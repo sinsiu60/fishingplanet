@@ -3,7 +3,7 @@ import math
 
 import pygame
 
-from src.core.mathutil import clamp, lerp, lerp_color, scale_color
+from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 
 DEFAULT_COLORS = {"body": [120, 130, 120], "belly": [220, 220, 210], "fin": [90, 100, 90], "stripe": None}
 RANK_COLORS = {"S": (255, 214, 90), "A": (150, 200, 255), "B": (140, 220, 150), "C": (190, 190, 190)}
@@ -279,22 +279,32 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
     lo, hi = fish["size_cm"]
     k = clamp((result["size"] - lo) / max(1, hi - lo), 0, 1.2)
     length = lerp(150, 240, k)
-    pop = 1 + 0.15 * max(0.0, 1 - t / 0.25)
-    bob = math.sin(t * 2.5) * 2
+    # 위에서 떨어져 두 손에 탁 안김 (0~0.3초), 안기는 순간 살짝 눌림
+    drop = clamp(t / 0.3, 0, 1)
+    fall_y = lerp(-90, 0, drop * drop)
+    squash = 0.12 * math.sin(clamp((t - 0.3) / 0.18, 0, 1) * math.pi) if t > 0.3 else 0.0
+    bob = math.sin(t * 2.5) * 2 if t > 0.5 else 0.0
     colors = fish_colors(fish)
-    draw_fish_side(canvas, cx, cy + bob, length * pop, 0.0, colors, facing=-1, tail_wag=math.sin(t * 6) * 0.4,
-                   shape=fish.get("shape"))
-    # 두 손 (아래에서 받쳐 듦)
+    draw_fish_side(canvas, cx, cy + bob + fall_y, length * (1 + squash), 0.0, colors, facing=-1,
+                   tail_wag=math.sin(t * (14 if t < 0.6 else 6)) * 0.5, shape=fish.get("shape"))
+    # 두 손 (아래에서 올라와 받쳐 듦)
     skin, shadow = pal["hand"], pal["hand_shadow"]
     if pal["hand"][0] < 90:  # 밤·노을엔 손이 너무 어두우니 밝힘
         skin, shadow = (225, 175, 140), (180, 125, 100)
+    rise = (1 - smoothstep(t / 0.28)) * 70
     for hx in (cx - length * 0.22, cx + length * 0.2):
-        hy = cy + bob + length * 0.12
+        hy = cy + bob + length * 0.12 + rise + squash * 20
         pygame.draw.ellipse(canvas, shadow, (hx - 15, hy - 4, 30, 18))
         pygame.draw.ellipse(canvas, skin, (hx - 15, hy - 7, 30, 15))
         for i in range(4):
             pygame.draw.line(canvas, shadow, (hx - 10 + i * 6, hy - 6), (hx - 10 + i * 6, hy - 1), 1)
         out = -1 if hx < cx else 1
-        sleeve = [(hx - 12, hy + 6), (hx + 12, hy + 6), (hx + 12 + out * 34, h), (hx - 12 + out * 34, h)]
+        sleeve = [(hx - 12, hy + 6), (hx + 12, hy + 6), (hx + 12 + out * 34, h + 60), (hx - 12 + out * 34, h + 60)]
         pygame.draw.polygon(canvas, (60, 80, 120), sleeve)
         pygame.draw.line(canvas, (44, 60, 94), (hx + out * 10, hy + 8), (hx + out * 44, h), 2)
+    # 연출에서 넘어온 하얀 섬광이 걷힘
+    if t < 0.25:
+        fl = pygame.Surface((w, h))
+        fl.fill((255, 255, 250))
+        fl.set_alpha(int(255 * (1 - t / 0.25)))
+        canvas.blit(fl, (0, 0))

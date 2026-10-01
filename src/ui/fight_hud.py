@@ -3,7 +3,8 @@ import math
 
 import pygame
 
-from src.core.mathutil import clamp, lerp_color
+from src.core.fonts import get_font
+from src.core.mathutil import clamp, lerp, lerp_color
 from src.render.fish_draw import RANK_COLORS
 from src.ui.hud import SHADOW, text
 
@@ -98,32 +99,52 @@ def draw_distance(canvas, pal, fight) -> None:
     text(canvas, f"거리 {fight.distance:.1f}m", (canvas.get_width() - 6, 4), pal["text"], 11, "topright")
 
 
+STAMP_T = 0.6       # 랭크 도장이 찍히는 시각 (획득 컷 기준)
+CATCH_READY_T = 1.0  # 이후 클릭하면 계속
+
+
 def draw_catch_info(canvas, result: dict, t: float) -> None:
+    """획득 컷 정보: 이름·크기 → 랭크 도장 쾅 → 기록 → 가치 숫자 올라감 (순서대로)."""
     w = canvas.get_width()
     fish = result["fish"]
     rc = RANK_COLORS[result["rank"]]
-    text(canvas, fish["name"], (w // 2, 24), RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 16, "center")
-    text(canvas, f"{result['size']:.1f}cm", (w // 2, 44), (255, 255, 255), 16, "center")
-    # 랭크 (커졌다가 자리 잡음)
-    pop = max(0.0, 1 - (t - 0.3) / 0.2) if t > 0.3 else 1.0
     if t > 0.3:
-        size = 16 if pop < 0.5 else 16
+        k = clamp((t - 0.3) / 0.15, 0, 1)
+        dy = int((1 - k) * -10)
+        text(canvas, fish["name"], (w // 2, 24 + dy), RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 16, "center")
+        text(canvas, f"{result['size']:.1f}cm", (w // 2, 44 + dy), (255, 255, 255), 16, "center")
+    # 랭크 도장: 크게 날아와 쾅
+    if t > STAMP_T:
+        k = clamp((t - STAMP_T) / 0.14, 0, 1)
+        scale = lerp(3.2, 1.0, k * k)
         rx, ry = w - 70, 54
-        box = pygame.Rect(0, 0, 34 + int(10 * pop), 34 + int(10 * pop))
+        side = int(36 * scale)
+        box = pygame.Rect(0, 0, side, side)
         box.center = (rx, ry)
         canvas.fill(SHADOW, box.move(2, 2))
         canvas.fill(PANEL, box)
-        pygame.draw.rect(canvas, rc, box, 2)
-        text(canvas, result["rank"], box.center, rc, size, "center")
-        text(canvas, "랭크", (rx, ry + 26), (200, 205, 220), 11, "center")
+        pygame.draw.rect(canvas, rc, box, max(2, int(2 * scale)))
+        img = get_font(16).render(result["rank"], False, rc)
+        img = pygame.transform.scale(img, (int(img.get_width() * scale * 1.3), int(img.get_height() * scale * 1.3)))
+        canvas.blit(img, img.get_rect(center=box.center))
+        if k >= 1:
+            # 찍힌 뒤 퍼지는 고리
+            ring = clamp((t - STAMP_T - 0.14) / 0.3, 0, 1)
+            if ring < 1:
+                pygame.draw.rect(canvas, rc, box.inflate(int(ring * 40), int(ring * 40)), 1)
+            text(canvas, "랭크", (rx, ry + 26), (200, 205, 220), 11, "center")
     y = 192
-    stats = (f"퍼펙트 {result['perfects']}   실수 {result['misses']}   줄 손상 {result['line_damage'] * 100:.0f}%   "
-             f"시간 {result['elapsed']:.0f}초 (기준 {result['par']:.0f}초)")
-    text(canvas, stats, (w // 2, y), (220, 225, 240), 11, "center")
-    text(canvas, f"가치 {result['price']}원", (w // 2, y + 16), (255, 230, 140), 11, "center")
-    if result["rank"] == "S":
+    if t > 0.85:
+        stats = (f"퍼펙트 {result['perfects']}   실수 {result['misses']}   줄 손상 {result['line_damage'] * 100:.0f}%   "
+                 f"시간 {result['elapsed']:.0f}초 (기준 {result['par']:.0f}초)")
+        text(canvas, stats, (w // 2, y), (220, 225, 240), 11, "center")
+    if t > 0.95:
+        k = clamp((t - 0.95) / 0.5, 0, 1)
+        shown = int(result["price"] * (1 - (1 - k) ** 2))
+        text(canvas, f"가치 {shown}원", (w // 2, y + 16), (255, 230, 140), 11, "center")
+    if result["rank"] == "S" and t > 1.5:
         text(canvas, "S랭크 보너스: 크기 +10%, 판매가 ×2", (w // 2, y + 32), RANK_COLORS["S"], 11, "center")
-    if t > 0.8 and int(t * 2) % 2 == 0:
+    if t > CATCH_READY_T + 0.5 and int(t * 2) % 2 == 0:
         text(canvas, "클릭해서 계속", (w // 2, 256), (170, 180, 200), 11, "center")
 
 

@@ -16,6 +16,7 @@ from src.render.camera import Camera
 from src.render.effects import (Bubbles, Droplets, Ripples, Sparkles, draw_bobber, draw_fish_shadow, draw_ink,
                                 draw_line, landing_marker, rod_tip_drop)
 from src.render.fish_draw import draw_catch_cut, draw_jump, draw_net_scene
+from src.render.landing import LandingCinematic
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
@@ -91,6 +92,7 @@ class FishingScene(Scene):
         self.ink_t = 0.0
         self.fake_bubble_t = 0.0
         self.fight: Fight | None = None
+        self.landing: LandingCinematic | None = None   # 뜰채 성공 → 획득 컷 사이 연출
         self.end_t = 0.0             # 결과 화면 경과 시간
         self.net_anim = 0.0
         self.jump_facing = -1
@@ -191,11 +193,14 @@ class FishingScene(Scene):
 
     def _left_click(self) -> None:
         c, f = self.cast, self.fight
+        if self.landing is not None:
+            self.landing.skip()
+            return
         if f is not None:
             if f.phase == "net":
                 self.net_anim = 0.3
                 f.net_click()
-            elif f.phase in ("caught", "lost") and self.end_t > 0.8:
+            elif f.phase in ("caught", "lost") and self.end_t > fight_hud.CATCH_READY_T:
                 self._end_fight()
             return
         if c.state != CastState.LANDED:
@@ -246,6 +251,7 @@ class FishingScene(Scene):
 
     def _end_fight(self) -> None:
         self.fight = None
+        self.landing = None
         self.screen_fx.reset()
         self.bite.stop()
         self.cast.reset()
@@ -337,8 +343,22 @@ class FishingScene(Scene):
 
     def _update_fight(self, dt: float, aim: float) -> None:
         f = self.fight
+        # 클릭(뜰채·우클릭)으로 생긴 이벤트는 틱 밖에서 발생하므로 먼저 처리
+        for ev in f.events:
+            self._on_fight_event(ev)
+        f.events.clear()
         if f.phase in ("caught", "lost"):
+            if self.landing is not None:
+                self._update_landing(dt)
+                return
+            prev = self.end_t
             self.end_t += dt
+            if f.phase == "caught" and prev < fight_hud.STAMP_T <= self.end_t:
+                # 랭크 도장 쾅
+                self.sfx.play("impact", 0.8)
+                self.shake_kick = 2.5
+                if f.result["rank"] == "S":
+                    self.sfx.play("perfect", 0.6)
             return
         reeling = pygame.mouse.get_pressed()[0] and f.phase == "fight"
         f.update(dt, reeling, aim)
@@ -386,6 +406,24 @@ class FishingScene(Scene):
             self.ripples.spawn(x, z, size=0.4 if b.state != "rush" else 0.6, life=0.9)
             if b.state == "rush" and p:
                 self.droplets.burst(p[0], p[1], max(0.5, p[2] / 25), count=3)
+
+    def _update_landing(self, dt: float) -> None:
+        for ev in self.landing.update(dt):
+            if ev == "hit":
+                self.sfx.play("splash", 1.0)
+                self.sfx.play("impact", 0.5)
+                self.shake_kick = 2.0
+            elif ev == "lift":
+                self.sfx.play("rise", 0.9)
+            elif ev == "launch":
+                self.sfx.play("launch", 0.9)
+                self.sfx.play("splash_small", 0.6)
+            elif ev == "apex":
+                self.sfx.play("perfect", 0.5)
+        if self.landing.done:
+            self.landing = None
+            self.end_t = 0.0
+            self.sfx.play("catch")
 
     def _update_reel_sound(self) -> None:
         name = None
@@ -527,7 +565,8 @@ class FishingScene(Scene):
             self.toasts.show("뜰채 실패! 물고기가 거리를 벌린다", BAD, 2.0, 11)
             self._splash_at(x, z, 1.0)
         elif ev == "caught":
-            self.sfx.play("catch")
+            pose, _ = f.net_pose()
+            self.landing = LandingCinematic(f.fish, f.result["size"], 240 + pose * 46)
             self.end_t = 0.0
         elif ev.startswith("lost:"):
             self.sfx.play("snap" if ev == "lost:snap" else "flee")
@@ -547,6 +586,9 @@ class FishingScene(Scene):
         self.clouds.draw(canvas, pal, cam)
         world.draw_mountains(canvas, pal, cam)
         self.water.draw(canvas, pal, t, hour)
+        if self.landing is not None:
+            self.landing.draw(canvas, pal)
+            return
         if f is None:
             sh = self.bite.shadow
             if sh is not None and self.bite.fish is not None:

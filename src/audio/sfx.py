@@ -141,6 +141,29 @@ def make_impact(rng) -> np.ndarray:
     return boom + crack
 
 
+def make_rise(rng) -> np.ndarray:
+    """끌어올림: 위로 올라가는 휘익 + 물 떨어지는 소리."""
+    sec = 0.7
+    n = int(RATE * sec)
+    noise = _noise(sec, rng)
+    band = _lowpass(noise, 3) - _lowpass(noise, 14)
+    env = np.linspace(0.2, 1.0, n) * np.exp(-np.linspace(0, 2.5, n))
+    tone = _sweep(300, 900, sec) * _env(n, 0.05, 0.3) * 0.15
+    return band * env * 1.6 + tone
+
+
+def make_launch(rng) -> np.ndarray:
+    """튀어 오름: 반짝이며 올라가는 아르페지오."""
+    notes = [659.25, 783.99, 987.77, 1318.5]
+    out = np.zeros(int(RATE * 0.55))
+    for i, f in enumerate(notes):
+        s = int(i * 0.06 * RATE)
+        t = _t(0.3)
+        tone = np.sin(2 * np.pi * f * t) * _env(len(t), 0.002, 0.08) * 0.3
+        out[s:s + len(tone)] += tone[: len(out) - s]
+    return out
+
+
 def make_miss(rng) -> np.ndarray:
     """실수: 낮은 쿵 + 줄 튕김."""
     sec = 0.35
@@ -262,6 +285,8 @@ class Sfx:
             "good": make_good(rng),
             "great": make_great(rng),
             "impact": make_impact(rng),
+            "rise": make_rise(rng),
+            "launch": make_launch(rng),
             "miss": make_miss(rng),
             "creak": make_creak(rng),
             "scrape": make_scrape(rng),
