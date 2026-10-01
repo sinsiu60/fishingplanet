@@ -1,11 +1,13 @@
-"""보물상자 화면 (C): 상자 열기(등급별 연출) · 조각 교환소 · 보유 아이템."""
+"""보물상자 화면 (C): 상자 열기(등급별 연출) · 조각 교환소 · 보유 아이템(장착·사용) · 보물 도감."""
 import math
 import random
 
 import pygame
 
 from src.core.mathutil import clamp, lerp, lerp_color
-from src.render.chest import draw_chest, draw_glow
+from src.core.game_clock import PERIODS
+from src.core.weather import WEATHER_KO, Weather
+from src.render.chest import draw_chest, draw_glow, draw_item_icon
 from src.render.landing import draw_star
 from src.save import treasure as tr
 from src.scene.base import Scene
@@ -13,7 +15,7 @@ from src.ui import widgets as ui
 from src.ui.fight_fx import big_text
 from src.ui.hud import draw_cursor, text, wrap_text
 
-TABS = [("open", "상자"), ("exchange", "조각 교환소"), ("items", "보유 아이템")]
+TABS = [("open", "상자"), ("exchange", "조각 교환소"), ("items", "보유 아이템"), ("dex", "보물 도감")]
 KIND_KO = {"consumable": "소모품", "charm": "부적", "cosmetic": "외형", "rod": "낚싯대", "reel": "릴", "net": "뜰채"}
 MAT_KO = {"sharmion": "샤르미온 소재", "eldrasion": "엘드라시온 소재"}
 LIST = pygame.Rect(16, 52, 236, 186)
@@ -37,7 +39,9 @@ class ChestScene(Scene):
         self.scroll = 0
         self.msg, self.msg_col, self.msg_t = "", ui.TEXT, 0.0
         self.close_btn = ui.Button((404, 244, 60, 16), "닫기 (C)", self._close)
-        self.action_btn = ui.Button((DETAIL.x + 8, DETAIL.bottom - 22, DETAIL.w - 16, 17), "", self._exchange)
+        self.action_btn = ui.Button((DETAIL.x + 8, DETAIL.bottom - 22, DETAIL.w - 16, 17), "", self._action)
+        self.chooser: dict | None = None  # 모래시계·소라: 시간대/날씨 고르기
+        self.choice_btns: list[ui.Button] = []
         self.open_btns = [ui.Button((0, 0, 92, 17), "열기", lambda g=g: self._open(g)) for g in tr.GRADES]
         self.anim: dict | None = None   # 개봉 연출
         self.particles: list[list[float]] = []
@@ -100,6 +104,97 @@ class ChestScene(Scene):
             if r["type"] == "item" and not r.get("dup"):
                 sfx.play("catch", 0.7)
 
+    def _action(self) -> None:
+        if self.kind == "exchange":
+            self._exchange()
+        elif self.kind == "items":
+            self._item_action()
+
+    # ── 보유 아이템: 장착·사용 ──
+    def _item_state(self, it: dict) -> tuple[str, bool]:
+        """(버튼 글자, 누를 수 있는지)."""
+        s = self.save
+        iid, kind = it["id"], it["kind"]
+        if kind in ("rod", "reel", "net"):
+            return ("장착 중", False) if s.data["gear"][kind] == iid else ("장착하기", True)
+        if kind == "charm":
+            if s.charm_on(iid):
+                return "부적 해제", True
+            used = sum(1 for c in s.charms() if c)
+            return f"부적 장착 ({used}/{s.charm_slots()}칸)", True
+        if kind == "cosmetic":
+            return ("외형 해제", True) if s.cosmetic_on(iid) else ("외형 적용", True)
+        if s.consumable_count(iid) <= 0:
+            return "없음", False
+        buffs = s.data["buffs"]
+        if iid in ("repair_spool", "calm_charm"):
+            return f"파이팅 중 {'1' if iid == 'repair_spool' else '2'}키로 사용", False
+        if iid == "lucky_paste" and buffs.get("lucky_casts", 0) > 0:
+            return f"효과 중 ({buffs['lucky_casts']}번 남음)", False
+        if iid == "fisher_lunch" and s.lunch_active():
+            left = (buffs["lunch_until"] - s.data["playtime"]) / 60
+            return f"효과 중 ({left:.0f}분 남음)", False
+        return "사용하기", True
+
+    def _item_action(self) -> None:
+        items = self._list()
+        if not items:
+            return
+        it = items[min(self.sel, len(items) - 1)]
+        label, ok = self._item_state(it)
+        if not ok:
+            return
+        s, iid, kind = self.save, it["id"], it["kind"]
+        sfx = self.game.sfx
+        if kind in ("rod", "reel", "net"):
+            s.equip(kind, iid)
+            self._say(f"{it['name']} 장착!", ui.GOOD)
+        elif kind == "charm":
+            on = s.toggle_charm(iid) == "on"
+            self._say(f"{it['name']} {'장착' if on else '해제'}", ui.GOOD)
+        elif kind == "cosmetic":
+            s.toggle_cosmetic(iid)
+            self._say(f"{it['name']} {'적용' if s.cosmetic_on(iid) else '해제'}", ui.GOOD)
+        elif iid == "lucky_paste":
+            s.use_consumable(iid)
+            s.data["buffs"]["lucky_casts"] = 5
+            self._say("다음 5번 캐스팅 동안 희귀 이상 +3%p", ui.GOOD)
+        elif iid == "fisher_lunch":
+            s.use_consumable(iid)
+            s.data["buffs"]["lunch_until"] = s.data["playtime"] + 600
+            self._say("10분 동안 판매가 +10%", ui.GOOD)
+        elif iid == "hourglass":
+            self._open_chooser(iid, [(name, start) for start, _, name in PERIODS])
+            return
+        elif iid == "storm_conch":
+            self._open_chooser(iid, [(WEATHER_KO[w], w) for w in ("clear", "rain", "storm")])
+            return
+        sfx.play("great", 0.6)
+        self.game.save_now()
+
+    def _open_chooser(self, iid: str, options: list) -> None:
+        self.chooser = {"item": iid}
+        w = (DETAIL.w - 16 - 4 * (len(options) - 1)) // len(options)
+        self.choice_btns = [ui.Button((DETAIL.x + 8 + i * (w + 4), DETAIL.bottom - 44, w, 17), label,
+                                      lambda v=value: self._choose(v)) for i, (label, value) in enumerate(options)]
+
+    def _choose(self, value) -> None:
+        iid = self.chooser["item"]
+        f, s = self.fishing, self.save
+        s.use_consumable(iid)
+        if iid == "hourglass":
+            f.clock.hour = value + 0.01
+            self._say("시간이 흘러갔다...", ui.GOOD)
+        else:
+            ws = f.weather_sys
+            ws.current = value
+            ws.next_change = Weather.abs_time(f.clock.day, f.clock.hour) + 12  # 실제 10분 = 게임 12시간
+            self._say(f"날씨가 바뀌었다: {WEATHER_KO[value]}", ui.GOOD)
+        self.chooser = None
+        self.choice_btns = []
+        self.game.sfx.play("great", 0.6)
+        self.game.save_now()
+
     # ── 교환소 ──
     def _exchange(self) -> None:
         items = self._list()
@@ -151,21 +246,30 @@ class ChestScene(Scene):
             m = self.game.to_canvas(event.pos)
             if self.tabs.click(m):
                 self.sel, self.scroll = 0, 0
+                self.chooser, self.choice_btns = None, []
                 self.game.sfx.play("click")
                 return
             if self.close_btn.click(m):
                 return
+            if self.chooser:
+                for b in self.choice_btns:
+                    if b.click(m):
+                        return
+                self.chooser, self.choice_btns = None, []
             if self.kind == "open":
                 for b in self.open_btns:
                     if b.click(m):
                         return
                 return
-            if self.kind == "exchange" and self.action_btn.click(m):
+            if self.kind in ("exchange", "items") and self.action_btn.click(m):
+                return
+            if self.kind == "dex":
                 return
             if LIST.collidepoint(m):
                 i = (m[1] - LIST.y) // ROW_H + self.scroll
                 if 0 <= i < len(self._list()):
                     self.sel = i
+                    self.chooser, self.choice_btns = None, []
                     self.game.sfx.play("click")
 
     def update(self, dt: float) -> None:
@@ -200,6 +304,8 @@ class ChestScene(Scene):
         self.tabs.draw(canvas, self.mouse)
         if self.kind == "open":
             self._draw_open(canvas)
+        elif self.kind == "dex":
+            self._draw_dex(canvas)
         else:
             self._draw_list(canvas)
         if self.msg_t > 0:
@@ -285,7 +391,43 @@ class ChestScene(Scene):
                 self.action_btn.label = reason
             self.action_btn.draw(canvas, self.mouse)
         else:
-            text(canvas, "장착·사용은 다음 업데이트에서", (x, DETAIL.bottom - 12), ui.DIM, 11, "midleft")
+            label, ok = self._item_state(it)
+            self.action_btn.label, self.action_btn.enabled = label, ok
+            self.action_btn.draw(canvas, self.mouse)
+            for b in self.choice_btns:
+                b.draw(canvas, self.mouse)
+            # 부적 칸
+            names = [tr.item_info(c)["name"] if c else "비어 있음" for c in self.save.charms()]
+            text(canvas, "부적: " + " / ".join(names), (240, 16), (200, 170, 255), 11, "center")
+
+    # ── 보물 도감 ──
+    def _draw_dex(self, canvas) -> None:
+        allit = tr.cfg()["items"]
+        tdex = self.save.data["treasure_dex"]
+        got = sum(1 for it in allit if tdex.get(it["id"]))
+        text(canvas, f"수집 {got}/{len(allit)}", (240, 16), ui.ACCENT, 11, "center")
+        hover = None
+        for i, it in enumerate(allit):
+            col_i, row = i % 4, i // 4
+            r = pygame.Rect(18 + col_i * 112, 54 + row * 46, 106, 42)
+            known = bool(tdex.get(it["id"]))
+            col = tuple(tr.grade_info(it["grade"])["color"])
+            ui.panel(canvas, r, border=col if known else ui.BORDER, fill=(16, 20, 36))
+            draw_item_icon(canvas, r.x + 14, r.centery, it["kind"], col, known)
+            lines = wrap_text(it["name"], r.w - 34)[:2] if known else ["???"]
+            for j, ln in enumerate(lines):
+                text(canvas, ln, (r.x + 28, r.y + (13 if len(lines) == 1 else 10) + j * 13), col if known else ui.DIM,
+                     11, "midleft")
+            text(canvas, f"×{tdex[it['id']]}" if known else tr.grade_info(it["grade"])["name"],
+                 (r.right - 5, r.bottom - 8), ui.TEXT if known else ui.DIM, 11, "midright")
+            if r.collidepoint(self.mouse):
+                hover = (it, known)
+        if hover:
+            it, known = hover
+            msg = it["desc"] if known else "상자에서 얻으면 기록돼요"
+            text(canvas, msg[:46], (240, 241), ui.TEXT if known else ui.DIM, 11, "center")
+        else:
+            text(canvas, "얻은 상자 아이템이 기록돼요 (못 얻은 건 ???)", (240, 241), ui.DIM, 11, "center")
 
     # ── 개봉 연출 ──
     def _draw_anim(self, canvas) -> None:

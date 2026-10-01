@@ -31,7 +31,7 @@ def bait_tier_mult(bait: dict | None, key: str) -> float:
 
 
 def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir",
-              bait: dict | None = None) -> dict | None:
+              bait: dict | None = None, rare_bonus: float = 0.0) -> dict | None:
     cfg = load_json("fishing_config.json")["bite"]
     candidates, weights = [], []
     for f in load_json("fish.json")["fish"]:
@@ -55,6 +55,15 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
             weights.append(w)
     if not candidates:
         return None
+    if rare_bonus > 0:
+        # 행운의 떡밥: 희귀 이상이 나올 확률을 +rare_bonus (%p)
+        total = sum(weights)
+        rare = sum(w for f, w in zip(candidates, weights) if f["rarity"] in ("rare", "legend"))
+        share = rare / total
+        target = min(0.95, share + rare_bonus)
+        if 0 < rare and share < target:
+            k = target * (total - rare) / ((1 - target) * rare)
+            weights = [w * k if f["rarity"] in ("rare", "legend") else w for f, w in zip(candidates, weights)]
     return rnd.choices(candidates, weights)[0]
 
 
@@ -101,6 +110,8 @@ class BiteController:
         self.spot = "reservoir"
         self.force_fish: dict | None = None  # 테스트용 강제 물고기
         self.bait: dict | None = None        # 장착한 미끼
+        self.rare_bonus = 0.0                # 행운의 떡밥 (+%p)
+        self.window_extra = 1.0              # 바람개비 찌: 0.95
         self.legend = False                  # 이번 입질이 전설인지
 
     def _rand(self, pair) -> float:
@@ -178,7 +189,7 @@ class BiteController:
                     self.fish = legend
                 else:
                     self.fish = pick_fish(self.period, self.weather, self.cast_distance, self.rnd, self.spot,
-                                          self.bait)
+                                          self.bait, rare_bonus=self.rare_bonus)
                 self.legend = self.fish is not None and self.fish["rarity"] == "legend"
                 if self.fish is None:
                     self.timer = 3.0
@@ -240,7 +251,8 @@ class BiteController:
                     # 예민한 물고기(감성돔 등)는 챔질 창이 짧다
                     bait_mult = (self.bait.get("window_mult", 1.0) if self.bait else 1.0) \
                         * bait_tier_mult(self.bait, "bait_tier_window_bonus")
-                    self.timer = cfg["bite_window_sec"] * self.fish.get("bite_window_mult", 1.0) * bait_mult
+                    self.timer = cfg["bite_window_sec"] * self.fish.get("bite_window_mult", 1.0) * bait_mult \
+                        * self.window_extra
                     self.bite_t = 0.0
                     self.tip_pull = 12.0
                     self.events.append("bite")

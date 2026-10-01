@@ -269,6 +269,9 @@ class FishingScene(Scene):
                 self.card = None
             return
         if event.type == pygame.KEYDOWN:
+            if event.key in (pygame.K_1, pygame.K_2) and f is not None and f.phase == "fight":
+                self._use_fight_item("repair_spool" if event.key == pygame.K_1 else "calm_charm")
+                return
             if event.key == pygame.K_h:
                 self.help = True
             elif event.key == pygame.K_ESCAPE and self.landing is None:
@@ -398,7 +401,7 @@ class FishingScene(Scene):
         fish = self.bite.fish
         size = roll_size(fish, self.bite.cast_distance)
         angle = math.atan2(c.bx, c.bz)
-        self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(),
+        self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(self.clock.period()[0]),
                            hazards=self.spot["hazards"])
         if fish["rarity"] == "legend":
             self.toasts.show(f"전설 등장! {fish['name']}", (255, 214, 90), 3.0)
@@ -810,11 +813,33 @@ class FishingScene(Scene):
         self.game.screen.shake = (random.randint(-a, a), random.randint(-a, a))
 
     # ───────────────────────── 이벤트 ─────────────────────────
+    def _use_fight_item(self, item_id: str) -> None:
+        """파이팅 중 소모품 (1: 수리용 실타래 / 2: 잔잔한 물 부적), 파이팅당 1개."""
+        from src.save.treasure import item_info
+        f = self.fight
+        name = item_info(item_id)["name"]
+        if self.save.consumable_count(item_id) <= 0:
+            self.toasts.show(f"{name}이(가) 없어요", BAD, 1.2, 11)
+        elif f.consumable_used:
+            self.toasts.show("소모품은 파이팅당 1개만 쓸 수 있어요", BAD, 1.4, 11)
+        elif f.use_consumable(item_id):
+            self.save.use_consumable(item_id)
+            self.sfx.play("great", 0.6)
+            msg = "줄 내구도 +20%" if item_id == "repair_spool" else "줄 걸림이 느려졌다 (이번 파이팅)"
+            self.toasts.show(f"{name}: {msg}", GOOD, 1.8, 11)
+            self.sparkles.burst(*self._fish_screen(), count=10, speed=0.7, ring=False)
+
     def _splash(self) -> None:
         self.tutorial.mark("guide_cast")
         c = self.cast
         self._splash_at(c.bx, c.bz, big=1.0)
         self.sfx.play("splash")
+        # 행운의 떡밥: 남은 캐스팅 동안 희귀 이상 +3%p
+        buffs = self.save.data["buffs"]
+        self.bite.rare_bonus = 0.03 if buffs.get("lucky_casts", 0) > 0 else 0.0
+        if buffs.get("lucky_casts", 0) > 0:
+            buffs["lucky_casts"] -= 1
+        self.bite.window_extra = 0.95 if self.save.charm_on("pinwheel_float") else 1.0
         self.bite.start((c.bx, c.bz), c.current_distance())
         self.idle_ripple_t = 0.0
 
@@ -832,7 +857,8 @@ class FishingScene(Scene):
             self.shake_kick = 1.5
         elif ev == "nibble":
             self.sfx.play("nibble")
-            self.ripples.spawn(c.bx, c.bz, size=0.35, life=0.8)
+            big = self.save.cosmetic_on("sparkle_float")  # 반짝이 찌: 입질 파문이 더 잘 보임
+            self.ripples.spawn(c.bx, c.bz, size=0.5 if big else 0.35, life=1.0 if big else 0.8)
         elif ev == "bite":
             self.sfx.play("bite")
             self.ripples.spawn(c.bx, c.bz, size=1.3, life=1.5, rings=3)
@@ -868,6 +894,10 @@ class FishingScene(Scene):
         elif not f.brain.sound_only:
             self._tip(ev)  # 소리 전용 물고기에겐 '물보라를 보라' 같은 시각 팁을 띄우지 않는다
         sound_only = f.brain.sound_only
+        if ev.startswith("telegraph:") and self.save.charm_on("ear_bell"):
+            self.sfx.play("bell", 0.7)  # 소리귀 방울
+        if ev == "scale_heal":
+            self.toasts.show("용린 낚싯대: 줄 +10%", (255, 214, 90), 0.9, 11)
         if ev in CAPTIONS and self.settings.get("sound_captions"):
             self.captions = [CAPTIONS[ev], 1.2]
         if ev == "telegraph:lure":
@@ -985,12 +1015,22 @@ class FishingScene(Scene):
             pose, _ = f.net_pose()
             shown = self._display_fish(f.fish)
             from src.save import treasure
+            golden = self.save.equipped("net")["id"] == "golden_net"
+            if golden:
+                # 황금 뜰채: 크기 +3% (판매가도 그만큼)
+                f.result["size"] = round(f.result["size"] * 1.03, 1)
+                f.result["price"] = int(round(f.result["price"] * 1.03))
             self.chest_drop = treasure.roll_drop(self.save, f.fish, f.result["rank"])
-            self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46, chest=self.chest_drop)
+            self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46, chest=self.chest_drop,
+                                            golden=golden)
             f.result["fish"] = shown
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
             self.catch_news["chest"] = self.chest_drop
+            if (self.save.charm_on("twin_hook") and f.fish["rarity"] != "legend" and random.random() < 0.05):
+                # 쌍둥이 바늘: 같은 물고기 한 마리 더 (판매·소재용, 도감·랭크 기록 없음)
+                self.save.data["keepnet"].append(dict(self.save.data["keepnet"][-1], twin=True))
+                self.toasts.show("쌍둥이 바늘! 한 마리 더 걸려 올라왔다", (200, 150, 255), 2.5, 11)
             self.game.save_now()
         elif ev.startswith("lost:"):
             self.save.record_loss()
@@ -1029,6 +1069,13 @@ class FishingScene(Scene):
             if sh is not None and self.bite.fish is not None:
                 sh = dict(sh, glow=GLOW.get(self.bite.fish["rarity"]))
             draw_fish_shadow(canvas, pal, cam, sh, t)
+            if sh is not None and self.bite.fish is not None and self.save.charm_on("abyss_eye"):
+                # 심연의 눈: 도감에 등록된 물고기면 이름이 보인다
+                p = cam.project(sh["x"], sh["z"])
+                if p and sh.get("alpha", 1) > 0.2:
+                    fish = self.bite.fish
+                    name = fish["name"] if self.save.caught(fish["id"]) else "???"
+                    hud.text(canvas, name, (p[0], p[1] - 10), (190, 170, 255), anchor="center")
         elif f.phase == "fight":
             if self.ink_t > 0:
                 x, z = f.fish_xz()
@@ -1215,9 +1262,33 @@ class FishingScene(Scene):
         fight_hud.draw_boss_bar(canvas, pal, f)
         fight_hud.draw_drag(canvas, pal, f)
         fight_hud.draw_distance(canvas, pal, f)
+        self._draw_fight_items(canvas, pal, f)
         hud.draw_hint(canvas, pal, HINTS[CastState.HOOKED])
         if self.debug:
             fight_hud.draw_debug(canvas, f)
+
+    def _bobber_pal(self, pal: dict) -> dict:
+        """찌 색: 반짝이 찌(외형) / 바람개비 찌(가짜 입질 때 하늘색 깜빡)."""
+        out = pal
+        if self.save.cosmetic_on("sparkle_float"):
+            glint = 0.5 + 0.5 * math.sin(self.t * 6)
+            out = dict(out, bobber=lerp_color((255, 196, 60), (255, 250, 200), glint * 0.5))
+        if (self.save.charm_on("pinwheel_float") and self.bite.state == BiteState.NIBBLE and self.bite.dip > 0.03):
+            out = dict(out, bobber=(90, 220, 255))
+        return out
+
+    def _draw_fight_items(self, canvas, pal, f) -> None:
+        """파이팅 중 쓸 수 있는 소모품 표시 (왼쪽 아래, 드랙 밑)."""
+        parts = []
+        for key, iid, short in (("1", "repair_spool", "실타래"), ("2", "calm_charm", "잔잔한 물")):
+            n = self.save.consumable_count(iid)
+            if n:
+                parts.append(f"{key}: {short} ×{n}")
+        if not parts:
+            return
+        col = pal["text"] if not f.consumable_used else (130, 136, 150)
+        label = "  ".join(parts) + ("  (이번 파이팅 사용함)" if f.consumable_used else "")
+        hud.text(canvas, label, (8, 241), col, anchor="midleft")
 
     def _draw_behavior_ui(self, canvas) -> None:
         """물고기 머리 위 행동 아이콘 + 점프 판정 원."""
@@ -1294,4 +1365,4 @@ class FishingScene(Scene):
         else:
             sag = 10 + abs(tip[0] - sx) * 0.04
         draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5 * (1 - dip)), sag, bias=0.6)
-        draw_bobber(canvas, pal, sx, sy + bob, size, floating=True, dip=dip)
+        draw_bobber(canvas, self._bobber_pal(pal), sx, sy + bob, size, floating=True, dip=dip)

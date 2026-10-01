@@ -570,6 +570,14 @@ def make_chest_legend(rng) -> np.ndarray:
     return out
 
 
+def make_bell(rng) -> np.ndarray:
+    """소리귀 방울: 작고 맑은 '딸랑'."""
+    sec = 0.35
+    tt = _t(sec)
+    tone = np.sin(2 * np.pi * 2350 * tt) + 0.5 * np.sin(2 * np.pi * 3520 * tt) * np.sin(2 * np.pi * 18 * tt)
+    return tone * _env(int(RATE * sec), 0.002, 0.09) * 0.16
+
+
 def make_flee(rng) -> np.ndarray:
     """놀라 도망: 작은 철썩 두 번."""
     a = make_splash(rng, 0.2) * 0.5
@@ -644,6 +652,7 @@ class Sfx:
             "cue_charge": make_cue_charge(rng),
             "cue_lure": make_cue_lure(rng),
             "chest_open": make_chest_open(rng),
+            "bell": make_bell(rng),
             "chest_legend": make_chest_legend(rng),
         }
         for name, wave in bank.items():

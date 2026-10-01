@@ -250,19 +250,28 @@ class ShopScene(Scene):
             text(canvas, fish["name"][:9], (r.x + 4, r.centery), RARITY_COL[fish["rarity"]], 11, "midleft")
             text(canvas, f"{it['size']:.1f}cm", (r.x + 120, r.centery), ui.TEXT, 11, "midleft")
             text(canvas, it["rank"], (r.x + 168, r.centery), RANK_COLORS[it["rank"]], 11, "midleft")
-            text(canvas, f"{it['price']:,}", (r.right - 4, r.centery), ui.ACCENT, 11, "midright")
+            text(canvas, f"{self.save.sale_price(it):,}", (r.right - 4, r.centery), ui.ACCENT, 11, "midright")
         it = items[self.sel]
         fish = self.fish_by_id(it["id"])
         draw_fish_side(canvas, DETAIL.centerx, DETAIL.y + 40, 110, 0.0, fish_colors(fish), -1, shape=fish.get("shape"))
         text(canvas, fish["name"], (DETAIL.centerx, DETAIL.y + 76), RARITY_COL[fish["rarity"]], 11, "center")
         text(canvas, f"{it['size']:.1f}cm · {it['rank']}랭크", (DETAIL.centerx, DETAIL.y + 92), ui.TEXT, 11, "center")
-        text(canvas, f"판매가 {ui.money_text(it['price'])}", (DETAIL.centerx, DETAIL.y + 110), ui.ACCENT, 11, "center")
+        text(canvas, f"판매가 {ui.money_text(self.save.sale_price(it))}", (DETAIL.centerx, DETAIL.y + 110), ui.ACCENT, 11,
+             "center")
+        notes = []
         if it["rank"] == "S":
-            text(canvas, "S랭크 ×2 적용", (DETAIL.centerx, DETAIL.y + 124), RANK_COLORS["S"], 11, "center")
+            notes.append("S랭크 ×2")
+        if self.save.lunch_active():
+            notes.append("도시락 +10%")
+        if it.get("twin"):
+            notes.append("쌍둥이 바늘")
+        if notes:
+            text(canvas, " · ".join(notes) + " 적용" * (it["rank"] == "S" or self.save.lunch_active()),
+                 (DETAIL.centerx, DETAIL.y + 124), RANK_COLORS["S"], 11, "center")
         got = self.save.disassemble_yield(self.sel)
         dis = ", ".join(f"{MAT_KO[k]} {v}" for k, v in got.items()) if got else "전설은 분해 불가"
         text(canvas, f"분해: {dis}", (DETAIL.centerx, DETAIL.y + 138), ui.DIM, 11, "center")
-        total = sum(x["price"] for x in items)
+        total = sum(self.save.sale_price(x) for x in items)
         self.dis_btn.enabled = got is not None
         self.sell_all_btn.label, self.sell_all_btn.enabled = f"모두 팔기 ({len(items)}마리 · {total:,}원)", True
         self.sell_btn.draw(canvas, self.mouse)

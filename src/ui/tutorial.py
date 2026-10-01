@@ -84,6 +84,7 @@ HELP_CONTROLS = [
     ("낚싯대 숙이기", "우클릭 (점프 때 원이 겹치는 순간 = PERFECT)"),
     ("드랙", "Q 낮추기 / E 올리기 / 휠"),
     ("버티기·꺾기", "마우스를 반대쪽으로 / 꺾는 순간 확 슬라이드"),
+    ("소모품", "파이팅 중 1: 수리용 실타래  2: 잔잔한 물 부적 (파이팅당 1개)"),
     ("기타", "우클릭: 줄 회수  C: 보물상자  T: 시간 가속  F1: 수치  F2: 흔들림"),
 ]
 DEBUG_CONTROLS = ("테스트", "F3: 물고기 고정  F4: 낚시터  F5: 날씨  F6: 상자")
@@ -175,22 +176,22 @@ def draw_guide(canvas, key: str, t: float) -> None:
 def draw_help(canvas) -> None:
     w, h = canvas.get_size()
     _dim(canvas, alpha=190)
-    pw, ph = 450, 262
+    pw, ph = 450, 266
     x, y = (w - pw) // 2, (h - ph) // 2
     canvas.fill(PANEL, (x, y, pw, ph))
     pygame.draw.rect(canvas, BORDER, (x, y, pw, ph), 1)
     text(canvas, "도움말", (w // 2, y + 11), BORDER, 16, "center")
-    yy = y + 24
+    yy = y + 22
     text(canvas, "조작", (x + 10, yy), (150, 200, 255), 11)
-    yy += 13
+    yy += 12
     controls = HELP_CONTROLS + ([DEBUG_CONTROLS] if load_json("fishing_config.json").get("debug_keys") else [])
     for name, desc in controls:
         text(canvas, name, (x + 14, yy), (255, 240, 200), 11)
         text(canvas, desc, (x + 100, yy), (230, 232, 240), 11)
         yy += 12
-    yy += 4
+    yy += 3
     text(canvas, "예고 신호 → 행동 → 대응", (x + 10, yy), (150, 200, 255), 11)
-    yy += 13
+    yy += 12
     for sig, act, resp in HELP_SIGNALS:
         text(canvas, sig, (x + 14, yy), (255, 240, 200), 11)
         text(canvas, act, (x + 140, yy), (255, 170, 150), 11)

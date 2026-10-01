@@ -68,6 +68,10 @@ class Fight:
         self.last_flick_dir = 0
         # 방향 전환 꺾기: {"need": 필요한 방향, "done": 판정 끝}
         self.turn_flick: dict | None = None
+        # 상자 아이템 (Phase E)
+        self.snag_mult = 1.0          # 잔잔한 물 부적: 0.5
+        self.consumable_used = None   # 이번 파이팅에 쓴 소모품 (파이팅당 1개)
+        self.auto_drag_prev: int | None = None  # 고대 어부의 릴: 돌진 전에 쓰던 드랙
         self.turn_mult = 1.0
         # 환경 위협 (수초·바위): 구역 안에 있으면 줄 걸림 게이지 증가
         self.hazards = hazards or []
@@ -124,6 +128,9 @@ class Fight:
     # ── 입력 ──
     def change_drag(self, delta: int) -> None:
         self.drag = int(clamp(self.drag + delta, 1, self.drag_steps))
+        if self.auto_drag_prev is not None:
+            # 자동 하강 중에 직접 바꾸면, 끝난 뒤엔 바꾼 값에서 1단계 위로 돌아온다
+            self.auto_drag_prev = int(clamp(self.drag + 1, 1, self.drag_steps))
 
     def dip(self) -> None:
         """우클릭: 낚싯대 숙이기. 점프 정점이면 퍼펙트."""
@@ -221,7 +228,36 @@ class Fight:
             self._net_fail()
 
     # ── 판정 ──
+    def use_consumable(self, item_id: str) -> bool:
+        """파이팅 중 소모품 (파이팅당 1개). 수리용 실타래 / 잔잔한 물 부적."""
+        if self.consumable_used or self.phase != "fight":
+            return False
+        if item_id == "repair_spool":
+            self.line = min(float(self.line_max), self.line + self.line_max * 0.2)
+        elif item_id == "calm_charm":
+            self.snag_mult = 0.5
+        else:
+            return False
+        self.consumable_used = item_id
+        self.events.append(f"used:{item_id}")
+        return True
+
+    def _auto_drag(self) -> None:
+        """고대 어부의 릴: 돌진 예고 때 드랙 1단계 자동 하강, 돌진이 끝나면 복귀."""
+        b = self.brain
+        rushing = b.state == "rush" or (b.state == "telegraph" and b.pending == "rush")
+        if rushing and self.auto_drag_prev is None:
+            self.auto_drag_prev = self.drag
+            self.drag = max(1, self.drag - 1)
+        elif not rushing and self.auto_drag_prev is not None:
+            self.drag = self.auto_drag_prev
+            self.auto_drag_prev = None
+
     def _perfect(self) -> None:
+        heal = self.gear.get("perfect_heal", 0.0)
+        if heal:
+            self.line = min(float(self.line_max), self.line + self.line_max * heal)  # 용린 낚싯대
+            self.events.append("scale_heal")
         self.perfects += 1
         self.perfect_streak += 1
         self.stamina -= self.cfg["perfect_stamina"]
@@ -249,6 +285,8 @@ class Fight:
     def update(self, dt: float, reeling: bool, rod_aim: float) -> None:
         self.dip_t = max(0.0, self.dip_t - dt)
         if self.phase == "fight":
+            if self.gear.get("auto_drag"):
+                self._auto_drag()
             self._update_fight(dt, reeling, rod_aim)
         elif self.phase == "net":
             self._update_net(dt)
@@ -345,6 +383,7 @@ class Fight:
             dmg = (self.tension - self.green_high) * cfg["line_damage_per_tension"] * dt
             if self.tension >= 100:
                 dmg *= cfg["line_damage_over100_mult"]
+            dmg *= self.gear.get("line_red_mult", 1.0)  # 온기 장갑
             self.line -= dmg
             self.line_damage += dmg
             if self.line_frac < 0.5:
@@ -371,7 +410,7 @@ class Fight:
             self.events.append("hazard_enter")
         self.in_hazard = hz
         if hz is not None:
-            self.snag += cfg["snag_rate"] * self.hazard_mult * dt
+            self.snag += cfg["snag_rate"] * self.hazard_mult * self.snag_mult * dt
         else:
             self.snag -= cfg["snag_recover"] * dt
         self.snag = clamp(self.snag, 0, 100)

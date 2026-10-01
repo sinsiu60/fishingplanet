@@ -90,6 +90,7 @@ def give_item(save, item_id: str) -> dict:
         save.data["shards"] += n
         return {"type": "item", "item": it, "dup": True, "shards": n}
     items["owned"].append(item_id)
+    items.setdefault("origin", {})[item_id] = save.data.get("continent", "sharmion")  # 특별 장비 기준 대륙
     return {"type": "item", "item": it, "dup": False}
 
 

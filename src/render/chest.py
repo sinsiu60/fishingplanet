@@ -53,3 +53,32 @@ def draw_chest(canvas, x: float, y: float, scale: float, color, lid: float = 0.0
         cx = int(x)
         canvas.fill(band, (cx - int(2 * s), body.y - int(1 * s), int(4 * s) or 2, int(4 * s) or 3))
         canvas.fill(dark, (cx - 1, body.y + int(1 * s), 2, 2))
+
+
+def draw_item_icon(canvas, x: float, y: float, kind: str, color, known: bool = True) -> None:
+    """상자 아이템 아이콘 (16px 정도). known=False면 실루엣."""
+    c = color if known else (58, 62, 78)
+    d = scale_color(c, 0.55)
+    x, y = int(x), int(y)
+    if kind == "consumable":       # 주머니
+        pygame.draw.circle(canvas, d, (x, y + 2), 7)
+        pygame.draw.circle(canvas, c, (x, y + 2), 6)
+        canvas.fill(d, (x - 3, y - 6, 6, 3))
+    elif kind == "charm":          # 목걸이 부적
+        pygame.draw.arc(canvas, d, (x - 7, y - 9, 14, 12), 0, math.pi, 1)
+        pygame.draw.polygon(canvas, c, [(x, y - 2), (x + 6, y + 4), (x, y + 9), (x - 6, y + 4)])
+        pygame.draw.polygon(canvas, d, [(x, y - 2), (x + 6, y + 4), (x, y + 9), (x - 6, y + 4)], 1)
+    elif kind == "cosmetic":       # 찌
+        canvas.fill(c, (x - 3, y - 4, 6, 8))
+        canvas.fill((240, 240, 240) if known else d, (x - 3, y + 1, 6, 2))
+        canvas.fill(d, (x, y - 9, 1, 5))
+    elif kind == "rod":            # 낚싯대
+        pygame.draw.line(canvas, c, (x - 8, y + 8), (x + 8, y - 8), 2)
+        pygame.draw.circle(canvas, d, (x - 4, y + 4), 3)
+    elif kind == "reel":           # 릴
+        pygame.draw.circle(canvas, c, (x, y), 7)
+        pygame.draw.circle(canvas, d, (x, y), 3)
+        pygame.draw.line(canvas, d, (x, y), (x + 9, y - 5), 2)
+    else:                          # 뜰채
+        pygame.draw.ellipse(canvas, c, (x - 7, y - 9, 14, 11), 2)
+        pygame.draw.line(canvas, d, (x + 4, y + 1), (x + 9, y + 9), 2)

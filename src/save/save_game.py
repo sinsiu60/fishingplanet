@@ -20,6 +20,7 @@ SLOTS = 3
 VERSION = 2
 RANK_ORDER = {"C": 0, "B": 1, "A": 2, "S": 3}
 GEAR_KINDS = ("rod", "reel", "line", "net")
+TOP_TIER = {"sharmion": 5, "eldrasion": 8}  # 대륙별 상점 최고 티어
 
 
 def _slot_path(slot: int):
@@ -136,6 +137,7 @@ def new_data() -> dict:
         "float": {"owned": [], "equipped": None},
         "treasure_dex": {},
         "flags": {"eldra_escape_tutorial": False},
+        "buffs": {"lucky_casts": 0, "lunch_until": 0.0},  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
     }
 
 
@@ -193,10 +195,94 @@ class SaveGame:
     def equipped(self, kind: str) -> dict:
         if kind == "bait":
             return baits()[self.data["gear"]["bait"]]
-        return find_gear(kind, self.data["gear"][kind])
+        gid = self.data["gear"][kind]
+        if self.owns_treasure(kind, gid):
+            return self.treasure_gear(kind, gid)
+        return find_gear(kind, gid)
 
     def owns(self, kind: str, item_id: str) -> bool:
-        return item_id in self.data["owned"][kind]
+        return item_id in self.data["owned"][kind] or self.owns_treasure(kind, item_id)
+
+    # ── 상자 아이템 (Phase E) ──
+    def owns_treasure(self, kind: str, item_id: str) -> bool:
+        if item_id not in self.data["items"]["owned"]:
+            return False
+        from src.save.treasure import item_info
+        return item_info(item_id)["kind"] == kind
+
+    def top_continent(self) -> str:
+        return "eldrasion" if "eldrasion" in self.data["unlocked_continents"] else "sharmion"
+
+    def treasure_gear(self, kind: str, item_id: str) -> dict:
+        """상자 장비의 실제 수치. 기본 = 대륙 상점 최고 티어 (전설은 지금 열린 가장 높은 대륙 기준으로 자동 상향,
+        특별은 얻은 대륙 기준). 대가(-5%)는 그대로 유지. 상점 최고 티어를 넘지 않는다."""
+        from src.save.treasure import item_info
+        it = item_info(item_id)
+        cont = self.top_continent() if it["grade"] == "legend" else \
+            self.data["items"].get("origin", {}).get(item_id, "sharmion")
+        top = TOP_TIER[cont]
+        base = max((g for g in equipment()[kind] if g["tier"] <= top), key=lambda g: g["tier"])
+        g = copy.deepcopy(base)
+        g.pop("continent", None)
+        g.pop("scales", None)
+        g.update(id=item_id, name=it["name"], desc=it["desc"], price=0, treasure=True)
+        if item_id == "dragon_scale_rod":
+            lo, hi = g["green"]
+            c, w = (lo + hi) / 2, (hi - lo) * 0.95
+            g["green"] = [round(c - w / 2, 1), round(c + w / 2, 1)]
+        elif item_id == "ancient_reel":
+            g["speed"] = round(g["speed"] * 0.95, 3)
+        return g
+
+    def charm_slots(self) -> int:
+        return 2 if "eldrasion" in self.data["unlocked_continents"] else 1
+
+    def charms(self) -> list:
+        ch = self.data["items"].setdefault("charms", [None])
+        n = self.charm_slots()
+        while len(ch) < n:
+            ch.append(None)
+        return ch[:n]
+
+    def charm_on(self, item_id: str) -> bool:
+        return item_id in self.charms()
+
+    def toggle_charm(self, item_id: str) -> str:
+        """장착/해제. 칸이 꽉 찼으면 첫 칸을 바꾼다."""
+        ch = self.charms()
+        full = self.data["items"]["charms"]
+        if item_id in ch:
+            full[full.index(item_id)] = None
+            return "off"
+        for i, v in enumerate(ch):
+            if v is None:
+                full[i] = item_id
+                return "on"
+        full[0] = item_id
+        return "on"
+
+    def cosmetic_on(self, item_id: str) -> bool:
+        return self.data["items"].get("cosmetic") == item_id
+
+    def toggle_cosmetic(self, item_id: str) -> None:
+        items = self.data["items"]
+        items["cosmetic"] = None if items.get("cosmetic") == item_id else item_id
+
+    def consumable_count(self, item_id: str) -> int:
+        return self.data["items"]["consumables"].get(item_id, 0)
+
+    def use_consumable(self, item_id: str) -> bool:
+        cons = self.data["items"]["consumables"]
+        if cons.get(item_id, 0) <= 0:
+            return False
+        cons[item_id] -= 1
+        return True
+
+    def lunch_active(self) -> bool:
+        return self.data["playtime"] < self.data["buffs"].get("lunch_until", 0.0)
+
+    def sale_price(self, item: dict) -> int:
+        return int(round(item["price"] * (1.1 if self.lunch_active() else 1.0)))
 
     def enhance_level(self, item_id: str) -> int:
         return self.data["enhance"].get(item_id, 0)
@@ -206,12 +292,21 @@ class SaveGame:
         lvl = self.enhance_level(item["id"]) if self.owns(kind, item["id"]) else 0
         return enhanced(kind, item, lvl)
 
-    def fight_gear(self) -> dict:
-        """Fight에 넘길 장비 수치 (강화 반영)."""
+    def fight_gear(self, period: str = "day") -> dict:
+        """Fight에 넘길 장비 수치 (강화 + 상자 아이템 효과 반영)."""
         rod, reel, line, net = (self.effective(k, self.equipped(k)) for k in GEAR_KINDS)
-        return {"rod_green": list(rod["green"]), "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
+        green = list(rod["green"])
+        if rod["id"] == "moon_rod" and period in ("night", "day"):
+            # 달빛 낚싯대: 밤 +10%, 낮 -5%
+            k = 1.10 if period == "night" else 0.95
+            c, w = (green[0] + green[1]) / 2, (green[1] - green[0]) * k
+            green = [c - w / 2, c + w / 2]
+        return {"rod_green": green, "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
                 "line_max": line["durability"], "net_window_sec": net["window"],
-                "net_fail_distance": net["fail_distance"]}
+                "net_fail_distance": net["fail_distance"],
+                "line_red_mult": 0.9 if self.charm_on("warm_gloves") else 1.0,
+                "perfect_heal": 0.10 if rod["id"] == "dragon_scale_rod" else 0.0,
+                "auto_drag": reel["id"] == "ancient_reel"}
 
     def gear_tier(self, kind: str) -> int:
         """장착한 장비 티어 (전설 미끼처럼 티어 없는 미끼는 0)."""
@@ -321,9 +416,10 @@ class SaveGame:
         if not 0 <= index < len(self.data["keepnet"]):
             return 0
         item = self.data["keepnet"].pop(index)
-        self.data["money"] += item["price"]
-        self.data["stats"]["earned"] += item["price"]
-        return item["price"]
+        price = self.sale_price(item)
+        self.data["money"] += price
+        self.data["stats"]["earned"] += price
+        return price
 
     def disassemble_yield(self, index: int) -> dict | None:
         """분해하면 얻는 소재 {대륙: n, 'rare': n}. 전설은 분해 불가 (None)."""
@@ -350,7 +446,7 @@ class SaveGame:
         return got
 
     def sell_all(self) -> int:
-        total = sum(it["price"] for it in self.data["keepnet"])
+        total = sum(self.sale_price(it) for it in self.data["keepnet"])
         self.data["money"] += total
         self.data["stats"]["earned"] += total
         self.data["keepnet"].clear()

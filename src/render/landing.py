@@ -45,7 +45,7 @@ def _ease_out(k: float) -> float:
 
 
 class LandingCinematic:
-    def __init__(self, fish: dict, size_cm: float, start_x: float, chest: str | None = None):
+    def __init__(self, fish: dict, size_cm: float, start_x: float, chest: str | None = None, golden: bool = False):
         self.fish = fish
         self.chest = chest  # 보물상자 등급 (물고기가 물고 나온다)
         self.chest_color = None
@@ -64,6 +64,9 @@ class LandingCinematic:
         self.fired: set[str] = set()
         self.hold = 0.0
         self.glow = RARITY_GLOW.get(fish["rarity"], (255, 255, 255))
+        self.golden = golden  # 황금 뜰채: 금빛 포획 연출
+        if golden:
+            self.glow = (255, 214, 90)
         self.tier = TIER.get(fish["rarity"], 0)
         self.t_apex = T_LIFT + RISE_SEC[self.tier]
         self.t_flash = self.t_apex + APEX_HOLD[self.tier]
@@ -322,7 +325,7 @@ class LandingCinematic:
             flash = max(flash, clamp((t - (self.t_flash - 0.22)) / 0.22, 0, 1))
         if flash > 0.01:
             fl = pygame.Surface((w, h))
-            fl.fill((255, 245, 200) if tier >= 3 else (255, 255, 250))
+            fl.fill((255, 245, 200) if tier >= 3 or self.golden else (255, 255, 250))
             fl.set_alpha(int(255 * flash))
             canvas.blit(fl, (0, 0))
 
