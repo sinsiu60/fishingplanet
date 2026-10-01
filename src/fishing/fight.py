@@ -24,6 +24,7 @@ class Fight:
                  gear: dict | None = None, rnd: random.Random | None = None, hazards: list | None = None):
         root = load_json("fishing_config.json")
         self.cfg = root["fight"]
+        self.fcfg = root["flick"]
         self.gear = gear or root["default_gear"]
         self.rnd = rnd or random.Random()
         self.fish = fish
@@ -63,6 +64,11 @@ class Fight:
         self.creak_t = 0.0
         self.dip_t = 0.0
         self.last_judge = ""
+        self.last_judge_kind = ""   # "dip"(우클릭) / "swipe"(슬라이드)
+        self.last_flick_dir = 0
+        # 방향 전환 꺾기: {"need": 필요한 방향, "done": 판정 끝}
+        self.turn_flick: dict | None = None
+        self.turn_mult = 1.0
         # 환경 위협 (수초·바위): 구역 안에 있으면 줄 걸림 게이지 증가
         self.hazards = hazards or []
         self.snag = 0.0
@@ -126,7 +132,8 @@ class Fight:
             return
         b = self.brain
         cfg = self.cfg
-        if b.state == "jump" and not b.jump_judged:
+        self.last_judge_kind = "dip"
+        if b.state == "jump" and b.jump_kind == "dip" and not b.jump_judged:
             b.jump_judged = True
             off = b.time_to_apex()  # + 면 이름, - 면 늦음
             if abs(off) <= cfg["perfect_window_sec"]:
@@ -143,6 +150,65 @@ class Fight:
     def net_pause(self) -> float:
         """멈춤 길이 = 판정 창 전체 (보이는 '멈춘 순간'과 판정이 정확히 일치하도록)."""
         return self.gear["net_window_sec"] * 2 + self.cfg["net_pause_grace_sec"]
+
+    def flick(self, direction: int) -> None:
+        """마우스를 좌우로 확 슬라이드. 방향 전환 꺾기 / 몸털기 점프 받아치기."""
+        if self.phase != "fight" or direction == 0:
+            return
+        b = self.brain
+        fc = self.fcfg
+        self.last_flick_dir = direction
+        # 1) 몸털기 점프: 정점에서 물고기가 몸을 던지는 반대쪽으로
+        if b.state == "jump" and b.jump_kind == "swipe" and not b.jump_judged:
+            if direction != -b.leap_dir:
+                return  # 엉뚱한 쪽은 무시 (흔들다 실수로 판정되지 않게)
+            b.jump_judged = True
+            self.last_judge_kind = "swipe"
+            off = b.time_to_apex()
+            if abs(off) <= self.cfg["perfect_window_sec"]:
+                self._perfect()
+            elif abs(off) <= self.cfg["good_window_sec"]:
+                self._good()
+            else:
+                self._miss("miss_early" if off > 0 else "miss_late")
+            return
+        # 2) 방향 전환 꺾기: 전환하는 순간 반대쪽으로
+        tf = self.turn_flick
+        off = b.turn_offset()
+        if tf and not tf["done"] and off is not None and off >= -fc["turn_before_sec"] and direction == tf["need"]:
+            tf["done"] = True
+            perfect = abs(off) <= fc["turn_perfect_sec"]
+            self.turn_mult = fc["turn_ok_lateral"]
+            self.tension = max(0.0, self.tension - fc["turn_ok_tension_relief"])
+            self.stamina -= fc["turn_perfect_stamina"] if perfect else fc["turn_ok_stamina"]
+            if perfect:
+                self.brain.lose_burst(0.1)
+                self.perfects += 1
+                self.perfect_streak += 1
+            self.events.append("flick_perfect" if perfect else "flick_good")
+
+    def _update_turn_flick(self) -> None:
+        """꺾기 창을 놓치면 물고기가 확 끌고 간다."""
+        b = self.brain
+        tf = self.turn_flick
+        off = b.turn_offset()
+        if off is None:
+            if not (b.state == "telegraph" and b.pending == "turn"):
+                self.turn_mult = 1.0
+            return
+        if tf is None or tf.get("turn_id") != b.turn_count:
+            self.turn_flick = tf = {"need": -b.turn_dir, "done": False, "turn_id": b.turn_count}
+            self.turn_mult = 1.0
+        if not tf["done"] and off > self.fcfg["turn_after_sec"]:
+            tf["done"] = True
+            fc = self.fcfg
+            self.turn_mult = fc["turn_fail_lateral"]
+            self.tension += fc["turn_fail_tension"]
+            self.hook += fc["turn_fail_hook"]
+            self.misses += 1
+            self.perfect_streak = 0
+            self.last_judge = "flick_miss"
+            self.events.append("flick_miss")
 
     def net_click(self) -> None:
         if self.phase != "net":
@@ -205,6 +271,8 @@ class Fight:
             self.events.append(ev)
         b.events.clear()
 
+        self._update_turn_flick()
+
         # 낚싯대 방향: 물고기(또는 방향 전환 쪽) 반대로 버티면 이득
         if (b.state == "turn") or (b.state == "telegraph" and b.pending == "turn"):
             side = float(b.turn_dir)
@@ -254,7 +322,7 @@ class Fight:
 
         # 좌우 이동
         if b.state == "turn":
-            lateral = b.turn_dir * b.turn_speed
+            lateral = b.turn_dir * b.turn_speed * self.turn_mult
             if self.align < 0:
                 lateral *= 1 - cfg["rod_align_lateral"] * (-self.align)
             self.angle += lateral * dt

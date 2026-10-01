@@ -50,7 +50,8 @@ DRAGON_LOOK = {"colors": {"body": [200, 40, 40], "belly": [255, 214, 110], "fin"
 TIPS = {
     "telegraph:rush": "꼬리 물보라 = 돌진! Q로 드랙을 낮추세요",
     "telegraph:jump": "그림자가 커진다 = 점프! 원이 겹치는 순간 우클릭",
-    "telegraph:turn": "줄이 쏠린다 = 방향 전환! 마우스를 반대쪽으로",
+    "telegraph:turn": "줄이 쏠린다 = 방향 전환! 꺾는 순간 반대쪽으로 확 슬라이드",
+    "telegraph:leap": "하늘색 원 = 몸털기! 원이 겹칠 때 화살표 쪽으로 슬라이드",
     "action:charge": "멈췄다 = 힘 모으기! 지금 확 감으세요",
     "tired": "지쳤다! 드랙을 올리고(E) 크게 감으세요",
     "fake_tired": "기포가 계속 올라온다 = 가짜 지침! 돌진 대비",
@@ -108,6 +109,9 @@ class FishingScene(Scene):
         self.dragon_k = 0.0      # '등용' 3페이즈: 진홍빛 하늘
         self.dragon_fx: DragonTransform | None = None
         self.embers = Embers()
+        self.flick_hist: list[tuple[float, int]] = []   # (시간, 마우스 x) — 슬라이드 감지
+        self.flick_cd = 0.0
+        self.flick_cfg = self.fish_cfg["flick"]
         self.catch_news: dict | None = None
         self.ink_t = 0.0
         self.fake_bubble_t = 0.0
@@ -581,6 +585,8 @@ class FishingScene(Scene):
                     self.sfx.play("perfect", 0.6)
             return
         reeling = pygame.mouse.get_pressed()[0] and f.phase == "fight"
+        if f.phase == "fight":
+            self._detect_flick(dt)
         f.update(dt, reeling, aim)
         x, z = f.fish_xz()
         self.cast.bx, self.cast.bz = x, z
@@ -618,6 +624,12 @@ class FishingScene(Scene):
             self.ripples.spawn(x + math.sin(back) * 0.4, z + math.cos(back) * 0.4, size=0.45, life=0.7)
             if p:
                 self.droplets.burst(p[0] + random.uniform(-3, 3), p[1], max(0.5, p[2] / 25), count=4)
+        elif sig == "leap" and p and self.ink_t <= 0 and not b.dark:
+            # 몸털기 점프 예고: 그림자 커짐 + 몸을 던질 쪽으로 튀는 물보라
+            self.bubbles.spawn(p[0], p[1], max(3.0, f.fish["shadow_len_m"] * p[2]))
+            if self.fx_t > 0.1:
+                self.fx_t = 0.0
+                self.droplets.burst(p[0], p[1], max(0.5, p[2] / 25), count=3, lateral=b.leap_dir * 50)
         elif sig == "jump" and p and self.ink_t <= 0 and not b.dark:
             # 그림자 커짐 + 기포
             self.bubbles.spawn(p[0], p[1], max(3.0, f.fish["shadow_len_m"] * p[2]))
@@ -653,6 +665,45 @@ class FishingScene(Scene):
             self.landing = None
             self.end_t = 0.0
             self.sfx.play("catch")
+
+    def _detect_flick(self, dt: float) -> None:
+        """마우스를 짧은 시간에 좌우로 크게 움직이면 슬라이드(꺾기)."""
+        fc = self.flick_cfg
+        self.flick_cd = max(0.0, self.flick_cd - dt)
+        self.flick_hist.append((self.t, self.mouse[0]))
+        self.flick_hist = [(tt, x) for tt, x in self.flick_hist if self.t - tt <= fc["sec"]]
+        if self.flick_cd > 0 or len(self.flick_hist) < 2:
+            return
+        dx = self.flick_hist[-1][1] - self.flick_hist[0][1]
+        if abs(dx) >= fc["px"]:
+            d = 1 if dx > 0 else -1
+            self.flick_cd = fc["cooldown_sec"]
+            self.flick_hist.clear()
+            self.sfx.play("cast", 0.3)  # 휘두르는 소리 (판정과 상관없이)
+            self.fight.flick(d)
+
+    def _swipe_vfx(self, perfect: bool) -> None:
+        """꺾기·몸털기 받아치기 성공: 참격 + 휘청 + 옆으로 튀는 물보라 + 채찍 소리."""
+        f = self.fight
+        d = f.last_flick_dir or 1
+        pos = self._fish_screen()
+        mpos = self.screen_fx.map(pos)
+        self.screen_fx.slash(d, mpos[1] - 6, perfect)
+        x, z = f.fish_xz()
+        p = self.cam.project(x, z)
+        if p:
+            self.droplets.burst(p[0], p[1], max(0.8, p[2] / 18), count=22 if perfect else 12, lateral=d * 70)
+        self.ripples.spawn(x, z, size=0.9, life=1.0, rings=2)
+        self.sparkles.burst(*pos, count=30 if perfect else 14, speed=1.5 if perfect else 1.0)
+        self.sfx.play("whip", 1.0)
+        if perfect:
+            self.sfx.play("perfect", 0.9)
+            self.sfx.play("impact", 0.7)
+            self.game.slowmo(0.18, 0.25)  # 히트스톱
+            self.shake_kick = 2.5
+        else:
+            self.sfx.play("great", 0.7)
+            self.shake_kick = 1.4
 
     def _update_reel_sound(self) -> None:
         name = None
@@ -771,6 +822,23 @@ class FishingScene(Scene):
             self.jump_facing = -1 if f.fish_side() > 0 else 1
             self.sfx.play("splash", 0.7)
             self._splash_at(x, z, 0.8)
+        elif ev == "telegraph:leap":
+            self.sfx.play("bubbles", 0.8)
+            self.sfx.play("splash_small", 0.5)
+        elif ev == "action:leap":
+            self.jump_facing = f.brain.leap_dir  # 몸을 던지는 쪽으로 비튼다
+            self.sfx.play("splash", 0.8)
+            self._splash_at(x, z, 0.9)
+        elif ev in ("flick_perfect", "flick_good"):
+            self._swipe_vfx(ev == "flick_perfect")
+            self.popups.add(ev, self._fish_screen(), f.perfect_streak if ev == "flick_perfect" else 0)
+        elif ev == "flick_miss":
+            pos = self._fish_screen()
+            self.sfx.play("miss")
+            self.sfx.play("scrape", 1.0)
+            self.popups.add("flick_miss", pos)
+            self.screen_fx.miss(self.screen_fx.map(pos))
+            self.shake_kick = 3.0
         elif ev == "jump_land":
             self.sfx.play("splash", 0.9)
             self._splash_at(x, z, 1.0)
@@ -781,6 +849,14 @@ class FishingScene(Scene):
             self.toasts.show("아직 힘이 남았다! 다시 도망친다", BAD, 1.8, 11)
         elif ev == "exhausted":
             self.toasts.show("완전히 지쳤다! 끝까지 감으세요", GOOD, 2.0, 11)
+        elif ev == "perfect" and f.last_judge_kind == "swipe":
+            self._swipe_vfx(True)
+            pos = self._fish_screen()
+            self.screen_fx.perfect(self.screen_fx.map(pos))
+            self.popups.add("swipe_perfect", pos, f.perfect_streak)
+        elif ev == "good" and f.last_judge_kind == "swipe":
+            self._swipe_vfx(False)
+            self.popups.add("swipe_good", self._fish_screen())
         elif ev == "perfect":
             # 퍼펙트: 섬광 + 충격파 + 빛줄기 + 줌 펀치 + 큰 반짝임 + 슬로우 + 묵직한 타격음
             pos = self._fish_screen()
@@ -979,7 +1055,7 @@ class FishingScene(Scene):
             heading += b.turn_dir * 1.2
         wag = {"rush": 22.0, "idle": 12.0, "telegraph": 14.0, "turn": 16.0, "recover": 8.0,
                "tired": 3.0, "fake_tired": 3.0, "charge": 0.0, "exhausted": 2.0}.get(b.state, 10.0)
-        scale = 1.0 + 0.9 * b.signal_progress() if b.signal == "jump" else 1.0
+        scale = 1.0 + 0.9 * b.signal_progress() if b.signal in ("jump", "leap") else 1.0
         alpha = 0.0 if b.state == "jump" else 0.7 if b.state in ("tired", "fake_tired", "exhausted") else 1.0
         if f.fish["rarity"] == "legend":
             scale *= self.fish_cfg["legend"]["shadow_scale"] * 0.55
@@ -1050,7 +1126,9 @@ class FishingScene(Scene):
         mapped = self.screen_fx.map(self._fish_screen())
         inked = self.ink_t > 0 or b.dark
         sig = b.signal
-        if sig in ("rush", "turn"):
+        prompt_on = (f.turn_flick is not None and not f.turn_flick["done"] and b.turn_offset() is not None
+                     and b.turn_offset() >= -(self.flick_cfg["turn_before_sec"] + 0.35))
+        if sig == "rush" or (sig == "turn" and not prompt_on):
             fight_fx.draw_behavior_icon(canvas, mapped, sig, b.signal_progress(), b.turn_dir, t)
         if sig == "turn" or b.state == "turn":
             amount = b.signal_progress() if sig == "turn" else 1.0
@@ -1060,8 +1138,24 @@ class FishingScene(Scene):
             fight_fx.draw_behavior_icon(canvas, mapped, "charge", prog, 0, t)
         elif b.state in ("tired", "fake_tired", "exhausted"):
             fight_fx.draw_behavior_icon(canvas, mapped, "tired", 0.0, 0, t)
+        # 방향 전환 꺾기 프롬프트
+        tf, off = f.turn_flick, b.turn_offset()
+        fc = self.flick_cfg
+        if tf and not tf["done"] and off is not None and off >= -(fc["turn_before_sec"] + 0.35):
+            fight_fx.draw_turn_prompt(canvas, mapped, tf["need"], off, fc["turn_before_sec"], fc["turn_after_sec"],
+                                      fc["turn_perfect_sec"], t)
+        # 몸털기 점프: 하늘색 원 + 슬라이드 방향 화살표
+        swiping = b.state == "jump" and b.jump_kind == "swipe" and not b.jump_judged
+        if (sig == "leap" and not inked) or swiping:
+            x, z = f.fish_xz()
+            apex = self.cam.project(x, z, b.jump_height)
+            if apex:
+                total = b.cur_telegraph + b.jump_air / 2
+                fcf = self.fish_cfg["fight"]
+                fight_fx.draw_swipe_ring(canvas, self.screen_fx.map((apex[0], apex[1])), b.time_to_apex(), total,
+                                         fcf["perfect_window_sec"], fcf["good_window_sec"], -b.leap_dir, t)
         # 점프 판정 원: 바깥 원이 줄어들어 판정 원과 만나는 순간 = 정점
-        jumping = b.state == "jump" and not b.jump_judged
+        jumping = b.state == "jump" and b.jump_kind == "dip" and not b.jump_judged
         if (sig == "jump" and not inked and not f.pre_judged) or jumping:
             x, z = f.fish_xz()
             apex = self.cam.project(x, z, b.jump_height)

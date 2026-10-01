@@ -48,12 +48,12 @@ class Droplets:
     def __init__(self):
         self.items: list[list[float]] = []
 
-    def burst(self, x: float, y: float, scale: float, count: int = 10) -> None:
+    def burst(self, x: float, y: float, scale: float, count: int = 10, lateral: float = 0.0) -> None:
         sp = clamp(scale, 0.3, 3.0)
         for _ in range(count):
             self.items.append([
                 x, y,
-                random.uniform(-25, 25) * sp,
+                (random.uniform(-25, 25) + lateral) * sp,
                 random.uniform(-70, -30) * sp,
                 random.uniform(0.35, 0.7),
                 y,  # 수면 높이

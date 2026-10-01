@@ -145,7 +145,8 @@
       "rush": 0.3,
       "jump": 0.25,
       "turn": 0.2,
-      "charge": 0.15
+      "charge": 0.15,
+      "leap": 0.25
     },
     "idle_sec": [
       0.8,
@@ -207,5 +208,21 @@
     "phase_slowmo_real": 0.6,
     "phase_slowmo_scale": 0.35,
     "dragon_extra_pause_sec": 1.2
+  },
+  "flick": {
+    "_설명": "슬라이드(마우스를 좌우로 확 휘두르기) 판정. 방향 전환 꺾기 + 몸털기 점프.",
+    "px": 46,
+    "sec": 0.12,
+    "cooldown_sec": 0.22,
+    "turn_before_sec": 0.35,
+    "turn_after_sec": 0.4,
+    "turn_perfect_sec": 0.12,
+    "turn_ok_stamina": 6,
+    "turn_perfect_stamina": 10,
+    "turn_ok_tension_relief": 10,
+    "turn_ok_lateral": 0.3,
+    "turn_fail_lateral": 1.8,
+    "turn_fail_tension": 18,
+    "turn_fail_hook": 10
   }
 }

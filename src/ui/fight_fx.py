@@ -12,7 +12,8 @@ GOLD = (255, 214, 90)
 GREAT_COL = (130, 255, 180)
 MISS_COL = (255, 110, 95)
 ICON_COL = {"rush": (255, 150, 60), "jump": (110, 220, 255), "turn": (255, 230, 90), "charge": (210, 150, 255),
-            "tired": (110, 255, 140)}
+            "tired": (110, 255, 140), "leap": (120, 255, 240)}
+SWIPE = (120, 255, 240)
 
 RING_R = 13          # 판정 원 반지름
 RING_SPREAD = 58     # 예고 시작 시 접근 원이 판정 원보다 얼마나 큰지
@@ -109,6 +110,11 @@ class JudgePopups:
         "miss_early": ("빠름!", MISS_COL, 1.0),
         "miss_late": ("늦음!", MISS_COL, 1.0),
         "miss_none": ("놓침!", MISS_COL, 1.0),
+        "flick_perfect": ("PERFECT 꺾기!", GOLD, 2.0),
+        "flick_good": ("꺾기!", SWIPE, 1.6),
+        "flick_miss": ("꺾기 실패!", MISS_COL, 1.2),
+        "swipe_perfect": ("PERFECT!", SWIPE, 2.0),
+        "swipe_good": ("GREAT!", SWIPE, 1.6),
     }
 
     def __init__(self):
@@ -136,7 +142,9 @@ class JudgePopups:
             x = clamp(x, 60, canvas.get_width() - 60)
             if age > 0.85 and int(age * 20) % 2 == 0:
                 continue
-            big_text(canvas, it["text"], (x, y), it["color"], scale, outline=it["kind"] in ("perfect", "good"))
+            big_text(canvas, it["text"], (x, y), it["color"], scale,
+                     outline=it["kind"] in ("perfect", "good", "flick_perfect", "flick_good", "swipe_perfect",
+                                            "swipe_good"))
             if it["streak"] >= 2:
                 big_text(canvas, f"×{it['streak']} 연속", (x, y + 14 * scale * 0.6 + 6), GOLD, 1.0, outline=True)
 
@@ -212,3 +220,73 @@ def draw_turn_chevrons(canvas, pos, direction: int, amount: float, t: float) -> 
         pts = [(x - direction * 4, y0 - 6), (x + direction * 2, y0), (x - direction * 4, y0 + 6)]
         pygame.draw.lines(canvas, SHADOW, False, [(p[0] + 1, p[1] + 1) for p in pts], 2)
         pygame.draw.lines(canvas, col, False, pts, 2)
+
+
+# ───────────────────────── 슬라이드 (꺾기 · 몸털기) ─────────────────────────
+
+def _arrow(canvas, cx: float, cy: float, direction: int, length: float, color, width: int = 3) -> None:
+    x0, x1 = cx - direction * length / 2, cx + direction * length / 2
+    pygame.draw.line(canvas, SHADOW, (x0 + 1, cy + 1), (x1 + 1, cy + 1), width + 1)
+    pygame.draw.line(canvas, color, (x0, cy), (x1, cy), width)
+    head = length * 0.35
+    for sgn in (-1, 1):
+        pygame.draw.line(canvas, SHADOW, (x1 + 1, cy + 1), (x1 - direction * head + 1, cy + sgn * head * 0.7 + 1), width)
+        pygame.draw.line(canvas, color, (x1, cy), (x1 - direction * head, cy + sgn * head * 0.7), width)
+
+
+def draw_turn_prompt(canvas, pos, need: int, offset: float, before: float, after: float, perfect: float,
+                     t: float) -> None:
+    """방향 전환 꺾기: 물고기 옆 큰 화살표 + 타이밍 막대 (가운데 = 전환 순간 = PERFECT)."""
+    if pos is None:
+        return
+    x, y = pos
+    in_perfect = abs(offset) <= perfect
+    in_window = -before <= offset <= after
+    col = GOLD if in_perfect else (SWIPE if in_window else (200, 210, 220))
+    pulse = 1.0 + (0.25 * math.sin(t * 30) if in_window else 0.0)
+    _arrow(canvas, x + need * 34, y - 10, need, 30 * pulse, col, 3)
+    big_text(canvas, "확 꺾기!", (x + need * 34, y - 26), col, 1.0, outline=True)
+    # 타이밍 막대
+    bw = 70
+    bx, by = x + need * 34 - bw // 2, y + 6
+    canvas.fill(SHADOW, (bx - 1, by - 1, bw + 2, 7))
+    canvas.fill((30, 36, 56), (bx, by, bw, 5))
+    span = before + after
+    zero = bx + bw * before / span
+    pz = bw * perfect / span
+    canvas.fill((70, 140, 150), (bx + int(bw * 0 / span), by, int(bw * (before + after) / span), 5))
+    canvas.fill((60, 70, 90), (bx, by, int(zero - bx - pz), 5))
+    canvas.fill(GOLD, (int(zero - pz), by, max(2, int(pz * 2)), 5))
+    k = clamp((offset + before) / span, -0.4, 1.0)
+    mx = bx + bw * k
+    canvas.fill((255, 255, 255), (int(mx) - 1, by - 3, 3, 11))
+
+
+def draw_swipe_ring(canvas, center, time_to_apex: float, total: float, perfect_w: float, good_w: float,
+                    need: int, t: float) -> None:
+    """몸털기 점프: 하늘색 판정 원 + 안쪽 화살표. 원이 겹치는 순간 화살표 방향으로 슬라이드."""
+    if center is None or total <= 0:
+        return
+    cx, cy = int(center[0]), int(center[1])
+    k = RING_SPREAD / total
+    r_approach = RING_R + time_to_apex * k
+    if r_approach < RING_R - good_w * k - 2:
+        return
+    size = (RING_R + RING_SPREAD + 8) * 2
+    surf = pygame.Surface((size, size), pygame.SRCALPHA)
+    o = size // 2
+    good_out = int(RING_R + good_w * k)
+    pygame.draw.circle(surf, (*SWIPE, 40), (o, o), good_out)
+    pygame.draw.circle(surf, (0, 0, 0, 0), (o, o), max(2, int(RING_R - good_w * k)))
+    in_perfect = abs(time_to_apex) <= perfect_w
+    in_good = abs(time_to_apex) <= good_w
+    ring_col = lerp_color(SWIPE, (255, 255, 255), 0.5 + 0.5 * math.sin(t * 20)) if in_perfect else SWIPE
+    pygame.draw.circle(surf, (*ring_col, 255), (o, o), RING_R + 2, max(2, int(perfect_w * k * 2)))
+    if r_approach > 1:
+        col = (255, 255, 255) if not in_good else (GOLD if in_perfect else SWIPE)
+        pygame.draw.circle(surf, (*col, 230), (o, o), int(r_approach), 2)
+    canvas.blit(surf, (cx - o, cy - o))
+    _arrow(canvas, cx, cy, need, 16, (255, 255, 255) if not in_good else GOLD, 2)
+    if time_to_apex > 0.15:
+        big_text(canvas, "슬라이드", (cx + need * 6, cy + RING_R + 12), SWIPE, 1.0, outline=True)
+        _arrow(canvas, cx - need * 26, cy + RING_R + 12, need, 12, SWIPE, 2)

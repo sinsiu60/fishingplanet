@@ -379,6 +379,22 @@ def make_roar(rng) -> np.ndarray:
     return growl * 0.8 + noise * 0.5 + splash * 0.4
 
 
+def make_whip(rng) -> np.ndarray:
+    """꺾기: 날카로운 휘익 + 탁 (채찍)."""
+    sec = 0.32
+    n = int(RATE * sec)
+    noise = _noise(sec, rng)
+    band = _lowpass(noise, 2) - _lowpass(noise, 7)
+    t = np.linspace(0, 1, n)
+    swoosh = band * np.exp(-((t - 0.35) / 0.18) ** 2) * 2.4
+    crack = np.zeros(n)
+    s0 = int(0.11 * RATE)
+    c = _lowpass(_noise(0.03, rng), 1) * _env(int(RATE * 0.03), 0.0005, 0.006)
+    crack[s0:s0 + len(c)] = c
+    tone = _sweep(900, 1800, sec) * _env(n, 0.05, 0.06) * 0.12
+    return swoosh + crack * 0.9 + tone
+
+
 def make_miss(rng) -> np.ndarray:
     """실수: 낮은 쿵 + 줄 튕김."""
     sec = 0.35
@@ -500,6 +516,7 @@ class Sfx:
             "good": make_good(rng),
             "great": make_great(rng),
             "impact": make_impact(rng),
+            "whip": make_whip(rng),
             "rise": make_rise(rng),
             "click": make_click(rng),
             "amb_lake": make_amb_lake(rng),

@@ -6,7 +6,8 @@ stamina가 0이면: exhausted (끝까지 저항 거의 없음)
 
 모든 행동 앞에는 예고(telegraph)가 있다. (DESIGN.md 0장 공정함 규칙 1)
   rush  ← 꼬리 물보라
-  jump  ← 그림자 커짐 + 기포
+  jump  ← 그림자 커짐 + 기포 (정점에 우클릭)
+  leap  ← 그림자 커짐 + 한쪽으로 튀는 물보라 (몸털기 점프: 정점에 반대쪽으로 슬라이드)
   turn  ← 줄 쏠림
   charge(힘 모으기)는 "멈춤" 자체가 신호이며, 끝나면 예고 후 돌진한다.
 
@@ -58,6 +59,9 @@ class FishBrain:
         self.state_t = 0.0
         self.burst = 1.0
         self.turn_dir = 1
+        self.leap_dir = 1           # 몸털기 점프 때 몸을 던지는 쪽
+        self.turn_count = 0         # 방향 전환 예고 횟수 (꺾기 판정 구분용)
+        self.jump_kind = "dip"      # dip: 우클릭 점프 / swipe: 슬라이드 점프
         self.cover_dir = 0          # Fight가 매 틱 알려줌: 가장 가까운 위협 구역 방향 (-1/0/1)
         self.chain_left = 0
         self.chain_action: str | None = None
@@ -155,11 +159,21 @@ class FishBrain:
         """점프 정점까지 남은 시간 (음수면 지남). 점프 예고 중이면 예고 남은 시간 포함."""
         if self.state == "jump":
             return self.jump_air / 2 - self.state_t
-        if self.state == "telegraph" and self.pending == "jump":
+        if self.state == "telegraph" and self.pending in ("jump", "leap"):
             return (self.cur_telegraph - self.state_t) + self.jump_air / 2
         return 999.0
 
+    def turn_offset(self) -> float | None:
+        """방향 전환 시작 시각 기준 지금 시간 (예고 중이면 음수). 전환과 상관없으면 None."""
+        if self.state == "telegraph" and self.pending == "turn":
+            return -(self.cur_telegraph - self.state_t)
+        if self.state == "turn":
+            return self.state_t
+        return None
+
     def display_name(self) -> str:
+        if self.state == "jump" and self.jump_kind == "swipe":
+            return "몸털기!"
         return STATE_NAMES[self.state]
 
     # ── 외부 개입 ──
@@ -182,6 +196,10 @@ class FishBrain:
 
     def _begin_telegraph(self, action: str, duration: float | None = None, turn_dir: int | None = None) -> None:
         self.pending = action
+        if action == "leap":
+            self.leap_dir = self.rnd.choice((-1, 1))
+        if action == "turn":
+            self.turn_count += 1
         if action == "turn":
             if turn_dir is not None:
                 self.turn_dir = turn_dir
@@ -205,8 +223,9 @@ class FishBrain:
         self.pending = None
         if action == "rush":
             self._enter("rush", self.rush_sec)
-        elif action == "jump":
+        elif action in ("jump", "leap"):
             self.jump_judged = False
+            self.jump_kind = "dip" if action == "jump" else "swipe"
             self._enter("jump", cfg["jump_air_sec"])
         elif action == "turn":
             self._enter("turn", self.turn_sec)
@@ -248,7 +267,7 @@ class FishBrain:
             self._start_action(self.pending)
         elif s == "jump":
             self.events.append("jump_land")
-            self._after_action("jump")
+            self._after_action("jump" if self.jump_kind == "dip" else "leap")
         elif s == "charge":
             # 힘을 모았다가 돌진 (예고 후)
             self._begin_telegraph("rush")

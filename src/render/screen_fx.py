@@ -42,6 +42,9 @@ class ScreenFX:
         self.sway = 0             # 배 위: 1이면 화면이 천천히 출렁
         self.legend = False       # 전설 등장 중: 금빛 테두리 맥동
         self.legend_color = (255, 196, 70)
+        self.whip_v = 0.0         # 꺾기: 화면이 휙 휘청 (패닝 충격)
+        self.whip_x = 0.0
+        self.slashes: list[list] = []
         self.v_legend = 0.0
         self.enabled = True
         # 테두리 효과 세기 0~1
@@ -98,6 +101,20 @@ class ScreenFX:
         self.flash_color = (255, 60, 50)
         self.shockwaves.append([pos[0], pos[1], 0.0, (255, 80, 70), 0.3, 1])
 
+    def slash(self, direction: int, y: float, perfect: bool) -> None:
+        """꺾기 성공: 슬라이드 방향으로 화면을 가르는 참격 + 휘청."""
+        self.slashes.append([direction, y, 0.0, perfect])
+        if perfect:
+            self.slashes.append([direction, y - 14, -0.04, perfect])
+        self.whip_v += direction * (420 if perfect else 260)
+        self.punch = max(self.punch, 0.05 if perfect else 0.025)
+        self.flash = max(self.flash, 0.35 if perfect else 0.15)
+        self.flash_color = (220, 250, 255)
+        # 가로 집중선
+        for _ in range(26 if perfect else 14):
+            self.speed_lines.append([math.pi if direction > 0 else 0.0, random.uniform(0.8, 1.05),
+                                     random.uniform(0.3, 0.6), 0.0, random.uniform(0.12, 0.22)])
+
     def reset(self) -> None:
         self.v_rush = self.v_jump = self.v_charge = self.v_tired = self.v_red = self.v_turn = 0.0
         self.speed_lines.clear()
@@ -106,6 +123,12 @@ class ScreenFX:
     def update(self, dt: float, fight, fish_pos) -> None:
         self.t += dt
         self.punch = max(0.0, self.punch - dt * 0.35)
+        # 휘청: 스프링으로 제자리
+        self.whip_v += (-self.whip_x * 260 - self.whip_v * 18) * dt
+        self.whip_x += self.whip_v * dt
+        for sl in self.slashes:
+            sl[2] += dt
+        self.slashes = [sl for sl in self.slashes if sl[2] < 0.38]
         self.flash = max(0.0, self.flash - dt * 3.0)
         for s in self.shockwaves:
             s[2] += dt
@@ -126,8 +149,8 @@ class ScreenFX:
                 k = prog if sig == "rush" else 1.0
                 zoom_t = lerp(BASE_FIGHT_ZOOM, 1.0, k)  # 뒤로 확 당겨지는 느낌
                 tgt["rush"] = 0.35 + 0.65 * k
-            elif sig == "jump" or state == "jump":
-                k = prog if sig == "jump" else 1.0
+            elif sig in ("jump", "leap") or state == "jump":
+                k = prog if sig in ("jump", "leap") else 1.0
                 zoom_t = lerp(BASE_FIGHT_ZOOM, 1.09, k)
                 focus_k = 0.55 * k
                 tgt["jump"] = 0.4 + 0.6 * k
@@ -187,13 +210,17 @@ class ScreenFX:
     def apply_camera(self, canvas: pygame.Surface) -> None:
         z = self.zoom + self.punch
         tilt = self.tilt
-        if abs(z - 1.0) < 0.002 and abs(self.pan_x) < 0.3 and abs(tilt) < 0.05:
+        pan = self.pan_x + (self.whip_x if self.enabled else 0.0)
+        tilt += self.whip_x * 0.08 if self.enabled else 0.0
+        if abs(z - 1.0) < 0.002 and abs(pan) < 0.3 and abs(tilt) < 0.05:
             self._map = None
             return
         w, h = self.w, self.h
         z = max(z, 1.0 + abs(tilt) * 0.035)  # 기울일 때 빈 모서리가 안 보이게
         sw, sh = w / z, h / z
-        left = clamp(self.focus[0] - sw / 2 + self.pan_x, 0, w - sw)
+        z = max(z, 1.0 + abs(pan) / w * 2.2)
+        sw, sh = w / z, h / z
+        left = clamp(self.focus[0] - sw / 2 + pan, 0, w - sw)
         top = clamp(self.focus[1] - sh / 2, 0, h - sh)
         rect = pygame.Rect(int(left), int(top), int(math.ceil(sw)), int(math.ceil(sh)))
         rect = rect.clip(canvas.get_rect())
@@ -260,6 +287,22 @@ class ScreenFX:
             p0 = (cx + ex * rx * r0 * 1.2, cy + ey * ry * r0 * 1.2)
             p1 = (cx + ex * rx * (r0 * 1.2 - ln), cy + ey * ry * (r0 * 1.2 - ln))
             pygame.draw.line(layer, (255, 248, 230, int(230 * k)), p0, p1, 2 if ln > 0.35 else 1)
+        # 참격 (꺾기·몸털기 받아치기)
+        for d, y, age, perfect in self.slashes:
+            if age < 0:
+                continue
+            sweep = clamp(age / 0.12, 0, 1)
+            fade = 1 - clamp((age - 0.12) / 0.26, 0, 1)
+            x0 = -20 if d > 0 else w + 20
+            x1 = x0 + d * (w + 40) * sweep
+            thick = (10 if perfect else 6) * fade
+            col = (255, 240, 170) if perfect else (180, 240, 255)
+            mid = (x0 + x1) / 2
+            poly = [(x0, y), (mid, y - thick), (x1, y - 1), (x1, y + 1), (mid, y + thick * 0.6)]
+            pygame.draw.polygon(layer, (*col, int(230 * fade)), poly)
+            pygame.draw.line(layer, (255, 255, 255, int(255 * fade)), (x0, y), (x1, y), 1)
+            # 꼬리 잔상
+            pygame.draw.line(layer, (*col, int(120 * fade)), (x0, y + 6), (x1 - d * 30, y + 5), 1)
         # 충격파 (퍼펙트·그레잇)
         for x, y, age, col, life, width in self.shockwaves:
             if age < 0:
