@@ -13,7 +13,7 @@
   "pity": {"special": 30, "legend": 100},
   "contents": {
     "common": [{"type": "gold", "mult": 1.5, "w": 50}, {"type": "materials", "n": [3, 5], "w": 35}, {"type": "item", "grade": "common", "w": 15}],
-    "rare": [{"type": "gold", "mult": 3.0, "w": 30}, {"type": "materials", "n": [6, 6], "rare": 1, "w": 30}, {"type": "item", "grade": "rare", "w": 40}],
+    "rare": [{"type": "gold", "mult": 2.0, "w": 30}, {"type": "materials", "n": [6, 6], "rare": 1, "w": 30}, {"type": "item", "grade": "rare", "w": 40}],
     "special": [{"type": "item", "grade": "special", "w": 75}, {"type": "item", "grade": "rare", "w": 25}],
     "legend": [{"type": "item", "grade": "legend", "w": 100}]
   },

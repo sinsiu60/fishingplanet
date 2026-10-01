@@ -85,6 +85,7 @@ class ShopScene(Scene):
             self.tabs.index = next(i for i, t in enumerate(TABS) if t[0] == tab)
         self.sel = 0
         self.scroll = 0
+        self.confirm = None  # 비늘 경고를 본 장비 id (한 번 더 누르면 구매)
         self.msg, self.msg_col, self.msg_t = "", ui.TEXT, 0.0
         self.close_btn = ui.Button((404, 244, 60, 16), "닫기 (B)", self._close)
         self.action_btn = ui.Button((DETAIL.x + 8, DETAIL.bottom - 40, DETAIL.w - 16, 17), "", self._action)
@@ -168,6 +169,14 @@ class ShopScene(Scene):
             self.game.sfx.play("click")
             self._say(f"{item['name']} 장착", ui.GOOD)
             return
+        need = self.save.scale_warning(item)
+        if need and self.confirm != item["id"]:
+            # 비늘을 써 버리면 다음 특수 찌를 못 살 수 있다 → 한 번 경고하고 다시 누르면 구매
+            self.confirm = item["id"]
+            self._say(f"특수 찌용 비늘이 모자라져요 (필요 {need}개) · 다시 누르면 구매", ui.BAD)
+            self.msg_t = 4.0
+            return
+        self.confirm = None
         result = self.save.buy(self.kind, item)
         if result == "ok":
             self.game.sfx.play("coin")
@@ -373,6 +382,14 @@ class ShopScene(Scene):
         else:
             self.action_btn.label = f"구매 ({it['price']:,}원)"
             self.action_btn.enabled = self.save.money >= it["price"] and self.save.data["scales"] >= it.get("scales", 0)
+            need = self.save.scale_warning(it)
+            if need:
+                text(canvas, f"주의: 남은 특수 찌에 비늘 {need}개 필요", (x, DETAIL.bottom - 58), ui.BAD, 11,
+                     "midleft")
+                if self.confirm == it["id"]:
+                    self.action_btn.label = "그래도 구매"
+        if self.confirm and self.confirm != it["id"]:
+            self.confirm = None
         self.action_btn.draw(canvas, self.mouse)
 
     def _draw_float(self, canvas, items, visible) -> None:

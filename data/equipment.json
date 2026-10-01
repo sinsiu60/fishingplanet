@@ -41,14 +41,14 @@
     {"id": "abyss_net", "name": "천해 뜰채", "tier": 8, "price": 266200, "window": 0.39, "fail_distance": 3.2, "continent": "eldrasion", "scales": 5, "desc": "닿는 것은 놓치지 않는다."}
   ],
   "_rules": {
-    "_설명": "강화(+1~+3, 실패 없음)와 분해. 강화는 능력치 좋은 방향으로 단계당 per_level. gold = 장비 가격 × gold_frac (가격 0이면 gold_free). 재료 = 장비 대륙 소재.",
+    "_설명": "강화(+1~+3, 실패 없음)와 분해. 강화는 능력치 좋은 방향으로 단계당 '다음 티어와의 차이 × gap_frac' (최고 티어는 아래 티어와의 차이, +3 = 차이의 90%라 다음 티어보다 낮음). 티어 없는 장비는 단계당 per_level. gold = 장비 가격 × gold_frac (가격 0이면 gold_free). 재료 = 장비 대륙 소재.",
     "enhance_kinds": [
       "rod",
       "reel",
       "line",
       "net"
     ],
-    "per_level": 0.03,
+    "per_level": 0.03, "gap_frac": 0.3,
     "max_level": 3,
     "gold_frac": [
       0.15,

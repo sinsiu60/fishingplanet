@@ -95,23 +95,47 @@ def spot_continent(spot_id: str) -> str:
     return "sharmion"
 
 
+def _stat(kind: str, g: dict) -> dict:
+    """강화 대상 능력치 (모두 '클수록 좋음'으로 맞춤: 실패 거리는 역수)."""
+    if kind == "rod":
+        return {"green": g["green"][1] - g["green"][0]}
+    if kind == "reel":
+        return {"speed": g["speed"]}
+    if kind == "line":
+        return {"durability": g["durability"]}
+    return {"window": g["window"], "fail_distance": 1.0 / g["fail_distance"]}
+
+
+def enhance_gain(kind: str, item: dict, level: int) -> dict:
+    """능력치별 배율. 단계당 '다음 티어와의 차이 × gap_frac' → +3이어도 다음 티어 기본 성능보다 조금 낮다.
+    최고 티어는 바로 아래 티어와의 차이를 쓴다. 티어를 모르는 장비는 단계당 per_level 고정."""
+    r = rules()
+    shop = {g["tier"]: g for g in equipment().get(kind, [])}
+    tier = item.get("tier")
+    if tier in shop and (tier + 1 in shop or tier - 1 in shop):
+        lo, hi = (shop[tier], shop[tier + 1]) if tier + 1 in shop else (shop[tier - 1], shop[tier])
+        a, b = _stat(kind, lo), _stat(kind, hi)
+        return {k: 1.0 + (b[k] / a[k] - 1.0) * r["gap_frac"] * level for k in a}
+    return {k: 1.0 + r["per_level"] * level for k in _stat(kind, item)}
+
+
 def enhanced(kind: str, item: dict, level: int) -> dict:
     """강화 단계만큼 능력치를 좋은 방향으로 올린 사본."""
     if level <= 0:
         return item
-    k = 1.0 + rules()["per_level"] * level
+    k = enhance_gain(kind, item, level)
     g = copy.deepcopy(item)
     if kind == "rod":
         lo, hi = g["green"]
-        c, w = (lo + hi) / 2, (hi - lo) * k
+        c, w = (lo + hi) / 2, (hi - lo) * k["green"]
         g["green"] = [round(c - w / 2, 1), round(c + w / 2, 1)]
     elif kind == "reel":
-        g["speed"] = round(g["speed"] * k, 3)
+        g["speed"] = round(g["speed"] * k["speed"], 3)
     elif kind == "line":
-        g["durability"] = round(g["durability"] * k)
+        g["durability"] = round(g["durability"] * k["durability"])
     elif kind == "net":
-        g["window"] = round(g["window"] * k, 3)
-        g["fail_distance"] = round(g["fail_distance"] / k, 2)
+        g["window"] = round(g["window"] * k["window"], 3)
+        g["fail_distance"] = round(g["fail_distance"] / k["fail_distance"], 2)
     return g
 
 
@@ -262,6 +286,19 @@ class SaveGame:
         need = spot.get("float_req", 0) + (1 if fish["rarity"] == "legend" else 0)
         return min(5, need)
 
+    def float_scales_needed(self) -> int:
+        """아직 안 산 특수 찌들에 드는 전설 비늘 합계."""
+        owned = self.data["float"]["owned"]
+        return sum(f.get("scales", 0) for f in load_json("floats.json")["floats"] if f["id"] not in owned)
+
+    def scale_warning(self, item: dict) -> int | None:
+        """비늘이 드는 장비를 사면 남은 특수 찌를 살 비늘이 모자라지는지. 모자라지면 필요한 비늘 수."""
+        cost = item.get("scales", 0)
+        need = self.float_scales_needed()
+        if cost and self.data["scales"] >= need and self.data["scales"] - cost < need:
+            return need
+        return None
+
     def buy_float(self, item: dict) -> str:
         fl = self.data["float"]
         if item["id"] in fl["owned"]:
@@ -395,10 +432,11 @@ class SaveGame:
             return "판매하지 않음"
         spot = bait.get("unlock_spot")
         if spot:
-            need = [f for f in all_fish() if f["spot"] == spot and f["rarity"] != "legend"]
+            # 일반~고급만 (희귀는 빠짐 — 전설 미끼가 너무 늦게 열리지 않게, DESIGN.md 25장)
+            need = [f for f in all_fish() if f["spot"] == spot and f["rarity"] in ("common", "uncommon")]
             missing = [f for f in need if f["id"] not in self.data["dex"]]
             if missing:
-                return f"이 낚시터 물고기 {len(need) - len(missing)}/{len(need)}종 포획 필요"
+                return f"이 낚시터 일반~고급 {len(need) - len(missing)}/{len(need)}종 포획 필요"
         return None
 
     def gear_locked_reason(self, item: dict) -> str | None:

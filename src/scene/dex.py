@@ -165,7 +165,7 @@ class DexScene(Scene):
                                      f" · 25m 이상 던지기")
                         lines.append("지도에서 날씨 예보를 확인하세요.")
                     else:
-                        lines.append("이 낚시터의 다른 물고기를 모두 잡으면 단서가 보인다.")
+                        lines.append("이 낚시터의 일반·고급 물고기를 모두 잡으면 단서가 보인다.")
                 yy = y + 46
                 for ln in lines:
                     for w in wrap_text(ln, d.w - 12):
