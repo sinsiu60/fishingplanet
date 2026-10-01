@@ -1,0 +1,17 @@
+{
+  "_설명": "미끼 (한 번 사면 영구, 하나씩 장착). boost = 물고기별 출현 가중치 배율, spot_boost = 낚시터 전체 배율, window_mult = 챔질 창 배율, nibble_delta = 가짜 입질 횟수 증감. unlock_spot = 그 낚시터의 일반~희귀를 모두 잡아야 판매. legend_for = 이 미끼가 필요한 전설.",
+  "baits": [
+    {"id": "worm", "name": "지렁이", "price": 0, "window_mult": 1.0, "boost": {"crucian": 1.3, "minnow": 1.3, "pale_chub": 1.3}, "desc": "어디서나 무난한 미끼. 민물 일반어가 좋아한다."},
+    {"id": "paste", "name": "떡밥", "price": 150, "window_mult": 1.1, "nibble_delta": -1, "boost": {"crucian": 2.0, "carp": 2.0, "golden_carp": 1.0}, "desc": "붕어·잉어가 잘 문다. 가짜 입질이 줄어든다."},
+    {"id": "spinner", "name": "스피너 루어", "price": 600, "window_mult": 1.0, "boost": {"bass": 2.0, "aucha_perch": 2.0, "mandarin_fish": 2.0, "cherry_salmon": 1.5}, "desc": "반짝이는 루어. 사냥꾼 물고기가 쫓아온다."},
+    {"id": "krill", "name": "크릴 새우", "price": 1200, "window_mult": 1.1, "spot_boost": {"breakwater": 1.5}, "desc": "바다 물고기 전반이 좋아한다."},
+    {"id": "jig", "name": "메탈 지그", "price": 4000, "window_mult": 0.9, "boost": {"mahi": 2.0, "amberjack": 2.0, "yellowtail": 2.0, "bluefin": 2.0}, "desc": "먼바다 대형어용. 챔질은 조금 어렵다."},
+    {"id": "squid_bait", "name": "오징어 살", "price": 8000, "window_mult": 1.0, "spot_boost": {"deep": 1.5}, "desc": "심해 물고기를 부르는 냄새."},
+    {"id": "golden_paste", "name": "황금 떡밥", "price": 2500, "window_mult": 1.0, "unlock_spot": "reservoir", "legend_for": "golden_carp", "desc": "저수지의 전설이 반응한다는 떡밥."},
+    {"id": "golden_spinner", "name": "금빛 스피너", "price": 6000, "window_mult": 1.0, "unlock_spot": "valley", "legend_for": "tiger_mandarin", "desc": "계곡의 호랑이를 부르는 금빛 루어."},
+    {"id": "glow_worm", "name": "형광 웜", "price": 12000, "window_mult": 1.0, "unlock_spot": "breakwater", "legend_for": "silver_bass", "desc": "폭풍 속에서도 빛나는 웜."},
+    {"id": "trolling_lure", "name": "트롤링 루어", "price": 25000, "window_mult": 1.0, "unlock_spot": "offshore", "legend_for": "marlin", "desc": "배로 끌고 다니는 커다란 루어."},
+    {"id": "glow_bait", "name": "발광 미끼", "price": 40000, "window_mult": 1.0, "unlock_spot": "deep", "legend_for": "coelacanth", "desc": "심연까지 닿는 빛."},
+    {"id": "dragon_pearl", "name": "여의주", "price": -1, "window_mult": 1.0, "legend_for": "dragon_carp", "desc": "다섯 전설을 모두 낚은 자에게 주어진다."}
+  ]
+}

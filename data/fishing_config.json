@@ -183,5 +183,6 @@
     },
     "s_size_bonus": 0.1
   },
-  "debug_spot": "reservoir"
+  "debug_keys": true,
+  "_debug_설명": "debug_keys: F3 물고기 고정 / F4 낚시터 / F5 날씨 테스트 키 (배포 전 false). debug_force_fish: 항상 이 물고기."
 }

@@ -185,6 +185,22 @@ def make_chord(rng, notes, sec: float, swell: float, shimmer: float) -> np.ndarr
     return out * 0.8
 
 
+def make_click(rng) -> np.ndarray:
+    sec = 0.05
+    return np.sin(2 * np.pi * 1500 * _t(sec)) * _env(int(RATE * sec), 0.001, 0.012) * 0.35
+
+
+def make_coin(rng) -> np.ndarray:
+    """판매·구매: 짤랑."""
+    out = np.zeros(int(RATE * 0.35))
+    for i, f in enumerate((1975.5, 2637.0)):
+        s = int(i * 0.06 * RATE)
+        t = _t(0.25)
+        tone = np.sin(2 * np.pi * f * t) * _env(len(t), 0.001, 0.06) * 0.3
+        out[s:s + len(tone)] += tone[: len(out) - s]
+    return out
+
+
 def make_miss(rng) -> np.ndarray:
     """실수: 낮은 쿵 + 줄 튕김."""
     sec = 0.35
@@ -307,6 +323,8 @@ class Sfx:
             "great": make_great(rng),
             "impact": make_impact(rng),
             "rise": make_rise(rng),
+            "click": make_click(rng),
+            "coin": make_coin(rng),
             "chord_rare": make_chord(rng, [659.25, 830.61, 987.77, 1318.5], 1.4, 0.15, 1.0),
             "chord_legend": make_chord(rng, [261.63, 392.0, 523.25, 659.25, 783.99, 1046.5], 2.4, 0.5, 2.0),
             "launch": make_launch(rng),
@@ -337,6 +355,11 @@ class Sfx:
         snd = self.sounds[name]
         snd.set_volume(self.volume * volume)
         snd.play()
+
+    def stop_all(self) -> None:
+        if self.enabled:
+            pygame.mixer.stop()
+        self.loops.clear()
 
     def loop(self, name: str, on: bool, volume: float = 1.0) -> None:
         if not self.enabled or name not in self.sounds:

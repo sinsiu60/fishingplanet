@@ -4,7 +4,6 @@ import random
 
 import pygame
 
-from src.audio.sfx import Sfx
 from src.core.config import game_config, load_json
 from src.core.game_clock import GameClock
 from src.core.mathutil import clamp, lerp, lerp_color, smoothstep
@@ -20,13 +19,12 @@ from src.render.landing import LandingCinematic
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
-from src.save.settings import Settings
 from src.scene.base import Scene
 from src.ui import fight_fx, fight_hud, hud
 from src.ui import tutorial as tut
 
 HINTS = {
-    CastState.READY: "좌클릭 유지: 파워 충전   마우스: 방향   화면 끝: 둘러보기   H: 도움말",
+    CastState.READY: "좌클릭 유지: 던지기   B: 상점   Tab: 도감   ESC: 메뉴   H: 도움말",
     CastState.CHARGING: "놓으면 던지기   우클릭: 취소",
     CastState.SWING: "",
     CastState.FLIGHT: "",
@@ -62,7 +60,10 @@ class FishingScene(Scene):
         self.cam_cfg = cfg["camera"]
         canvas = game.screen.canvas
         self.cam = Camera(canvas.get_width(), canvas.get_height(), self.cam_cfg)
+        self.save = game.save
         self.clock = GameClock()
+        self.clock.hour = self.save.data["hour"]
+        self.clock.day = self.save.data["day"]
         self.palette = Palette()
         self.stars = world.StarField(self.cam)
         self.clouds = world.Clouds(self.cam)
@@ -70,7 +71,7 @@ class FishingScene(Scene):
         self.reeds = world.Reeds(self.cam)
         self.cast = CastController()
         self.bite = BiteController()
-        self.sfx = Sfx()
+        self.sfx = game.sfx
         self.toasts = hud.Toasts()
         self.ripples = Ripples()
         self.droplets = Droplets()
@@ -88,7 +89,9 @@ class FishingScene(Scene):
         force = self.fish_cfg.get("debug_force_fish")
         if force:
             self.force_i = next((i for i, x in enumerate(self.all_fish) if x["id"] == force), -1)
-        self._set_spot(self.fish_cfg.get("debug_spot") or "reservoir")
+        self._set_spot(self.save.data["spot"] if self.save.data["spot"] in self.spots else "reservoir")
+        self.weather_i = next((i for i, w in enumerate(WEATHERS) if w[0] == self.save.data["weather"]), 0)
+        self.catch_news: dict | None = None
         self.ink_t = 0.0
         self.fake_bubble_t = 0.0
         self.fight: Fight | None = None
@@ -99,7 +102,7 @@ class FishingScene(Scene):
         self.fx_t = 0.0
         self.tip_counts: dict[str, int] = {}
         self.debug = False
-        self.settings = Settings()
+        self.settings = game.settings
         self.tutorial = tut.Tutorial(self.settings)
         self.card: dict | None = None    # 튜토리얼 카드 (표시 중엔 게임 정지)
         self.help = False                # H 도움말 (표시 중엔 게임 정지)
@@ -113,7 +116,6 @@ class FishingScene(Scene):
         self.look_left = self.look_right = False
         self.idle_ripple_t = 0.0
         self.wake_t = 0.0
-        pygame.mouse.set_visible(False)
         if self.tutorial.want("welcome"):
             self._open_card("welcome", None)
 
@@ -168,7 +170,14 @@ class FishingScene(Scene):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_h:
                 self.help = True
-            elif event.key in (pygame.K_F3, pygame.K_F4, pygame.K_F5) and f is None:
+            elif event.key == pygame.K_ESCAPE and self.landing is None:
+                from src.scene.pause import PauseScene
+                self.game.scenes.push(PauseScene(self.game, self))
+            elif event.key == pygame.K_b and self.can_open_menus():
+                self.open_menu("shop")
+            elif event.key == pygame.K_TAB and self.fight is None:
+                self.open_menu("dex")
+            elif event.key in (pygame.K_F3, pygame.K_F4, pygame.K_F5) and f is None and self.fish_cfg.get("debug_keys"):
                 self._cycle_debug(event.key)
             elif event.key == pygame.K_t:
                 self.clock.fast = not self.clock.fast
@@ -190,6 +199,35 @@ class FishingScene(Scene):
                 self._left_click()
             elif event.button == 3:
                 self._right_click()
+
+    # ───────────────────────── 메뉴 · 저장 ─────────────────────────
+    def can_open_menus(self) -> bool:
+        return self.fight is None and self.cast.state in (CastState.READY, CastState.LANDED, CastState.RETRIEVE)
+
+    def open_menu(self, which: str) -> None:
+        if which == "shop":
+            if not self.can_open_menus():
+                return
+            # 상점에 가면 줄은 걷는다
+            self.bite.stop()
+            self.cast.reset()
+            from src.scene.shop import ShopScene
+            self.game.scenes.push(ShopScene(self.game, self))
+        elif which == "dex":
+            from src.scene.dex import DexScene
+            self.game.scenes.push(DexScene(self.game, self))
+        if self.reel_loop:
+            self.sfx.loop(self.reel_loop, False)
+            self.reel_loop = None
+
+    def write_save(self) -> None:
+        d = self.save.data
+        d["hour"], d["day"] = self.clock.hour, self.clock.day
+        d["spot"], d["weather"] = self.spot_id, self.weather
+
+    def apply_settings(self) -> None:
+        self.shake_on = self.settings.get("screen_shake")
+        self.screen_fx.enabled = self.shake_on
 
     def _left_click(self) -> None:
         c, f = self.cast, self.fight
@@ -241,7 +279,8 @@ class FishingScene(Scene):
         fish = self.bite.fish
         size = roll_size(fish, self.bite.cast_distance)
         angle = math.atan2(c.bx, c.bz)
-        self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, hazards=self.spot["hazards"])
+        self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(),
+                           hazards=self.spot["hazards"])
         self.ink_t = 0.0
         self.bite.shadow = None
         self.end_t = 0.0
@@ -324,6 +363,7 @@ class FishingScene(Scene):
 
     def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
+        self.bite.bait = self.save.equipped("bait")
         self.bite.force_fish = self.all_fish[self.force_i] if self.force_i >= 0 else None
         self.bite.update(dt)
         for ev in self.bite.events:
@@ -577,7 +617,11 @@ class FishingScene(Scene):
             pose, _ = f.net_pose()
             self.landing = LandingCinematic(f.fish, f.result["size"], 240 + pose * 46)
             self.end_t = 0.0
+            self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
+            self.game.save_now()
         elif ev.startswith("lost:"):
+            self.save.record_loss()
+            self.game.save_now()
             self.sfx.play("snap" if ev == "lost:snap" else "flee")
             self.sfx.play("lose", 0.8)
             self.end_t = 0.0
@@ -660,8 +704,13 @@ class FishingScene(Scene):
             if c.state == CastState.CHARGING:
                 hud.draw_power_gauge(canvas, pal, c.power, c.distance_for_power(c.power))
             if c.state == CastState.LANDED:
-                hud.text(canvas, f"찌 거리 {c.current_distance():.0f}m", (cam.width - 6, 4), pal["text"],
+                hud.text(canvas, f"찌 거리 {c.current_distance():.0f}m", (cam.width - 6, 30), pal["text"],
                          anchor="topright")
+            sv = self.save.data
+            hud.text(canvas, f"{sv['money']:,}원", (cam.width - 6, 4), (255, 228, 140), anchor="topright")
+            bait = self.save.equipped("bait")["name"]
+            hud.text(canvas, f"살림망 {len(sv['keepnet'])} · 미끼 {bait}", (cam.width - 6, 17), pal["text"],
+                     anchor="topright")
             hint = HINTS[c.state]
             if hint:
                 hud.draw_hint(canvas, pal, hint)
@@ -745,7 +794,7 @@ class FishingScene(Scene):
             return
         if f.phase == "caught":
             draw_catch_cut(canvas, pal, f.result, self.end_t)
-            fight_hud.draw_catch_info(canvas, f.result, self.end_t)
+            fight_hud.draw_catch_info(canvas, f.result, self.end_t, self.catch_news)
             return
         if f.phase == "lost":
             fight_hud.draw_lose_panel(canvas, f, LOSE_REASONS[f.lose_reason], self.end_t)

@@ -23,13 +23,17 @@ class BiteState(Enum):
     SCARED = auto()
 
 
-def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir") -> dict | None:
+def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir",
+              bait: dict | None = None) -> dict | None:
     cfg = load_json("fishing_config.json")["bite"]
     candidates, weights = [], []
     for f in load_json("fish.json")["fish"]:
         if f["spot"] != spot or period not in f["times"] or weather not in f["weathers"]:
             continue
         w = cfg["rarity_weight"].get(f["rarity"], 0)
+        if bait:
+            # 미끼: 물고기별·낚시터별 배율
+            w *= bait.get("boost", {}).get(f["id"], 1.0) * bait.get("spot_boost", {}).get(spot, 1.0)
         if f["rarity"] != "common":
             if cast_distance >= cfg["far_cast_distance"]:
                 w *= cfg["far_rare_mult"]
@@ -72,6 +76,7 @@ class BiteController:
         self.period, self.weather = "day", "clear"
         self.spot = "reservoir"
         self.force_fish: dict | None = None  # 테스트용 강제 물고기
+        self.bait: dict | None = None        # 장착한 미끼
 
     def _rand(self, pair) -> float:
         return self.rnd.uniform(pair[0], pair[1])
@@ -139,7 +144,7 @@ class BiteController:
             self.dip = lerp(self.dip, 0.0, 0.2)
             if self.timer <= 0:
                 self.fish = self.force_fish or pick_fish(self.period, self.weather, self.cast_distance, self.rnd,
-                                                         self.spot)
+                                                         self.spot, self.bait)
                 if self.fish is None:
                     self.timer = 3.0
                     return
@@ -168,7 +173,8 @@ class BiteController:
             if self.timer <= 0:
                 self.state = BiteState.NIBBLE
                 lo, hi = self.fish["nibbles"]
-                self.nibbles_left = self.rnd.randint(lo, hi)
+                delta = self.bait.get("nibble_delta", 0) if self.bait else 0
+                self.nibbles_left = max(0, self.rnd.randint(lo, hi) + delta)
                 self.timer = self._rand(cfg["nibble_interval_sec"])
 
         elif self.state == BiteState.NIBBLE:
@@ -192,7 +198,8 @@ class BiteController:
                 else:
                     self.state = BiteState.BITE
                     # 예민한 물고기(감성돔 등)는 챔질 창이 짧다
-                    self.timer = cfg["bite_window_sec"] * self.fish.get("bite_window_mult", 1.0)
+                    bait_mult = self.bait.get("window_mult", 1.0) if self.bait else 1.0
+                    self.timer = cfg["bite_window_sec"] * self.fish.get("bite_window_mult", 1.0) * bait_mult
                     self.bite_t = 0.0
                     self.tip_pull = 12.0
                     self.events.append("bite")

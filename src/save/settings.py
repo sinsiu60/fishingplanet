@@ -3,7 +3,7 @@ import json
 
 from src.core.paths import save_dir
 
-DEFAULTS = {"tutorial_seen": [], "screen_shake": True}
+DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": None}
 
 
 class Settings:

@@ -103,7 +103,7 @@ STAMP_T = 0.6       # 랭크 도장이 찍히는 시각 (획득 컷 기준)
 CATCH_READY_T = 1.0  # 이후 클릭하면 계속
 
 
-def draw_catch_info(canvas, result: dict, t: float) -> None:
+def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) -> None:
     """획득 컷 정보: 이름·크기 → 랭크 도장 쾅 → 기록 → 가치 숫자 올라감 (순서대로)."""
     w = canvas.get_width()
     fish = result["fish"]
@@ -154,6 +154,22 @@ def draw_catch_info(canvas, result: dict, t: float) -> None:
         text(canvas, f"가치 {shown}원", (w // 2, y + 16), (255, 230, 140), 11, "center")
     if result["rank"] == "S" and t > 1.5:
         text(canvas, "S랭크 보너스: 크기 +10%, 판매가 ×2", (w // 2, y + 32), RANK_COLORS["S"], 11, "center")
+    # 새 기록 배지 (왼쪽 위에 차례로)
+    if news and t > 1.0:
+        badges = []
+        if news.get("new"):
+            badges.append(("NEW! 도감 등록", (255, 230, 120)))
+        if news.get("record"):
+            badges.append(("최대 크기 경신!", (140, 240, 150)))
+        if news.get("gold"):
+            badges.append(("도감 금테 획득!", RANK_COLORS["S"]))
+        if news.get("hint"):
+            badges.append((f"힌트 해금 ({news['hint']}회) - 도감 확인", (150, 220, 255)))
+        for i, (label, col) in enumerate(badges):
+            if t > 1.0 + i * 0.15:
+                text(canvas, label, (12, 24 + i * 15), col, 11, "midleft")
+    if t > 1.2:
+        text(canvas, "살림망에 보관했어요 (B: 상점에서 판매)", (w // 2, 240), (170, 180, 200), 11, "center")
     if t > CATCH_READY_T + 0.5 and int(t * 2) % 2 == 0:
         text(canvas, "클릭해서 계속", (w // 2, 256), (170, 180, 200), 11, "center")
 
