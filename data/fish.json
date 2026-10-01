@@ -2427,6 +2427,7 @@
      "telegraph_sec": 0.35,
      "dragon": true,
      "fake_tired": 0.45,
+     "jump_height_m": 2.6,
      "combo": {
       "rush": [
        "turn",

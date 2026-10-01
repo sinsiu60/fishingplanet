@@ -16,6 +16,7 @@ from src.render.camera import Camera
 from src.render.effects import (Bubbles, Droplets, Ripples, Sparkles, draw_bobber, draw_fish_shadow, draw_ink,
                                 draw_line, landing_marker, rod_tip_drop)
 from src.render.fish_draw import draw_catch_cut, draw_jump, draw_net_scene
+from src.render.dragon import DragonTransform, Embers, draw_dragon_jump, draw_dragon_shadow
 from src.render.landing import LandingCinematic
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
@@ -104,6 +105,9 @@ class FishingScene(Scene):
         self.amb_loops: set[str] = set()
         self.legend_on = False   # 전설 등장 중 (BGM·색감·금빛 테두리)
         self.legend_k = 0.0
+        self.dragon_k = 0.0      # '등용' 3페이즈: 진홍빛 하늘
+        self.dragon_fx: DragonTransform | None = None
+        self.embers = Embers()
         self.catch_news: dict | None = None
         self.ink_t = 0.0
         self.fake_bubble_t = 0.0
@@ -384,6 +388,7 @@ class FishingScene(Scene):
         last = self.fight.result if self.fight is not None else None
         self.fight = None
         self.landing = None
+        self.dragon_fx = None
         self._check_new_spots()
         if last and last["fish"]["id"] == "dragon_carp" and not self.save.data.get("ending_seen"):
             self.save.data["ending_seen"] = True
@@ -462,7 +467,39 @@ class FishingScene(Scene):
             scale = p[2] / 20 if p else 1.0
         self.gather.update(dt, fighting and f.brain.state == "charge" and self.ink_t <= 0, fish_pos, scale)
 
+    def _update_dragon(self, dt: float) -> None:
+        f = self.fight
+        dragon = f is not None and f.phase in ("fight", "net") and f.brain.dragon
+        self.dragon_k += ((1.0 if dragon else 0.0) - self.dragon_k) * min(1.0, dt / 0.7)
+        self.screen_fx.legend_color = (255, 80, 45) if dragon else (255, 196, 70)
+        self.embers.update(dt)
+        if dragon and f.phase == "fight":
+            pos = self._fish_screen()
+            p = self.cam.project(*f.fish_xz())
+            spread = max(8.0, (p[2] if p else 10) * 1.2)
+            self.embers.spawn(pos[0], pos[1], spread, 3 if self.dragon_fx else 1)
+        if self.dragon_fx is not None:
+            for ev in self.dragon_fx.update(dt):
+                if ev == "swirl":
+                    self.sfx.play("roar", 0.6)
+                    self.sfx.play("bubbles", 1.0)
+                elif ev == "pillar":
+                    self.sfx.play("rise", 1.0)
+                    self.shake_kick = 2.0
+                elif ev.startswith("bolt"):
+                    self.sfx.play("thunder", 0.9)
+                    self.shake_kick = 3.0
+                elif ev == "flash":
+                    self.sfx.play("impact", 1.0)
+                elif ev == "roar":
+                    self.sfx.play("roar", 1.0)
+                    self.sfx.play("chord_legend", 0.8)
+                    self.shake_kick = 4.0
+            if self.dragon_fx.done:
+                self.dragon_fx = None
+
     def _update_legend(self, dt: float) -> None:
+        self._update_dragon(dt)
         f = self.fight
         if f is not None:
             on = f.fish["rarity"] == "legend" and f.phase in ("fight", "net")
@@ -722,7 +759,9 @@ class FishingScene(Scene):
             lc = self.fish_cfg["legend"]
             self.game.slowmo(lc["phase_slowmo_real"], lc["phase_slowmo_scale"])
             if f.brain.dragon:
-                self.toasts.show("용이 되었다!!", (255, 120, 80), 3.2)
+                self.toasts.items.clear()  # 배너가 대신 알림
+                self.dragon_fx = DragonTransform(self.screen_fx.map(pos))
+                self.game.slowmo(1.2, 0.4)
         elif ev == "telegraph:turn":
             self.sfx.play("scrape", 0.8)
         elif ev == "action:rush":
@@ -799,6 +838,10 @@ class FishingScene(Scene):
         hour = self.clock.hour
         theme, weather = self.theme, self.weather
         pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash, self.legend_k)
+        if self.dragon_k > 0.01:
+            for key, v in pal.items():
+                if isinstance(v, tuple) and key not in ("text", "bobber", "bobber_base"):
+                    pal[key] = lerp_color(v, (120, 16, 26), 0.28 * self.dragon_k)
         cam, c, t, f = self.cam, self.cast, self.t, self.fight
 
         world.draw_sky(canvas, pal, cam)
@@ -823,6 +866,10 @@ class FishingScene(Scene):
             if self.ink_t > 0:
                 x, z = f.fish_xz()
                 draw_ink(canvas, pal, cam, x, z, min(1.0, self.ink_t), t)
+            elif f.brain.dragon:
+                sh = self._fight_shadow()
+                facing = 1 if f.fish_side() <= 0 else -1  # 화면 가운데 쪽을 향해 머리를 둔다
+                draw_dragon_shadow(canvas, pal, cam, sh["x"], sh["z"], sh["heading"], t, 1.0, sh["alpha"], facing)
             elif not f.brain.dark:
                 draw_fish_shadow(canvas, pal, cam, self._fight_shadow(), t)
         self.ripples.draw(canvas, pal, cam)
@@ -844,7 +891,11 @@ class FishingScene(Scene):
         elif not hanging and f is None:
             self._draw_line_and_bobber(canvas, pal, tip)
 
-        if f is not None and f.phase == "fight" and f.brain.state == "jump":
+        if f is not None and f.phase == "fight" and f.brain.state == "jump" and f.brain.dragon:
+            x, z = f.fish_xz()
+            draw_dragon_jump(canvas, pal, cam, x, z, f.brain.jump_phase(), f.brain.jump_height, t,
+                             1 if f.fish_side() <= 0 else -1)
+        elif f is not None and f.phase == "fight" and f.brain.state == "jump":
             x, z = f.fish_xz()
             draw_jump(canvas, pal, cam, self._display_fish(f.fish), f.size_cm, x, z, f.brain.jump_phase(), self.jump_facing,
                       f.brain.jump_height)
@@ -871,6 +922,7 @@ class FishingScene(Scene):
             if f.brain.state in ("tired", "fake_tired", "exhausted"):
                 fight_fx.draw_tired_ring(canvas, pos, sc, t)
         self.sparkles.draw(canvas)
+        self.embers.draw(canvas)
         # 가짜 FOV (줌·패닝·기울기)
         self.screen_fx.apply_camera(canvas)
 
@@ -979,6 +1031,8 @@ class FishingScene(Scene):
         if f.phase == "lost":
             fight_hud.draw_lose_panel(canvas, f, LOSE_REASONS[f.lose_reason], self.end_t)
             return
+        if self.dragon_fx is not None:
+            self.dragon_fx.draw(canvas)
         self._draw_behavior_ui(canvas)
         self.popups.draw(canvas, self.screen_fx.map)
         self.screen_fx.draw_edges(canvas)

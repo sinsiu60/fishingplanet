@@ -205,6 +205,7 @@
     ],
     "phase_pause_sec": 1.4,
     "phase_slowmo_real": 0.6,
-    "phase_slowmo_scale": 0.35
+    "phase_slowmo_scale": 0.35,
+    "dragon_extra_pause_sec": 1.2
   }
 }

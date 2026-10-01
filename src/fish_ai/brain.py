@@ -110,7 +110,8 @@ class FishBrain:
         self.chain_left = 0
         self.chain_action = None
         self.burst = max(self.burst, 0.8)
-        self._enter("idle", self.legend_cfg["phase_pause_sec"])  # 숨 돌릴 틈
+        pause = self.legend_cfg["phase_pause_sec"] + (self.legend_cfg["dragon_extra_pause_sec"] if self.dragon else 0)
+        self._enter("idle", pause)  # 숨 돌릴 틈 (용 변신은 연출 동안 더 길게)
         self.events.append(f"phase:{self.phase + 1}")
 
     # ── 조회 ──
