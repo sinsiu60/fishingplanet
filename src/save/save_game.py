@@ -59,6 +59,7 @@ def migrate(data: dict, slot: int | None = None) -> dict:
             spots = data.setdefault("unlocked_spots", ["reservoir"])
             if "marsh" not in spots:
                 spots.append("marsh")
+            data.setdefault("flags", {})["voyage_pending"] = True
         data.setdefault("unlocked_continents", conts)
         data["version"] = 2
     return data

@@ -155,6 +155,8 @@ class FishingScene(Scene):
         self.wake_t = 0.0
         if self.tutorial.want("welcome"):
             self._open_card("welcome", None)
+        # 확장 전 세이브로 이미 '등용'을 잡았다면: 새 대륙 소식을 한 번 보여준다 (첫 업데이트에서)
+        self.voyage_pending = self.save.data["flags"].pop("voyage_pending", False)
 
     def _set_spot(self, spot_id: str) -> None:
         self.spot_id = spot_id
@@ -443,6 +445,11 @@ class FishingScene(Scene):
             self.game.save_now()
             from src.scene.ending import EndingScene
             self.game.scenes.push(EndingScene(self.game, self))
+        elif last and last["fish"]["id"] == "orsiel" and not self.save.data["flags"].get("final_ending_seen"):
+            self.save.data["flags"]["final_ending_seen"] = True
+            self.game.save_now()
+            from src.scene.ending import EndingScene
+            self.game.scenes.push(EndingScene(self.game, self, kind="final"))
         self.screen_fx.reset()
         self.bite.stop()
         self.cast.reset()
@@ -450,6 +457,11 @@ class FishingScene(Scene):
 
     # ───────────────────────── 로직 (60틱 고정) ─────────────────────────
     def update(self, dt: float) -> None:
+        if getattr(self, "voyage_pending", False) and self.game.scenes.current is self:
+            self.voyage_pending = False
+            from src.scene.voyage import VoyageScene
+            self.game.scenes.push(VoyageScene(self.game, self))
+            return
         if self.card is not None or self.help:
             # 튜토리얼 카드·도움말: 게임 정지 (예고 시간도 흐르지 않음)
             if self.card is not None:
@@ -1068,6 +1080,11 @@ class FishingScene(Scene):
                 f.result["size"] = round(f.result["size"] * 1.03, 1)
                 f.result["price"] = int(round(f.result["price"] * 1.03))
             self.chest_drop = treasure.roll_drop(self.save, f.fish, f.result["rank"])
+            if f.fish["rarity"] == "legend" and self.spot.get("continent") == "eldrasion":
+                # 전설 비늘: 첫 포획 5개, 이후 2개 (T7·T8, 봉인 찌 재료)
+                n = 2 if self.save.caught(f.fish["id"]) else 5
+                self.save.data["scales"] += n
+                self.toasts.show(f"전설 비늘 +{n} (보유 {self.save.data['scales']})", (255, 214, 90), 3.0, 11)
             self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46, chest=self.chest_drop,
                                             golden=golden)
             f.result["fish"] = shown
