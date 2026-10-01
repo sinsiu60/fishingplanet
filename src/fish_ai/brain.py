@@ -19,6 +19,12 @@ stamina가 0이면: exhausted (끝까지 저항 거의 없음)
   charge_rush_mult      힘 모으기 뒤 돌진의 힘 배율
   fake_tired 0~1        지칠 때 '가짜 지침'일 확률 (단서: 기포가 계속 올라옴)
   ink 0~1               돌진 후 먹물을 뿜을 확률 (그림자 신호를 가림)
+  first_rush {power_mult, sec, telegraph_sec, burst_after}
+                        챔질 직후 강한 첫 돌진 (예고 있음). 끝나면 burst를 깎아 빨리 지친다 (가물치)
+  fake_cue 0~1          행동 대신 '가짜 예고(lure)'를 보낼 확률: 그림자가 부풀고 등불이 번쩍이지만
+                        기포·판정 원이 없고 아무 일도 일어나지 않는다 (초롱아귀). 진짜 점프는 기포 + 판정 원
+  sound_only            그림자·행동 아이콘·화면 연출 없이 소리로만 예고 (안개잉어). dark를 포함한다
+  phase_at [..]         페이즈 전환 체력 비율 (없으면 전설 공통값). 미니보스(비늘왕)도 phases를 쓴다
 
 전설 (phases): 체력 비율이 phase_at 아래로 떨어지면 다음 페이즈 값으로 덮어쓴다.
   전환 순간에는 잠깐 행동을 멈춘다 (숨 돌릴 틈). 추가 필드:
@@ -68,6 +74,12 @@ class FishBrain:
         self.rush_after_charge = False
         self.jump_judged = False
         self.events: list[str] = []
+        # 첫 돌진 (가물치): 챔질 직후 예고 → 강한 돌진
+        self.first_rush = fish.get("first_rush")
+        self.first_rush_on = False
+        self.first_rush_done = not self.first_rush
+        if self.first_rush:
+            self._begin_telegraph("rush", self.first_rush.get("telegraph_sec", self.telegraph_sec))
 
     def _rand(self, pair) -> float:
         return self.rnd.uniform(pair[0], pair[1])
@@ -92,6 +104,10 @@ class FishBrain:
         self.lightning_cue = src.get("lightning_cue", False)
         self.jump_height = src.get("jump_height_m", cfg["jump_height_m"])
         self.dragon = src.get("dragon", False)
+        self.fake_cue_p = src.get("fake_cue", 0.0)
+        self.sound_only = src.get("sound_only", False)
+        if self.sound_only:
+            self.dark = True
 
     @property
     def phase_desc(self) -> str:
@@ -101,7 +117,7 @@ class FishBrain:
         """전설: 체력이 기준 아래로 떨어지면 다음 페이즈로 (점프 중이면 착수 뒤에)."""
         if not self.phases or self.phase >= len(self.phases) - 1 or self.state in ("jump", "exhausted"):
             return
-        threshold = self.legend_cfg["phase_at"][self.phase]
+        threshold = self.fish.get("phase_at", self.legend_cfg["phase_at"])[self.phase]
         if stamina_frac > threshold:
             return
         self.phase += 1
@@ -124,6 +140,8 @@ class FishBrain:
         p = self.cfg["pull"][self.state]
         if self.state == "rush" and self.rush_after_charge:
             p *= self.charge_rush_mult
+        if self.state == "rush" and self.first_rush_on:
+            p *= self.first_rush.get("power_mult", 1.5)
         return p
 
     @property
@@ -221,7 +239,17 @@ class FishBrain:
         cost = cfg["burst_cost"].get(action, 0.2)
         self.burst -= cost * (0.5 if self.chain_action == action else 1.0)
         self.pending = None
+        if action == "lure":
+            # 가짜 예고: 아무 일도 없다
+            self.events.append("action:lure")
+            self._enter("idle", self._rand(cfg["idle_sec"]))
+            return
         if action == "rush":
+            if not self.first_rush_done:
+                self.first_rush_on = self.first_rush_done = True
+                self._enter("rush", self.first_rush.get("sec", self.rush_sec))
+                self.events.append("action:rush")
+                return
             self._enter("rush", self.rush_sec)
         elif action in ("jump", "leap"):
             self.jump_judged = False
@@ -285,6 +313,8 @@ class FishBrain:
                 else:
                     self._enter("tired", self._rand(self.tired_range))
                     self.events.append("tired")
+            elif self.fake_cue_p and self.rnd.random() < self.fake_cue_p:
+                self._begin_telegraph("lure")
             else:
                 self._begin_action_sequence(self._choose_action())
         elif s == "fake_tired":
@@ -301,6 +331,10 @@ class FishBrain:
             self.rush_after_charge = False
 
     def _after_action(self, action: str) -> None:
+        if self.first_rush_on:
+            # 첫 돌진에 힘을 다 써서 빨리 지친다
+            self.first_rush_on = False
+            self.burst = min(self.burst, self.first_rush.get("burst_after", 0.7))
         # 연속 동작
         if self.chain_left > 0 and self.chain_action == action:
             self.chain_left -= 1
@@ -313,6 +347,9 @@ class FishBrain:
         # 콤보
         nxt = self.combo.get(action)
         if nxt and self.burst > 0 and self.rnd.random() < nxt[1]:
-            self._begin_telegraph(nxt[0], self._short_telegraph())
+            if nxt[0] == "charge":
+                self._start_action("charge")  # 멈춤은 그 자체가 신호
+            else:
+                self._begin_telegraph(nxt[0], self._short_telegraph())
             return
         self._enter("idle", self._rand(self.cfg["idle_sec"]))

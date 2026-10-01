@@ -143,6 +143,8 @@ class ScreenFX:
         if fight is not None and fight.phase == "fight":
             b = fight.brain
             sig, state = b.signal, b.state
+            if b.sound_only:
+                sig = None  # 소리로만 예고하는 물고기: 화면 연출로 미리 알려주지 않는다
             prog = b.signal_progress()
             zoom_t = BASE_FIGHT_ZOOM
             if sig == "rush" or state == "rush":

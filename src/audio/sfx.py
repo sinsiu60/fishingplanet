@@ -509,6 +509,35 @@ def make_catch(rng) -> np.ndarray:
     return out
 
 
+def make_cue_leap(rng) -> np.ndarray:
+    """몸털기 예고 (소리 전용 물고기): 물을 차는 두 번의 '촵촵' + 올라가는 짧은 음."""
+    out = np.zeros(int(RATE * 0.4))
+    for i, start in enumerate((0.0, 0.12)):
+        s = int(RATE * start)
+        n = _lowpass(_noise(0.07, rng), 3) * _env(int(RATE * 0.07), 0.002, 0.025)
+        out[s:s + len(n)] += n * 0.5
+    chirp = _sweep(600, 1400, 0.16) * _env(int(RATE * 0.16), 0.01, 0.08)
+    s = int(RATE * 0.2)
+    out[s:s + len(chirp)] += chirp[: len(out) - s] * 0.25
+    return out
+
+
+def make_cue_charge(rng) -> np.ndarray:
+    """힘 모으기 (소리 전용 물고기): 낮고 묵직한 '쿵'."""
+    sec = 0.5
+    body = _sweep(90, 45, sec) * _env(int(RATE * sec), 0.004, 0.18)
+    thud = _lowpass(_noise(sec, rng), 12) * _env(int(RATE * sec), 0.002, 0.04)
+    return body * 0.7 + thud * 0.4
+
+
+def make_cue_lure(rng) -> np.ndarray:
+    """가짜 예고 (초롱아귀 등불): 유리 같은 '팅' — 기포 소리와 확실히 다르다."""
+    sec = 0.6
+    t = _t(sec)
+    tone = np.sin(2 * np.pi * 1760 * t) + 0.4 * np.sin(2 * np.pi * 2640 * t)
+    return tone * _env(int(RATE * sec), 0.002, 0.18) * 0.18
+
+
 def make_flee(rng) -> np.ndarray:
     """놀라 도망: 작은 철썩 두 번."""
     a = make_splash(rng, 0.2) * 0.5
@@ -579,6 +608,9 @@ class Sfx:
             "lose": make_lose(rng),
             "catch": make_catch(rng),
             "flee": make_flee(rng),
+            "cue_leap": make_cue_leap(rng),
+            "cue_charge": make_cue_charge(rng),
+            "cue_lure": make_cue_lure(rng),
         }
         for name, wave in bank.items():
             self.sounds[name] = self._to_sound(wave)

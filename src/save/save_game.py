@@ -358,7 +358,25 @@ class SaveGame:
 
     # ── 도감 ──
     def dex_count(self) -> int:
-        return len(self.data["dex"])
+        return sum(1 for e in self.data["dex"].values() if e.get("count", 0) > 0)
 
     def dex_entry(self, fish_id: str) -> dict | None:
-        return self.data["dex"].get(fish_id)
+        e = self.data["dex"].get(fish_id)
+        return e if e and e.get("count", 0) > 0 else None  # '목격'만 한 물고기는 잡은 것이 아님
+
+    def caught(self, fish_id: str) -> bool:
+        return self.dex_entry(fish_id) is not None
+
+    def continent_dex(self, continent: str = "sharmion") -> tuple[int, int]:
+        """(잡은 종 수, 전체 종 수) — 그 대륙 기준."""
+        fish = [f for f in all_fish() if spot_continent(f["spot"]) == continent]
+        return sum(1 for f in fish if self.caught(f["id"])), len(fish)
+
+    def rare_total(self) -> int:
+        """희귀 이상 누적 포획 마리 수."""
+        rar = {f["id"]: f["rarity"] for f in all_fish()}
+        return sum(e.get("count", 0) for fid, e in self.data["dex"].items() if rar.get(fid) in ("rare", "legend"))
+
+    def spot_has_s(self, spot: str) -> bool:
+        return any(self.dex_entry(f["id"]) and self.data["dex"][f["id"]].get("best_rank") == "S"
+                   for f in all_fish() if f["spot"] == spot)

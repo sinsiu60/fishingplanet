@@ -94,6 +94,7 @@ HELP_SIGNALS = [
     ("그림자 + 하늘색 원", "몸털기 점프", "원이 겹칠 때 화살표 쪽 슬라이드"),
     ("멈춤", "힘 모으기", "확 감기"),
     ("지침", "빈틈", "드랙 올리고 크게 감기 (기포 계속 = 가짜)"),
+    ("등불만 번쩍 (기포 없음)", "가짜 신호", "무시 (진짜 점프는 기포 + 판정 원)"),
 ]
 
 PANEL = (22, 28, 48)
@@ -174,7 +175,7 @@ def draw_guide(canvas, key: str, t: float) -> None:
 def draw_help(canvas) -> None:
     w, h = canvas.get_size()
     _dim(canvas, alpha=190)
-    pw, ph = 450, 250
+    pw, ph = 450, 262
     x, y = (w - pw) // 2, (h - ph) // 2
     canvas.fill(PANEL, (x, y, pw, ph))
     pygame.draw.rect(canvas, BORDER, (x, y, pw, ph), 1)
@@ -195,7 +196,7 @@ def draw_help(canvas) -> None:
         text(canvas, act, (x + 140, yy), (255, 170, 150), 11)
         text(canvas, resp, (x + 220, yy), (230, 232, 240), 11)
         yy += 12
-    yy += 6
+    yy += 3
     text(canvas, "장력은 초록 구간 유지! 빨강 = 줄 손상, 아래 = 바늘 빠짐", (w // 2, yy + 4), (140, 230, 150), 11,
          "center")
     text(canvas, "H 또는 클릭: 닫기", (w // 2, y + ph - 9), (160, 170, 195), 11, "center")

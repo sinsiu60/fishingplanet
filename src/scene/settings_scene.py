@@ -1,4 +1,4 @@
-"""설정: 음량, 화면 연출, 화면 배율, 튜토리얼 다시 보기."""
+"""설정: 음량, 화면 연출, 화면 배율, 튜토리얼 다시 보기, 소리 자막."""
 import pygame
 
 from src.scene.base import Scene
@@ -14,7 +14,7 @@ class SettingsScene(Scene):
         self.msg_t = 0.0
         w = game.screen.width
         self.x0 = w // 2 - 140
-        rows_y = [70, 100, 130, 160]
+        rows_y = [66, 92, 118, 144, 170]
         x = self.x0 + 150
         self.buttons = [
             ui.Button((x, rows_y[0] - 8, 18, 16), "-", lambda: self._volume(-0.1)),
@@ -23,6 +23,7 @@ class SettingsScene(Scene):
             ui.Button((x, rows_y[2] - 8, 18, 16), "-", lambda: self._scale(-1)),
             ui.Button((x + 104, rows_y[2] - 8, 18, 16), "+", lambda: self._scale(1)),
             ui.Button((x, rows_y[3] - 8, 122, 16), "처음부터 다시 보기", self._reset_tutorial),
+            ui.Button((x, rows_y[4] - 8, 122, 16), "", self._toggle_captions),
             ui.Button((w // 2 - 40, 212, 80, 18), "뒤로", self._back),
         ]
         self.rows_y = rows_y
@@ -41,6 +42,9 @@ class SettingsScene(Scene):
         for scene in self.game.scenes.stack:
             if hasattr(scene, "apply_settings"):
                 scene.apply_settings()
+
+    def _toggle_captions(self) -> None:
+        self.s.set("sound_captions", not self.s.get("sound_captions"))
 
     def _max_scale(self) -> int:
         return max(1, self.game.screen._best_scale())
@@ -88,12 +92,13 @@ class SettingsScene(Scene):
         w = canvas.get_width()
         ui.panel(canvas, (self.x0 - 10, 30, 300, 210))
         text(canvas, "설정", (w // 2, 44), ui.ACCENT, 16, "center")
-        labels = ["음량", "화면 연출 (흔들림·줌)", "화면 배율", "튜토리얼"]
+        labels = ["음량", "화면 연출 (흔들림·줌)", "화면 배율", "튜토리얼", "소리 자막 (예고음 글자로)"]
         for y, label in zip(self.rows_y, labels):
             text(canvas, label, (self.x0, y), ui.TEXT, 11, "midleft")
         x = self.x0 + 150
         ui.bar(canvas, (x + 22, self.rows_y[0] - 4, 78, 8), self.s.get("volume"), (140, 200, 255))
         self.buttons[2].label = "켬" if self.s.get("screen_shake") else "끔"
+        self.buttons[6].label = "켬" if self.s.get("sound_captions") else "끔"
         text(canvas, f"{self.game.screen.scale}배 (최대 {self._max_scale()})", (x + 61, self.rows_y[2]), ui.TEXT, 11,
              "center")
         for b in self.buttons:

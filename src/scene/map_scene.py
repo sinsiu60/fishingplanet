@@ -10,6 +10,7 @@ from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
 
+SHARMION_SPOTS = ("reservoir", "valley", "breakwater", "offshore", "deep")
 LAND = (88, 128, 82)
 LAND_DARK = (66, 100, 64)
 SEA = (44, 84, 140)
@@ -18,18 +19,47 @@ PATH = (240, 226, 180)
 
 
 def unlock_status(save, spot: dict) -> tuple[bool, list[tuple[str, bool]]]:
-    """(조건을 모두 채웠는지, [(조건 설명, 충족 여부)])."""
+    """(조건을 모두 채웠는지, [(조건 설명, 충족 여부)]) — 지도 체크리스트."""
     cond = spot.get("unlock", {})
     rows = []
     if "dex" in cond:
         rows.append((f"도감 {cond['dex']}종 ({save.dex_count()}/{cond['dex']})", save.dex_count() >= cond["dex"]))
+    if "dex_pct" in cond:
+        got, total = save.continent_dex(spot.get("continent", "sharmion"))
+        need = math.ceil(total * cond["dex_pct"] / 100)
+        rows.append((f"도감 {cond['dex_pct']}% ({got}/{need}종)", got >= need))
+    if "rod_tier" in cond:
+        tier = save.gear_tier("rod")
+        rows.append((f"낚싯대 T{cond['rod_tier']} 이상 (지금 T{tier})", tier >= cond["rod_tier"]))
     if "line_tier" in cond:
-        tier = save.equipped("line")["tier"]
-        rows.append((f"낚싯줄 {cond['line_tier']}등급 이상 (지금 {tier}등급)", tier >= cond["line_tier"]))
+        tier = save.gear_tier("line")
+        rows.append((f"낚싯줄 T{cond['line_tier']} 이상 (지금 T{tier})", tier >= cond["line_tier"]))
+    if "all_gear_tier" in cond:
+        need = cond["all_gear_tier"]
+        low = min(save.gear_tier(k) for k in ("rod", "reel", "line", "net", "bait"))
+        rows.append((f"장비 전부 T{need} 이상 (최저 T{low})", low >= need))
+    if "spot_s" in cond:
+        name = next(s["name"] for s in load_json("spots.json")["spots"] if s["id"] == cond["spot_s"])
+        rows.append((f"{name} 물고기 S랭크 1회", save.spot_has_s(cond["spot_s"])))
+    if "rare_total" in cond:
+        n = save.rare_total()
+        rows.append((f"희귀 이상 {min(n, cond['rare_total'])}/{cond['rare_total']}마리",
+                     n >= cond["rare_total"]))
+    if "legend" in cond:
+        fish = next(f for f in all_fish() if f["id"] == cond["legend"])
+        rows.append((f"전설 {fish['name']}", save.caught(cond["legend"])))
     if "legends" in cond:
-        legends = [f["id"] for f in all_fish() if f["rarity"] == "legend" and f["spot"] != "secret"]
-        got = sum(1 for fid in legends if save.dex_entry(fid))
-        rows.append((f"전설 {cond['legends']}마리 포획 ({got}/{cond['legends']})", got >= cond["legends"]))
+        legends = [f["id"] for f in all_fish() if f["rarity"] == "legend" and f["spot"] != "secret"
+                   and f.get("spot") in SHARMION_SPOTS]
+        got = sum(1 for fid in legends if save.caught(fid))
+        rows.append((f"전설 {got}/{cond['legends']}마리 포획", got >= cond["legends"]))
+    if "s_total" in cond:
+        n = save.data["stats"]["s_ranks"]
+        rows.append((f"S랭크 {min(n, cond['s_total'])}/{cond['s_total']}회", n >= cond["s_total"]))
+    if "perfects" in cond:
+        n = save.data["stats"]["perfects"]
+        rows.append((f"퍼펙트 {min(n, cond['perfects'])}/{cond['perfects']}회",
+                     n >= cond["perfects"]))
     if cond.get("cost"):
         rows.append((f"비용 {ui.money_text(cond['cost'])}", save.money >= cond["cost"]))
     return all(ok for _, ok in rows), rows

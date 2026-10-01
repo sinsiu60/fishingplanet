@@ -5,6 +5,7 @@ import random
 import pygame
 
 from src.core.config import game_config, load_json
+from src.core.fonts import get_font
 from src.core.game_clock import PERIODS, GameClock
 from src.core.weather import WEATHER_KO, Weather, roll_weather
 from src.core.mathutil import clamp, lerp, lerp_color, smoothstep
@@ -21,7 +22,7 @@ from src.render.landing import LandingCinematic
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
-from src.render.weather_fx import Ambient, Lightning, Rain, themed_palette
+from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
 from src.scene.base import Scene
 from src.ui import fight_fx, fight_hud, hud
 from src.ui import tutorial as tut
@@ -40,7 +41,7 @@ GOOD = (140, 240, 150)
 BAD = (255, 150, 130)
 INFO = (255, 235, 170)
 LOOK_STATES = (CastState.READY, CastState.LANDED)
-WEATHERS = ["clear", "rain", "storm"]
+WEATHERS = ["clear", "rain", "storm", "fog"]
 GLOW = {"rare": (150, 210, 255), "legend": (255, 215, 100)}
 DRAGON_LOOK = {"colors": {"body": [200, 40, 40], "belly": [255, 214, 110], "fin": [255, 170, 40],
                           "stripe": [255, 230, 140]},
@@ -55,7 +56,12 @@ TIPS = {
     "action:charge": "멈췄다 = 힘 모으기! 지금 확 감으세요",
     "tired": "지쳤다! 드랙을 올리고(E) 크게 감으세요",
     "fake_tired": "기포가 계속 올라온다 = 가짜 지침! 돌진 대비",
+    "telegraph:lure": "등불만 번쩍 = 가짜 신호! 기포·판정 원이 없으면 속지 마세요",
 }
+# 소리 자막 (설정 '소리 자막'): 예고 소리를 글자로도 보여준다
+CAPTIONS = {"telegraph:rush": "쏴아 — 물보라 (돌진)", "telegraph:jump": "보글보글 — 기포 (점프)",
+            "telegraph:leap": "촵촵 — 몸털기", "telegraph:turn": "스윽 — 긁힘 (방향 전환)",
+            "action:charge": "쿵 — 힘 모으기", "telegraph:lure": "팅 — 등불 (가짜)"}
 TIP_REPEAT = 1
 SLACK_RED_CARD_SEC = 0.6  # 이 시간 이상 느슨/빨강이면 튜토리얼 카드
 
@@ -101,6 +107,7 @@ class FishingScene(Scene):
                                    d.get("weather_next") or roll_weather(self.spot["weather"]),
                                    d.get("weather_change", 0.0))
         self.rain = Rain(canvas.get_width(), canvas.get_height())
+        self.fog = Fog(canvas.get_width(), canvas.get_height())
         self.lightning = Lightning()
         self.ambient = Ambient(canvas.get_width(), canvas.get_height(), self.cam.horizon)
         self.amb_loops: set[str] = set()
@@ -134,6 +141,7 @@ class FishingScene(Scene):
         self.reel_loop = None
         self.line_ch = None      # 캐스팅 줄 풀림 소리 채널
         self.legend_builtin = False
+        self.captions = None     # [글자, 남은 시간] 소리 자막
         self.t = 0.0
         self.mouse = (canvas.get_width() // 2, canvas.get_height() // 2)
         self.look_left = self.look_right = False
@@ -383,6 +391,9 @@ class FishingScene(Scene):
             self.sfx.play("impact", 1.0)
             self.sfx.play("chord_legend", 0.7)
             self.shake_kick = 2.5
+        if self.fight.brain.sound_only:
+            hint = " (설정: 소리 자막)" if not self.settings.get("sound_captions") else ""
+            self.toasts.show(f"모습이 보이지 않는다... 소리로 읽어라!{hint}", (200, 220, 255), 3.0, 11)
         self.ink_t = 0.0
         self.bite.shadow = None
         self.end_t = 0.0
@@ -429,6 +440,10 @@ class FishingScene(Scene):
         self.sparkles.update(dt)
         self.popups.update(dt)
         self.toasts.update(dt)
+        if self.captions:
+            self.captions[1] -= dt
+            if self.captions[1] <= 0:
+                self.captions = None
         self.net_anim = max(0.0, self.net_anim - dt)
 
         mx, my = self.game.screen.to_canvas(pygame.mouse.get_pos())
@@ -540,10 +555,12 @@ class FishingScene(Scene):
         w.update(self.clock.day, self.clock.hour, self.spot["weather"])
         for ev in w.events:
             msg = {"clear": "비가 그치고 하늘이 갰다", "rain": "비가 내리기 시작했다 (입질 증가)",
-                   "storm": "폭풍이 몰아친다! (희귀어 증가)"}[ev.split(":")[1]]
+                   "storm": "폭풍이 몰아친다! (희귀어 증가)",
+                   "fog": "짙은 안개가 내려앉았다 (그림자가 안 보여요)"}[ev.split(":")[1]]
             self.toasts.show(msg, INFO, 2.6, 11)
         w.events.clear()
         self.rain.update(dt, self.weather, self.ripples, self.cam)
+        self.fog.update(dt, self.weather)
         self.lightning.update(dt, self.weather, self.cam.horizon, self.cam.width)
         for ev in self.lightning.events:
             if ev == "thunder":
@@ -554,7 +571,7 @@ class FishingScene(Scene):
         self.ambient.update(dt, self.clock.period()[0], self.weather, self.theme.get("sea", False))
         # 환경음: 낚시터 + 비
         want = {self.theme["ambient"]}
-        if self.weather != "clear":
+        if self.weather in ("rain", "storm"):
             want.add("amb_rain")
         for name in self.amb_loops - want:
             self.sfx.loop(name, False)
@@ -637,6 +654,12 @@ class FishingScene(Scene):
             if self.fake_bubble_t > 0.12:
                 self.fake_bubble_t = 0.0
                 self.bubbles.spawn(p[0], p[1], max(2.0, f.fish["shadow_len_m"] * p[2] * 0.6))
+        if b.sound_only:
+            sig = None  # 소리로만 예고: 물보라·기포 연출 없음
+        if sig == "lure" and p and self.fx_t > 0.25:
+            # 초롱아귀 가짜 예고: 등불이 번쩍 (기포 없음)
+            self.fx_t = 0.0
+            self.sparkles.burst(p[0], p[1] - 2, count=3, speed=0.4, ring=False)
         if sig == "rush" and self.fx_t > 0.12:
             # 꼬리 물보라: 물고기 뒤쪽에서 하얀 물방울
             self.fx_t = 0.0
@@ -821,9 +844,18 @@ class FishingScene(Scene):
             self._open_card(ev, None if ev == "net_start" else "fish")
         elif ev == "hazard_enter":
             self.toasts.show(f"{f.in_hazard['name']}에 걸리려 해요! 반대로 당기세요", BAD, 1.5, 11)
-        else:
-            self._tip(ev)
-        if ev == "telegraph:rush":
+        elif not f.brain.sound_only:
+            self._tip(ev)  # 소리 전용 물고기에겐 '물보라를 보라' 같은 시각 팁을 띄우지 않는다
+        sound_only = f.brain.sound_only
+        if ev in CAPTIONS and self.settings.get("sound_captions"):
+            self.captions = [CAPTIONS[ev], 1.2]
+        if ev == "telegraph:lure":
+            self.sfx.play("cue_lure", 0.8)
+            pos = self._fish_screen()
+            self.sparkles.burst(*pos, count=8, speed=0.6, ring=False)  # 등불 번쩍 (판정 원과 헷갈리지 않게 고리 없음)
+        elif ev == "action:charge" and sound_only:
+            self.sfx.play("cue_charge", 1.0)
+        elif ev == "telegraph:rush":
             self.sfx.play("splash_small", 0.7)
         elif ev == "telegraph:jump":
             self.sfx.play("bubbles", 0.8)
@@ -855,8 +887,11 @@ class FishingScene(Scene):
             self.sfx.play("splash", 0.7)
             self._splash_at(x, z, 0.8)
         elif ev == "telegraph:leap":
-            self.sfx.play("bubbles", 0.8)
-            self.sfx.play("splash_small", 0.5)
+            if sound_only:
+                self.sfx.play("cue_leap", 1.0)
+            else:
+                self.sfx.play("bubbles", 0.8)
+                self.sfx.play("splash_small", 0.5)
         elif ev == "action:leap":
             self.jump_facing = f.brain.leap_dir  # 몸을 던지는 쪽으로 비튼다
             self.sfx.play("splash", 0.8)
@@ -958,7 +993,7 @@ class FishingScene(Scene):
         self.clouds.draw(canvas, pal, cam)
         self.lightning.draw(canvas)
         world.draw_mountains(canvas, pal, cam, theme["terrain"], t)
-        amp = {"clear": 1.0, "rain": 1.25, "storm": 1.9}[weather] * (1.3 if theme.get("sea") else 1.0)
+        amp = {"clear": 1.0, "rain": 1.25, "storm": 1.9, "fog": 0.8}[weather] * (1.3 if theme.get("sea") else 1.0)
         self.water.draw(canvas, pal, t, hour, amp_mult=amp, show_reflection=weather == "clear")
         if theme.get("lamp"):
             world.draw_ship_lamp(canvas, pal, cam)
@@ -966,7 +1001,7 @@ class FishingScene(Scene):
             self.landing.draw(canvas, pal)
             return
         if f is None:
-            sh = self.bite.shadow
+            sh = self.bite.shadow if weather != "fog" else None  # 안개: 다가오는 그림자가 안 보인다
             if sh is not None and self.bite.fish is not None:
                 sh = dict(sh, glow=GLOW.get(self.bite.fish["rarity"]))
             draw_fish_shadow(canvas, pal, cam, sh, t)
@@ -1010,7 +1045,7 @@ class FishingScene(Scene):
 
         fg = theme["foreground"]
         if fg == "reeds":
-            self.reeds.draw(canvas, pal, t, wind={"clear": 1.0, "rain": 1.4, "storm": 2.2}[weather])
+            self.reeds.draw(canvas, pal, t, wind={"clear": 1.0, "rain": 1.4, "storm": 2.2, "fog": 0.6}[weather])
         else:
             world.FOREGROUND[fg](canvas, pal, t)
         draw_rod(canvas, pal, geo, c.reel_angle)
@@ -1021,6 +1056,7 @@ class FishingScene(Scene):
             draw_bobber(canvas, pal, bx, by, 7, floating=False)
         self.droplets.draw(canvas, pal)
         self.rain.draw(canvas, pal)
+        self.fog.draw(canvas, pal, cam.horizon, t)
         if f is not None and f.phase == "fight":
             # 수면 위 행동 연출 (카메라 연출 전에 그려서 함께 확대됨)
             pos = self._fish_screen()
@@ -1054,6 +1090,13 @@ class FishingScene(Scene):
                 hud.draw_hint(canvas, pal, hint)
             hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
         self.toasts.draw(canvas)
+        if self.captions:
+            cap, left = self.captions
+            w = get_font(11).size(cap)[0] + 12
+            r = pygame.Rect(self.cam.cx - w // 2, 72, w, 14)
+            canvas.fill((10, 14, 28), r)
+            pygame.draw.rect(canvas, (150, 200, 255), r, 1)
+            hud.text(canvas, cap, r.center, (200, 230, 255), anchor="center")
         if f is None and self.card is None:
             if not self.tutorial.is_seen("guide_cast") and c.state in (CastState.READY, CastState.CHARGING):
                 tut.draw_guide(canvas, "guide_cast", t)
@@ -1087,7 +1130,7 @@ class FishingScene(Scene):
             heading += b.turn_dir * 1.2
         wag = {"rush": 22.0, "idle": 12.0, "telegraph": 14.0, "turn": 16.0, "recover": 8.0,
                "tired": 3.0, "fake_tired": 3.0, "charge": 0.0, "exhausted": 2.0}.get(b.state, 10.0)
-        scale = 1.0 + 0.9 * b.signal_progress() if b.signal in ("jump", "leap") else 1.0
+        scale = 1.0 + 0.9 * b.signal_progress() if b.signal in ("jump", "leap", "lure") else 1.0
         alpha = 0.0 if b.state == "jump" else 0.7 if b.state in ("tired", "fake_tired", "exhausted") else 1.0
         if f.fish["rarity"] == "legend":
             scale *= self.fish_cfg["legend"]["shadow_scale"] * 0.55
@@ -1160,12 +1203,14 @@ class FishingScene(Scene):
         sig = b.signal
         prompt_on = (f.turn_flick is not None and not f.turn_flick["done"] and b.turn_offset() is not None
                      and b.turn_offset() >= -(self.flick_cfg["turn_before_sec"] + 0.35))
+        if b.sound_only:
+            sig, prompt_on = None, False  # 행동 아이콘·꺾기 프롬프트 없음 (점프 중 판정 원만)
         if sig == "rush" or (sig == "turn" and not prompt_on):
             fight_fx.draw_behavior_icon(canvas, mapped, sig, b.signal_progress(), b.turn_dir, t)
-        if sig == "turn" or b.state == "turn":
+        if not b.sound_only and (sig == "turn" or b.state == "turn"):
             amount = b.signal_progress() if sig == "turn" else 1.0
             fight_fx.draw_turn_chevrons(canvas, mapped, b.turn_dir, 0.4 + 0.6 * amount, t)
-        elif b.state == "charge":
+        elif b.state == "charge" and not b.sound_only:
             prog = b.state_t / max(0.01, b.state_t + b.timer)
             fight_fx.draw_behavior_icon(canvas, mapped, "charge", prog, 0, t)
         elif b.state in ("tired", "fake_tired", "exhausted"):
@@ -1173,7 +1218,7 @@ class FishingScene(Scene):
         # 방향 전환 꺾기 프롬프트
         tf, off = f.turn_flick, b.turn_offset()
         fc = self.flick_cfg
-        if tf and not tf["done"] and off is not None and off >= -(fc["turn_before_sec"] + 0.35):
+        if tf and not tf["done"] and off is not None and off >= -(fc["turn_before_sec"] + 0.35) and not b.sound_only:
             fight_fx.draw_turn_prompt(canvas, mapped, tf["need"], off, fc["turn_before_sec"], fc["turn_after_sec"],
                                       fc["turn_perfect_sec"], t)
         # 몸털기 점프: 하늘색 원 + 슬라이드 방향 화살표

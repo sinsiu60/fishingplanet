@@ -32,6 +32,13 @@ def themed_palette(pal: dict, theme: dict, weather: str, flash: float = 0.0, leg
         out["stars"] = 0.0
         out["reflect"] = out["reflect"] * 0.25
         out["cloud"] = lerp_color(out["sky_top"], (80, 84, 96) if weather == "rain" else (30, 32, 44), 0.6)
+    if weather == "fog":
+        haze = lerp_color(out["sky_bottom"], (196, 204, 214), 0.6)
+        for key, v in out.items():
+            if isinstance(v, tuple) and key not in KEEP:
+                out[key] = lerp_color(v, haze, 0.38)
+        out["stars"] = out["stars"] * 0.3
+        out["reflect"] = out["reflect"] * 0.3
     if legend > 0:
         # 전설 등장: 하늘·물이 보랏빛 황혼처럼 물든다
         for key, v in out.items():
@@ -55,7 +62,7 @@ class Rain:
 
     def update(self, dt: float, weather: str, ripples, cam) -> None:
         heavy = weather == "storm"
-        rate = 0 if weather == "clear" else (10 if heavy else 4)
+        rate = 0 if weather in ("clear", "fog") else (10 if heavy else 4)
         wind = 0.35 if heavy else 0.12
         for _ in range(rate):
             sp = random.uniform(300, 430)
@@ -80,6 +87,35 @@ class Rain:
         col = lerp_color(pal["sky_bottom"], (230, 236, 250), 0.45)
         for x, y, sp, wind, ln, _ in self.drops:
             pygame.draw.line(canvas, col, (x, y), (x - wind * ln, y - ln), 1)
+
+
+class Fog:
+    """안개: 수면 위를 천천히 흐르는 반투명 띠 여러 겹 (화면 공간)."""
+
+    def __init__(self, w: int, h: int):
+        self.w, self.h = w, h
+        self.k = 0.0  # 안개 농도 (날씨가 바뀌면 서서히)
+
+    def update(self, dt: float, weather: str) -> None:
+        target = 1.0 if weather == "fog" else 0.0
+        self.k += (target - self.k) * min(1.0, dt / 2.0)
+
+    def draw(self, canvas, pal, horizon: int, t: float) -> None:
+        if self.k < 0.02:
+            return
+        col = lerp_color(pal["sky_bottom"], (214, 220, 228), 0.55)
+        layer = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+        for i in range(5):
+            y = horizon - 10 + i * 22
+            hgt = 26 + i * 8
+            a = int((70 + i * 18) * self.k)
+            off = (t * (6 + i * 3)) % 120
+            for x in range(-120, self.w + 120, 60):
+                wob = math.sin((x + off) * 0.05 + i) * 6
+                pygame.draw.ellipse(layer, (*col, a // 2), (x + off - 40, y + wob, 140, hgt))
+        veil = int(60 * self.k)
+        layer.fill((*col, veil), special_flags=pygame.BLEND_RGBA_MAX)
+        canvas.blit(layer, (0, 0))
 
 
 class Lightning:

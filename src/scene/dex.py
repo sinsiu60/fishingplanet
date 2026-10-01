@@ -4,6 +4,7 @@ import math
 import pygame
 
 from src.core.config import load_json
+from src.core.weather import WEATHER_KO
 from src.render.fish_draw import RANK_COLORS, draw_fish_side, fish_colors
 from src.save.save_game import baits
 from src.scene.base import Scene
@@ -13,7 +14,6 @@ from src.ui.hud import draw_cursor, text, wrap_text
 SPOT_TABS = [("reservoir", "저수지"), ("valley", "계곡"), ("breakwater", "방파제"), ("offshore", "먼바다"),
              ("deep", "심해"), ("secret", "비밀")]
 TIME_KO = {"morning": "아침", "day": "낮", "evening": "저녁", "night": "밤"}
-WEATHER_KO = {"clear": "맑음", "rain": "비", "storm": "폭풍"}
 RARITY_KO = {"common": "일반", "uncommon": "고급", "rare": "희귀", "legend": "전설"}
 RARITY_COL = {"common": (230, 230, 230), "uncommon": (130, 230, 150), "rare": (130, 190, 255),
               "legend": (255, 214, 90)}
@@ -24,7 +24,7 @@ DETAIL = pygame.Rect(306, 50, 160, 196)
 
 
 def _join(values, table, all_count) -> str:
-    return "전체" if len(values) == all_count else "·".join(table[v] for v in values)
+    return "전체" if len(values) >= all_count else "·".join(table[v] for v in values)
 
 
 class DexScene(Scene):
