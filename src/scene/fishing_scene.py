@@ -13,8 +13,8 @@ from src.fishing.casting import CastController, CastState
 from src.fishing.fight import LOSE_REASONS, Fight
 from src.render import world
 from src.render.camera import Camera
-from src.render.effects import (Bubbles, Droplets, Ripples, Sparkles, draw_bobber, draw_fish_shadow, draw_line,
-                                landing_marker, rod_tip_drop)
+from src.render.effects import (Bubbles, Droplets, Ripples, Sparkles, draw_bobber, draw_fish_shadow, draw_ink,
+                                draw_line, landing_marker, rod_tip_drop)
 from src.render.fish_draw import draw_catch_cut, draw_jump, draw_net_scene
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
@@ -37,14 +37,17 @@ GOOD = (140, 240, 150)
 BAD = (255, 150, 130)
 INFO = (255, 235, 170)
 LOOK_STATES = (CastState.READY, CastState.LANDED)
+WEATHERS = [("clear", "맑음"), ("rain", "비"), ("storm", "폭풍")]
+GLOW = {"rare": (150, 210, 255), "legend": (255, 215, 100)}
 
 # 튜토리얼 카드를 본 뒤 한 번 더 짧게 상기시킨다 (DESIGN.md 4장)
 TIPS = {
-    "telegraph:rush": "꼬리 물보라 = 돌진! 드랙을 낮추고(Q) 감기를 멈추세요",
+    "telegraph:rush": "꼬리 물보라 = 돌진! Q로 드랙을 낮추세요",
     "telegraph:jump": "그림자가 커진다 = 점프! 정점에서 우클릭",
     "telegraph:turn": "줄이 쏠린다 = 방향 전환! 마우스를 반대쪽으로",
     "action:charge": "멈췄다 = 힘 모으기! 지금 확 감으세요",
     "tired": "지쳤다! 드랙을 올리고(E) 크게 감으세요",
+    "fake_tired": "기포가 계속 올라온다 = 가짜 지침! 돌진 대비",
 }
 TIP_REPEAT = 1
 SLACK_RED_CARD_SEC = 0.6  # 이 시간 이상 느슨/빨강이면 튜토리얼 카드
@@ -73,6 +76,17 @@ class FishingScene(Scene):
         self.sparkles = Sparkles()
         self.popups = fight_hud.JudgePopups()
         self.fish_cfg = load_json("fishing_config.json")
+        self.spots = {sp["id"]: sp for sp in load_json("spots.json")["spots"]}
+        self.spot_ids = list(self.spots)
+        self.weather_i = 0
+        self.force_i = -1          # F3 테스트: 고정할 물고기 인덱스 (-1 = 없음)
+        self.all_fish = load_json("fish.json")["fish"]
+        force = self.fish_cfg.get("debug_force_fish")
+        if force:
+            self.force_i = next((i for i, x in enumerate(self.all_fish) if x["id"] == force), -1)
+        self._set_spot(self.fish_cfg.get("debug_spot") or "reservoir")
+        self.ink_t = 0.0
+        self.fake_bubble_t = 0.0
         self.fight: Fight | None = None
         self.end_t = 0.0             # 결과 화면 경과 시간
         self.net_anim = 0.0
@@ -96,6 +110,29 @@ class FishingScene(Scene):
         pygame.mouse.set_visible(False)
         if self.tutorial.want("welcome"):
             self._open_card("welcome", None)
+
+    def _set_spot(self, spot_id: str) -> None:
+        self.spot_id = spot_id
+        self.spot = self.spots[spot_id]
+        self.hazard_decor = world.HazardDecor(self.spot["hazards"])
+
+    @property
+    def weather(self) -> str:
+        return WEATHERS[self.weather_i][0]
+
+    def _cycle_debug(self, key: int) -> None:
+        """F3 물고기 고정 / F4 낚시터 / F5 날씨 (테스트용)."""
+        if key == pygame.K_F3:
+            self.force_i = self.force_i + 1 if self.force_i + 1 < len(self.all_fish) else -1
+            name = self.all_fish[self.force_i]["name"] if self.force_i >= 0 else "없음 (자연 출현)"
+            self.toasts.show(f"[테스트] 물고기 고정: {name}", INFO, 1.5, 11)
+        elif key == pygame.K_F4:
+            i = (self.spot_ids.index(self.spot_id) + 1) % len(self.spot_ids)
+            self._set_spot(self.spot_ids[i])
+            self.toasts.show(f"[테스트] 낚시터: {self.spot['name']}", INFO, 1.5, 11)
+        elif key == pygame.K_F5:
+            self.weather_i = (self.weather_i + 1) % len(WEATHERS)
+            self.toasts.show(f"[테스트] 날씨: {WEATHERS[self.weather_i][1]}", INFO, 1.5, 11)
 
     def _open_card(self, key: str, focus: str | None) -> None:
         self.card = {"key": key, "focus": focus, "t": 0.0}
@@ -125,6 +162,8 @@ class FishingScene(Scene):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_h:
                 self.help = True
+            elif event.key in (pygame.K_F3, pygame.K_F4, pygame.K_F5) and f is None:
+                self._cycle_debug(event.key)
             elif event.key == pygame.K_t:
                 self.clock.fast = not self.clock.fast
             elif event.key == pygame.K_F1:
@@ -190,12 +229,10 @@ class FishingScene(Scene):
     def _start_fight(self) -> None:
         c = self.cast
         fish = self.bite.fish
-        force = self.fish_cfg.get("debug_force_fish")
-        if force:
-            fish = next((x for x in load_json("fish.json")["fish"] if x["id"] == force), fish)
         size = roll_size(fish, self.bite.cast_distance)
         angle = math.atan2(c.bx, c.bz)
-        self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw)
+        self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, hazards=self.spot["hazards"])
+        self.ink_t = 0.0
         self.bite.shadow = None
         self.end_t = 0.0
         self.slack_t = self.red_t = 0.0
@@ -265,7 +302,8 @@ class FishingScene(Scene):
         self._update_shake(dt)
 
     def _update_waiting(self, dt: float) -> None:
-        self.bite.set_conditions(self.clock.period()[0], "clear")
+        self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
+        self.bite.force_fish = self.all_fish[self.force_i] if self.force_i >= 0 else None
         self.bite.update(dt)
         for ev in self.bite.events:
             self._on_bite_event(ev)
@@ -309,8 +347,15 @@ class FishingScene(Scene):
         # 예고 신호 연출
         b = f.brain
         self.fx_t += dt
+        self.ink_t = max(0.0, self.ink_t - dt)
         p = self.cam.project(x, z)
         sig = b.signal
+        if b.state == "fake_tired" and p and self.ink_t <= 0:
+            # 가짜 지침의 단서: 기포가 계속 올라온다 (진짜 지침은 기포 없음)
+            self.fake_bubble_t += dt
+            if self.fake_bubble_t > 0.12:
+                self.fake_bubble_t = 0.0
+                self.bubbles.spawn(p[0], p[1], max(2.0, f.fish["shadow_len_m"] * p[2] * 0.6))
         if sig == "rush" and self.fx_t > 0.12:
             # 꼬리 물보라: 물고기 뒤쪽에서 하얀 물방울
             self.fx_t = 0.0
@@ -318,7 +363,7 @@ class FishingScene(Scene):
             self.ripples.spawn(x + math.sin(back) * 0.4, z + math.cos(back) * 0.4, size=0.45, life=0.7)
             if p:
                 self.droplets.burst(p[0] + random.uniform(-3, 3), p[1], max(0.5, p[2] / 25), count=4)
-        elif sig == "jump" and p:
+        elif sig == "jump" and p and self.ink_t <= 0:
             # 그림자 커짐 + 기포
             self.bubbles.spawn(p[0], p[1], max(3.0, f.fish["shadow_len_m"] * p[2]))
         elif b.state in ("idle", "rush", "turn", "recover") and self.fx_t > (0.15 if b.state == "rush" else 0.6):
@@ -405,6 +450,8 @@ class FishingScene(Scene):
         x, z = f.fish_xz()
         if ev in tut.CARDS and self.card is None and self.tutorial.want(ev):
             self._open_card(ev, None if ev == "net_start" else "fish")
+        elif ev == "hazard_enter":
+            self.toasts.show(f"{f.in_hazard['name']}에 걸리려 해요! 반대로 당기세요", BAD, 1.5, 11)
         else:
             self._tip(ev)
         if ev == "telegraph:rush":
@@ -423,6 +470,9 @@ class FishingScene(Scene):
         elif ev == "jump_land":
             self.sfx.play("splash", 0.9)
             self._splash_at(x, z, 1.0)
+        elif ev == "ink":
+            self.ink_t = self.fish_cfg["fight"]["ink_sec"]
+            self.sfx.play("splash_small", 0.5)
         elif ev == "exhausted":
             self.toasts.show("완전히 지쳤다! 끝까지 감으세요", GOOD, 2.0, 11)
         elif ev == "perfect":
@@ -472,11 +522,19 @@ class FishingScene(Scene):
         world.draw_mountains(canvas, pal, cam)
         self.water.draw(canvas, pal, t, hour)
         if f is None:
-            draw_fish_shadow(canvas, pal, cam, self.bite.shadow, t)
+            sh = self.bite.shadow
+            if sh is not None and self.bite.fish is not None:
+                sh = dict(sh, glow=GLOW.get(self.bite.fish["rarity"]))
+            draw_fish_shadow(canvas, pal, cam, sh, t)
         elif f.phase == "fight":
-            draw_fish_shadow(canvas, pal, cam, self._fight_shadow(), t)
+            if self.ink_t > 0:
+                x, z = f.fish_xz()
+                draw_ink(canvas, pal, cam, x, z, min(1.0, self.ink_t), t)
+            else:
+                draw_fish_shadow(canvas, pal, cam, self._fight_shadow(), t)
         self.ripples.draw(canvas, pal, cam)
         self.bubbles.draw(canvas, pal)
+        self.hazard_decor.draw(canvas, pal, cam, t, f.in_hazard if f is not None and f.phase == "fight" else None)
 
         geo = self._rod_geo()
         tip = geo["tip"]
@@ -509,7 +567,8 @@ class FishingScene(Scene):
         if f is not None:
             self._draw_fight_overlay(canvas, pal)
         else:
-            hud.draw_clock(canvas, pal, self.clock.label(), self.clock.fast, self.clock.fast_mult)
+            label = f"{self.clock.label()} · {self.spot['name']} · {WEATHERS[self.weather_i][1]}"
+            hud.draw_clock(canvas, pal, label, self.clock.fast, self.clock.fast_mult)
             if c.state == CastState.CHARGING:
                 hud.draw_power_gauge(canvas, pal, c.power, c.distance_for_power(c.power))
             if c.state == CastState.LANDED:
@@ -552,11 +611,11 @@ class FishingScene(Scene):
         if b.state == "turn":
             heading += b.turn_dir * 1.2
         wag = {"rush": 22.0, "idle": 12.0, "telegraph": 14.0, "turn": 16.0, "recover": 8.0,
-               "tired": 3.0, "charge": 0.0, "exhausted": 2.0}.get(b.state, 10.0)
+               "tired": 3.0, "fake_tired": 3.0, "charge": 0.0, "exhausted": 2.0}.get(b.state, 10.0)
         scale = 1.0 + 0.9 * b.signal_progress() if b.signal == "jump" else 1.0
-        alpha = 0.0 if b.state == "jump" else 0.7 if b.state in ("tired", "exhausted") else 1.0
+        alpha = 0.0 if b.state == "jump" else 0.7 if b.state in ("tired", "fake_tired", "exhausted") else 1.0
         return {"x": x, "z": z, "heading": heading, "alpha": alpha, "len": f.fish["shadow_len_m"],
-                "scale": scale, "wag": wag}
+                "scale": scale, "wag": wag, "glow": GLOW.get(f.fish["rarity"])}
 
     def _draw_fight_line(self, canvas, pal, tip) -> None:
         f, cam = self.fight, self.cam

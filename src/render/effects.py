@@ -124,6 +124,12 @@ def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:
     row = clamp((sy - cam.horizon) / (cam.height - cam.horizon), 0, 1) ** 0.55
     water = lerp_color(pal["water_top"], pal["water_bottom"], row)
     color = lerp_color(water, scale_color(pal["wave_dark"], 0.8), 0.8 * shadow["alpha"])
+    glow = shadow.get("glow")
+    if glow:
+        # 희귀 이상: 그림자 테두리가 은은하게 빛남
+        k = 0.45 + 0.35 * math.sin(t * 3.0)
+        gcol = lerp_color(water, glow, k * shadow["alpha"])
+        pygame.draw.ellipse(canvas, gcol, (sx - body_w / 2 - 2, sy - body_h / 2 - 2, body_w + 4, body_h + 4), 1)
     pygame.draw.ellipse(canvas, color, (sx - body_w / 2, sy - body_h / 2, body_w, body_h))
     # 꼬리 (진행 반대쪽, 살랑)
     direction = 1 if side >= 0 else -1
@@ -243,3 +249,18 @@ class Sparkles:
         for x, y, _, _, life in self.items:
             col = (255, 255, 255) if life > 0.3 else (255, 220, 90)
             canvas.fill(col, (int(x), int(y), 2 if life > 0.3 else 1, 2 if life > 0.3 else 1))
+
+
+def draw_ink(canvas, pal, cam, x: float, z: float, amount: float, t: float) -> None:
+    """대왕오징어 먹물: 물고기 주변 수면을 검게 덮는다."""
+    p = cam.project(x, z)
+    if p is None or amount <= 0:
+        return
+    sx, sy, s = p
+    r = max(10.0, 2.2 * s) * (0.6 + 0.4 * amount)
+    ink = lerp_color(pal["water_bottom"], (5, 5, 12), 0.7)
+    for i in range(5):
+        a = i * 1.3 + t * 0.4
+        ox = math.cos(a) * r * 0.35
+        oy = math.sin(a) * r * 0.08
+        pygame.draw.ellipse(canvas, ink, (sx + ox - r / 2, sy + oy - r * 0.12, r, r * 0.24))

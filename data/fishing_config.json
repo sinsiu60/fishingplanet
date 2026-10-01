@@ -44,7 +44,7 @@
       "legend": 0
     }
   },
-  "debug_force_fish": "bass",
+  "debug_force_fish": "",
   "default_gear": {
     "_설명": "Phase 5 장비 시스템 전까지 쓰는 기본 장비 (DESIGN.md 6장 1등급)",
     "rod_green": [
@@ -111,7 +111,13 @@
     "net_pause_grace_sec": 0.04,
     "calm_reel_floor": 8,
     "calm_reel_floor_per_drag": 12,
-    "hook_slack_mult_calm": 0.5
+    "hook_slack_mult_calm": 0.5,
+    "snag_rate": 15,
+    "snag_recover": 20,
+    "ink_sec": 4.0,
+    "payout_max_speed": 3.5,
+    "par_power_weight": 0.5,
+    "hook_slack_power_min": 0.4
   },
   "fish_ai": {
     "_설명": "물고기 행동 공통 수치. 종별 값은 fish.json이 우선.",
@@ -124,7 +130,8 @@
       "charge": 0.15,
       "tired": 0.1,
       "recover": 0.25,
-      "exhausted": 0.05
+      "exhausted": 0.05,
+      "fake_tired": 0.15
     },
     "burst_cost": {
       "rush": 0.3,
@@ -149,7 +156,14 @@
     ],
     "recover_sec": 1.5,
     "turn_speed": 0.35,
-    "jump_height_m": 1.2
+    "jump_height_m": 1.2,
+    "chain_telegraph_mult": 0.6,
+    "min_telegraph_sec": 0.35,
+    "fake_tired_sec": [
+      1.0,
+      1.6
+    ],
+    "cover_rush_lateral": 0.5
   },
   "rank": {
     "base": 60,
@@ -168,5 +182,6 @@
       "C": 0.8
     },
     "s_size_bonus": 0.1
-  }
+  },
+  "debug_spot": "reservoir"
 }

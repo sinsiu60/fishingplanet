@@ -15,12 +15,13 @@ LOSE_REASONS = {
     "snap": ("줄이 끊어졌다", "빨간 구간에 너무 오래 있었다. 돌진할 땐 드랙(Q)을 낮추고 감기를 멈추세요."),
     "slack": ("바늘이 빠졌다", "줄이 너무 느슨했다. 장력을 초록 구간 아래로 떨어뜨리지 마세요."),
     "jump": ("바늘이 빠졌다", "점프 정점에 낚싯대를 숙이지 못했다. 그림자가 커지면 우클릭을 준비하세요."),
+    "snag": ("줄이 걸려 끊어졌다", "물고기가 위협 구역(수초·바위)으로 들어갔다. 그쪽으로 가면 마우스를 반대로 당겨 빼내세요."),
 }
 
 
 class Fight:
     def __init__(self, fish: dict, size_cm: float, cast_distance: float, angle: float, yaw: float,
-                 gear: dict | None = None, rnd: random.Random | None = None):
+                 gear: dict | None = None, rnd: random.Random | None = None, hazards: list | None = None):
         root = load_json("fishing_config.json")
         self.cfg = root["fight"]
         self.gear = gear or root["default_gear"]
@@ -46,7 +47,7 @@ class Fight:
         self.drag = (self.drag_steps + 1) // 2
         self.perfects = self.goods = self.misses = 0
         self.elapsed = 0.0
-        self.par = rank_mod.par_time(cast_distance, self.stamina_max)
+        self.par = rank_mod.par_time(cast_distance, self.stamina_max, fish.get("power", 1.0))
         self.events: list[str] = []
         self.lose_reason: str | None = None
         self.result: dict | None = None
@@ -61,6 +62,11 @@ class Fight:
         self.creak_t = 0.0
         self.dip_t = 0.0
         self.last_judge = ""
+        # 환경 위협 (수초·바위): 구역 안에 있으면 줄 걸림 게이지 증가
+        self.hazards = hazards or []
+        self.snag = 0.0
+        self.in_hazard: dict | None = None
+        self.hazard_mult = fish.get("hazard_mult", 1.0)
         # 뜰채
         self.net_t = 0.0
         self.net_period = 1.0
@@ -88,6 +94,22 @@ class Fight:
     def fish_side(self) -> float:
         """물고기의 화면 좌우 위치 -1~1."""
         return clamp((self.angle - self.yaw) / 0.45, -1, 1)
+
+    def _hazard_at(self) -> dict | None:
+        for hz in self.hazards:
+            if hz["angle"][0] <= self.angle <= hz["angle"][1] and hz["dist"][0] <= self.distance <= hz["dist"][1]:
+                return hz
+        return None
+
+    def _cover_dir(self) -> int:
+        """가장 가까운 위협 구역 쪽 (-1 왼쪽 / 1 오른쪽 / 0 없음)."""
+        best, best_d = 0, 9.0
+        for hz in self.hazards:
+            center = (hz["angle"][0] + hz["angle"][1]) / 2
+            d = abs(center - self.angle)
+            if d < best_d and hz["dist"][0] - 3 <= self.distance <= hz["dist"][1] + 3:
+                best, best_d = (1 if center > self.angle else -1), d
+        return best
 
     def fish_xz(self) -> tuple[float, float]:
         return math.sin(self.angle) * self.distance, math.cos(self.angle) * self.distance
@@ -168,6 +190,7 @@ class Fight:
         self.reeling = reeling
         self.rod_aim = rod_aim
 
+        b.cover_dir = self._cover_dir()
         b.update(dt, self.stamina <= 0)
         for ev in b.events:
             if ev == "action:jump" and self.pre_judged:
@@ -200,7 +223,7 @@ class Fight:
         payout = 0.0
         if target > self.drag_limit:
             over = target - self.drag_limit
-            payout = over * cfg["payout_speed_per_tension"]
+            payout = min(cfg["payout_max_speed"], over * cfg["payout_speed_per_tension"])
             target = self.drag_limit + over * cfg["drag_overflow_keep"]
         if reeling and calm:
             # 지친 물고기를 감는 중엔 물고기 무게만큼 줄이 당겨짐 → 장력은 초록 구간 안에 유지
@@ -227,7 +250,13 @@ class Fight:
 
         # 좌우 이동
         if b.state == "turn":
-            lateral = b.turn_dir * b.cfg["turn_speed"]
+            lateral = b.turn_dir * b.turn_speed
+            if self.align < 0:
+                lateral *= 1 - cfg["rod_align_lateral"] * (-self.align)
+            self.angle += lateral * dt
+        elif b.state == "rush" and b.cover_dir and b.cover_bias > 0:
+            # 숨을 곳이 있는 물고기는 돌진도 그쪽으로 휜다
+            lateral = b.cover_dir * b.turn_speed * b.cfg["cover_rush_lateral"] * b.cover_bias
             if self.align < 0:
                 lateral *= 1 - cfg["rod_align_lateral"] * (-self.align)
             self.angle += lateral * dt
@@ -257,10 +286,23 @@ class Fight:
             rate = cfg["hook_slack_rate"] + (self.green_low - self.tension) * cfg["hook_slack_extra_per_tension"]
             if calm:
                 rate *= cfg["hook_slack_mult_calm"]  # 몸부림이 없으니 바늘이 덜 빠짐
+            # 힘이 약한 물고기는 바늘을 덜 턴다
+            rate *= clamp(self.fish.get("power", 1.0), cfg["hook_slack_power_min"], 1.0)
             self.hook += rate * dt
         else:
             self.hook -= cfg["hook_recover_rate"] * dt
         self.hook = clamp(self.hook, 0, 100)
+
+        # 줄 걸림 (환경 위협)
+        hz = self._hazard_at()
+        if hz is not None and self.in_hazard is None:
+            self.events.append("hazard_enter")
+        self.in_hazard = hz
+        if hz is not None:
+            self.snag += cfg["snag_rate"] * self.hazard_mult * dt
+        else:
+            self.snag -= cfg["snag_recover"] * dt
+        self.snag = clamp(self.snag, 0, 100)
 
         # 스태미나
         drain = 0.0
@@ -273,6 +315,8 @@ class Fight:
         # 종료 판정
         if self.line <= 0:
             self._lose("snap")
+        elif self.snag >= 100:
+            self._lose("snag")
         elif self.hook >= 100:
             self._lose("jump" if self.elapsed - self.last_jump_miss_t < 1.5 else "slack")
         elif self.distance <= cfg["net_distance"] and b.state not in ("jump", "telegraph"):

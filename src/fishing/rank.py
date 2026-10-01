@@ -2,9 +2,11 @@
 from src.core.config import load_json
 
 
-def par_time(cast_distance: float, stamina: float) -> float:
+def par_time(cast_distance: float, stamina: float, power: float = 1.0) -> float:
+    """기준 시간. 힘센 물고기는 질주로 거리가 벌어지니 더 넉넉하게."""
     f = load_json("fishing_config.json")["fight"]
-    return f["par_base_sec"] + f["par_per_meter"] * cast_distance + f["par_per_stamina"] * stamina
+    power_k = 1 + f["par_power_weight"] * max(0.0, power - 1.0) * 2
+    return f["par_base_sec"] + (f["par_per_meter"] * cast_distance + f["par_per_stamina"] * stamina) * power_k
 
 
 def compute_score(perfects: int, misses: int, line_damage: float, elapsed: float, par: float) -> dict:

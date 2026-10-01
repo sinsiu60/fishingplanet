@@ -26,62 +26,162 @@ def _xf(points, cx, cy, angle, facing):
 
 
 def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, colors: dict,
-                   facing: int = -1, silhouette=None, tail_wag: float = 0.0) -> None:
-    """옆모습 물고기. 기본은 머리가 왼쪽(-x). silhouette 색을 주면 단색 실루엣."""
+                   facing: int = -1, silhouette=None, tail_wag: float = 0.0, shape: dict | None = None) -> None:
+    """옆모습 물고기. 기본은 머리가 왼쪽(-x). silhouette 색을 주면 단색 실루엣.
+
+    shape (fish.json): height(몸 높이 비율), tail(fork/round/lunate/ribbon), pattern(stripe/bars/spots),
+    dorsal(normal/long/crest), whiskers, eye_big, bill, lure, finlets, kind(squid)
+    """
+    shape = shape or {}
+    if shape.get("kind") == "squid":
+        draw_squid(canvas, cx, cy, length, angle, colors, facing, silhouette, tail_wag)
+        return
     L = length
-    H = L * 0.17
+    H = L * shape.get("height", 0.17)
+    tail_type = shape.get("tail", "fork")
+    ribbon = tail_type == "ribbon"
+    body_frac = 0.92 if ribbon else 0.82 if tail_type == "round" else 0.8
     top, bot = [], []
-    n = 10
-    tail_base = -L / 2 + L * 0.8
+    n = 12
+    tail_base = -L / 2 + L * body_frac
     for i in range(n + 1):
         u = i / n
-        x = -L / 2 + u * L * 0.8
-        prof = math.sin(math.pi * clamp(u * 0.92 + 0.06, 0, 1)) ** 0.75
-        taper = lerp(1.0, 0.35, clamp((u - 0.55) / 0.45, 0, 1))
+        x = -L / 2 + u * L * body_frac
+        if ribbon:
+            prof = min(1.0, u * 6) ** 0.6
+            taper = lerp(1.0, 0.25, clamp((u - 0.6) / 0.4, 0, 1))
+        else:
+            prof = math.sin(math.pi * clamp(u * 0.92 + 0.06, 0, 1)) ** 0.75
+            taper = lerp(1.0, 0.35, clamp((u - 0.55) / 0.45, 0, 1))
         h = H * max(0.2, prof) * taper
         top.append((x, -h))
         bot.append((x, h * 1.08))
     wag = tail_wag * H * 0.6
-    tail = [(L / 2, -H * 0.85 + wag), (L / 2 - L * 0.06, wag * 0.5), (L / 2, H * 0.85 + wag)]
+    tx = L / 2
+    if tail_type == "round":
+        tail = [(tail_base + L * 0.1, -H * 0.55 + wag), (tx, -H * 0.2 + wag), (tx, H * 0.25 + wag),
+                (tail_base + L * 0.1, H * 0.6 + wag)]
+    elif tail_type == "lunate":
+        tail = [(tx + L * 0.02, -H * 1.05 + wag), (tail_base + L * 0.1, wag * 0.5), (tx + L * 0.02, H * 1.05 + wag)]
+    elif ribbon:
+        tail = [(tx, -H * 0.15 + wag), (tx, H * 0.15 + wag)]
+    else:
+        tail = [(tx, -H * 0.85 + wag), (tx - L * 0.06, wag * 0.5), (tx, H * 0.85 + wag)]
     body = top + tail + bot[::-1]
+    pts_body = _xf(body, cx, cy, angle, facing)
 
     if silhouette is not None:
-        pygame.draw.polygon(canvas, silhouette, _xf(body, cx, cy, angle, facing))
+        pygame.draw.polygon(canvas, silhouette, pts_body)
         fin = [(-L * 0.05, -H * 0.9), (L * 0.15, -H * 1.5), (L * 0.22, -H * 0.7)]
         pygame.draw.polygon(canvas, silhouette, _xf(fin, cx, cy, angle, facing))
+        if shape.get("bill"):
+            pygame.draw.line(canvas, silhouette, *_xf([(-L / 2, 0), (-L / 2 - L * 0.22, -H * 0.1)], cx, cy, angle,
+                                                      facing), max(1, int(L / 50)))
         return
 
     base, belly, fin_c, stripe = colors["body"], colors["belly"], colors["fin"], colors["stripe"]
     # 등지느러미 (몸 뒤에)
-    dorsal = [(-L * 0.16, -H * 0.8), (-L * 0.07, -H * 1.3), (L * 0.06, -H * 1.05), (L * 0.16, -H * 1.25),
-              (L * 0.25, -H * 0.55)]
+    dorsal_type = shape.get("dorsal", "normal")
+    if dorsal_type == "long":
+        dorsal = [(-L * 0.38, -H * 0.7), (-L * 0.3, -H * 1.45), (L * 0.1, -H * 1.3), (L * 0.28, -H * 0.9),
+                  (L * 0.3, -H * 0.4)]
+    elif dorsal_type == "crest":
+        dorsal = [(-L * 0.45, -H * 0.6), (-L * 0.4, -H * 3.2), (-L * 0.3, -H * 1.6), (L * 0.35, -H * 1.5),
+                  (L * 0.4, -H * 0.6)]
+    else:
+        dorsal = [(-L * 0.16, -H * 0.8), (-L * 0.07, -H * 1.3), (L * 0.06, -H * 1.05), (L * 0.16, -H * 1.25),
+                  (L * 0.25, -H * 0.55)]
     pygame.draw.polygon(canvas, fin_c, _xf(dorsal, cx, cy, angle, facing))
-    pygame.draw.polygon(canvas, base, _xf(body, cx, cy, angle, facing))
+    # 뒷지느러미
+    if not ribbon:
+        anal = [(L * 0.12, H * 0.7), (L * 0.19, H * 1.05), (L * 0.25, H * 0.5)]
+        pygame.draw.polygon(canvas, fin_c, _xf(anal, cx, cy, angle, facing))
+    pygame.draw.polygon(canvas, base, pts_body)
     # 배
-    belly_poly = [(x, h * 0.25) for x, h in [(p[0], -p[1]) for p in top[1:-2]]] + bot[1:-2][::-1]
+    belly_poly = [(p[0], -p[1] * 0.25) for p in top[1:-2]] + bot[1:-2][::-1]
     pygame.draw.polygon(canvas, belly, _xf(belly_poly, cx, cy, angle, facing))
     # 등 쪽 어두운 음영
-    back_poly = top[1:-1] + [(x, -h * 0.55) for x, h in [(p[0], -p[1]) for p in top[1:-1]]][::-1]
+    back_poly = top[1:-1] + [(p[0], p[1] * 0.55) for p in top[1:-1]][::-1]
     pygame.draw.polygon(canvas, scale_color(base, 0.8), _xf(back_poly, cx, cy, angle, facing))
-    # 옆줄 무늬
-    if stripe:
+    # 무늬
+    pattern = shape.get("pattern")
+    if stripe and pattern == "bars":
+        for i in range(5):
+            x = -L * 0.25 + i * L * 0.11
+            pts = _xf([(x, -H * 0.85), (x + L * 0.03, H * 0.45)], cx, cy, angle, facing)
+            pygame.draw.line(canvas, stripe, pts[0], pts[1], max(1, int(L / 45)))
+    elif stripe and pattern == "spots":
+        for i in range(9):
+            x = -L * 0.25 + (i % 5) * L * 0.11 + (i // 5) * L * 0.05
+            y = -H * 0.45 + (i // 5) * H * 0.5
+            p = _xf([(x, y)], cx, cy, angle, facing)[0]
+            pygame.draw.circle(canvas, stripe, p, max(1, int(L / 55)))
+    elif stripe:
         pts = _xf([(-L * 0.3, -H * 0.05), (tail_base - L * 0.04, H * 0.05)], cx, cy, angle, facing)
         pygame.draw.line(canvas, stripe, pts[0], pts[1], max(1, int(L / 60)))
+    # 꼬리 쪽 작은 지느러미 (참치)
+    if shape.get("finlets"):
+        for i in range(4):
+            x = L * 0.1 + i * L * 0.05
+            for sgn in (-1, 1):
+                p = _xf([(x, sgn * H * 0.5)], cx, cy, angle, facing)[0]
+                canvas.fill((235, 210, 90), (int(p[0]), int(p[1]), 2, 2))
     # 가슴지느러미
     pec = [(-L * 0.26, H * 0.2), (-L * 0.17, H * 0.55), (-L * 0.13, H * 0.25)]
     pygame.draw.polygon(canvas, fin_c, _xf(pec, cx, cy, angle, facing))
     # 꼬리 색
     pygame.draw.polygon(canvas, fin_c, _xf(tail + [(tail_base + L * 0.02, 0)], cx, cy, angle, facing))
-    # 눈·입
+    # 주둥이 (청새치)
+    if shape.get("bill"):
+        bill = _xf([(-L / 2 + L * 0.02, -H * 0.1), (-L / 2 - L * 0.25, -H * 0.2)], cx, cy, angle, facing)
+        pygame.draw.line(canvas, scale_color(base, 0.7), bill[0], bill[1], max(1, int(L / 45)))
+    # 눈
+    eye_r = max(1, int(L / (22 if shape.get("eye_big") else 40)))
     eye = _xf([(-L * 0.4, -H * 0.3)], cx, cy, angle, facing)[0]
-    r = max(1, int(L / 40))
-    pygame.draw.circle(canvas, (250, 250, 240), eye, r + 1)
-    pygame.draw.circle(canvas, (20, 20, 20), eye, r)
+    pygame.draw.circle(canvas, (255, 220, 90) if shape.get("eye_big") else (250, 250, 240), eye, eye_r + 1)
+    pygame.draw.circle(canvas, (20, 20, 20), eye, eye_r)
     mouth = _xf([(-L / 2 + L * 0.01, H * 0.05), (-L * 0.42, H * 0.25)], cx, cy, angle, facing)
     pygame.draw.line(canvas, scale_color(base, 0.55), mouth[0], mouth[1], 1)
     # 아가미 선
     gill = _xf([(-L * 0.33, -H * 0.55), (-L * 0.3, 0), (-L * 0.33, H * 0.6)], cx, cy, angle, facing)
     pygame.draw.lines(canvas, scale_color(base, 0.7), False, gill, 1)
+    # 수염 (잉어·메기)
+    if shape.get("whiskers"):
+        wc = scale_color(base, 0.6)
+        for k in (0.3, 0.7):
+            w = _xf([(-L / 2 + L * 0.02, H * 0.15), (-L / 2 - L * 0.06, H * (0.4 + k)),
+                     (-L / 2 - L * 0.02, H * (0.8 + k))], cx, cy, angle, facing)
+            pygame.draw.lines(canvas, wc, False, w, 1)
+    # 등불 (아귀)
+    if shape.get("lure"):
+        lp = _xf([(-L * 0.4, -H * 0.9), (-L * 0.48, -H * 1.8), (-L * 0.55, -H * 1.6)], cx, cy, angle, facing)
+        pygame.draw.lines(canvas, scale_color(base, 0.7), False, lp, 1)
+        pygame.draw.circle(canvas, (255, 240, 150), lp[2], max(2, int(L / 40)))
+
+
+def draw_squid(canvas, cx, cy, length, angle, colors, facing, silhouette=None, tail_wag: float = 0.0) -> None:
+    """대왕오징어: 몸통(외투막) + 지느러미 + 다리."""
+    L = length
+    H = L * 0.13
+    col = silhouette or colors["body"]
+    dark = silhouette or scale_color(colors["body"], 0.75)
+    # 외투막: 머리가 오른쪽(+x) 끝이 뾰족
+    mantle = [(-L * 0.05, -H), (L * 0.3, -H * 0.8), (L * 0.5, 0), (L * 0.3, H * 0.8), (-L * 0.05, H)]
+    fin = [(L * 0.32, -H * 0.7), (L * 0.42, -H * 1.6), (L * 0.5, 0), (L * 0.42, H * 1.6), (L * 0.32, H * 0.7)]
+    pygame.draw.polygon(canvas, dark, _xf(fin, cx, cy, angle, facing))
+    # 다리 (왼쪽으로 늘어짐)
+    for i in range(6):
+        y0 = -H * 0.7 + i * H * 0.28
+        w = math.sin(tail_wag * 2 + i) * H * 0.4
+        pts = _xf([(-L * 0.08, y0), (-L * 0.28, y0 * 1.3 + w), (-L * 0.5, y0 * 1.6 - w)], cx, cy, angle, facing)
+        pygame.draw.lines(canvas, dark, False, pts, max(1, int(L / 70)))
+    pygame.draw.polygon(canvas, col, _xf(mantle, cx, cy, angle, facing))
+    head = _xf([(-L * 0.08, 0)], cx, cy, angle, facing)[0]
+    pygame.draw.circle(canvas, col, head, int(H * 0.9))
+    if silhouette is None:
+        eye = _xf([(-L * 0.08, -H * 0.2)], cx, cy, angle, facing)[0]
+        pygame.draw.circle(canvas, (250, 240, 210), eye, max(2, int(L / 30)))
+        pygame.draw.circle(canvas, (20, 20, 20), eye, max(1, int(L / 50)))
 
 
 # ───────────────────────── 점프 ─────────────────────────
@@ -99,10 +199,11 @@ def draw_jump(canvas, pal, cam, fish: dict, size_cm: float, x: float, z: float, 
     colors = fish_colors(fish)
     # 노을·밤엔 실루엣처럼 어둡게
     dark = lerp_color(colors["body"], pal["rod"], 0.55)
+    shape = fish.get("shape")
     if length < 26:
-        draw_fish_side(canvas, sx, sy, length, angle, colors, facing, silhouette=dark)
+        draw_fish_side(canvas, sx, sy, length, angle, colors, facing, silhouette=dark, shape=shape)
     else:
-        draw_fish_side(canvas, sx, sy, length, angle, colors, facing)
+        draw_fish_side(canvas, sx, sy, length, angle, colors, facing, shape=shape)
     return sx, sy
 
 
@@ -121,7 +222,7 @@ def draw_net_scene(canvas, pal, fish: dict, size_cm: float, pose: float, still: 
     pygame.draw.ellipse(canvas, pal["wave_dark"], (cx - length * 0.62, cy + 4, length * 1.24, 16))
     pygame.draw.ellipse(canvas, water_ring, (cx - length * 0.62, cy + 4, length * 1.24, 16), 1)
     draw_fish_side(canvas, cx, cy, length, angle, colors, facing=-1,
-                   tail_wag=0.0 if still else math.sin(t * 30))
+                   tail_wag=0.0 if still else math.sin(t * 30), shape=fish.get("shape"))
     # 수면 (몸 아래쪽은 물에 잠김)
     water = lerp_color(pal["water_top"], pal["water_bottom"], 0.85)
     canvas.fill(water, (0, int(cy + length * 0.1), w, h))
@@ -181,7 +282,8 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
     pop = 1 + 0.15 * max(0.0, 1 - t / 0.25)
     bob = math.sin(t * 2.5) * 2
     colors = fish_colors(fish)
-    draw_fish_side(canvas, cx, cy + bob, length * pop, 0.0, colors, facing=-1, tail_wag=math.sin(t * 6) * 0.4)
+    draw_fish_side(canvas, cx, cy + bob, length * pop, 0.0, colors, facing=-1, tail_wag=math.sin(t * 6) * 0.4,
+                   shape=fish.get("shape"))
     # 두 손 (아래에서 받쳐 듦)
     skin, shadow = pal["hand"], pal["hand_shadow"]
     if pal["hand"][0] < 90:  # 밤·노을엔 손이 너무 어두우니 밝힘

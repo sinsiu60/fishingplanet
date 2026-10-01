@@ -58,7 +58,13 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
     hf = fight.hook / 100
     hc = (255, 170, 60) if hf < 0.6 or int(t * 6) % 2 else (255, 60, 40)
     _vbar(canvas, 60, y, 5, h, hf, hc)
-    text(canvas, "바늘", (62, y + h + 12), pal["text"], 11, "center")
+    text(canvas, "바늘", (61, y + h + 12), pal["text"], 11, "center")
+    # 줄 걸림 (위협 구역이 있는 낚시터만)
+    if fight.hazards:
+        sf = fight.snag / 100
+        sc = (200, 150, 255) if not fight.in_hazard or int(t * 6) % 2 else (255, 80, 200)
+        _vbar(canvas, 88, y, 5, h, sf, sc)
+        text(canvas, "걸림", (90, y + h + 12), pal["text"], 11, "center")
 
 
 def draw_boss_bar(canvas, pal, fight) -> None:
@@ -201,7 +207,7 @@ def draw_debug(canvas, fight) -> None:
         f"장력 {fight.tension:.0f}→{fight.target:.0f} [{fight.green_low}-{fight.green_high}]",
         f"드랙 {fight.drag}/{fight.drag_steps} 한계{fight.drag_limit:.0f}",
         f"거리 {fight.distance:.1f} 감{fight.reel_speed_now:.1f} 풀{fight.payout_now:.1f}",
-        f"줄 {fight.line:.0f} 바늘 {fight.hook:.0f}",
+        f"줄 {fight.line:.0f} 바늘 {fight.hook:.0f} 걸림 {fight.snag:.0f}",
         f"체력 {fight.stamina:.0f} burst {b.burst:.2f}",
         f"{b.state} {b.pending or ''} {b.timer:.2f}s",
         f"정렬 {fight.align:+.2f} 측 {fight.fish_side():+.2f}",

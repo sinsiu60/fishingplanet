@@ -278,3 +278,55 @@ class Reeds:
             x0 = s["x"]
             pygame.draw.lines(canvas, color, False, [
                 (x0, base_y), (x0 + 10 + sway, base_y - 18), (x0 + 22 + sway, base_y - 22)], 1)
+
+
+# ───────────────────────── 환경 위협 구역 (수초·바위·물살) ─────────────────────────
+
+class HazardDecor:
+    """구역 안에 장식(수초 줄기·연잎 / 바위 / 물살)을 흩뿌려 월드 좌표로 그린다."""
+
+    def __init__(self, hazards: list, seed: int = 21):
+        rnd = random.Random(seed)
+        self.items = []
+        for hz in hazards:
+            count = 26 if hz["type"] == "weeds" else 12 if hz["type"] == "rocks" else 20
+            for _ in range(count):
+                ang = rnd.uniform(*hz["angle"])
+                dist = rnd.uniform(*hz["dist"])
+                self.items.append({"type": hz["type"], "hz": hz, "x": math.sin(ang) * dist, "z": math.cos(ang) * dist,
+                                   "size": rnd.uniform(0.6, 1.4), "ph": rnd.uniform(0, math.tau)})
+        self.items.sort(key=lambda it: -it["z"])
+
+    def draw(self, canvas, pal, cam, t: float, active_hz=None) -> None:
+        warn = active_hz is not None and int(t * 6) % 2 == 0
+        for it in self.items:
+            p = cam.project(it["x"], it["z"])
+            if p is None:
+                continue
+            sx, sy, s = p
+            if sx < -20 or sx > cam.width + 20:
+                continue
+            k = it["size"]
+            hot = warn and it["hz"] is active_hz
+            if it["type"] == "weeds":
+                col = pal["reed"] if not hot else (200, 80, 60)
+                pad = lerp_color(pal["reed"], pal["water_top"], 0.25) if not hot else (220, 110, 80)
+                w = clamp(0.5 * s * k, 2, 26)
+                pygame.draw.ellipse(canvas, pad, (sx - w / 2, sy - max(1, w * 0.12), w, max(2, w * 0.25)))
+                h = clamp(0.7 * s * k, 3, 24)
+                sway = math.sin(t * 1.4 + it["ph"]) * h * 0.15
+                pygame.draw.line(canvas, col, (sx, sy), (sx + sway, sy - h), 1)
+                pygame.draw.line(canvas, col, (sx + w * 0.2, sy), (sx + w * 0.2 + sway * 0.7, sy - h * 0.7), 1)
+            elif it["type"] == "rocks":
+                col = pal["mountain_near"] if not hot else (200, 80, 60)
+                w = clamp(0.55 * s * k, 3, 30)
+                h = clamp(0.25 * s * k, 2, 12)
+                pygame.draw.ellipse(canvas, col, (sx - w / 2, sy - h, w, h * 1.6))
+                pygame.draw.line(canvas, lerp_color(col, (255, 255, 255), 0.25), (sx - w * 0.3, sy - h * 0.8),
+                                 (sx + w * 0.1, sy - h * 0.95), 1)
+                pygame.draw.line(canvas, pal["wave_light"], (sx - w / 2 - 1, sy + h * 0.55), (sx + w / 2 + 1, sy + h * 0.55), 1)
+            else:  # current
+                col = pal["wave_light"] if not hot else (255, 150, 120)
+                w = max(3, 1.5 * s * k)
+                off = (t * 30 + it["ph"] * 10) % (w * 2) - w
+                pygame.draw.line(canvas, col, (sx - w / 2 + off * 0.3, sy), (sx + w / 2 + off * 0.3, sy), 1)

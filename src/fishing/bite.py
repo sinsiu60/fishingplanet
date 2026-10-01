@@ -23,11 +23,11 @@ class BiteState(Enum):
     SCARED = auto()
 
 
-def pick_fish(period: str, weather: str, cast_distance: float, rnd=random) -> dict | None:
+def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir") -> dict | None:
     cfg = load_json("fishing_config.json")["bite"]
     candidates, weights = [], []
     for f in load_json("fish.json")["fish"]:
-        if period not in f["times"] or weather not in f["weathers"]:
+        if f["spot"] != spot or period not in f["times"] or weather not in f["weathers"]:
             continue
         w = cfg["rarity_weight"].get(f["rarity"], 0)
         if f["rarity"] != "common":
@@ -70,6 +70,8 @@ class BiteController:
         self.bobber = (0.0, 0.0)
         self.cast_distance = 0.0
         self.period, self.weather = "day", "clear"
+        self.spot = "reservoir"
+        self.force_fish: dict | None = None  # 테스트용 강제 물고기
 
     def _rand(self, pair) -> float:
         return self.rnd.uniform(pair[0], pair[1])
@@ -90,8 +92,8 @@ class BiteController:
         self.dip = 0.0
         self.fish = None
 
-    def set_conditions(self, period: str, weather: str) -> None:
-        self.period, self.weather = period, weather
+    def set_conditions(self, period: str, weather: str, spot: str = "reservoir") -> None:
+        self.period, self.weather, self.spot = period, weather, spot
 
     def hookset(self) -> str:
         """좌클릭(챔질). 결과: 'hooked' / 'scared' / 'empty'."""
@@ -136,7 +138,8 @@ class BiteController:
         if self.state == BiteState.WAIT:
             self.dip = lerp(self.dip, 0.0, 0.2)
             if self.timer <= 0:
-                self.fish = pick_fish(self.period, self.weather, self.cast_distance, self.rnd)
+                self.fish = self.force_fish or pick_fish(self.period, self.weather, self.cast_distance, self.rnd,
+                                                         self.spot)
                 if self.fish is None:
                     self.timer = 3.0
                     return
@@ -188,7 +191,8 @@ class BiteController:
                     self.timer = self._rand(cfg["nibble_interval_sec"])
                 else:
                     self.state = BiteState.BITE
-                    self.timer = cfg["bite_window_sec"]
+                    # 예민한 물고기(감성돔 등)는 챔질 창이 짧다
+                    self.timer = cfg["bite_window_sec"] * self.fish.get("bite_window_mult", 1.0)
                     self.bite_t = 0.0
                     self.tip_pull = 12.0
                     self.events.append("bite")

@@ -1,0 +1,18 @@
+{
+  "_설명": "낚시터. hazards = 환경 위협 구역 (angle: 정면 기준 좌우 각도 라디안, 음수=왼쪽 / dist: 거리 m). Phase 6에서 배경·해금 조건 추가.",
+  "spots": [
+    {"id": "reservoir", "name": "동네 저수지",
+     "hazards": [{"type": "weeds", "name": "수초", "angle": [-0.55, -0.22], "dist": [6, 32]}]},
+    {"id": "valley", "name": "계곡",
+     "hazards": [{"type": "rocks", "name": "바위", "angle": [-0.55, -0.28], "dist": [5, 30]},
+                 {"type": "rocks", "name": "바위", "angle": [0.3, 0.55], "dist": [8, 26]}]},
+    {"id": "breakwater", "name": "바다 방파제",
+     "hazards": [{"type": "rocks", "name": "테트라포드", "angle": [0.22, 0.55], "dist": [4, 22]}]},
+    {"id": "offshore", "name": "먼바다 배낚시", "hazards": []},
+    {"id": "deep", "name": "심해",
+     "hazards": [{"type": "rocks", "name": "암초", "angle": [0.2, 0.5], "dist": [5, 18]}]},
+    {"id": "secret", "name": "용문 폭포",
+     "hazards": [{"type": "current", "name": "폭포 물살", "angle": [-0.55, -0.3], "dist": [5, 40]},
+                 {"type": "current", "name": "폭포 물살", "angle": [0.3, 0.55], "dist": [5, 40]}]}
+  ]
+}
