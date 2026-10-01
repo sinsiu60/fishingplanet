@@ -115,7 +115,7 @@ def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:
         return
     sx, sy, s = p
     # 멀리서도 읽히도록 실제보다 크게 + 최소 크기 보장 (공정함 > 사실감)
-    length = max(7.0, shadow["len"] * s * 1.8)
+    length = max(7.0, shadow["len"] * s * 1.8) * shadow.get("scale", 1.0)
     # 진행 방향의 화면 좌우 성분 (정면/뒤로 향하면 짧아 보임)
     rel = shadow["heading"] - cam.yaw
     side = math.sin(rel)
@@ -128,7 +128,7 @@ def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:
     # 꼬리 (진행 반대쪽, 살랑)
     direction = 1 if side >= 0 else -1
     tail_x = sx - direction * body_w / 2
-    wag = math.sin(t * 9) * body_h * 0.35
+    wag = math.sin(t * shadow.get("wag", 9.0)) * body_h * 0.35
     tail_len = max(2.0, body_w * 0.3)
     pygame.draw.polygon(canvas, color, [
         (tail_x, sy),
@@ -139,18 +139,32 @@ def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:
 
 # ───────────────────────── 낚싯줄 ─────────────────────────
 
-def draw_line(canvas, pal, start, end, sag: float, bias: float = 0.5) -> None:
-    """start(낚싯대 끝) → end(찌). sag만큼 아래로 처진 2차 곡선."""
-    cx = start[0] + (end[0] - start[0]) * bias
+def draw_line(canvas, pal, start, end, sag: float, bias: float = 0.5, dx: float = 0.0,
+              color=None, cracks: float = 0.0, t: float = 0.0) -> list:
+    """start(낚싯대 끝) → end(찌). sag만큼 아래로 처진 2차 곡선.
+    dx: 줄 쏠림(좌우 휨), cracks: 0~1 실금 정도."""
+    cx = start[0] + (end[0] - start[0]) * bias + dx
     cy = max(start[1], end[1]) + sag
     ctrl = (cx, cy)
-    n = 14
+    n = 16
     pts = []
     for i in range(n + 1):
-        t = i / n
-        a, b, c = (1 - t) ** 2, 2 * (1 - t) * t, t * t
+        u = i / n
+        a, b, c = (1 - u) ** 2, 2 * (1 - u) * u, u * u
         pts.append((a * start[0] + b * ctrl[0] + c * end[0], a * start[1] + b * ctrl[1] + c * end[1]))
-    pygame.draw.lines(canvas, pal["line"], False, pts, 1)
+    col = color or pal["line"]
+    pygame.draw.lines(canvas, col, False, pts, 1)
+    if cracks > 0:
+        crack_col = lerp_color(col, (255, 60, 50), 0.6)
+        step = max(1, int(5 - cracks * 3))
+        for i in range(2, n - 1, step):
+            (x0, y0), (x1, y1) = pts[i], pts[i + 1]
+            nx, ny = -(y1 - y0), (x1 - x0)
+            ln = math.hypot(nx, ny) or 1
+            k = (2 + cracks * 2) * (1 if (i + int(t * 10)) % 2 else -1)
+            canvas.fill(crack_col, (int(x0 + nx / ln * k), int(y0 + ny / ln * k), 1, 1))
+            canvas.fill(crack_col, (int(x0 + nx / ln * k * 0.5), int(y0 + ny / ln * k * 0.5), 1, 1))
+    return pts
 
 
 def landing_marker(canvas, pal, cam, x: float, z: float, t: float) -> None:
@@ -171,3 +185,61 @@ def landing_marker(canvas, pal, cam, x: float, z: float, t: float) -> None:
 def rod_tip_drop(tip, t: float) -> tuple[float, float]:
     """낚싯대 끝에 매달린 찌 위치 (살짝 흔들림)."""
     return tip[0] + math.sin(t * 2.3) * 1.5, tip[1] + 15
+
+
+# ───────────────────────── 기포 · 반짝 (화면 공간) ─────────────────────────
+
+class Bubbles:
+    def __init__(self):
+        self.items: list[list[float]] = []
+
+    def spawn(self, x: float, y: float, spread: float) -> None:
+        self.items.append([x + random.uniform(-spread, spread), y + random.uniform(-1, 2), random.uniform(0.25, 0.5)])
+
+    def update(self, dt: float) -> None:
+        for b in self.items:
+            b[1] -= 6 * dt
+            b[2] -= dt
+        self.items = [b for b in self.items if b[2] > 0]
+
+    def draw(self, canvas, pal) -> None:
+        col = lerp_color(pal["wave_light"], (255, 255, 255), 0.5)
+        for x, y, life in self.items:
+            if life < 0.08:
+                canvas.fill(col, (int(x) - 1, int(y), 3, 1))  # 톡 터짐
+            else:
+                canvas.fill(col, (int(x), int(y), 1, 1))
+
+
+class Sparkles:
+    """퍼펙트 반짝 이펙트."""
+
+    def __init__(self):
+        self.items: list[list[float]] = []
+        self.rings: list[list[float]] = []
+
+    def burst(self, x: float, y: float) -> None:
+        for i in range(18):
+            a = i / 18 * math.tau + random.uniform(-0.1, 0.1)
+            sp = random.uniform(50, 110)
+            self.items.append([x, y, math.cos(a) * sp, math.sin(a) * sp, random.uniform(0.4, 0.7)])
+        self.rings.append([x, y, 0.0])
+
+    def update(self, dt: float) -> None:
+        for p in self.items:
+            p[0] += p[2] * dt
+            p[1] += p[3] * dt
+            p[2] *= 0.9
+            p[3] *= 0.9
+            p[4] -= dt
+        self.items = [p for p in self.items if p[4] > 0]
+        for r in self.rings:
+            r[2] += dt
+        self.rings = [r for r in self.rings if r[2] < 0.35]
+
+    def draw(self, canvas) -> None:
+        for x, y, age in self.rings:
+            pygame.draw.circle(canvas, (255, 240, 170), (int(x), int(y)), int(4 + age * 90), 1)
+        for x, y, _, _, life in self.items:
+            col = (255, 255, 255) if life > 0.3 else (255, 220, 90)
+            canvas.fill(col, (int(x), int(y), 2 if life > 0.3 else 1, 2 if life > 0.3 else 1))

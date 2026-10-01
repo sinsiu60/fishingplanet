@@ -1,22 +1,25 @@
-"""1인칭 낚시 장면 (Phase 1: 장면 + 캐스팅)."""
+"""1인칭 낚시 장면: 캐스팅 → 입질 → 챔질 → 파이팅 → 뜰채 → 획득."""
 import math
+import random
 
 import pygame
 
-from src.core.config import game_config
-from src.core.game_clock import GameClock
 from src.audio.sfx import Sfx
-from src.core.mathutil import clamp, lerp, smoothstep
+from src.core.config import game_config, load_json
+from src.core.game_clock import GameClock
+from src.core.mathutil import clamp, lerp, lerp_color, smoothstep
 from src.fishing.bite import BiteController, BiteState, roll_size
 from src.fishing.casting import CastController, CastState
+from src.fishing.fight import LOSE_REASONS, Fight
 from src.render import world
 from src.render.camera import Camera
-from src.render.effects import (Droplets, Ripples, draw_bobber, draw_fish_shadow, draw_line, landing_marker,
-                                rod_tip_drop)
+from src.render.effects import (Bubbles, Droplets, Ripples, Sparkles, draw_bobber, draw_fish_shadow, draw_line,
+                                landing_marker, rod_tip_drop)
+from src.render.fish_draw import draw_catch_cut, draw_jump, draw_net_scene
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
 from src.scene.base import Scene
-from src.ui import hud
+from src.ui import fight_hud, hud
 
 HINTS = {
     CastState.READY: "좌클릭 유지: 파워 충전   마우스: 방향   화면 끝: 둘러보기   T: 시간 가속",
@@ -25,12 +28,23 @@ HINTS = {
     CastState.FLIGHT: "",
     CastState.LANDED: "좌클릭: 챔질 (찌가 쑥 잠길 때!)   우클릭: 줄 회수   화면 끝: 둘러보기",
     CastState.RETRIEVE: "줄 감는 중...",
-    CastState.HOOKED: "",
+    CastState.HOOKED: "좌클릭 유지: 감기   우클릭: 숙이기   Q/E·휠: 드랙   마우스: 버티는 방향   F1: 수치",
 }
+NET_HINT = "몸부림이 멈춘 순간 좌클릭!"
 GOOD = (140, 240, 150)
 BAD = (255, 150, 130)
 INFO = (255, 235, 170)
 LOOK_STATES = (CastState.READY, CastState.LANDED)
+
+# 처음 몇 번은 예고 신호의 의미를 알려준다 (DESIGN.md 4장)
+TIPS = {
+    "telegraph:rush": "꼬리 물보라 = 돌진! 드랙을 낮추고(Q) 감기를 멈추세요",
+    "telegraph:jump": "그림자가 커진다 = 점프! 정점에서 우클릭",
+    "telegraph:turn": "줄이 쏠린다 = 방향 전환! 마우스를 반대쪽으로",
+    "action:charge": "멈췄다 = 힘 모으기! 지금 확 감으세요",
+    "tired": "지쳤다! 드랙을 올리고(E) 크게 감으세요",
+}
+TIP_REPEAT = 2
 
 
 class FishingScene(Scene):
@@ -50,10 +64,22 @@ class FishingScene(Scene):
         self.bite = BiteController()
         self.sfx = Sfx()
         self.toasts = hud.Toasts()
-        self.catch: dict | None = None     # 획득 카드 표시 중인 물고기
-        self.hook_timer = 0.0
         self.ripples = Ripples()
         self.droplets = Droplets()
+        self.bubbles = Bubbles()
+        self.sparkles = Sparkles()
+        self.popups = fight_hud.JudgePopups()
+        self.fish_cfg = load_json("fishing_config.json")
+        self.fight: Fight | None = None
+        self.end_t = 0.0             # 결과 화면 경과 시간
+        self.net_anim = 0.0
+        self.jump_facing = -1
+        self.fx_t = 0.0
+        self.tip_counts: dict[str, int] = {}
+        self.debug = False
+        self.shake_on = self.fish_cfg["fight"]["screen_shake"]
+        self.shake_kick = 0.0
+        self.reel_loop = None
         self.t = 0.0
         self.mouse = (canvas.get_width() // 2, canvas.get_height() // 2)
         self.look_left = self.look_right = False
@@ -61,27 +87,39 @@ class FishingScene(Scene):
         self.wake_t = 0.0
         pygame.mouse.set_visible(False)
 
-    # ── 입력 ──
+    # ───────────────────────── 입력 ─────────────────────────
     def handle_event(self, event: pygame.event.Event) -> None:
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_t:
-            self.clock.fast = not self.clock.fast
+        f = self.fight
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_t:
+                self.clock.fast = not self.clock.fast
+            elif event.key == pygame.K_F1:
+                self.debug = not self.debug
+            elif event.key == pygame.K_F2:
+                self.shake_on = not self.shake_on
+                self.toasts.show("화면 흔들림 " + ("켬" if self.shake_on else "끔"), INFO, 1.2, 11)
+            elif f and event.key == pygame.K_q:
+                f.change_drag(-1)
+            elif f and event.key == pygame.K_e:
+                f.change_drag(+1)
+        elif event.type == pygame.MOUSEWHEEL and f:
+            f.change_drag(1 if event.y > 0 else -1)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 self._left_click()
-            elif event.button == 3 and self.catch is None:
-                if self.cast.state == CastState.LANDED:
-                    self.bite.stop()
-                self.cast.cancel_or_retrieve()
+            elif event.button == 3:
+                self._right_click()
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.cast.release(self.cam.yaw)
 
     def _left_click(self) -> None:
-        c = self.cast
-        if self.catch is not None:
-            if self.catch.get("ready"):
-                self.catch = None
-                self.bite.stop()
-                c.reset()
+        c, f = self.cast, self.fight
+        if f is not None:
+            if f.phase == "net":
+                self.net_anim = 0.3
+                f.net_click()
+            elif f.phase in ("caught", "lost") and self.end_t > 0.8:
+                self._end_fight()
             return
         if c.state != CastState.LANDED:
             c.press()
@@ -92,9 +130,9 @@ class FishingScene(Scene):
         if result == "hooked":
             c.hooked()
             self.sfx.play("hookset")
-            self.toasts.show("챔질 성공!", GOOD, 1.2)
-            self.hook_timer = 0.9
+            self.toasts.show("챔질 성공!", GOOD, 1.0)
             self._splash_at(c.bx, c.bz, big=0.6)
+            self._start_fight()
         elif result == "scared":
             self.sfx.play("hookset", 0.5)
             self.sfx.play("flee")
@@ -104,13 +142,47 @@ class FishingScene(Scene):
             if self.bite.state == BiteState.MISSED:
                 self.toasts.show("미끼가 없어요. 우클릭으로 회수", INFO, 2.0, 11)
 
-    # ── 로직 (60틱 고정) ──
+    def _right_click(self) -> None:
+        if self.fight is not None:
+            if self.fight.phase == "fight":
+                self.sfx.play("cast", 0.35)
+                self.fight.dip()
+            return
+        if self.cast.state == CastState.LANDED:
+            self.bite.stop()
+        self.cast.cancel_or_retrieve()
+
+    # ───────────────────────── 파이팅 시작·끝 ─────────────────────────
+    def _start_fight(self) -> None:
+        c = self.cast
+        fish = self.bite.fish
+        force = self.fish_cfg.get("debug_force_fish")
+        if force:
+            fish = next((x for x in load_json("fish.json")["fish"] if x["id"] == force), fish)
+        size = roll_size(fish, self.bite.cast_distance)
+        angle = math.atan2(c.bx, c.bz)
+        self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw)
+        self.bite.shadow = None
+        self.end_t = 0.0
+
+    def _end_fight(self) -> None:
+        self.fight = None
+        self.bite.stop()
+        self.cast.reset()
+        self.game.screen.shake = (0, 0)
+
+    # ───────────────────────── 로직 (60틱 고정) ─────────────────────────
     def update(self, dt: float) -> None:
         self.t += dt
         self.clock.update(dt)
         self.clouds.update(dt)
         self.ripples.update(dt)
         self.droplets.update(dt)
+        self.bubbles.update(dt)
+        self.sparkles.update(dt)
+        self.popups.update(dt)
+        self.toasts.update(dt)
+        self.net_anim = max(0.0, self.net_anim - dt)
 
         mx, my = self.game.screen.to_canvas(pygame.mouse.get_pos())
         w = self.cam.width
@@ -129,7 +201,6 @@ class FishingScene(Scene):
 
         aim = clamp((mx - self.cam.cx) / (self.cam.cx - edge), -1.0, 1.0)
         self.cast.update(dt, aim)
-
         for ev in self.cast.events:
             if ev == "splash":
                 self._splash()
@@ -137,21 +208,20 @@ class FishingScene(Scene):
                 self.sfx.play("cast")
         self.cast.events.clear()
 
+        if self.fight is not None:
+            self._update_fight(dt, aim)
+        else:
+            self._update_waiting(dt)
+
+        self._update_reel_sound()
+        self._update_shake(dt)
+
+    def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], "clear")
         self.bite.update(dt)
         for ev in self.bite.events:
             self._on_bite_event(ev)
         self.bite.events.clear()
-        self.toasts.update(dt)
-        self.sfx.loop("reel", self.cast.state == CastState.RETRIEVE, 0.5)
-
-        if self.hook_timer > 0:
-            self.hook_timer -= dt
-            if self.hook_timer <= 0:
-                self._land_fish()
-        if self.catch is not None:
-            self.catch["t"] += dt
-            self.catch["ready"] = self.catch["t"] > 0.5
 
         if self.cast.state == CastState.LANDED and self.bite.state != BiteState.BITE:
             self.idle_ripple_t += dt
@@ -164,6 +234,71 @@ class FishingScene(Scene):
                 self.wake_t = 0.0
                 self.ripples.spawn(self.cast.bx, self.cast.bz, size=0.35, life=0.9)
 
+    def _update_fight(self, dt: float, aim: float) -> None:
+        f = self.fight
+        if f.phase in ("caught", "lost"):
+            self.end_t += dt
+            return
+        reeling = pygame.mouse.get_pressed()[0] and f.phase == "fight"
+        f.update(dt, reeling, aim)
+        x, z = f.fish_xz()
+        self.cast.bx, self.cast.bz = x, z
+        for ev in f.events:
+            self._on_fight_event(ev)
+        f.events.clear()
+        if f.phase != "fight":
+            return
+
+        # 예고 신호 연출
+        b = f.brain
+        self.fx_t += dt
+        p = self.cam.project(x, z)
+        sig = b.signal
+        if sig == "rush" and self.fx_t > 0.12:
+            # 꼬리 물보라: 물고기 뒤쪽에서 하얀 물방울
+            self.fx_t = 0.0
+            back = math.atan2(x, z)
+            self.ripples.spawn(x + math.sin(back) * 0.4, z + math.cos(back) * 0.4, size=0.45, life=0.7)
+            if p:
+                self.droplets.burst(p[0] + random.uniform(-3, 3), p[1], max(0.5, p[2] / 25), count=4)
+        elif sig == "jump" and p:
+            # 그림자 커짐 + 기포
+            self.bubbles.spawn(p[0], p[1], max(3.0, f.fish["shadow_len_m"] * p[2]))
+        elif b.state in ("idle", "rush", "turn", "recover") and self.fx_t > (0.15 if b.state == "rush" else 0.6):
+            self.fx_t = 0.0
+            self.ripples.spawn(x, z, size=0.4 if b.state != "rush" else 0.6, life=0.9)
+            if b.state == "rush" and p:
+                self.droplets.burst(p[0], p[1], max(0.5, p[2] / 25), count=3)
+
+    def _update_reel_sound(self) -> None:
+        name = None
+        f = self.fight
+        if f is not None and f.phase == "fight" and f.reeling:
+            v = f.reel_speed_now
+            name = "reel0" if v < 0.6 else "reel1" if v < 1.2 else "reel2" if v < 2.0 else "reel3"
+        elif self.cast.state == CastState.RETRIEVE:
+            name = "reel2"
+        if name != self.reel_loop:
+            if self.reel_loop:
+                self.sfx.loop(self.reel_loop, False)
+            if name:
+                self.sfx.loop(name, True, 0.5)
+            self.reel_loop = name
+
+    def _update_shake(self, dt: float) -> None:
+        self.shake_kick = max(0.0, self.shake_kick - dt * 6)
+        amp = self.shake_kick
+        f = self.fight
+        fc = self.fish_cfg["fight"]
+        if f is not None and f.phase == "fight" and f.tension > fc["shake_start_tension"]:
+            amp += (f.tension - fc["shake_start_tension"]) / 30 * fc["shake_max_px"]
+        if not self.shake_on or amp < 0.3:
+            self.game.screen.shake = (0, 0)
+            return
+        a = int(round(amp))
+        self.game.screen.shake = (random.randint(-a, a), random.randint(-a, a))
+
+    # ───────────────────────── 이벤트 ─────────────────────────
     def _splash(self) -> None:
         c = self.cast
         self._splash_at(c.bx, c.bz, big=1.0)
@@ -175,7 +310,7 @@ class FishingScene(Scene):
         self.ripples.spawn(x, z, size=big, life=1.8, rings=3 if big >= 0.8 else 2)
         p = self.cam.project(x, z)
         if p:
-            self.droplets.burst(p[0], p[1], p[2] / 20 * big, count=int(6 + 6 * big))
+            self.droplets.burst(p[0], p[1], max(0.5, p[2] / 20 * big), count=int(6 + 6 * big))
 
     def _on_bite_event(self, ev: str) -> None:
         c = self.cast
@@ -192,18 +327,82 @@ class FishingScene(Scene):
             self.sfx.play("flee", 0.6)
             self.toasts.show("미끼만 먹고 도망갔다... (우클릭: 회수)", BAD, 2.6)
 
-    def _land_fish(self) -> None:
-        """임시: 챔질 성공 = 바로 획득. Phase 3에서 파이팅으로 교체."""
-        fish = self.bite.fish
-        size = roll_size(fish, self.bite.cast_distance)
-        self.catch = {"fish": fish, "size": size, "t": 0.0, "ready": False}
-        self.sfx.play("catch")
+    def _tip(self, key: str) -> None:
+        n = self.tip_counts.get(key, 0)
+        if key in TIPS and n < TIP_REPEAT:
+            self.tip_counts[key] = n + 1
+            self.toasts.show(TIPS[key], INFO, 2.2, 11)
 
-    # ── 그리기 ──
+    def _fish_screen(self, h: float = 0.0):
+        f = self.fight
+        x, z = f.fish_xz()
+        if h == 0.0 and f.brain.state == "jump":
+            ph = f.brain.jump_phase()
+            h = 4 * f.brain.cfg["jump_height_m"] * ph * (1 - ph)
+        p = self.cam.project(x, z, h)
+        return (p[0], p[1]) if p else (self.cam.cx, self.cam.horizon + 20)
+
+    def _on_fight_event(self, ev: str) -> None:
+        f = self.fight
+        x, z = f.fish_xz()
+        self._tip(ev)
+        if ev == "telegraph:rush":
+            self.sfx.play("splash_small", 0.7)
+        elif ev == "telegraph:jump":
+            self.sfx.play("bubbles", 0.8)
+        elif ev == "telegraph:turn":
+            self.sfx.play("scrape", 0.8)
+        elif ev == "action:rush":
+            self.sfx.play("splash_small", 1.0)
+            self._splash_at(x, z, 0.6)
+        elif ev == "action:jump":
+            self.jump_facing = -1 if f.fish_side() > 0 else 1
+            self.sfx.play("splash", 0.7)
+            self._splash_at(x, z, 0.8)
+        elif ev == "jump_land":
+            self.sfx.play("splash", 0.9)
+            self._splash_at(x, z, 1.0)
+        elif ev == "exhausted":
+            self.toasts.show("완전히 지쳤다! 끝까지 감으세요", GOOD, 2.0, 11)
+        elif ev == "perfect":
+            pos = self._fish_screen()
+            self.sfx.play("perfect")
+            self.sparkles.burst(*pos)
+            self.popups.add("perfect", pos)
+            fc = self.fish_cfg["fight"]
+            self.game.slowmo(fc["slowmo_real_sec"], fc["slowmo_scale"])
+        elif ev == "good":
+            pos = self._fish_screen()
+            self.sfx.play("good")
+            self.popups.add("good", pos)
+        elif ev in ("miss_early", "miss_late", "miss_none"):
+            self.sfx.play("miss")
+            self.popups.add(ev, self._fish_screen())
+            self.shake_kick = 3.0
+        elif ev == "creak":
+            self.sfx.play("creak", 0.8)
+        elif ev == "net_start":
+            self.sfx.play("splash", 0.8)
+            self.toasts.show("뜰채! " + NET_HINT, INFO, 1.6, 11)
+        elif ev == "net_fail":
+            self.sfx.play("flee")
+            self.sfx.play("splash")
+            self.toasts.show("뜰채 실패! 물고기가 거리를 벌린다", BAD, 2.0, 11)
+            self._splash_at(x, z, 1.0)
+        elif ev == "caught":
+            self.sfx.play("catch")
+            self.end_t = 0.0
+        elif ev.startswith("lost:"):
+            self.sfx.play("snap" if ev == "lost:snap" else "flee")
+            self.sfx.play("lose", 0.8)
+            self.end_t = 0.0
+            self.shake_kick = 4.0 if ev == "lost:snap" else 0.0
+
+    # ───────────────────────── 그리기 ─────────────────────────
     def draw(self, canvas: pygame.Surface) -> None:
         hour = self.clock.hour
         pal = self.palette.sample(hour)
-        cam, c, t = self.cam, self.cast, self.t
+        cam, c, t, f = self.cam, self.cast, self.t, self.fight
 
         world.draw_sky(canvas, pal, cam)
         self.stars.draw(canvas, pal, cam, t)
@@ -211,11 +410,14 @@ class FishingScene(Scene):
         self.clouds.draw(canvas, pal, cam)
         world.draw_mountains(canvas, pal, cam)
         self.water.draw(canvas, pal, t, hour)
-        draw_fish_shadow(canvas, pal, cam, self.bite.shadow, t)
+        if f is None:
+            draw_fish_shadow(canvas, pal, cam, self.bite.shadow, t)
+        elif f.phase == "fight":
+            draw_fish_shadow(canvas, pal, cam, self._fight_shadow(), t)
         self.ripples.draw(canvas, pal, cam)
+        self.bubbles.draw(canvas, pal)
 
-        geo = rod_geometry(c.aim, c.swing_deg + c.jerk_offset(), c.bend + self.bite.tip_pull,
-                           c.rod_hand_offset())
+        geo = self._rod_geo()
         tip = geo["tip"]
 
         if c.state == CastState.CHARGING:
@@ -224,8 +426,15 @@ class FishingScene(Scene):
             landing_marker(canvas, pal, cam, math.sin(ang) * d, math.cos(ang) * d, t)
 
         hanging = c.state in (CastState.READY, CastState.CHARGING, CastState.SWING)
-        if not hanging:
+        if f is not None and f.phase in ("fight", "net"):
+            self._draw_fight_line(canvas, pal, tip)
+        elif not hanging and f is None:
             self._draw_line_and_bobber(canvas, pal, tip)
+
+        if f is not None and f.phase == "fight" and f.brain.state == "jump":
+            x, z = f.fish_xz()
+            draw_jump(canvas, pal, cam, f.fish, f.size_cm, x, z, f.brain.jump_phase(), self.jump_facing,
+                      f.brain.cfg["jump_height_m"])
 
         self.reeds.draw(canvas, pal, t)
         draw_rod(canvas, pal, geo, c.reel_angle)
@@ -236,22 +445,102 @@ class FishingScene(Scene):
             draw_bobber(canvas, pal, bx, by, 7, floating=False)
         self.droplets.draw(canvas, pal)
 
-        # HUD
-        hud.draw_clock(canvas, pal, self.clock.label(), self.clock.fast, self.clock.fast_mult)
-        if c.state == CastState.CHARGING:
-            hud.draw_power_gauge(canvas, pal, c.power, c.distance_for_power(c.power))
-        if c.state == CastState.LANDED:
-            hud.text(canvas, f"찌 거리 {c.current_distance():.0f}m", (cam.width - 6, 4), pal["text"],
-                     anchor="topright")
-        hint = HINTS[c.state]
-        if hint and self.catch is None:
-            hud.draw_hint(canvas, pal, hint)
+        if f is not None:
+            self._draw_fight_overlay(canvas, pal)
+        else:
+            hud.draw_clock(canvas, pal, self.clock.label(), self.clock.fast, self.clock.fast_mult)
+            if c.state == CastState.CHARGING:
+                hud.draw_power_gauge(canvas, pal, c.power, c.distance_for_power(c.power))
+            if c.state == CastState.LANDED:
+                hud.text(canvas, f"찌 거리 {c.current_distance():.0f}m", (cam.width - 6, 4), pal["text"],
+                         anchor="topright")
+            hint = HINTS[c.state]
+            if hint:
+                hud.draw_hint(canvas, pal, hint)
+            hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
         self.toasts.draw(canvas)
-        if self.catch is not None:
-            f = self.catch
-            hud.draw_catch_card(canvas, pal, f["fish"]["name"], f["size"], f["fish"]["rarity"], f["t"])
-        hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
         hud.draw_cursor(canvas, self.mouse)
+
+    def _rod_geo(self) -> dict:
+        c, f = self.cast, self.fight
+        if f is None or f.phase in ("caught", "lost"):
+            return rod_geometry(c.aim, c.swing_deg + c.jerk_offset(), c.bend + self.bite.tip_pull,
+                                c.rod_hand_offset())
+        # 파이팅: 장력만큼 휘고, 끝이 물고기 쪽으로 끌려감. 우클릭이면 숙임.
+        tension = f.tension
+        dip = math.sin(math.pi * (f.dip_t / 0.35)) if f.dip_t > 0 else 0.0
+        bend = 5 + tension * 0.24 + (math.sin(self.t * 31) * tension / 40 if tension > 60 else 0)
+        pull_x = f.fish_side() * tension * 0.25
+        swing = 10 - 24 * dip
+        return rod_geometry(c.aim, swing + c.jerk_offset(), bend, (0, 2 * dip), pull_x=pull_x)
+
+    def _fight_shadow(self) -> dict:
+        f = self.fight
+        b = f.brain
+        x, z = f.fish_xz()
+        heading = math.atan2(x, z)
+        if b.state == "turn":
+            heading += b.turn_dir * 1.2
+        wag = {"rush": 22.0, "idle": 12.0, "telegraph": 14.0, "turn": 16.0, "recover": 8.0,
+               "tired": 3.0, "charge": 0.0, "exhausted": 2.0}.get(b.state, 10.0)
+        scale = 1.0 + 0.9 * b.signal_progress() if b.signal == "jump" else 1.0
+        alpha = 0.0 if b.state == "jump" else 0.7 if b.state in ("tired", "exhausted") else 1.0
+        return {"x": x, "z": z, "heading": heading, "alpha": alpha, "len": f.fish["shadow_len_m"],
+                "scale": scale, "wag": wag}
+
+    def _draw_fight_line(self, canvas, pal, tip) -> None:
+        f, cam = self.fight, self.cam
+        x, z = f.fish_xz()
+        p = cam.project(x, z)
+        if p is None:
+            return
+        sx, sy, s = p
+        b = f.brain
+        size = max(3.5, 0.36 * s)
+        still = b.state == "charge"
+        bob = 0.0 if still else math.sin(self.t * 9) * max(0.5, s * 0.01)
+        # 줄 쏠림 (방향 전환 예고/진행)
+        dx = 0.0
+        if b.signal == "turn":
+            dx = b.turn_dir * (6 + 22 * b.signal_progress()) + math.sin(self.t * 40) * 1.5
+        elif b.state == "turn":
+            dx = b.turn_dir * 22
+        lf = f.line_frac
+        color = pal["line"] if lf >= 0.5 else lerp_color(pal["line"], (235, 70, 55), (0.5 - lf) * 2)
+        if lf < 0.25 and int(self.t * 8) % 2 == 0:
+            color = (255, 90, 70)
+        cracks = 0.0 if lf >= 0.5 else (0.5 - lf) * 2
+        sag = max(0.0, (45 - f.tension) * 0.35) + 1
+        draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.25), sag, bias=0.6, dx=dx, color=color,
+                  cracks=cracks, t=self.t)
+        if f.phase == "fight":
+            draw_bobber(canvas, pal, sx, sy + bob, size, floating=True, dip=0.55)
+
+    def _draw_fight_overlay(self, canvas, pal) -> None:
+        f, t = self.fight, self.t
+        if f.phase == "net":
+            pose, still = f.net_pose()
+            draw_net_scene(canvas, pal, f.fish, f.size_cm, pose, still, t, self.net_anim, self.mouse)
+            fight_hud.draw_boss_bar(canvas, pal, f)
+            hud.draw_hint(canvas, pal, NET_HINT)
+            return
+        if f.phase == "caught":
+            draw_catch_cut(canvas, pal, f.result, self.end_t)
+            fight_hud.draw_catch_info(canvas, f.result, self.end_t)
+            return
+        if f.phase == "lost":
+            fight_hud.draw_lose_panel(canvas, f, LOSE_REASONS[f.lose_reason], self.end_t)
+            return
+        fight_hud.draw_danger_vignette(canvas, f, t)
+        self.sparkles.draw(canvas)
+        self.popups.draw(canvas)
+        fight_hud.draw_gauges(canvas, pal, f, t)
+        fight_hud.draw_boss_bar(canvas, pal, f)
+        fight_hud.draw_drag(canvas, pal, f)
+        fight_hud.draw_distance(canvas, pal, f)
+        hud.draw_hint(canvas, pal, HINTS[CastState.HOOKED])
+        if self.debug:
+            fight_hud.draw_debug(canvas, f)
 
     def _draw_line_and_bobber(self, canvas, pal, tip) -> None:
         c, cam = self.cast, self.cam

@@ -1,17 +1,171 @@
 {
-  "_설명": "Phase 2 임시 물고기 3종. Phase 4에서 DESIGN.md 전체 35종으로 확장.",
+  "_설명": "Phase 3: 배스 파이팅 완성. 나머지 2종은 임시 수치. Phase 4에서 DESIGN.md 전체 35종으로 확장.",
   "fish": [
-    {"id": "crucian", "name": "붕어", "spot": "reservoir",
-     "times": ["morning", "day", "evening", "night"], "weathers": ["clear", "rain"],
-     "rarity": "common", "size_cm": [15, 35], "base_price": 25, "difficulty": 1,
-     "telegraph_sec": 1.4, "nibbles": [1, 3], "shadow_len_m": 0.45},
-    {"id": "minnow", "name": "피라미", "spot": "reservoir",
-     "times": ["morning", "day"], "weathers": ["clear", "rain"],
-     "rarity": "common", "size_cm": [8, 15], "base_price": 12, "difficulty": 1,
-     "telegraph_sec": 1.4, "nibbles": [3, 5], "shadow_len_m": 0.3},
-    {"id": "bass", "name": "배스", "spot": "reservoir",
-     "times": ["morning", "evening"], "weathers": ["clear", "rain"],
-     "rarity": "uncommon", "size_cm": [25, 55], "base_price": 70, "difficulty": 3,
-     "telegraph_sec": 1.0, "nibbles": [1, 2], "shadow_len_m": 0.6}
+    {
+      "id": "crucian",
+      "name": "붕어",
+      "spot": "reservoir",
+      "times": [
+        "morning",
+        "day",
+        "evening",
+        "night"
+      ],
+      "weathers": [
+        "clear",
+        "rain"
+      ],
+      "rarity": "common",
+      "size_cm": [
+        15,
+        35
+      ],
+      "base_price": 25,
+      "difficulty": 1,
+      "telegraph_sec": 1.4,
+      "nibbles": [
+        1,
+        3
+      ],
+      "shadow_len_m": 0.45,
+      "power": 0.6,
+      "stamina": 50,
+      "actions": {
+        "rush": 55,
+        "charge": 45
+      },
+      "colors": {
+        "body": [
+          150,
+          130,
+          70
+        ],
+        "belly": [
+          225,
+          210,
+          160
+        ],
+        "fin": [
+          120,
+          100,
+          60
+        ],
+        "stripe": null
+      }
+    },
+    {
+      "id": "minnow",
+      "name": "피라미",
+      "spot": "reservoir",
+      "times": [
+        "morning",
+        "day"
+      ],
+      "weathers": [
+        "clear",
+        "rain"
+      ],
+      "rarity": "common",
+      "size_cm": [
+        8,
+        15
+      ],
+      "base_price": 12,
+      "difficulty": 1,
+      "telegraph_sec": 1.4,
+      "nibbles": [
+        3,
+        5
+      ],
+      "shadow_len_m": 0.3,
+      "power": 0.35,
+      "stamina": 25,
+      "actions": {
+        "rush": 60,
+        "turn": 40
+      },
+      "colors": {
+        "body": [
+          150,
+          170,
+          190
+        ],
+        "belly": [
+          235,
+          235,
+          240
+        ],
+        "fin": [
+          200,
+          120,
+          110
+        ],
+        "stripe": [
+          90,
+          110,
+          150
+        ]
+      }
+    },
+    {
+      "id": "bass",
+      "name": "배스",
+      "spot": "reservoir",
+      "times": [
+        "morning",
+        "evening"
+      ],
+      "weathers": [
+        "clear",
+        "rain"
+      ],
+      "rarity": "uncommon",
+      "size_cm": [
+        25,
+        55
+      ],
+      "base_price": 70,
+      "difficulty": 3,
+      "telegraph_sec": 1.0,
+      "nibbles": [
+        1,
+        2
+      ],
+      "shadow_len_m": 0.6,
+      "power": 1.0,
+      "stamina": 100,
+      "actions": {
+        "rush": 25,
+        "jump": 40,
+        "turn": 20,
+        "charge": 15
+      },
+      "tired_sec": [
+        2.5,
+        3.5
+      ],
+      "colors": {
+        "body": [
+          96,
+          124,
+          62
+        ],
+        "belly": [
+          224,
+          222,
+          176
+        ],
+        "fin": [
+          74,
+          96,
+          50
+        ],
+        "stripe": [
+          52,
+          70,
+          40
+        ]
+      }
+    }
   ]
 }

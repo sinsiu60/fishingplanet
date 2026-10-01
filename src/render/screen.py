@@ -11,6 +11,7 @@ class PixelScreen:
         self.height = height
         self.canvas = pygame.Surface((width, height))
         self.scale = scale or self._best_scale()
+        self.shake = (0, 0)  # 화면 흔들림 (캔버스 픽셀)
         self.window = pygame.display.set_mode((width * self.scale, height * self.scale))
         pygame.display.set_caption(title)
 
@@ -31,5 +32,10 @@ class PixelScreen:
         return pos[0] // self.scale, pos[1] // self.scale
 
     def present(self) -> None:
-        pygame.transform.scale(self.canvas, self.window.get_size(), self.window)
+        if self.shake == (0, 0):
+            pygame.transform.scale(self.canvas, self.window.get_size(), self.window)
+        else:
+            scaled = pygame.transform.scale(self.canvas, self.window.get_size())
+            self.window.fill((0, 0, 0))
+            self.window.blit(scaled, (self.shake[0] * self.scale, self.shake[1] * self.scale))
         pygame.display.flip()

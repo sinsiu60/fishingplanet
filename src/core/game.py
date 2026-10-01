@@ -23,14 +23,23 @@ class Game:
         self.scenes.push(FishingScene(self))
         # 슬로우모션용 (퍼펙트 0.3초 슬로우 등). 틱 간격은 그대로, 쌓이는 시간만 줄인다.
         self.time_scale = 1.0
+        self.slow_timer = 0.0  # 실제 시간 기준 남은 슬로우모션
         self.running = True
         self.max_frames = max_frames  # 자동 테스트용
+
+    def slowmo(self, real_sec: float, scale: float) -> None:
+        self.slow_timer = real_sec
+        self.time_scale = scale
 
     def run(self) -> None:
         accumulator = 0.0
         frames = 0
         while self.running:
             frame_time = min(self.clock.tick(self.fps_cap) / 1000.0, MAX_FRAME_TIME)
+            if self.slow_timer > 0:
+                self.slow_timer -= frame_time
+                if self.slow_timer <= 0:
+                    self.time_scale = 1.0
             accumulator += frame_time * self.time_scale
 
             for event in pygame.event.get():

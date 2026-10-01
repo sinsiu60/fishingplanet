@@ -12,8 +12,9 @@ REST_ANGLE = math.degrees(math.atan2(-110, -88))  # 손 → 낚싯대 끝 방향
 AIM_DEG = 18
 
 
-def rod_geometry(aim: float, swing_deg: float, bend: float, hand_offset=(0.0, 0.0)) -> dict:
-    """aim: -1~1 (왼쪽~오른쪽), swing_deg: 휘두르기 회전(+ = 뒤로 젖힘), bend: 휨(px, + = 아래로)."""
+def rod_geometry(aim: float, swing_deg: float, bend: float, hand_offset=(0.0, 0.0), pull_x: float = 0.0) -> dict:
+    """aim: -1~1 (왼쪽~오른쪽), swing_deg: 휘두르기 회전(+ = 뒤로 젖힘), bend: 휨(px, + = 아래로),
+    pull_x: 낚싯대 끝이 옆으로 끌려가는 양(px, 물고기 쪽)."""
     hx, hy = HAND[0] + hand_offset[0], HAND[1] + hand_offset[1]
     ang = math.radians(REST_ANGLE + aim * AIM_DEG + swing_deg)
     dx, dy = math.cos(ang), math.sin(ang)
@@ -24,8 +25,8 @@ def rod_geometry(aim: float, swing_deg: float, bend: float, hand_offset=(0.0, 0.
     butt = (hx - dx * BUTT_LEN, hy - dy * BUTT_LEN)
     straight_tip = (hx + dx * ROD_LEN, hy + dy * ROD_LEN)
     # 휘면 끝이 아래로 처지고 길이가 약간 줄어든다
-    tip = (straight_tip[0] + px * bend * 1.2, straight_tip[1] + py * bend * 1.2)
-    ctrl = (hx + dx * ROD_LEN * 0.55 + px * bend * 0.25, hy + dy * ROD_LEN * 0.55 + py * bend * 0.25)
+    tip = (straight_tip[0] + px * bend * 1.2 + pull_x, straight_tip[1] + py * bend * 1.2)
+    ctrl = (hx + dx * ROD_LEN * 0.55 + px * bend * 0.25 + pull_x * 0.3, hy + dy * ROD_LEN * 0.55 + py * bend * 0.25)
     return {"hand": (hx, hy), "butt": butt, "ctrl": ctrl, "tip": tip, "dir": (dx, dy), "perp": (px, py)}
 
 

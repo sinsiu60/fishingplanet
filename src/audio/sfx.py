@@ -86,16 +86,101 @@ def make_hookset(rng) -> np.ndarray:
     return out
 
 
-def make_reel(rng) -> np.ndarray:
-    """릴 딸깍 (루프용 0.5초)."""
+def make_reel(rng, clicks: int = 12, pitch: float = 1.0) -> np.ndarray:
+    """릴 딸깍 (루프용 0.5초). clicks가 많을수록 빨리 감는 소리."""
     sec = 0.5
     n = int(RATE * sec)
     out = np.zeros(n)
-    click = _lowpass(_noise(0.006, rng), 2) * _env(int(RATE * 0.006), 0.0005, 0.0015)
-    for i in range(12):
-        s = int(i * n / 12)
-        out[s:s + len(click)] += click
+    click_sec = 0.006 / pitch
+    click = _lowpass(_noise(click_sec, rng), 2) * _env(int(RATE * click_sec), 0.0005, 0.0015 / pitch)
+    tone = np.sin(2 * np.pi * 1800 * pitch * _t(click_sec))[: len(click)] * _env(len(click), 0.0005, 0.002)
+    click = click + tone * 0.4
+    for i in range(clicks):
+        s = int(i * n / clicks)
+        out[s:s + len(click)] += click[: n - s]
     return out * 0.6
+
+
+def make_perfect(rng) -> np.ndarray:
+    """퍼펙트: 맑은 차임 두 음 + 반짝임."""
+    sec = 0.7
+    n = int(RATE * sec)
+    t = _t(sec)
+    out = np.zeros(n)
+    for f, start, amp in ((1568, 0.0, 0.5), (2093, 0.06, 0.45), (3136, 0.12, 0.2)):
+        s = int(start * RATE)
+        tt = t[: n - s]
+        out[s:] += np.sin(2 * np.pi * f * tt) * _env(n - s, 0.002, 0.18) * amp
+    shimmer = _lowpass(_noise(sec, rng), 1) * _env(n, 0.01, 0.12) * 0.06
+    return out + shimmer
+
+
+def make_good(rng) -> np.ndarray:
+    sec = 0.18
+    return np.sin(2 * np.pi * 1046 * _t(sec)) * _env(int(RATE * sec), 0.002, 0.05) * 0.4
+
+
+def make_miss(rng) -> np.ndarray:
+    """실수: 낮은 쿵 + 줄 튕김."""
+    sec = 0.35
+    n = int(RATE * sec)
+    thud = _sweep(180, 60, sec) * _env(n, 0.002, 0.08) * 0.9
+    twang = _sweep(420, 300, sec) * _env(n, 0.002, 0.1) * 0.25
+    return thud + twang
+
+
+def make_creak(rng) -> np.ndarray:
+    """끼익: 줄이 버티는 소리 (거친 톱니파 + 피치 흔들림)."""
+    sec = 0.45
+    n = int(RATE * sec)
+    t = _t(sec)
+    freq = 900 + 120 * np.sin(2 * np.pi * 7 * t) + rng.uniform(-30, 30, n)
+    phase = np.cumsum(freq) / RATE
+    saw = 2 * (phase % 1.0) - 1
+    env = np.sin(np.pi * np.linspace(0, 1, n)) ** 0.7
+    return _lowpass(saw, 3) * env * 0.22
+
+
+def make_scrape(rng) -> np.ndarray:
+    """줄 쏠림: 쉬익 긁히는 소리."""
+    sec = 0.4
+    n = int(RATE * sec)
+    noise = _noise(sec, rng)
+    band = _lowpass(noise, 2) - _lowpass(noise, 6)
+    env = np.linspace(0.2, 1, n) * _env(n, 0.05, 0.25)
+    return band * env * 1.2
+
+
+def make_bubbles(rng) -> np.ndarray:
+    sec = 0.6
+    n = int(RATE * sec)
+    out = np.zeros(n)
+    for _ in range(10):
+        start = rng.integers(0, n - int(RATE * 0.05))
+        b = _sweep(rng.uniform(400, 900), rng.uniform(1000, 1800), 0.05) * _env(int(RATE * 0.05), 0.002, 0.015)
+        out[start:start + len(b)] += b * rng.uniform(0.2, 0.4)
+    return out
+
+
+def make_snap(rng) -> np.ndarray:
+    """줄 끊김: 날카로운 딱 + 휘익."""
+    sec = 0.5
+    n = int(RATE * sec)
+    crack = _noise(sec, rng) * _env(n, 0.0005, 0.015) * 1.0
+    whip = make_whoosh(rng, 0.35, 1.6)
+    out = crack
+    out[: len(whip)] += whip * 0.6
+    return out
+
+
+def make_lose(rng) -> np.ndarray:
+    notes = [392.0, 349.2, 311.1]
+    out = []
+    for f in notes:
+        sec = 0.16
+        t = _t(sec)
+        out.append(np.sin(2 * np.pi * f * t) * _env(len(t), 0.004, 0.08) * 0.35)
+    return np.concatenate(out)
 
 
 def make_catch(rng) -> np.ndarray:
@@ -148,6 +233,18 @@ class Sfx:
             "cast": make_whoosh(rng, 0.3, 1.0),
             "hookset": make_hookset(rng),
             "reel": make_reel(rng),
+            "reel0": make_reel(rng, 6, 0.9),
+            "reel1": make_reel(rng, 10, 1.0),
+            "reel2": make_reel(rng, 16, 1.15),
+            "reel3": make_reel(rng, 24, 1.3),
+            "perfect": make_perfect(rng),
+            "good": make_good(rng),
+            "miss": make_miss(rng),
+            "creak": make_creak(rng),
+            "scrape": make_scrape(rng),
+            "bubbles": make_bubbles(rng),
+            "snap": make_snap(rng),
+            "lose": make_lose(rng),
             "catch": make_catch(rng),
             "flee": make_flee(rng),
         }

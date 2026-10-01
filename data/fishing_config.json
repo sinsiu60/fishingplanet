@@ -43,5 +43,127 @@
       "rare": 10,
       "legend": 0
     }
+  },
+  "debug_force_fish": "bass",
+  "default_gear": {
+    "_설명": "Phase 5 장비 시스템 전까지 쓰는 기본 장비 (DESIGN.md 6장 1등급)",
+    "rod_green": [
+      35,
+      70
+    ],
+    "reel_speed": 1.0,
+    "drag_steps": 5,
+    "line_max": 100,
+    "net_window_sec": 0.15,
+    "net_fail_distance": 6.0
+  },
+  "fight": {
+    "_설명": "파이팅 수치. 장력은 0~100(최대 110). 시간은 초, 거리는 m.",
+    "tension_response_sec": 0.15,
+    "base_line_tension": 12,
+    "fish_pull_scale": 60,
+    "reel_tension_min": 14,
+    "reel_tension_per_drag": 30,
+    "reel_tension_mult_when_calm": 0.45,
+    "drag_limit_min": 35,
+    "drag_limit_max": 95,
+    "drag_overflow_keep": 0.45,
+    "payout_speed_per_tension": 0.085,
+    "reel_speed_drag_min": 0.55,
+    "reel_speed_drag_add": 0.9,
+    "reel_mult": {
+      "active": 0.5,
+      "calm": 2.5,
+      "exhausted": 3.0
+    },
+    "rod_align_tension": 0.25,
+    "rod_align_lateral": 0.5,
+    "center_pull_when_opposed": 0.08,
+    "max_fish_angle": 0.5,
+    "line_damage_per_tension": 1.0,
+    "line_damage_over100_mult": 2.0,
+    "hook_slack_rate": 18,
+    "hook_slack_extra_per_tension": 0.6,
+    "hook_recover_rate": 10,
+    "stamina_drain_active": 1.2,
+    "stamina_drain_per_tension": 2.0,
+    "stamina_drain_reel_calm": 5.0,
+    "perfect_window_sec": 0.08,
+    "good_window_sec": 0.18,
+    "perfect_stamina": 15,
+    "perfect_burst": 0.3,
+    "good_stamina": 5,
+    "miss_tension_spike": 30,
+    "miss_hook": 30,
+    "slowmo_real_sec": 0.3,
+    "slowmo_scale": 0.3,
+    "net_distance": 3.0,
+    "net_period_fresh": 1.0,
+    "net_period_tired": 0.65,
+    "net_max_cycles": 4,
+    "net_fail_stamina_recover": 10,
+    "par_base_sec": 10,
+    "par_per_meter": 0.8,
+    "par_per_stamina": 0.2,
+    "screen_shake": true,
+    "shake_start_tension": 70,
+    "shake_max_px": 2.0,
+    "net_pause_grace_sec": 0.04
+  },
+  "fish_ai": {
+    "_설명": "물고기 행동 공통 수치. 종별 값은 fish.json이 우선.",
+    "pull": {
+      "idle": 0.35,
+      "telegraph": 0.35,
+      "rush": 1.0,
+      "jump": 0.3,
+      "turn": 0.6,
+      "charge": 0.15,
+      "tired": 0.1,
+      "recover": 0.25,
+      "exhausted": 0.05
+    },
+    "burst_cost": {
+      "rush": 0.3,
+      "jump": 0.25,
+      "turn": 0.2,
+      "charge": 0.15
+    },
+    "idle_sec": [
+      0.8,
+      1.6
+    ],
+    "rush_sec": 1.2,
+    "turn_sec": 1.0,
+    "jump_air_sec": 0.9,
+    "charge_sec": [
+      1.2,
+      1.6
+    ],
+    "tired_sec": [
+      2.5,
+      3.5
+    ],
+    "recover_sec": 1.5,
+    "turn_speed": 0.35,
+    "jump_height_m": 1.2
+  },
+  "rank": {
+    "base": 60,
+    "per_perfect": 10,
+    "perfect_max": 30,
+    "line_weight": 20,
+    "time_weight": 20,
+    "per_miss": 5,
+    "S": 100,
+    "A": 85,
+    "B": 65,
+    "price_mult": {
+      "S": 2.0,
+      "A": 1.3,
+      "B": 1.0,
+      "C": 0.8
+    },
+    "s_size_bonus": 0.1
   }
 }
