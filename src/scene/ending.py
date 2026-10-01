@@ -27,7 +27,11 @@ class EndingScene(Scene):
         self.mouse = (0, 0)
         self.stars = [(random.uniform(0, 480), random.uniform(0, 200), random.random()) for _ in range(120)]
         game.sfx.stop_all()
-        game.sfx.loop("bgm_ending", True, 0.6)
+        game.music.stop()
+        if game.music.has("ending"):
+            game.music.play("ending")
+        else:
+            game.sfx.loop("bgm_ending", True, 0.6)
 
     def handle_event(self, event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -40,6 +44,8 @@ class EndingScene(Scene):
 
     def update(self, dt: float) -> None:
         self.t += dt
+        if self.game.music.has("ending"):
+            self.game.music.play("ending")
         self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
 
     # ── 그리기 ──

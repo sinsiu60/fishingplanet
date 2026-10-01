@@ -17,6 +17,11 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## 음악 넣기 (선택)
+
+`data/music/`에 정해진 이름의 ogg/mp3 파일을 넣으면 낚시터·파이팅·전설별로 자동 재생됩니다.
+AI 작곡용 프롬프트와 파일 이름은 [MUSIC_PROMPTS.md](MUSIC_PROMPTS.md) 참고.
+
 ## exe 빌드 (배포용)
 
 1. `build.bat` 더블클릭 (처음이면 가상환경·PyInstaller를 자동 설치, 1~3분)

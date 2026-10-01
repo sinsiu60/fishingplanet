@@ -350,7 +350,7 @@ class Fight:
             if self.line_frac < 0.5:
                 self.creak_t -= dt
                 if self.creak_t <= 0:
-                    self.creak_t = 0.8
+                    self.creak_t = random.uniform(1.4, 2.2)  # 일정 간격 반복은 귀가 아프다
                     self.events.append("creak")
 
         # 바늘 빠짐 (느슨 구간에서 증가)

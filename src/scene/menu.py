@@ -98,6 +98,7 @@ class TitleScene(Scene):
     def update(self, dt: float) -> None:
         self.bg.update(dt)
         self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.game.music.play("title")
 
     def draw(self, canvas) -> None:
         self.bg.draw(canvas)

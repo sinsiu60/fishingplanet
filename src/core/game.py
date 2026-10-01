@@ -1,6 +1,7 @@
 """메인 루프. 게임 로직은 초당 60틱 고정, 렌더링은 그와 분리된다."""
 import pygame
 
+from src.audio.music import Music
 from src.audio.sfx import Sfx
 from src.core.config import game_config
 from src.render.screen import PixelScreen
@@ -26,6 +27,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.sfx = Sfx()
         self.sfx.volume = self.settings.get("volume")
+        self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
         self.save = None            # 현재 SaveGame (메뉴에선 None)
         self.autosave_t = 0.0
         self.scenes = SceneManager()
@@ -93,6 +95,7 @@ class Game:
                 if self.scenes.current:
                     self.scenes.current.update(self.tick_dt)
                 accumulator -= self.tick_dt
+            self.music.update()
 
             if self.scenes.current:
                 self.scenes.current.draw(self.screen.canvas)

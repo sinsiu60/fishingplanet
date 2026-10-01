@@ -87,18 +87,53 @@ def make_hookset(rng) -> np.ndarray:
 
 
 def make_reel(rng, clicks: int = 12, pitch: float = 1.0) -> np.ndarray:
-    """릴 딸깍 (루프용 0.5초). clicks가 많을수록 빨리 감는 소리."""
-    sec = 0.5
+    """릴 감기 루프 (2초, 끊김 없음). clicks = 0.5초당 딸깍 수.
+
+    같은 딸깍이 기계처럼 반복되면 귀가 아프므로 간격·세기·음색을 매번 조금씩 흔들고,
+    빨리 감을수록 딸깍은 작아지고 기어 웅웅거림(부드러운 소리)이 커진다.
+    """
+    sec = 2.0
     n = int(RATE * sec)
     out = np.zeros(n)
-    click_sec = 0.006 / pitch
-    click = _lowpass(_noise(click_sec, rng), 2) * _env(int(RATE * click_sec), 0.0005, 0.0015 / pitch)
-    tone = np.sin(2 * np.pi * 1800 * pitch * _t(click_sec))[: len(click)] * _env(len(click), 0.0005, 0.002)
-    click = click + tone * 0.4
-    for i in range(clicks):
-        s = int(i * n / clicks)
-        out[s:s + len(click)] += click[: n - s]
-    return out * 0.6
+    count = clicks * 4
+    fast = min(1.0, clicks / 24)
+    base = np.linspace(0, n, count, endpoint=False)
+    starts = (base + rng.uniform(-0.18, 0.18, count) * n / count).astype(int)
+    for s in starts:
+        csec = 0.007 / pitch * rng.uniform(0.85, 1.2)
+        m = int(RATE * csec)
+        body = _lowpass(rng.uniform(-1, 1, m), 4) * _env(m, 0.0005, 0.0018 / pitch)
+        f = 950 * pitch * rng.uniform(0.9, 1.1)
+        tone = np.sin(2 * np.pi * f * np.arange(m) / RATE) * _env(m, 0.0005, 0.0015)
+        click = (body + tone * 0.25) * rng.uniform(0.55, 1.0)
+        idx = (s + np.arange(m)) % n  # 루프 끝에서 앞으로 감김 → 이음매 없음
+        out[idx] += click * (1.0 - 0.45 * fast)
+    # 기어 웅웅: 2초에 정수 주기라 이음매가 없다
+    tt = np.arange(n) / RATE
+    hum_f = round((70 + 90 * fast) * pitch * sec) / sec
+    hum = np.sin(2 * np.pi * hum_f * tt) + 0.35 * np.sin(2 * np.pi * 2 * hum_f * tt)
+    whir = _loop_noise(rng, 300, 1400, 0.5, sec)
+    out += hum * 0.05 * (0.3 + fast) + whir * 0.05 * fast
+    return (out + np.roll(out, 1)) * 0.25  # 원형 저역통과 (루프 이음매 보존)
+
+
+def make_line_out(rng) -> np.ndarray:
+    """캐스팅: 스풀에서 줄이 풀리는 '지이이잉'. 날아가는 동안 재생, 착수 때 끊는다.
+
+    스풀 회전(진폭 떨림)과 윙 하는 음이 점점 느려지고 낮아진다.
+    """
+    sec = 1.6
+    n = int(RATE * sec)
+    t = _t(sec)
+    slow = np.exp(-t / 0.9)                       # 회전이 서서히 느려짐
+    whine_f = 420 + 520 * slow                    # 940Hz → 약 520Hz
+    phase = np.cumsum(whine_f) / RATE
+    whine = np.sin(2 * np.pi * phase) + 0.45 * np.sin(4 * np.pi * phase) + 0.2 * np.sin(6 * np.pi * phase)
+    spin_f = 18 + 42 * slow                       # 스풀 회전 떨림 60Hz → 18Hz
+    spin = 0.62 + 0.38 * np.sin(2 * np.pi * np.cumsum(spin_f) / RATE)
+    hiss = _lowpass(_noise(sec, rng), 3) * (0.25 + 0.35 * slow)  # 줄이 가이드를 스치는 쉬익
+    env = np.clip(t / 0.03, 0, 1) * np.clip((sec - t) / 0.25, 0, 1)
+    return (whine * spin * 0.3 + hiss * 0.35) * env * 0.55
 
 
 def make_perfect(rng) -> np.ndarray:
@@ -404,16 +439,16 @@ def make_miss(rng) -> np.ndarray:
     return thud + twang
 
 
-def make_creak(rng) -> np.ndarray:
-    """끼익: 줄이 버티는 소리 (거친 톱니파 + 피치 흔들림)."""
+def make_creak(rng, base: float = 900, wobble: float = 7) -> np.ndarray:
+    """끼익: 줄이 버티는 소리 (톱니파 + 피치 흔들림). 변형 여러 개를 번갈아 쓴다."""
     sec = 0.45
     n = int(RATE * sec)
     t = _t(sec)
-    freq = 900 + 120 * np.sin(2 * np.pi * 7 * t) + rng.uniform(-30, 30, n)
+    freq = base + 0.13 * base * np.sin(2 * np.pi * wobble * t) + rng.uniform(-30, 30, n)
     phase = np.cumsum(freq) / RATE
     saw = 2 * (phase % 1.0) - 1
     env = np.sin(np.pi * np.linspace(0, 1, n)) ** 0.7
-    return _lowpass(saw, 3) * env * 0.22
+    return _lowpass(saw, 6) * env * 0.18
 
 
 def make_scrape(rng) -> np.ndarray:
@@ -506,6 +541,7 @@ class Sfx:
             "nibble": make_nibble(rng),
             "bite": make_bite(rng),
             "cast": make_whoosh(rng, 0.3, 1.0),
+            "line_out": make_line_out(rng),
             "hookset": make_hookset(rng),
             "reel": make_reel(rng),
             "reel0": make_reel(rng, 6, 0.9),
@@ -535,6 +571,8 @@ class Sfx:
             "launch": make_launch(rng),
             "miss": make_miss(rng),
             "creak": make_creak(rng),
+            "creak2": make_creak(rng, 760, 5),
+            "creak3": make_creak(rng, 640, 9),
             "scrape": make_scrape(rng),
             "bubbles": make_bubbles(rng),
             "snap": make_snap(rng),
@@ -554,12 +592,12 @@ class Sfx:
             data = np.column_stack((data, data))
         return pygame.sndarray.make_sound(np.ascontiguousarray(data))
 
-    def play(self, name: str, volume: float = 1.0) -> None:
+    def play(self, name: str, volume: float = 1.0) -> pygame.mixer.Channel | None:
         if not self.enabled or name not in self.sounds:
-            return
+            return None
         snd = self.sounds[name]
         snd.set_volume(self.volume * volume)
-        snd.play()
+        return snd.play()
 
     def stop_all(self) -> None:
         if self.enabled:

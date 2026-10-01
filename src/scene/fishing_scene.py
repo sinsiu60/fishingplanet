@@ -132,6 +132,8 @@ class FishingScene(Scene):
         self.screen_fx.enabled = self.shake_on
         self.shake_kick = 0.0
         self.reel_loop = None
+        self.line_ch = None      # 캐스팅 줄 풀림 소리 채널
+        self.legend_builtin = False
         self.t = 0.0
         self.mouse = (canvas.get_width() // 2, canvas.get_height() // 2)
         self.look_left = self.look_right = False
@@ -451,7 +453,11 @@ class FishingScene(Scene):
                 self._splash()
             elif ev == "launch":
                 self.sfx.play("cast")
+                self.line_ch = self.sfx.play("line_out", 0.45 + 0.45 * self.cast.power)
         self.cast.events.clear()
+        if self.line_ch is not None and self.cast.state != CastState.FLIGHT:
+            self.line_ch.fadeout(120)  # 착수(또는 취소) 순간 줄 풀림 소리를 끊는다
+            self.line_ch = None
 
         if self.fight is not None:
             self._update_fight(dt, aim)
@@ -509,9 +515,23 @@ class FishingScene(Scene):
             on = f.fish["rarity"] == "legend" and f.phase in ("fight", "net")
         else:
             on = self.bite.legend and self.bite.state in (BiteState.APPROACH, BiteState.NIBBLE, BiteState.BITE)
-        if on != self.legend_on:
+        # 음악: 전설 테마 > 파이팅 > 낚시터 (data/music/ 에 파일이 있는 것만)
+        music = self.game.music
+        legend_id = None
+        if on:
+            legend_id = "legend_" + (f.fish["id"] if f is not None else self.bite.fish["id"])
+        fighting = f is not None and f.phase in ("fight", "net")
+        if legend_id:
+            music.play(legend_id)
+        elif fighting:
+            music.play(f"fight_{self.spot_id}")
+        else:
+            music.play(f"spot_{self.spot_id}")
+        use_builtin = on and not music.has(legend_id)  # 전설 테마 파일이 없으면 코드로 만든 BGM
+        if on != self.legend_on or use_builtin != self.legend_builtin:
             self.legend_on = on
-            self.sfx.loop("bgm_legend", on, 0.55)
+            self.legend_builtin = use_builtin
+            self.sfx.loop("bgm_legend", use_builtin, 0.55)
         self.screen_fx.legend = on
         self.legend_k += ((1.0 if on else 0.0) - self.legend_k) * min(1.0, dt / 0.8)
 
@@ -705,19 +725,31 @@ class FishingScene(Scene):
             self.sfx.play("great", 0.7)
             self.shake_kick = 1.4
 
+    REEL_VOL = {"reel0": 0.5, "reel1": 0.45, "reel2": 0.4, "reel3": 0.34}
+
     def _update_reel_sound(self) -> None:
         name = None
         f = self.fight
         if f is not None and f.phase == "fight" and f.reeling:
             v = f.reel_speed_now
-            name = "reel0" if v < 0.6 else "reel1" if v < 1.2 else "reel2" if v < 2.0 else "reel3"
+            cur = self.reel_loop
+            # 경계값 근처에서 소리가 계속 바뀌며 처음부터 다시 재생되지 않도록 여유(히스테리시스)를 둔다
+            edges = (0.6, 1.2, 2.0)
+            tiers = ("reel0", "reel1", "reel2", "reel3")
+            if cur in tiers:
+                i = tiers.index(cur)
+                lo = edges[i - 1] - 0.12 if i > 0 else -1.0
+                hi = edges[i] + 0.12 if i < 3 else 99.0
+                name = cur if lo <= v < hi else None
+            if name is None:
+                name = tiers[sum(v >= e for e in edges)]
         elif self.cast.state == CastState.RETRIEVE:
             name = "reel2"
         if name != self.reel_loop:
             if self.reel_loop:
                 self.sfx.loop(self.reel_loop, False)
             if name:
-                self.sfx.loop(name, True, 0.5)
+                self.sfx.loop(name, True, self.REEL_VOL[name])
             self.reel_loop = name
 
     def _update_shake(self, dt: float) -> None:
@@ -884,7 +916,7 @@ class FishingScene(Scene):
             self.screen_fx.miss(self.screen_fx.map(pos))
             self.shake_kick = 3.0
         elif ev == "creak":
-            self.sfx.play("creak", 0.8)
+            self.sfx.play(random.choice(("creak", "creak2", "creak3")), random.uniform(0.45, 0.65))
         elif ev == "net_start":
             self.sfx.play("splash", 0.8)
             self.toasts.show("뜰채! " + NET_HINT, INFO, 1.6, 11)
