@@ -105,6 +105,10 @@ class FishBrain:
         self.jump_height = src.get("jump_height_m", cfg["jump_height_m"])
         self.dragon = src.get("dragon", False)
         self.fake_cue_p = src.get("fake_cue", 0.0)
+        self.gimmick = src.get("gimmick")            # 전설 페이즈가 기믹을 바꿀 때 (오르시엘)
+        self.gimmick_mult = src.get("gimmick_mult", 1.0)
+        self.gimmick_bias = src.get("gimmick_bias", 0.0)
+        self.cover_bias = max(self.cover_bias, self.gimmick_bias)
         self.sound_only = src.get("sound_only", False)
         if self.sound_only:
             self.dark = True

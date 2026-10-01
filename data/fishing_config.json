@@ -224,5 +224,25 @@
     "turn_fail_lateral": 1.8,
     "turn_fail_tension": 18,
     "turn_fail_hook": 10
+  },
+  "gimmick": {
+    "_설명": "엘드라시온 환경 기믹 (src/fishing/gimmick.py). 각도는 라디안, rate는 초당.",
+    "tangle_angle": 0.3,
+    "tangle_delay": 1.2,
+    "tangle_rate": 30,
+    "tangle_recover": 25,
+    "tangle_after": 40,
+    "tangle_lock_sec": 1.5,
+    "tangle_line_loss": 0.15,
+    "current_amp": 12,
+    "current_period": 4.0,
+    "heat_start": 45,
+    "heat_step_sec": 15,
+    "heat_rate": 0.6,
+    "heat_rate_step": 0.2,
+    "ice_hole": 0.25,
+    "ice_scrape": 2.0,
+    "heat_rate_max": 1.4,
+    "heat_start_per_stamina": 0.18
   }
 }

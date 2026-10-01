@@ -5167,9 +5167,9 @@
      }
     },
     {
-     "desc": "분화! 열 손상이 두 배",
+     "desc": "분화! 열 손상이 1.5배",
      "telegraph_sec": 0.5,
-     "gimmick_mult": 2.0,
+     "gimmick_mult": 1.5,
      "combo": {
       "rush": [
        "jump",

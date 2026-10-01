@@ -21,7 +21,8 @@ LOSE_REASONS = {
 
 class Fight:
     def __init__(self, fish: dict, size_cm: float, cast_distance: float, angle: float, yaw: float,
-                 gear: dict | None = None, rnd: random.Random | None = None, hazards: list | None = None):
+                 gear: dict | None = None, rnd: random.Random | None = None, hazards: list | None = None,
+                 gimmick: str | None = None):
         root = load_json("fishing_config.json")
         self.cfg = root["fight"]
         self.fcfg = root["flick"]
@@ -72,6 +73,11 @@ class Fight:
         self.snag_mult = 1.0          # 잔잔한 물 부적: 0.5
         self.consumable_used = None   # 이번 파이팅에 쓴 소모품 (파이팅당 1개)
         self.auto_drag_prev: int | None = None  # 고대 어부의 릴: 돌진 전에 쓰던 드랙
+        # 엘드라시온 환경 기믹
+        from src.fishing.gimmick import Gimmicks
+        self.gim = Gimmicks(gimmick)
+        if "dark" in self.gim.kinds(self.brain):
+            self.brain.dark = True  # 수정 동굴: 그림자 대신 천장 반사광
         self.turn_mult = 1.0
         # 환경 위협 (수초·바위): 구역 안에 있으면 줄 걸림 게이지 증가
         self.hazards = hazards or []
@@ -295,10 +301,14 @@ class Fight:
         cfg = self.cfg
         b = self.brain
         self.elapsed += dt
+        if self.gim.reel_lock_t > 0:
+            reeling = False  # 갈대에 엉켜 감을 수 없다
         self.reeling = reeling
         self.rod_aim = rod_aim
 
         b.cover_dir = self._cover_dir()
+        if b.cover_dir == 0 and b.gimmick_bias > 0 and self.gim.kinds(b) & {"tangle", "ice", "current"}:
+            b.cover_dir = 1 if self.angle - self.yaw >= 0 else -1  # 기믹 쪽(바깥)으로 끌고 간다
         b.update(dt, self.stamina <= 0, self.stamina_frac)
         for ev in b.events:
             if ev == "action:jump" and self.pre_judged:
@@ -342,6 +352,7 @@ class Fight:
             target = max(target, floor)
         if b.is_active:
             target += math.sin(self.elapsed * 13.0) * 2.5 + math.sin(self.elapsed * 5.3) * 2.0
+        target += self.gim.tension_offset(self)  # 부유섬 물살
         self.target = target
         k = 1 - math.exp(-dt / cfg["tension_response_sec"])
         self.tension = clamp(self.tension + (target - self.tension) * k, 0, 110)
@@ -391,6 +402,8 @@ class Fight:
                 if self.creak_t <= 0:
                     self.creak_t = random.uniform(1.4, 2.2)  # 일정 간격 반복은 귀가 아프다
                     self.events.append("creak")
+
+        self.gim.update(self, dt)  # 엉킴·열·얼음
 
         # 바늘 빠짐 (느슨 구간에서 증가)
         if self.tension < self.green_low:

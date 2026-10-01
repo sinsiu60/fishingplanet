@@ -66,6 +66,44 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
         sc = (200, 150, 255) if not fight.in_hazard or int(t * 6) % 2 else (255, 80, 200)
         _vbar(canvas, 88, y, 5, h, sf, sc)
         text(canvas, "걸림", (90, y + h + 12), pal["text"], 11, "center")
+    # 엘드라시온 기믹
+    gim = getattr(fight, "gim", None)
+    if gim is None:
+        return
+    kinds = gim.kinds(fight.brain)
+    gx = 116 if fight.hazards else 88
+    if "tangle" in kinds:
+        tf = gim.tangle / 100
+        tc = (190, 210, 230) if tf < 0.7 or int(t * 6) % 2 else (255, 120, 120)
+        if gim.reel_lock_t > 0:
+            tc = (255, 80, 80)
+        _vbar(canvas, gx, y, 5, h, tf, tc)
+        text(canvas, "엉킴", (gx + 2, y + h + 12), pal["text"], 11, "center")
+        gx += 28
+    if "heat" in kinds:
+        # 열: 파이팅 시간이 45초에 가까워질수록 차오르고, 넘으면 붉게 맥동
+        start = gim.heat_start(fight)
+        hf = min(1.0, fight.elapsed / start)
+        hot = gim.heat_dmg > 0
+        hc = (255, 150, 60) if not hot else lerp_color((255, 80, 40), (255, 220, 120), 0.5 + 0.5 * math.sin(t * 10))
+        _vbar(canvas, gx, y, 5, h, hf, hc)
+        text(canvas, "열", (gx + 2, y + h + 12), pal["text"], 11, "center")
+        if hot:
+            text(canvas, f"-{gim.heat_dmg:.1f}%/s", (gx + 2, y - 8), (255, 140, 90), 11, "center")
+        gx += 28
+    if "current" in kinds:
+        # 물살: 장력 게이지 바로 옆 작은 파도 + 다음 마루까지
+        wx, wy = 104, y + h - 10
+        left = gim.next_crest(fight)
+        for i in range(24):
+            ph = (fight.elapsed + i * 0.1) / gim.cfg["current_period"] * math.tau
+            yy = wy - math.sin(ph) * 4
+            canvas.fill(SHADOW, (wx + i * 2 + 1, int(yy) + 1, 2, 2))
+            canvas.fill((255, 240, 170) if i == 0 else (230, 245, 255), (wx + i * 2, int(yy), 2, 2))
+        col = (255, 220, 120) if left < 0.8 else (180, 220, 255)
+        text(canvas, f"물살 마루 {left:.1f}초", (wx, wy + 10), col, 11, "midleft")
+    if "ice" in kinds and gim.ice_out and int(t * 6) % 2 == 0:
+        text(canvas, "얼음에 쓸린다!", (x, y - 10), (150, 220, 255), 11, "midleft")
 
 
 def draw_boss_bar(canvas, pal, fight) -> None:

@@ -403,7 +403,11 @@ class FishingScene(Scene):
         size = roll_size(fish, self.bite.cast_distance)
         angle = math.atan2(c.bx, c.bz)
         self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(self.clock.period()[0]),
-                           hazards=self.spot["hazards"])
+                           hazards=self.spot["hazards"], gimmick=self.current_gimmick())
+        for g in sorted(self.fight.gim.kinds(self.fight.brain)):
+            key = f"gimmick:{g}"
+            if self.card is None and self.tutorial.want(key):
+                self._open_card(key, "gauge")
         if fish["rarity"] == "legend":
             self.toasts.show(f"전설 등장! {fish['name']}", (255, 214, 90), 3.0)
             self.sfx.play("impact", 1.0)
@@ -814,6 +818,14 @@ class FishingScene(Scene):
         self.game.screen.shake = (random.randint(-a, a), random.randint(-a, a))
 
     # ───────────────────────── 이벤트 ─────────────────────────
+    def current_gimmick(self) -> str | None:
+        """이 낚시터의 환경 기믹 (세계수는 시간대·날씨에 따라)."""
+        g = self.spot.get("gimmick")
+        if g == "cycle":
+            from src.fishing.gimmick import cycle_gimmick
+            return cycle_gimmick(self.clock.period()[0], self.weather)
+        return g
+
     def _use_fight_item(self, item_id: str) -> None:
         """파이팅 중 소모품 (1: 수리용 실타래 / 2: 잔잔한 물 부적), 파이팅당 1개."""
         from src.save.treasure import item_info
@@ -892,13 +904,20 @@ class FishingScene(Scene):
             self._open_card(ev, None if ev == "net_start" else "fish")
         elif ev == "hazard_enter":
             self.toasts.show(f"{f.in_hazard['name']}에 걸리려 해요! 반대로 당기세요", BAD, 1.5, 11)
-        elif not f.brain.sound_only:
-            self._tip(ev)  # 소리 전용 물고기에겐 '물보라를 보라' 같은 시각 팁을 띄우지 않는다
+        elif not f.brain.sound_only and "dark" not in f.gim.kinds(f.brain):
+            self._tip(ev)  # 소리 전용·동굴(어둠)에선 그림자 기준 팁을 띄우지 않는다
         sound_only = f.brain.sound_only
         if ev.startswith("telegraph:") and self.save.charm_on("ear_bell"):
             self.sfx.play("bell", 0.7)  # 소리귀 방울
         if ev == "scale_heal":
             self.toasts.show("용린 낚싯대: 줄 +10%", (255, 214, 90), 0.9, 11)
+        elif ev == "gimmick:tangle_full":
+            self.sfx.play("scrape", 1.0)
+            self.sfx.play("creak", 0.8)
+            self.toasts.show("갈대에 줄이 엉켰다! 잠깐 감을 수 없다 (줄 -15%)", BAD, 1.8, 11)
+            self.shake_kick = max(self.shake_kick, 2.0)
+        elif ev == "gimmick:ice_scrape":
+            self.sfx.play("scrape", 0.6)
         if ev in CAPTIONS and self.settings.get("sound_captions"):
             self.captions = [CAPTIONS[ev], 1.2]
         if ev == "telegraph:lure":
@@ -1144,6 +1163,7 @@ class FishingScene(Scene):
                 fight_fx.draw_tired_ring(canvas, pos, sc, t)
         self.sparkles.draw(canvas)
         self.embers.draw(canvas)
+        self._draw_gimmick_world(canvas, pal)
         # 가짜 FOV (줌·패닝·기울기)
         self.screen_fx.apply_camera(canvas)
 
@@ -1151,6 +1171,10 @@ class FishingScene(Scene):
             self._draw_fight_overlay(canvas, pal)
         else:
             label = f"{self.clock.label()} · {self.spot['name']} · {WEATHER_KO[weather]}"
+            g = self.current_gimmick()
+            if g:
+                from src.fishing.gimmick import KO
+                label += f" · {KO[g]}"
             hud.draw_clock(canvas, pal, label, self.clock.fast, self.clock.fast_mult)
             if c.state == CastState.CHARGING:
                 hud.draw_power_gauge(canvas, pal, c.power, c.distance_for_power(c.power))
@@ -1296,9 +1320,88 @@ class FishingScene(Scene):
         label = "  ".join(parts) + ("  (이번 파이팅 사용함)" if f.consumable_used else "")
         hud.text(canvas, label, (8, 241), col, anchor="midleft")
 
+    def _draw_gimmick_world(self, canvas, pal) -> None:
+        """기믹 연출 (월드): 동굴 어둠, 얼음 구멍 가장자리, 엉킨 갈대, 열수 김."""
+        f, cam, t = self.fight, self.cam, self.t
+        fighting = f is not None and f.phase == "fight"
+        kinds = f.gim.kinds(f.brain) if fighting else ({self.current_gimmick()} - {None})
+        if "ice" in kinds:
+            # 얼음 구멍: 정면 ±0.25rad 경계선
+            hole = self.fish_cfg["gimmick"]["ice_hole"]
+            out = fighting and f.gim.ice_out and int(t * 8) % 2 == 0
+            col = (255, 120, 120) if out else lerp_color(pal["sky_bottom"], (230, 245, 255), 0.6)
+            yaw = f.yaw if fighting else 0.0
+            for s in (-1, 1):
+                pts = []
+                for z in range(4, 46, 3):
+                    p = cam.project(math.sin(yaw + s * hole) * z, math.cos(yaw + s * hole) * z)
+                    if p:
+                        pts.append((p[0], p[1]))
+                if len(pts) > 1:
+                    pygame.draw.lines(canvas, col, False, pts, 2)
+                    # 얼음 가장자리: 바깥쪽으로 삐죽한 얼음 조각
+                    for i, (px, py) in enumerate(pts[::2]):
+                        ln = 3 + (i * 7) % 5
+                        pygame.draw.line(canvas, col, (px, py), (px + s * ln, py - 1), 1)
+        if fighting and "tangle" in kinds and f.gim.tangle > 45:
+            # 엉킨 갈대가 줄을 감는다
+            x, y = self._fish_screen()
+            k = f.gim.tangle / 100
+            col = lerp_color((200, 210, 225), (255, 130, 120), max(0.0, k - 0.6) * 2.5)
+            for i in range(int(3 + 6 * k)):
+                a = i * 1.7 + t
+                pygame.draw.line(canvas, col, (x + math.cos(a) * 6, y + 4), (x + math.cos(a) * 12, y - 10 - i % 3 * 4), 1)
+        if fighting and "heat" in kinds and f.gim.heat_dmg > 0 and int(t * 10) % 3 == 0:
+            x, y = self._fish_screen()
+            self.bubbles.spawn(x + random.uniform(-8, 8), y, 3.0)
+        if "dark" in kinds or self.theme.get("terrain") == "cave":
+            # 어둠: 찌(또는 물고기) 주변만 보인다
+            if fighting:
+                cx, cy = self._fish_screen()
+            else:
+                p = cam.project(self.cast.bx, self.cast.bz) if self.cast.state != CastState.READY else None
+                cx, cy = (p[0], p[1]) if p else (cam.cx, cam.horizon + 40)
+            veil = pygame.Surface((cam.width, cam.height), pygame.SRCALPHA)
+            veil.fill((4, 6, 18, 175))
+            for r, a in ((78, 140), (60, 100), (44, 60), (28, 25)):
+                pygame.draw.circle(veil, (4, 6, 18, a), (int(cx), int(cy)), r)
+            canvas.blit(veil, (0, 0))
+
+    def _draw_ceiling_cues(self, canvas) -> None:
+        """수정 동굴(어둠): 예고 신호가 천장 수정에 반사광으로 비친다. 가짜(등불)는 깜빡인다."""
+        f, b, t = self.fight, self.fight.brain, self.t
+        if "dark" not in f.gim.kinds(b) or b.sound_only:
+            return
+        sig = b.signal
+        if sig is None:
+            return
+        x = int(clamp(self._fish_screen()[0], 30, self.cam.width - 30))
+        y = 84  # 천장 수정 (수평선 위)
+        prog = b.signal_progress()
+        if sig == "lure" and int(t * 12) % 2 == 0:
+            return  # 가짜 반사광은 깜빡인다
+        col = {"jump": (255, 214, 90), "lure": (255, 214, 90), "leap": (120, 220, 255), "rush": (240, 245, 255),
+               "turn": (200, 180, 255)}.get(sig, (255, 255, 255))
+        r = int(4 + 6 * prog)
+        glow = pygame.Surface((60, 60), pygame.SRCALPHA)
+        pygame.draw.circle(glow, (*col, 70), (30, 30), r + 10)
+        canvas.blit(glow, (x - 30, y - 30))
+        pts = [(x, y - r - 2), (x + r, y), (x, y + r + 2), (x - r, y)]
+        pygame.draw.polygon(canvas, col, pts)
+        pygame.draw.polygon(canvas, (255, 255, 255), pts, 1)
+        if sig == "leap":
+            d = -b.leap_dir
+            pygame.draw.polygon(canvas, col, [(x + d * (r + 14), y), (x + d * (r + 6), y - 5), (x + d * (r + 6), y + 5)])
+        elif sig == "turn":
+            d = b.turn_dir
+            pygame.draw.polygon(canvas, col, [(x + d * (r + 14), y), (x + d * (r + 6), y - 5), (x + d * (r + 6), y + 5)])
+        elif sig == "rush":
+            pygame.draw.line(canvas, col, (x, y + r + 4), (x, y + r + 16 * prog + 6), 2)
+
     def _draw_behavior_ui(self, canvas) -> None:
         """물고기 머리 위 행동 아이콘 + 점프 판정 원."""
         f, b, t = self.fight, self.fight.brain, self.t
+        self._draw_ceiling_cues(canvas)
         mapped = self.screen_fx.map(self._fish_screen())
         inked = self.ink_t > 0 or b.dark
         sig = b.signal
@@ -1306,6 +1409,8 @@ class FishingScene(Scene):
                      and b.turn_offset() >= -(self.flick_cfg["turn_before_sec"] + 0.35))
         if b.sound_only:
             sig, prompt_on = None, False  # 행동 아이콘·꺾기 프롬프트 없음 (점프 중 판정 원만)
+        elif "dark" in f.gim.kinds(b):
+            sig = None  # 동굴: 아이콘 대신 천장 반사광 (꺾기 타이밍 막대는 유지)
         if sig == "rush" or (sig == "turn" and not prompt_on):
             fight_fx.draw_behavior_icon(canvas, mapped, sig, b.signal_progress(), b.turn_dir, t)
         if not b.sound_only and (sig == "turn" or b.state == "turn"):
