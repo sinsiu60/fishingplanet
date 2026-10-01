@@ -120,6 +120,27 @@ def make_good(rng) -> np.ndarray:
     return np.sin(2 * np.pi * 1046 * _t(sec)) * _env(int(RATE * sec), 0.002, 0.05) * 0.4
 
 
+def make_great(rng) -> np.ndarray:
+    """그레잇: 밝은 두 음 + 짧은 반짝."""
+    sec = 0.4
+    n = int(RATE * sec)
+    t = _t(sec)
+    out = np.sin(2 * np.pi * 1318.5 * t) * _env(n, 0.002, 0.08) * 0.4
+    s = int(0.05 * RATE)
+    out[s:] += np.sin(2 * np.pi * 1760 * t[: n - s]) * _env(n - s, 0.002, 0.12) * 0.4
+    out += _lowpass(_noise(sec, rng), 1) * _env(n, 0.005, 0.05) * 0.05
+    return out
+
+
+def make_impact(rng) -> np.ndarray:
+    """퍼펙트 타격감: 묵직한 쿵 + 고음 반짝 꼬리."""
+    sec = 0.6
+    n = int(RATE * sec)
+    boom = _sweep(140, 45, sec) * _env(n, 0.001, 0.12) * 1.0
+    crack = _lowpass(_noise(sec, rng), 2) * _env(n, 0.0005, 0.02) * 0.5
+    return boom + crack
+
+
 def make_miss(rng) -> np.ndarray:
     """실수: 낮은 쿵 + 줄 튕김."""
     sec = 0.35
@@ -239,6 +260,8 @@ class Sfx:
             "reel3": make_reel(rng, 24, 1.3),
             "perfect": make_perfect(rng),
             "good": make_good(rng),
+            "great": make_great(rng),
+            "impact": make_impact(rng),
             "miss": make_miss(rng),
             "creak": make_creak(rng),
             "scrape": make_scrape(rng),

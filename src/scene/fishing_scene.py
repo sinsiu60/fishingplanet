@@ -18,9 +18,10 @@ from src.render.effects import (Bubbles, Droplets, Ripples, Sparkles, draw_bobbe
 from src.render.fish_draw import draw_catch_cut, draw_jump, draw_net_scene
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
+from src.render.screen_fx import ScreenFX
 from src.save.settings import Settings
 from src.scene.base import Scene
-from src.ui import fight_hud, hud
+from src.ui import fight_fx, fight_hud, hud
 from src.ui import tutorial as tut
 
 HINTS = {
@@ -43,7 +44,7 @@ GLOW = {"rare": (150, 210, 255), "legend": (255, 215, 100)}
 # 튜토리얼 카드를 본 뒤 한 번 더 짧게 상기시킨다 (DESIGN.md 4장)
 TIPS = {
     "telegraph:rush": "꼬리 물보라 = 돌진! Q로 드랙을 낮추세요",
-    "telegraph:jump": "그림자가 커진다 = 점프! 정점에서 우클릭",
+    "telegraph:jump": "그림자가 커진다 = 점프! 원이 겹치는 순간 우클릭",
     "telegraph:turn": "줄이 쏠린다 = 방향 전환! 마우스를 반대쪽으로",
     "action:charge": "멈췄다 = 힘 모으기! 지금 확 감으세요",
     "tired": "지쳤다! 드랙을 올리고(E) 크게 감으세요",
@@ -74,7 +75,9 @@ class FishingScene(Scene):
         self.droplets = Droplets()
         self.bubbles = Bubbles()
         self.sparkles = Sparkles()
-        self.popups = fight_hud.JudgePopups()
+        self.popups = fight_fx.JudgePopups()
+        self.gather = fight_fx.GatherFX()
+        self.screen_fx = ScreenFX(canvas.get_width(), canvas.get_height())
         self.fish_cfg = load_json("fishing_config.json")
         self.spots = {sp["id"]: sp for sp in load_json("spots.json")["spots"]}
         self.spot_ids = list(self.spots)
@@ -100,6 +103,7 @@ class FishingScene(Scene):
         self.help = False                # H 도움말 (표시 중엔 게임 정지)
         self.slack_t = self.red_t = 0.0
         self.shake_on = self.settings.get("screen_shake")
+        self.screen_fx.enabled = self.shake_on
         self.shake_kick = 0.0
         self.reel_loop = None
         self.t = 0.0
@@ -170,8 +174,9 @@ class FishingScene(Scene):
                 self.debug = not self.debug
             elif event.key == pygame.K_F2:
                 self.shake_on = not self.shake_on
+                self.screen_fx.enabled = self.shake_on
                 self.settings.set("screen_shake", self.shake_on)
-                self.toasts.show("화면 흔들림 " + ("켬" if self.shake_on else "끔"), INFO, 1.2, 11)
+                self.toasts.show("화면 연출(흔들림·줌) " + ("켬" if self.shake_on else "끔"), INFO, 1.2, 11)
             elif f and event.key == pygame.K_q:
                 f.change_drag(-1)
             elif f and event.key == pygame.K_e:
@@ -241,6 +246,7 @@ class FishingScene(Scene):
 
     def _end_fight(self) -> None:
         self.fight = None
+        self.screen_fx.reset()
         self.bite.stop()
         self.cast.reset()
         self.game.screen.shake = (0, 0)
@@ -300,6 +306,15 @@ class FishingScene(Scene):
 
         self._update_reel_sound()
         self._update_shake(dt)
+        f = self.fight
+        fighting = f is not None and f.phase == "fight"
+        fish_pos = self._fish_screen() if fighting else None
+        self.screen_fx.update(dt, f, fish_pos)
+        scale = 1.0
+        if fighting:
+            p = self.cam.project(*f.fish_xz())
+            scale = p[2] / 20 if p else 1.0
+        self.gather.update(dt, fighting and f.brain.state == "charge" and self.ink_t <= 0, fish_pos, scale)
 
     def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
@@ -476,19 +491,30 @@ class FishingScene(Scene):
         elif ev == "exhausted":
             self.toasts.show("완전히 지쳤다! 끝까지 감으세요", GOOD, 2.0, 11)
         elif ev == "perfect":
+            # 퍼펙트: 섬광 + 충격파 + 빛줄기 + 줌 펀치 + 큰 반짝임 + 슬로우 + 묵직한 타격음
             pos = self._fish_screen()
             self.sfx.play("perfect")
-            self.sparkles.burst(*pos)
-            self.popups.add("perfect", pos)
+            self.sfx.play("impact", 0.9)
+            self.sparkles.burst(*pos, count=40, speed=1.7)
+            self.sparkles.burst(*pos, count=16, speed=0.6, ring=False)
+            self.screen_fx.perfect(self.screen_fx.map(pos))
+            self.popups.add("perfect", pos, f.perfect_streak)
+            self.shake_kick = 2.5
             fc = self.fish_cfg["fight"]
             self.game.slowmo(fc["slowmo_real_sec"], fc["slowmo_scale"])
         elif ev == "good":
+            # 그레잇: 작은 섬광 + 충격파 + 반짝임
             pos = self._fish_screen()
-            self.sfx.play("good")
+            self.sfx.play("great")
+            self.sparkles.burst(*pos, count=16, speed=1.0)
+            self.screen_fx.great(self.screen_fx.map(pos))
             self.popups.add("good", pos)
+            self.shake_kick = 1.2
         elif ev in ("miss_early", "miss_late", "miss_none"):
+            pos = self._fish_screen()
             self.sfx.play("miss")
-            self.popups.add(ev, self._fish_screen())
+            self.popups.add(ev, pos)
+            self.screen_fx.miss(self.screen_fx.map(pos))
             self.shake_kick = 3.0
         elif ev == "creak":
             self.sfx.play("creak", 0.8)
@@ -563,6 +589,17 @@ class FishingScene(Scene):
             draw_line(canvas, pal, tip, (bx, by - 3), 0)
             draw_bobber(canvas, pal, bx, by, 7, floating=False)
         self.droplets.draw(canvas, pal)
+        if f is not None and f.phase == "fight":
+            # 수면 위 행동 연출 (카메라 연출 전에 그려서 함께 확대됨)
+            pos = self._fish_screen()
+            p = cam.project(*f.fish_xz())
+            sc = p[2] / 20 if p else 1.0
+            self.gather.draw(canvas)
+            if f.brain.state in ("tired", "fake_tired", "exhausted"):
+                fight_fx.draw_tired_ring(canvas, pos, sc, t)
+        self.sparkles.draw(canvas)
+        # 가짜 FOV (줌·패닝·기울기)
+        self.screen_fx.apply_camera(canvas)
 
         if f is not None:
             self._draw_fight_overlay(canvas, pal)
@@ -647,6 +684,8 @@ class FishingScene(Scene):
 
     def _draw_fight_overlay(self, canvas, pal) -> None:
         f, t = self.fight, self.t
+        if f.phase != "fight":
+            self.screen_fx.draw_edges(canvas)  # 섬광이 남아 있으면 마저 사라지게
         if f.phase == "net":
             pose, still = f.net_pose()
             draw_net_scene(canvas, pal, f.fish, f.size_cm, pose, still, t, self.net_anim, self.mouse)
@@ -660,9 +699,9 @@ class FishingScene(Scene):
         if f.phase == "lost":
             fight_hud.draw_lose_panel(canvas, f, LOSE_REASONS[f.lose_reason], self.end_t)
             return
-        fight_hud.draw_danger_vignette(canvas, f, t)
-        self.sparkles.draw(canvas)
-        self.popups.draw(canvas)
+        self._draw_behavior_ui(canvas)
+        self.popups.draw(canvas, self.screen_fx.map)
+        self.screen_fx.draw_edges(canvas)
         fight_hud.draw_gauges(canvas, pal, f, t)
         fight_hud.draw_boss_bar(canvas, pal, f)
         fight_hud.draw_drag(canvas, pal, f)
@@ -670,6 +709,33 @@ class FishingScene(Scene):
         hud.draw_hint(canvas, pal, HINTS[CastState.HOOKED])
         if self.debug:
             fight_hud.draw_debug(canvas, f)
+
+    def _draw_behavior_ui(self, canvas) -> None:
+        """물고기 머리 위 행동 아이콘 + 점프 판정 원."""
+        f, b, t = self.fight, self.fight.brain, self.t
+        mapped = self.screen_fx.map(self._fish_screen())
+        inked = self.ink_t > 0
+        sig = b.signal
+        if sig in ("rush", "turn"):
+            fight_fx.draw_behavior_icon(canvas, mapped, sig, b.signal_progress(), b.turn_dir, t)
+        if sig == "turn" or b.state == "turn":
+            amount = b.signal_progress() if sig == "turn" else 1.0
+            fight_fx.draw_turn_chevrons(canvas, mapped, b.turn_dir, 0.4 + 0.6 * amount, t)
+        elif b.state == "charge":
+            prog = b.state_t / max(0.01, b.state_t + b.timer)
+            fight_fx.draw_behavior_icon(canvas, mapped, "charge", prog, 0, t)
+        elif b.state in ("tired", "fake_tired", "exhausted"):
+            fight_fx.draw_behavior_icon(canvas, mapped, "tired", 0.0, 0, t)
+        # 점프 판정 원: 바깥 원이 줄어들어 판정 원과 만나는 순간 = 정점
+        jumping = b.state == "jump" and not b.jump_judged
+        if (sig == "jump" and not inked and not f.pre_judged) or jumping:
+            x, z = f.fish_xz()
+            apex = self.cam.project(x, z, b.cfg["jump_height_m"])
+            if apex:
+                total = b.cur_telegraph + b.jump_air / 2
+                fc = self.fish_cfg["fight"]
+                fight_fx.draw_jump_ring(canvas, self.screen_fx.map((apex[0], apex[1])), b.time_to_apex(), total,
+                                        fc["perfect_window_sec"], fc["good_window_sec"], t)
 
     def _draw_line_and_bobber(self, canvas, pal, tip) -> None:
         c, cam = self.cast, self.cam

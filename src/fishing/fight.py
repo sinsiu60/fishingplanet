@@ -46,6 +46,7 @@ class Fight:
         self.drag_steps = self.gear["drag_steps"]
         self.drag = (self.drag_steps + 1) // 2
         self.perfects = self.goods = self.misses = 0
+        self.perfect_streak = 0
         self.elapsed = 0.0
         self.par = rank_mod.par_time(cast_distance, self.stamina_max, fish.get("power", 1.0))
         self.events: list[str] = []
@@ -156,6 +157,7 @@ class Fight:
     # ── 판정 ──
     def _perfect(self) -> None:
         self.perfects += 1
+        self.perfect_streak += 1
         self.stamina -= self.cfg["perfect_stamina"]
         self.brain.lose_burst(self.cfg["perfect_burst"])
         self.last_judge = "perfect"
@@ -163,12 +165,14 @@ class Fight:
 
     def _good(self) -> None:
         self.goods += 1
+        self.perfect_streak = 0
         self.stamina -= self.cfg["good_stamina"]
         self.last_judge = "good"
         self.events.append("good")
 
     def _miss(self, kind: str) -> None:
         self.misses += 1
+        self.perfect_streak = 0
         self.tension += self.cfg["miss_tension_spike"]
         self.hook += self.cfg["miss_hook"]
         self.last_jump_miss_t = self.elapsed

@@ -224,12 +224,13 @@ class Sparkles:
         self.items: list[list[float]] = []
         self.rings: list[list[float]] = []
 
-    def burst(self, x: float, y: float) -> None:
-        for i in range(18):
-            a = i / 18 * math.tau + random.uniform(-0.1, 0.1)
-            sp = random.uniform(50, 110)
-            self.items.append([x, y, math.cos(a) * sp, math.sin(a) * sp, random.uniform(0.4, 0.7)])
-        self.rings.append([x, y, 0.0])
+    def burst(self, x: float, y: float, count: int = 18, speed: float = 1.0, ring: bool = True) -> None:
+        for i in range(count):
+            a = i / count * math.tau + random.uniform(-0.15, 0.15)
+            sp = random.uniform(50, 110) * speed
+            self.items.append([x, y, math.cos(a) * sp, math.sin(a) * sp, random.uniform(0.4, 0.8)])
+        if ring:
+            self.rings.append([x, y, 0.0])
 
     def update(self, dt: float) -> None:
         for p in self.items:

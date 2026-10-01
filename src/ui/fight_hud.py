@@ -98,46 +98,6 @@ def draw_distance(canvas, pal, fight) -> None:
     text(canvas, f"거리 {fight.distance:.1f}m", (canvas.get_width() - 6, 4), pal["text"], 11, "topright")
 
 
-def draw_danger_vignette(canvas, fight, t: float) -> None:
-    if fight.line_frac >= 0.3 and fight.zone() != "red":
-        return
-    if fight.zone() != "red" and int(t * 4) % 2:
-        return
-    k = 1.0 if fight.line_frac < 0.3 else 0.5
-    w, h = canvas.get_size()
-    col = (200, 30, 30)
-    for i in range(int(3 * k) + 1):
-        pygame.draw.rect(canvas, lerp_color(col, (60, 0, 0), i / 4), (i, i, w - 2 * i, h - 2 * i), 1)
-
-
-class JudgePopups:
-    STYLE = {
-        "perfect": ("PERFECT!", (255, 220, 90), 16),
-        "good": ("GOOD", (140, 240, 150), 11),
-        "miss_early": ("빠름!", (255, 120, 100), 11),
-        "miss_late": ("늦음!", (255, 120, 100), 11),
-        "miss_none": ("놓침!", (255, 120, 100), 11),
-    }
-
-    def __init__(self):
-        self.items: list[dict] = []
-
-    def add(self, kind: str, pos) -> None:
-        s, c, size = self.STYLE[kind]
-        self.items.append({"text": s, "color": c, "size": size, "x": pos[0], "y": pos[1] - 14, "t": 0.0})
-
-    def update(self, dt: float) -> None:
-        for it in self.items:
-            it["t"] += dt
-        self.items = [it for it in self.items if it["t"] < 1.0]
-
-    def draw(self, canvas) -> None:
-        for it in self.items:
-            y = it["y"] - it["t"] * 18
-            x = clamp(it["x"], 40, canvas.get_width() - 40)
-            text(canvas, it["text"], (x, y), it["color"], it["size"], "center")
-
-
 def draw_catch_info(canvas, result: dict, t: float) -> None:
     w = canvas.get_width()
     fish = result["fish"]
