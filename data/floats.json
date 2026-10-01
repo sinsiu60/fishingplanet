@@ -1,0 +1,12 @@
+{
+  "_설명": "엘드라시온 특수 찌 (DESIGN.md 23-4). 낚시터마다 필요한 티어(spots.json float_req, 전설은 +1). 모자라면 물고기가 뜰채 직전에 마지막 발악으로 줄을 끊고 달아난다. 요구 티어를 넘는 만큼 지침 시간 +5%/티어 (관문 역할, 성능 폭등 없음). escape_distance_frac = 처음 거리의 이 비율 이내(뜰채 직전)에서 발악.",
+  "bonus_tired_per_tier": 0.05,
+  "escape_distance_frac": 0.15,
+  "floats": [
+    {"id": "paralysis_float", "name": "마비 찌", "tier": 1, "price": 20000, "color": [255, 222, 60], "pattern": "zigzag", "desc": "지친 물고기에게 마비 파동을 보내 마지막 발악을 막는다."},
+    {"id": "deep_paralysis_float", "name": "심마비 찌", "tier": 2, "price": 60000, "color": [255, 150, 50], "pattern": "double_zigzag", "desc": "더 강한 마비 파동."},
+    {"id": "binding_float", "name": "결박 찌", "tier": 3, "price": 140000, "color": [215, 222, 236], "pattern": "chain", "desc": "빛의 사슬로 물고기를 묶는다."},
+    {"id": "seal_float", "name": "봉인 찌", "tier": 4, "price": 300000, "scales": 3, "color": [90, 150, 255], "pattern": "seal", "desc": "마력 봉인진을 펼친다."},
+    {"id": "abyss_seal_float", "name": "천해 봉인 찌", "tier": 5, "price": 600000, "scales": 8, "color": [200, 170, 255], "pattern": "star_seal", "desc": "천해의 최상위 봉인."}
+  ]
+}

@@ -12,6 +12,7 @@ from src.core.mathutil import clamp, lerp, lerp_color, smoothstep
 from src.fishing.bite import BiteController, BiteState, roll_size
 from src.fishing.casting import CastController, CastState
 from src.fishing.fight import LOSE_REASONS, Fight
+
 from src.render import world
 from src.render.camera import Camera
 from src.render.effects import (Bubbles, Droplets, Ripples, Sparkles, draw_bobber, draw_fish_shadow, draw_ink,
@@ -26,6 +27,11 @@ from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
 from src.scene.base import Scene
 from src.ui import fight_fx, fight_hud, hud
 from src.ui import tutorial as tut
+
+
+def float_name(tier: int) -> str:
+    """특수 찌 티어 → 이름."""
+    return next((f["name"] for f in load_json("floats.json")["floats"] if f["tier"] == tier), "특수 찌")
 
 HINTS = {
     CastState.READY: "좌클릭 유지: 던지기  M: 지도  B: 상점  Tab: 도감  C: 상자  H: 도움말  ESC: 메뉴",
@@ -179,6 +185,8 @@ class FishingScene(Scene):
         self._advance_hours(1.0)
         self.weather_sys.reroll_upcoming(self.spot["weather"])
         self.toasts.show(f"{self.spot['name']}에 도착했다", GOOD, 2.0)
+        if self.float_warning():
+            self.toasts.show(self.float_warning(), BAD, 3.0, 11)
         self.game.save_now()
 
     def next_period_name(self) -> str:
@@ -315,7 +323,7 @@ class FishingScene(Scene):
     def can_open_menus(self) -> bool:
         return self.fight is None and self.cast.state in (CastState.READY, CastState.LANDED, CastState.RETRIEVE)
 
-    def open_menu(self, which: str) -> None:
+    def open_menu(self, which: str, tab: str | None = None) -> None:
         self.sfx.play("click")
         if which == "shop":
             if not self.can_open_menus():
@@ -324,7 +332,7 @@ class FishingScene(Scene):
             self.bite.stop()
             self.cast.reset()
             from src.scene.shop import ShopScene
-            self.game.scenes.push(ShopScene(self.game, self))
+            self.game.scenes.push(ShopScene(self.game, self, tab=tab))
         elif which == "dex":
             from src.scene.dex import DexScene
             self.game.scenes.push(DexScene(self.game, self))
@@ -403,7 +411,8 @@ class FishingScene(Scene):
         size = roll_size(fish, self.bite.cast_distance)
         angle = math.atan2(c.bx, c.bz)
         self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(self.clock.period()[0]),
-                           hazards=self.spot["hazards"], gimmick=self.current_gimmick())
+                           hazards=self.spot["hazards"], gimmick=self.current_gimmick(),
+                           float_need=self.save.float_need(fish, self.spot), float_tier=self.save.float_tier())
         for g in sorted(self.fight.gim.kinds(self.fight.brain)):
             key = f"gimmick:{g}"
             if self.card is None and self.tutorial.want(key):
@@ -502,6 +511,7 @@ class FishingScene(Scene):
             self._update_waiting(dt)
 
         self._update_reel_sound()
+        self._maybe_escape_tutorial()
         self._update_shake(dt)
         self._update_legend(dt)
         f = self.fight
@@ -804,6 +814,12 @@ class FishingScene(Scene):
                 self.sfx.loop(name, True, self.REEL_VOL[name])
             self.reel_loop = name
 
+    def _maybe_escape_tutorial(self) -> None:
+        if getattr(self, "escape_tutorial_pending", False) and self.end_t > 1.2:
+            self.escape_tutorial_pending = False
+            from src.scene.escape_tutorial import EscapeTutorialScene
+            self.game.scenes.push(EscapeTutorialScene(self.game, self))
+
     def _update_shake(self, dt: float) -> None:
         self.shake_kick = max(0.0, self.shake_kick - dt * 6)
         amp = self.shake_kick
@@ -818,6 +834,13 @@ class FishingScene(Scene):
         self.game.screen.shake = (random.randint(-a, a), random.randint(-a, a))
 
     # ───────────────────────── 이벤트 ─────────────────────────
+    def float_warning(self) -> str | None:
+        """엘드라시온: 장착한 찌가 이 낚시터 요구 티어보다 낮으면 경고 문구."""
+        need = self.spot.get("float_req", 0) if self.spot.get("continent") == "eldrasion" else 0
+        if need and self.save.float_tier() < need and self.save.data["flags"].get("eldra_escape_tutorial"):
+            return f"찌 부족: {float_name(need)} 이상 필요"
+        return None
+
     def current_gimmick(self) -> str | None:
         """이 낚시터의 환경 기믹 (세계수는 시간대·날씨에 따라)."""
         g = self.spot.get("gimmick")
@@ -866,6 +889,10 @@ class FishingScene(Scene):
         c = self.cast
         if ev == "legend_approach":
             self.toasts.show("수면 아래 거대한 그림자가...!", (255, 214, 120), 3.0)
+            fish = self.bite.fish
+            need = self.save.float_need(fish, self.spot) if fish else 0
+            if need > self.save.float_tier() and self.save.data["flags"].get("eldra_escape_tutorial"):
+                self.toasts.show(f"이 물고기를 잡으려면 [{float_name(need)}] 이상 필요", BAD, 3.0, 11)
             self.sfx.play("roar", 0.6)
             self.shake_kick = 1.5
         elif ev == "nibble":
@@ -1052,8 +1079,33 @@ class FishingScene(Scene):
                 self.save.data["keepnet"].append(dict(self.save.data["keepnet"][-1], twin=True))
                 self.toasts.show("쌍둥이 바늘! 한 마리 더 걸려 올라왔다", (200, 150, 255), 2.5, 11)
             self.game.save_now()
+        elif ev == "escape_start":
+            # 마지막 발악: 눈이 번쩍 + 물보라 폭발 + 화면 흔들림
+            pos = self._fish_screen()
+            self.sparkles.burst(pos[0], pos[1] - 4, count=14, speed=1.2, ring=False)
+            self._splash_at(x, z, 1.6)
+            self.sfx.play("roar", 0.7)
+            self.sfx.play("splash", 1.0)
+            self.shake_kick = 4.0
+        elif ev == "escape_snap":
+            self.sfx.play("snap", 1.0)  # 투둑
+            self.screen_fx.miss(self.screen_fx.map(self._fish_screen()))
+            self.game.slowmo(1.0, 0.35)
+            self.shake_kick = 3.0
+        elif ev == "lost:escape" and not self.save.data["flags"].get("eldra_escape_tutorial"):
+            # 최초 도주: 실패 기록 없음, 도감에 '목격', 튜토리얼 팝업
+            self.save.data["flags"]["eldra_escape_tutorial"] = True
+            self.save.data["flags"]["float_highlight"] = True
+            self.save.record_seen(f.fish["id"])
+            self.game.save_now()
+            self.sfx.play("lose", 0.6)
+            self.end_t = 0.0
+            self.escape_tutorial_pending = True
         elif ev.startswith("lost:"):
             self.save.record_loss()
+            if ev == "lost:escape":
+                self.save.record_seen(f.fish["id"])
+                self.toasts.show(f"이 물고기를 붙잡으려면 [{float_name(f.float_need)}] 이상이 필요합니다.", BAD, 3.5, 11)
             self.game.save_now()
             self.sfx.play("snap" if ev == "lost:snap" else "flee")
             self.sfx.play("lose", 0.8)
@@ -1170,6 +1222,12 @@ class FishingScene(Scene):
         if f is not None:
             self._draw_fight_overlay(canvas, pal)
         else:
+            warn = self.float_warning()
+            if warn:
+                blink = int(self.t * 3) % 2 == 0
+                hud.text(canvas, ("! " if blink else "  ") + warn, (6, 17), (255, 120, 110), anchor="topleft")
+            if self.save.data["flags"].get("float_highlight") and int(self.t * 4) % 2 == 0:
+                hud.text(canvas, "B: 상점에서 마비 찌!", (cam.width - 6, 43), (255, 230, 120), anchor="topright")
             label = f"{self.clock.label()} · {self.spot['name']} · {WEATHER_KO[weather]}"
             g = self.current_gimmick()
             if g:
@@ -1285,6 +1343,11 @@ class FishingScene(Scene):
             return
         if self.dragon_fx is not None:
             self.dragon_fx.draw(canvas)
+        if f.escape_t is not None:
+            self._draw_escape(canvas, f)
+            self.screen_fx.draw_edges(canvas)
+            fight_hud.draw_gauges(canvas, pal, f, t)
+            return
         self._draw_behavior_ui(canvas)
         self.popups.draw(canvas, self.screen_fx.map)
         self.screen_fx.draw_edges(canvas)
@@ -1297,9 +1360,43 @@ class FishingScene(Scene):
         if self.debug:
             fight_hud.draw_debug(canvas, f)
 
+    def _equipped_float(self) -> dict | None:
+        """엘드라시온에서 장착한 특수 찌 (샤르미온에선 효과도 외형도 없음)."""
+        fid = self.save.data["float"].get("equipped")
+        if not fid or self.spot.get("continent") != "eldrasion":
+            return None
+        return next((f for f in load_json("floats.json")["floats"] if f["id"] == fid), None)
+
+    def _draw_float_mark(self, canvas, x: float, y: float, size: float, dip: float) -> None:
+        """특수 찌 문양: 마비=노란 번개, 심마비=이중 번개, 결박=은빛 사슬, 봉인=푸른 봉인진, 천해=별빛 봉인진."""
+        fl = self._equipped_float()
+        if fl is None or size < 4 or dip >= 0.95:
+            return
+        col = tuple(fl["color"])
+        x, y = int(x), int(y - size * 0.35)
+        pat, t = fl["pattern"], self.t
+        if pat in ("zigzag", "double_zigzag"):
+            for k in range(2 if pat == "double_zigzag" else 1):
+                ox = -3 + k * 6 if pat == "double_zigzag" else 0
+                pts = [(x + ox - 2, y - 4), (x + ox + 1, y - 1), (x + ox - 1, y + 1), (x + ox + 2, y + 4)]
+                pygame.draw.lines(canvas, col, False, pts, 1)
+        elif pat == "chain":
+            for k in range(3):
+                pygame.draw.ellipse(canvas, col, (x - 2, y - 5 + k * 3, 4, 3), 1)
+        else:
+            r = 5 + int(1.5 * math.sin(t * 3))
+            pygame.draw.circle(canvas, col, (x, y), r, 1)
+            if pat == "star_seal":
+                for k in range(5):
+                    a = t * 0.8 + k * math.tau / 5
+                    canvas.fill((255, 255, 255), (int(x + math.cos(a) * r), int(y + math.sin(a) * r), 1, 1))
+
     def _bobber_pal(self, pal: dict) -> dict:
         """찌 색: 반짝이 찌(외형) / 바람개비 찌(가짜 입질 때 하늘색 깜빡)."""
         out = pal
+        fl = self._equipped_float()
+        if fl is not None:
+            out = dict(out, bobber=tuple(fl["color"]))
         if self.save.cosmetic_on("sparkle_float"):
             glint = 0.5 + 0.5 * math.sin(self.t * 6)
             out = dict(out, bobber=lerp_color((255, 196, 60), (255, 250, 200), glint * 0.5))
@@ -1366,6 +1463,28 @@ class FishingScene(Scene):
             for r, a in ((78, 140), (60, 100), (44, 60), (28, 25)):
                 pygame.draw.circle(veil, (4, 6, 18, a), (int(cx), int(cy)), r)
             canvas.blit(veil, (0, 0))
+
+    def _draw_escape(self, canvas, f) -> None:
+        """마지막 발악: 눈이 번쩍 → '투둑!' → 깊은 곳으로."""
+        x, y = self.screen_fx.map(self._fish_screen())
+        x, y = clamp(x, 50, self.cam.width - 50), clamp(y, 60, self.cam.height - 60)  # 화면 밖이어도 보이게
+        e = f.escape_t
+        if e < 0.7:
+            blink = int(e * 20) % 2 == 0
+            if blink:
+                for dx in (-3, 3):
+                    pygame.draw.circle(canvas, (255, 60, 50), (int(x + dx), int(y - 3)), 2)
+                    canvas.fill((255, 255, 255), (int(x + dx), int(y - 3), 1, 1))
+            text_k = e / 0.7
+            fight_fx.big_text(canvas, "!!", (x, y - 22 - 6 * text_k), (255, 90, 80), 1.6, outline=True)
+        else:
+            k = min(1.0, (e - 0.7) / 0.3)
+            pop = 1.0 + 0.6 * math.exp(-(e - 0.7) * 8)
+            fight_fx.big_text(canvas, "투둑!", (x, y - 30), (255, 110, 90), 2.4 * pop, outline=True)
+            if k < 1:
+                fl = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+                fl.fill((255, 60, 40, int(90 * (1 - k))))
+                canvas.blit(fl, (0, 0))
 
     def _draw_ceiling_cues(self, canvas) -> None:
         """수정 동굴(어둠): 예고 신호가 천장 수정에 반사광으로 비친다. 가짜(등불)는 깜빡인다."""
@@ -1477,3 +1596,4 @@ class FishingScene(Scene):
             sag = 10 + abs(tip[0] - sx) * 0.04
         draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5 * (1 - dip)), sag, bias=0.6)
         draw_bobber(canvas, self._bobber_pal(pal), sx, sy + bob, size, floating=True, dip=dip)
+        self._draw_float_mark(canvas, sx, sy + bob, size, dip)

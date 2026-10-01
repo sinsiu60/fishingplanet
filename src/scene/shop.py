@@ -10,7 +10,7 @@ from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
 
 TABS = [("sell", "판매"), ("rod", "낚싯대"), ("reel", "릴"), ("line", "줄"), ("net", "뜰채"), ("bait", "미끼"),
-        ("enhance", "강화")]
+        ("float", "특수 찌"), ("enhance", "강화")]
 KIND_KO = {"rod": "낚싯대", "reel": "릴", "line": "줄", "net": "뜰채", "bait": "미끼"}
 MAT_KO = {"sharmion": "샤르미온 소재", "eldrasion": "엘드라시온 소재", "rare": "희귀 소재"}
 ROW_H = 17
@@ -74,13 +74,15 @@ def score(kind: str, item: dict) -> float:
 
 
 class ShopScene(Scene):
-    def __init__(self, game, fishing):
+    def __init__(self, game, fishing, tab: str | None = None):
         super().__init__(game)
         self.fishing = fishing
         self.save = game.save
         self.mouse = (0, 0)
         self.age = 0.0  # 열림 애니메이션
-        self.tabs = ui.Tabs(16, 30, [t[1] for t in TABS], width=56)
+        self.tabs = ui.Tabs(16, 30, [t[1] for t in TABS], width=54)
+        if tab:
+            self.tabs.index = next(i for i, t in enumerate(TABS) if t[0] == tab)
         self.sel = 0
         self.scroll = 0
         self.msg, self.msg_col, self.msg_t = "", ui.TEXT, 0.0
@@ -102,6 +104,8 @@ class ShopScene(Scene):
         if self.kind == "bait":
             lst = [b for b in baits().values() if b["price"] >= 0 or self.save.owns("bait", b["id"])]
             return sorted(lst, key=lambda b: (b.get("tier") is None, b.get("tier") or 0, b["price"]))  # 전설 미끼는 맨 뒤
+        if self.kind == "float":
+            return load_json("floats.json")["floats"]
         if self.kind == "enhance":
             out = []
             for k in rules()["enhance_kinds"]:
@@ -127,6 +131,21 @@ class ShopScene(Scene):
         if not items:
             return
         item = items[min(self.sel, len(items) - 1)]
+        if self.kind == "float":
+            fl = self.save.data["float"]
+            if item["id"] in fl["owned"]:
+                fl["equipped"] = item["id"]
+                self.game.sfx.play("click")
+                self._say(f"{item['name']} 장착", ui.GOOD)
+                return
+            res = self.save.buy_float(item)
+            msg = {"ok": (f"{item['name']} 구매 · 장착!", ui.GOOD), "money": ("돈이 부족해요", ui.BAD),
+                   "scales": ("전설 비늘이 부족해요", ui.BAD), "locked": ("엘드라시온 대륙에서 판매", ui.BAD)}.get(res)
+            if res == "ok":
+                self.game.sfx.play("coin")
+            if msg:
+                self._say(*msg)
+            return
         if self.kind == "enhance":
             kind, gear = item
             res = self.save.enhance(kind, gear)
@@ -221,6 +240,8 @@ class ShopScene(Scene):
         visible = LIST.h // ROW_H
         if self.kind == "sell":
             self._draw_sell(canvas, items, visible)
+        elif self.kind == "float":
+            self._draw_float(canvas, items, visible)
         elif self.kind == "enhance":
             self._draw_enhance(canvas, items, visible)
         else:
@@ -349,6 +370,59 @@ class ShopScene(Scene):
             self.action_btn.label, self.action_btn.enabled = "잠김", False
             for i, ln in enumerate(wrap_text(reason, DETAIL.w - 16)[:2]):
                 text(canvas, ln, (x, DETAIL.bottom - 58 + i * 12), ui.BAD, 11, "midleft")
+        else:
+            self.action_btn.label = f"구매 ({it['price']:,}원)"
+            self.action_btn.enabled = self.save.money >= it["price"] and self.save.data["scales"] >= it.get("scales", 0)
+        self.action_btn.draw(canvas, self.mouse)
+
+    def _draw_float(self, canvas, items, visible) -> None:
+        fl = self.save.data["float"]
+        locked = "eldrasion" not in self.save.data["unlocked_continents"]
+        hl = self.save.data["flags"].get("float_highlight")
+        for i in range(self.scroll, min(len(items), self.scroll + visible)):
+            it = items[i]
+            r = self._row_rect(i)
+            if i == self.sel or r.collidepoint(self.mouse):
+                canvas.fill(ui.PANEL_LIGHT, r)
+            if hl and it["tier"] == 1 and int(self.age * 4) % 2 == 0:
+                pygame.draw.rect(canvas, (255, 230, 120), r, 1)  # 튜토리얼: 마비 찌 반짝임
+            col = tuple(it["color"])
+            text(canvas, f"S{it['tier']}", (r.x + 4, r.centery), ui.DIM if locked else col, 11, "midleft")
+            text(canvas, it["name"], (r.x + 30, r.centery), ui.DIM if locked else ui.TEXT, 11, "midleft")
+            if fl.get("equipped") == it["id"]:
+                status, scol = "장착 중", ui.GOOD
+            elif it["id"] in fl["owned"]:
+                status, scol = "보유", ui.TEXT
+            elif locked:
+                status, scol = "엘드라시온", ui.DIM
+            else:
+                status, scol = f"{it['price']:,}원", ui.ACCENT if self.save.money >= it["price"] else ui.BAD
+            text(canvas, status, (r.right - 4, r.centery), scol, 11, "midright")
+        it = items[self.sel]
+        x, y = DETAIL.x + 8, DETAIL.y + 8
+        text(canvas, it["name"], (x, y + 4), tuple(it["color"]), 11, "midleft")
+        text(canvas, f"S{it['tier']}", (DETAIL.right - 8, y + 4), ui.ACCENT, 11, "midright")
+        yy = y + 20
+        for ln in wrap_text(it["desc"], DETAIL.w - 16)[:3]:
+            text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
+            yy += 13
+        yy += 4
+        spots = [s for s in load_json("spots.json")["spots"] if s.get("continent") == "eldrasion"]
+        ok = [s["short"] for s in spots if s.get("float_req", 9) <= it["tier"]]
+        for ln in wrap_text("쓸 수 있는 곳: " + (", ".join(ok) if ok else "-"), DETAIL.w - 16)[:3]:
+            text(canvas, ln, (x, yy), ui.TEXT, 11, "midleft")
+            yy += 13
+        text(canvas, "전설은 한 단계 위 찌가 필요해요", (x, yy + 2), ui.DIM, 11, "midleft")
+        if it.get("scales"):
+            have = self.save.data["scales"]
+            text(canvas, f"전설 비늘 {it['scales']}개 필요 (보유 {have})", (x, DETAIL.bottom - 34),
+                 ui.TEXT if have >= it["scales"] else ui.BAD, 11, "midleft")
+        if fl.get("equipped") == it["id"]:
+            self.action_btn.label, self.action_btn.enabled = "장착 중", False
+        elif it["id"] in fl["owned"]:
+            self.action_btn.label, self.action_btn.enabled = "장착하기", True
+        elif locked:
+            self.action_btn.label, self.action_btn.enabled = "잠김", False
         else:
             self.action_btn.label = f"구매 ({it['price']:,}원)"
             self.action_btn.enabled = self.save.money >= it["price"] and self.save.data["scales"] >= it.get("scales", 0)

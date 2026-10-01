@@ -247,6 +247,41 @@ class SaveGame:
             self.data["unlocked_spots"].append(first)
         return True
 
+    # ── 특수 찌 (엘드라시온) ──
+    def float_tier(self) -> int:
+        fid = self.data["float"].get("equipped")
+        if not fid:
+            return 0
+        return next((f["tier"] for f in load_json("floats.json")["floats"] if f["id"] == fid), 0)
+
+    def float_need(self, fish: dict, spot: dict) -> int:
+        """이 물고기를 끝까지 잡는 데 필요한 찌 티어 (샤르미온 = 0)."""
+        if spot.get("continent", "sharmion") != "eldrasion":
+            return 0
+        need = spot.get("float_req", 0) + (1 if fish["rarity"] == "legend" else 0)
+        return min(5, need)
+
+    def buy_float(self, item: dict) -> str:
+        fl = self.data["float"]
+        if item["id"] in fl["owned"]:
+            return "already"
+        if "eldrasion" not in self.data["unlocked_continents"]:
+            return "locked"
+        if self.data["money"] < item["price"]:
+            return "money"
+        if self.data["scales"] < item.get("scales", 0):
+            return "scales"
+        self.data["money"] -= item["price"]
+        self.data["scales"] -= item.get("scales", 0)
+        fl["owned"].append(item["id"])
+        fl["equipped"] = item["id"]
+        self.data["flags"]["float_highlight"] = False
+        return "ok"
+
+    def record_seen(self, fish_id: str) -> None:
+        """도감에 '목격'으로 등록 (잡은 것은 아님)."""
+        self.data["dex"].setdefault(fish_id, {"count": 0, "max_size": 0.0, "best_rank": "C", "seen": True})
+
     def charm_slots(self) -> int:
         return 2 if "eldrasion" in self.data["unlocked_continents"] else 1
 

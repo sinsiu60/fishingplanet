@@ -16,13 +16,14 @@ LOSE_REASONS = {
     "slack": ("바늘이 빠졌다", "줄이 너무 느슨했다. 장력을 초록 구간 아래로 떨어뜨리지 마세요."),
     "jump": ("바늘이 빠졌다", "점프 정점에 낚싯대를 숙이지 못했다. 그림자가 커지면 우클릭을 준비하세요."),
     "snag": ("줄이 걸려 끊어졌다", "물고기가 위협 구역(수초·바위)으로 들어갔다. 그쪽으로 가면 마우스를 반대로 당겨 빼내세요."),
+    "escape": ("마지막 발악! 줄을 끊고 달아났다", "엘드라시온의 물고기는 특수 찌 없이는 끝까지 잡을 수 없다. 상점에서 필요한 찌를 장착하세요."),
 }
 
 
 class Fight:
     def __init__(self, fish: dict, size_cm: float, cast_distance: float, angle: float, yaw: float,
                  gear: dict | None = None, rnd: random.Random | None = None, hazards: list | None = None,
-                 gimmick: str | None = None):
+                 gimmick: str | None = None, float_need: int = 0, float_tier: int = 0):
         root = load_json("fishing_config.json")
         self.cfg = root["fight"]
         self.fcfg = root["flick"]
@@ -78,6 +79,15 @@ class Fight:
         self.gim = Gimmicks(gimmick)
         if "dark" in self.gim.kinds(self.brain):
             self.brain.dark = True  # 수정 동굴: 그림자 대신 천장 반사광
+        # 특수 찌: 모자라면 뜰채 직전에 마지막 발악 (엘드라시온)
+        self.float_need = float_need
+        self.float_tier = float_tier
+        self.escape_t: float | None = None
+        fcfg = load_json("floats.json")
+        self.escape_frac = fcfg["escape_distance_frac"]
+        if float_need and float_tier > float_need:
+            k = 1 + fcfg["bonus_tired_per_tier"] * (float_tier - float_need)  # 초과 티어당 지침 +5%
+            self.brain.tired_range = [v * k for v in self.brain.tired_range]
         self.turn_mult = 1.0
         # 환경 위협 (수초·바위): 구역 안에 있으면 줄 걸림 게이지 증가
         self.hazards = hazards or []
@@ -290,6 +300,9 @@ class Fight:
     # ── 틱 ──
     def update(self, dt: float, reeling: bool, rod_aim: float) -> None:
         self.dip_t = max(0.0, self.dip_t - dt)
+        if self.escape_t is not None and self.phase == "fight":
+            self._update_escape(dt)
+            return
         if self.phase == "fight":
             if self.gear.get("auto_drag"):
                 self._auto_drag()
@@ -307,8 +320,10 @@ class Fight:
         self.rod_aim = rod_aim
 
         b.cover_dir = self._cover_dir()
+        b.cover_from_gimmick = False
         if b.cover_dir == 0 and b.gimmick_bias > 0 and self.gim.kinds(b) & {"tangle", "ice", "current"}:
             b.cover_dir = 1 if self.angle - self.yaw >= 0 else -1  # 기믹 쪽(바깥)으로 끌고 간다
+            b.cover_from_gimmick = True
         b.update(dt, self.stamina <= 0, self.stamina_frac)
         for ev in b.events:
             if ev == "action:jump" and self.pre_judged:
@@ -443,6 +458,9 @@ class Fight:
             self._lose("snag")
         elif self.hook >= 100:
             self._lose("jump" if self.elapsed - self.last_jump_miss_t < 1.5 else "slack")
+        elif self._escape_ready():
+            self.escape_t = 0.0
+            self.events.append("escape_start")  # 눈이 번쩍 + 물보라 폭발
         elif self.distance <= cfg["net_distance"] and b.state not in ("jump", "telegraph"):
             need = cfg["net_min_stamina_legend"] if self.fish["rarity"] == "legend" else cfg["net_min_stamina"]
             if self.stamina_frac > need and b.state not in ("rush",):
@@ -452,6 +470,28 @@ class Fight:
                 self.events.append("bolt")
             elif self.stamina_frac <= need:
                 self._start_net()
+
+    # ── 특수 찌 부족: 마지막 발악 ──
+    def _escape_ready(self) -> bool:
+        if not self.float_need or self.float_tier >= self.float_need:
+            return False
+        cfg = self.cfg
+        need = cfg["net_min_stamina_legend"] if self.fish["rarity"] == "legend" else cfg["net_min_stamina"]
+        near = max(cfg["net_distance"] + 1.5, self.cast_distance * self.escape_frac)
+        return self.distance <= near and self.stamina_frac <= need and self.brain.state not in ("jump",)
+
+    def _update_escape(self, dt: float) -> None:
+        """0.7초 몸부림 → '투둑' (줄 끊김) → 깊은 곳으로 사라짐 → 실패."""
+        prev = self.escape_t
+        self.escape_t += dt
+        self.elapsed += dt
+        if prev < 0.7 <= self.escape_t:
+            self.events.append("escape_snap")
+        if self.escape_t >= 0.7:
+            self.distance += 9.0 * dt  # 깊은 곳으로
+            self.tension = max(0.0, self.tension - 120 * dt)
+        if self.escape_t >= 2.0:
+            self._lose("escape")
 
     # ── 뜰채 ──
     def _start_net(self) -> None:

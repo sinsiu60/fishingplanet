@@ -69,6 +69,7 @@ class FishBrain:
         self.turn_count = 0         # 방향 전환 예고 횟수 (꺾기 판정 구분용)
         self.jump_kind = "dip"      # dip: 우클릭 점프 / swipe: 슬라이드 점프
         self.cover_dir = 0          # Fight가 매 틱 알려줌: 가장 가까운 위협 구역 방향 (-1/0/1)
+        self.cover_from_gimmick = False  # True면 cover_dir이 위협 구역이 아니라 기믹(바깥) 방향
         self.chain_left = 0
         self.chain_action: str | None = None
         self.rush_after_charge = False
@@ -107,8 +108,7 @@ class FishBrain:
         self.fake_cue_p = src.get("fake_cue", 0.0)
         self.gimmick = src.get("gimmick")            # 전설 페이즈가 기믹을 바꿀 때 (오르시엘)
         self.gimmick_mult = src.get("gimmick_mult", 1.0)
-        self.gimmick_bias = src.get("gimmick_bias", 0.0)
-        self.cover_bias = max(self.cover_bias, self.gimmick_bias)
+        self.gimmick_bias = src.get("gimmick_bias", 0.0)  # 기믹 쪽(바깥)으로 끄는 경향 — 위협 구역 경향과 따로
         self.sound_only = src.get("sound_only", False)
         if self.sound_only:
             self.dark = True
@@ -225,7 +225,7 @@ class FishBrain:
         if action == "turn":
             if turn_dir is not None:
                 self.turn_dir = turn_dir
-            elif self.cover_dir and self.rnd.random() < self.cover_bias:
+            elif self.cover_dir and self.rnd.random() < (self.gimmick_bias if self.cover_from_gimmick else self.cover_bias):
                 self.turn_dir = self.cover_dir
             else:
                 self.turn_dir = self.rnd.choice((-1, 1))
