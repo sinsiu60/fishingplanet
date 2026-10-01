@@ -4,7 +4,7 @@ import pygame
 from src.core.config import game_config
 from src.render.screen import PixelScreen
 from src.scene.base import SceneManager
-from src.scene.blank import BlankScene
+from src.scene.fishing_scene import FishingScene
 
 MAX_FRAME_TIME = 0.25  # 창 드래그 등으로 멈췄을 때 틱이 폭주하지 않게
 
@@ -19,7 +19,7 @@ class Game:
         self.screen = PixelScreen(cfg["width"], cfg["height"], cfg.get("scale"), cfg["title"])
         self.clock = pygame.time.Clock()
         self.scenes = SceneManager()
-        self.scenes.push(BlankScene(self))
+        self.scenes.push(FishingScene(self))
         # 슬로우모션용 (퍼펙트 0.3초 슬로우 등). 틱 간격은 그대로, 쌓이는 시간만 줄인다.
         self.time_scale = 1.0
         self.running = True

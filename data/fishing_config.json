@@ -1,0 +1,16 @@
+{
+  "cast": {
+    "min_distance": 8,
+    "max_distance": 40,
+    "charge_period_sec": 1.6,
+    "max_aim_deg": 30,
+    "back_swing_sec": 0.18,
+    "forward_swing_sec": 0.12,
+    "flight_sec_min": 0.7,
+    "flight_sec_per_power": 0.7,
+    "apex_min": 2.0,
+    "apex_per_power": 5.0,
+    "retrieve_speed": 9.0,
+    "retrieve_done_distance": 3.0
+  }
+}
