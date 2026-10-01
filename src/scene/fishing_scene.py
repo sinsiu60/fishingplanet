@@ -5,7 +5,8 @@ import random
 import pygame
 
 from src.core.config import game_config, load_json
-from src.core.game_clock import GameClock
+from src.core.game_clock import PERIODS, GameClock
+from src.core.weather import WEATHER_KO, Weather, roll_weather
 from src.core.mathutil import clamp, lerp, lerp_color, smoothstep
 from src.fishing.bite import BiteController, BiteState, roll_size
 from src.fishing.casting import CastController, CastState
@@ -19,12 +20,13 @@ from src.render.landing import LandingCinematic
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
+from src.render.weather_fx import Ambient, Lightning, Rain, themed_palette
 from src.scene.base import Scene
 from src.ui import fight_fx, fight_hud, hud
 from src.ui import tutorial as tut
 
 HINTS = {
-    CastState.READY: "좌클릭 유지: 던지기   B: 상점   Tab: 도감   ESC: 메뉴   H: 도움말",
+    CastState.READY: "좌클릭 유지: 던지기   M: 지도   B: 상점   Tab: 도감   H: 도움말   ESC: 메뉴",
     CastState.CHARGING: "놓으면 던지기   우클릭: 취소",
     CastState.SWING: "",
     CastState.FLIGHT: "",
@@ -37,7 +39,7 @@ GOOD = (140, 240, 150)
 BAD = (255, 150, 130)
 INFO = (255, 235, 170)
 LOOK_STATES = (CastState.READY, CastState.LANDED)
-WEATHERS = [("clear", "맑음"), ("rain", "비"), ("storm", "폭풍")]
+WEATHERS = ["clear", "rain", "storm"]
 GLOW = {"rare": (150, 210, 255), "legend": (255, 215, 100)}
 
 # 튜토리얼 카드를 본 뒤 한 번 더 짧게 상기시킨다 (DESIGN.md 4장)
@@ -83,14 +85,20 @@ class FishingScene(Scene):
         self.fish_cfg = load_json("fishing_config.json")
         self.spots = {sp["id"]: sp for sp in load_json("spots.json")["spots"]}
         self.spot_ids = list(self.spots)
-        self.weather_i = 0
         self.force_i = -1          # F3 테스트: 고정할 물고기 인덱스 (-1 = 없음)
         self.all_fish = load_json("fish.json")["fish"]
         force = self.fish_cfg.get("debug_force_fish")
         if force:
             self.force_i = next((i for i, x in enumerate(self.all_fish) if x["id"] == force), -1)
         self._set_spot(self.save.data["spot"] if self.save.data["spot"] in self.spots else "reservoir")
-        self.weather_i = next((i for i, w in enumerate(WEATHERS) if w[0] == self.save.data["weather"]), 0)
+        d = self.save.data
+        self.weather_sys = Weather(d.get("weather", "clear"),
+                                   d.get("weather_next") or roll_weather(self.spot["weather"]),
+                                   d.get("weather_change", 0.0))
+        self.rain = Rain(canvas.get_width(), canvas.get_height())
+        self.lightning = Lightning()
+        self.ambient = Ambient(canvas.get_width(), canvas.get_height(), self.cam.horizon)
+        self.amb_loops: set[str] = set()
         self.catch_news: dict | None = None
         self.ink_t = 0.0
         self.fake_bubble_t = 0.0
@@ -122,11 +130,67 @@ class FishingScene(Scene):
     def _set_spot(self, spot_id: str) -> None:
         self.spot_id = spot_id
         self.spot = self.spots[spot_id]
+        self.theme = self.spot["theme"]
         self.hazard_decor = world.HazardDecor(self.spot["hazards"])
+        self.screen_fx.sway = self.theme.get("sway", 0)
 
     @property
     def weather(self) -> str:
-        return WEATHERS[self.weather_i][0]
+        return self.weather_sys.current
+
+    # ───────────────────────── 이동 · 휴식 ─────────────────────────
+    def travel(self, spot_id: str) -> None:
+        """지도에서 이동: 1시간 흐르고, 그 지역 기후로 예보가 바뀐다."""
+        self.bite.stop()
+        self.cast.reset()
+        self.cam.yaw = 0.0
+        self._set_spot(spot_id)
+        self._advance_hours(1.0)
+        self.weather_sys.reroll_upcoming(self.spot["weather"])
+        self.toasts.show(f"{self.spot['name']}에 도착했다", GOOD, 2.0)
+        self.game.save_now()
+
+    def next_period_name(self) -> str:
+        return self._next_period()[1]
+
+    def _next_period(self) -> tuple[float, str]:
+        h = self.clock.hour
+        starts = [(p[0], p[2]) for p in PERIODS]
+        for start, name in starts:
+            if start > h + 0.01:
+                return start, name
+        return starts[0][0] + 24.0, starts[0][1]
+
+    def rest(self) -> str:
+        """텐트에서 쉬기: 다음 시간대 시작까지 시간을 넘긴다 (날씨도 그만큼 진행)."""
+        self.bite.stop()
+        self.cast.reset()
+        start, name = self._next_period()
+        self._advance_hours(start - self.clock.hour)
+        self.game.save_now()
+        return f"{self.clock.label()} · {WEATHER_KO[self.weather]}"
+
+    def _advance_hours(self, hours: float) -> None:
+        self.clock.hour += hours
+        while self.clock.hour >= 24.0:
+            self.clock.hour -= 24.0
+            self.clock.day += 1
+        self.weather_sys.update(self.clock.day, self.clock.hour, self.spot["weather"])
+        self.weather_sys.events.clear()
+
+    def _check_new_spots(self) -> None:
+        """비용 빼고 해금 조건을 처음 채운 낚시터가 있으면 알린다."""
+        from src.scene.map_scene import can_unlock_soon
+        notified = self.save.data.setdefault("notified_spots", [])
+        for sp in self.spots.values():
+            if sp["id"] in self.save.data["unlocked_spots"] or sp["id"] in notified:
+                continue
+            if can_unlock_soon(self.save, sp):
+                notified.append(sp["id"])
+                name = sp["name"] if sp["id"] != "secret" else "숨겨진 장소"
+                self.toasts.show(f"새 낚시터 '{name}'을(를) 열 수 있어요! (M: 지도)", GOOD, 3.5, 11)
+                self.sfx.play("great", 0.7)
+                return
 
     def _cycle_debug(self, key: int) -> None:
         """F3 물고기 고정 / F4 낚시터 / F5 날씨 (테스트용)."""
@@ -137,10 +201,11 @@ class FishingScene(Scene):
         elif key == pygame.K_F4:
             i = (self.spot_ids.index(self.spot_id) + 1) % len(self.spot_ids)
             self._set_spot(self.spot_ids[i])
-            self.toasts.show(f"[테스트] 낚시터: {self.spot['name']}", INFO, 1.5, 11)
+            self.toasts.show(f"[테스트] 낚시터: {self.spot['name']} (해금 무시)", INFO, 1.5, 11)
         elif key == pygame.K_F5:
-            self.weather_i = (self.weather_i + 1) % len(WEATHERS)
-            self.toasts.show(f"[테스트] 날씨: {WEATHERS[self.weather_i][1]}", INFO, 1.5, 11)
+            w = self.weather_sys
+            w.current = WEATHERS[(WEATHERS.index(w.current) + 1) % len(WEATHERS)]
+            self.toasts.show(f"[테스트] 날씨: {WEATHER_KO[w.current]}", INFO, 1.5, 11)
 
     def _open_card(self, key: str, focus: str | None) -> None:
         self.card = {"key": key, "focus": focus, "t": 0.0}
@@ -177,6 +242,8 @@ class FishingScene(Scene):
                 self.open_menu("shop")
             elif event.key == pygame.K_TAB and self.fight is None:
                 self.open_menu("dex")
+            elif event.key == pygame.K_m and self.can_open_menus():
+                self.open_menu("map")
             elif event.key in (pygame.K_F3, pygame.K_F4, pygame.K_F5) and f is None and self.fish_cfg.get("debug_keys"):
                 self._cycle_debug(event.key)
             elif event.key == pygame.K_t:
@@ -216,6 +283,11 @@ class FishingScene(Scene):
         elif which == "dex":
             from src.scene.dex import DexScene
             self.game.scenes.push(DexScene(self.game, self))
+        elif which == "map":
+            if not self.can_open_menus():
+                return
+            from src.scene.map_scene import MapScene
+            self.game.scenes.push(MapScene(self.game, self))
         if self.reel_loop:
             self.sfx.loop(self.reel_loop, False)
             self.reel_loop = None
@@ -223,7 +295,8 @@ class FishingScene(Scene):
     def write_save(self) -> None:
         d = self.save.data
         d["hour"], d["day"] = self.clock.hour, self.clock.day
-        d["spot"], d["weather"] = self.spot_id, self.weather
+        d["spot"] = self.spot_id
+        d.update(self.weather_sys.to_save())
 
     def apply_settings(self) -> None:
         self.shake_on = self.settings.get("screen_shake")
@@ -291,6 +364,7 @@ class FishingScene(Scene):
     def _end_fight(self) -> None:
         self.fight = None
         self.landing = None
+        self._check_new_spots()
         self.screen_fx.reset()
         self.bite.stop()
         self.cast.reset()
@@ -312,6 +386,7 @@ class FishingScene(Scene):
         self.t += dt
         self.clock.update(dt)
         self.clouds.update(dt)
+        self._update_weather(dt)
         self.ripples.update(dt)
         self.droplets.update(dt)
         self.bubbles.update(dt)
@@ -360,6 +435,34 @@ class FishingScene(Scene):
             p = self.cam.project(*f.fish_xz())
             scale = p[2] / 20 if p else 1.0
         self.gather.update(dt, fighting and f.brain.state == "charge" and self.ink_t <= 0, fish_pos, scale)
+
+    def _update_weather(self, dt: float) -> None:
+        w = self.weather_sys
+        w.update(self.clock.day, self.clock.hour, self.spot["weather"])
+        for ev in w.events:
+            msg = {"clear": "비가 그치고 하늘이 갰다", "rain": "비가 내리기 시작했다 (입질 증가)",
+                   "storm": "폭풍이 몰아친다! (희귀어 증가)"}[ev.split(":")[1]]
+            self.toasts.show(msg, INFO, 2.6, 11)
+        w.events.clear()
+        self.rain.update(dt, self.weather, self.ripples, self.cam)
+        self.lightning.update(dt, self.weather, self.cam.horizon, self.cam.width)
+        for ev in self.lightning.events:
+            if ev == "thunder":
+                self.sfx.play("thunder", 0.9)
+            elif ev == "strike":
+                self.shake_kick = max(self.shake_kick, 1.0)
+        self.lightning.events.clear()
+        self.ambient.update(dt, self.clock.period()[0], self.weather, self.theme.get("sea", False))
+        # 환경음: 낚시터 + 비
+        want = {self.theme["ambient"]}
+        if self.weather != "clear":
+            want.add("amb_rain")
+        for name in self.amb_loops - want:
+            self.sfx.loop(name, False)
+        for name in want:
+            vol = 0.35 if name != "amb_rain" else (0.4 if self.weather == "rain" else 0.65)
+            self.sfx.loop(name, True, vol)
+        self.amb_loops = want
 
     def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
@@ -630,15 +733,20 @@ class FishingScene(Scene):
     # ───────────────────────── 그리기 ─────────────────────────
     def draw(self, canvas: pygame.Surface) -> None:
         hour = self.clock.hour
-        pal = self.palette.sample(hour)
+        theme, weather = self.theme, self.weather
+        pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash)
         cam, c, t, f = self.cam, self.cast, self.t, self.fight
 
         world.draw_sky(canvas, pal, cam)
         self.stars.draw(canvas, pal, cam, t)
-        world.draw_celestial(canvas, pal, cam, hour, t)
+        world.draw_celestial(canvas, pal, cam, hour, t, visible=weather == "clear")
         self.clouds.draw(canvas, pal, cam)
-        world.draw_mountains(canvas, pal, cam)
-        self.water.draw(canvas, pal, t, hour)
+        self.lightning.draw(canvas)
+        world.draw_mountains(canvas, pal, cam, theme["terrain"], t)
+        amp = {"clear": 1.0, "rain": 1.25, "storm": 1.9}[weather] * (1.3 if theme.get("sea") else 1.0)
+        self.water.draw(canvas, pal, t, hour, amp_mult=amp, show_reflection=weather == "clear")
+        if theme.get("lamp"):
+            world.draw_ship_lamp(canvas, pal, cam)
         if self.landing is not None:
             self.landing.draw(canvas, pal)
             return
@@ -656,6 +764,7 @@ class FishingScene(Scene):
         self.ripples.draw(canvas, pal, cam)
         self.bubbles.draw(canvas, pal)
         self.hazard_decor.draw(canvas, pal, cam, t, f.in_hazard if f is not None and f.phase == "fight" else None)
+        self.ambient.draw(canvas, pal, self.clock.period()[0], weather, theme.get("sea", False), t)
 
         geo = self._rod_geo()
         tip = geo["tip"]
@@ -676,7 +785,11 @@ class FishingScene(Scene):
             draw_jump(canvas, pal, cam, f.fish, f.size_cm, x, z, f.brain.jump_phase(), self.jump_facing,
                       f.brain.cfg["jump_height_m"])
 
-        self.reeds.draw(canvas, pal, t)
+        fg = theme["foreground"]
+        if fg == "reeds":
+            self.reeds.draw(canvas, pal, t, wind={"clear": 1.0, "rain": 1.4, "storm": 2.2}[weather])
+        else:
+            world.FOREGROUND[fg](canvas, pal, t)
         draw_rod(canvas, pal, geo, c.reel_angle)
 
         if hanging:
@@ -684,6 +797,7 @@ class FishingScene(Scene):
             draw_line(canvas, pal, tip, (bx, by - 3), 0)
             draw_bobber(canvas, pal, bx, by, 7, floating=False)
         self.droplets.draw(canvas, pal)
+        self.rain.draw(canvas, pal)
         if f is not None and f.phase == "fight":
             # 수면 위 행동 연출 (카메라 연출 전에 그려서 함께 확대됨)
             pos = self._fish_screen()
@@ -699,7 +813,7 @@ class FishingScene(Scene):
         if f is not None:
             self._draw_fight_overlay(canvas, pal)
         else:
-            label = f"{self.clock.label()} · {self.spot['name']} · {WEATHERS[self.weather_i][1]}"
+            label = f"{self.clock.label()} · {self.spot['name']} · {WEATHER_KO[weather]}"
             hud.draw_clock(canvas, pal, label, self.clock.fast, self.clock.fast_mult)
             if c.state == CastState.CHARGING:
                 hud.draw_power_gauge(canvas, pal, c.power, c.distance_for_power(c.power))

@@ -201,6 +201,98 @@ def make_coin(rng) -> np.ndarray:
     return out
 
 
+# ───────────────────────── 환경음 (끊김 없는 루프) ─────────────────────────
+LOOP_SEC = 6.0
+
+
+def _loop_noise(rng, lo: float, hi: float, tilt: float = 0.0, sec: float = LOOP_SEC) -> np.ndarray:
+    """주파수 영역에서 만든 노이즈 → 역변환하면 자연스럽게 반복되는(끊김 없는) 루프가 된다."""
+    n = int(RATE * sec)
+    freqs = np.fft.rfftfreq(n, 1 / RATE)
+    mag = ((freqs >= lo) & (freqs <= hi)).astype(float)
+    with np.errstate(divide="ignore"):
+        mag *= np.where(freqs > 0, (freqs / max(lo, 1)) ** -tilt, 0)
+    spec = mag * np.exp(1j * rng.uniform(0, 2 * np.pi, len(freqs)))
+    out = np.fft.irfft(spec, n)
+    return out / (np.max(np.abs(out)) + 1e-9)
+
+
+def _loop_t(sec: float = LOOP_SEC) -> np.ndarray:
+    return np.arange(int(RATE * sec)) / RATE
+
+
+def make_amb_lake(rng) -> np.ndarray:
+    """저수지: 잔잔한 바람 + 풀벌레."""
+    t = _loop_t()
+    wind = _loop_noise(rng, 80, 700, 1.0) * (0.6 + 0.4 * np.sin(2 * np.pi * t / LOOP_SEC)) * 0.25
+    bugs = np.zeros_like(t)
+    for start in np.arange(0.2, LOOP_SEC - 0.3, 0.75):
+        for k in range(3):
+            s0 = int((start + k * 0.06) * RATE)
+            seg = np.sin(2 * np.pi * 4300 * _t(0.035)) * _env(int(RATE * 0.035), 0.004, 0.012)
+            bugs[s0:s0 + len(seg)] += seg * 0.08
+    return wind + bugs
+
+
+def make_amb_stream(rng) -> np.ndarray:
+    """계곡: 졸졸 흐르는 물."""
+    t = _loop_t()
+    water = _loop_noise(rng, 300, 3500, 0.5) * 0.22
+    mod = 0.7 + 0.3 * np.sin(2 * np.pi * 3 * t / LOOP_SEC)
+    bubbles = np.zeros_like(t)
+    for _ in range(40):
+        s0 = rng.integers(0, len(t) - int(RATE * 0.04))
+        b = _sweep(rng.uniform(500, 900), rng.uniform(1000, 1600), 0.04) * _env(int(RATE * 0.04), 0.003, 0.012)
+        bubbles[s0:s0 + len(b)] += b * 0.05
+    return water * mod + bubbles
+
+
+def make_amb_waves(rng) -> np.ndarray:
+    """바다: 철썩이는 파도 (루프 길이에 맞춘 두 번의 너울)."""
+    t = _loop_t()
+    surf = _loop_noise(rng, 60, 2500, 1.2)
+    swell = (0.5 + 0.5 * np.sin(2 * np.pi * 2 * t / LOOP_SEC - 1.2)) ** 2
+    return surf * (0.08 + 0.32 * swell)
+
+
+def make_amb_boat(rng) -> np.ndarray:
+    """먼바다: 낮은 엔진음 + 파도."""
+    t = _loop_t()
+    base = 42.0  # 루프 길이(6초)에 정수 주기로 맞아떨어지는 주파수
+    hum = sum(np.sin(2 * np.pi * base * h * t) / h for h in (1, 2, 3, 5)) * 0.12
+    hum *= 0.85 + 0.15 * np.sin(2 * np.pi * 6 * t / LOOP_SEC)
+    return hum + make_amb_waves(rng) * 0.6
+
+
+def make_amb_deep(rng) -> np.ndarray:
+    """심해: 깊게 울리는 저음 + 먼 파도."""
+    t = _loop_t()
+    drone = (np.sin(2 * np.pi * 55 * t) + 0.7 * np.sin(2 * np.pi * (82.5 + 1 / LOOP_SEC) * t)) * 0.12
+    drone *= 0.7 + 0.3 * np.sin(2 * np.pi * t / LOOP_SEC)
+    return drone + _loop_noise(rng, 40, 400, 1.0) * 0.12
+
+
+def make_amb_rain(rng) -> np.ndarray:
+    """빗소리: 사락사락."""
+    hiss = _loop_noise(rng, 900, 9000, 0.3) * 0.18
+    t = _loop_t()
+    patter = np.zeros_like(t)
+    for _ in range(260):
+        s0 = rng.integers(0, len(t) - 200)
+        patter[s0:s0 + 120] += _lowpass(rng.uniform(-1, 1, 120), 2) * np.exp(-np.arange(120) / 25) * 0.15
+    return hiss + patter
+
+
+def make_thunder(rng) -> np.ndarray:
+    """천둥: 우르릉."""
+    sec = 2.6
+    n = int(RATE * sec)
+    crack = _lowpass(_noise(sec, rng), 3) * _env(n, 0.002, 0.08) * 0.6
+    rumble = _lowpass(_noise(sec, rng), 60) * 6
+    rumble *= _env(n, 0.05, 0.9) * (0.7 + 0.3 * np.sin(np.linspace(0, 20, n)))
+    return crack + rumble
+
+
 def make_miss(rng) -> np.ndarray:
     """실수: 낮은 쿵 + 줄 튕김."""
     sec = 0.35
@@ -324,6 +416,13 @@ class Sfx:
             "impact": make_impact(rng),
             "rise": make_rise(rng),
             "click": make_click(rng),
+            "amb_lake": make_amb_lake(rng),
+            "amb_stream": make_amb_stream(rng),
+            "amb_waves": make_amb_waves(rng),
+            "amb_boat": make_amb_boat(rng),
+            "amb_deep": make_amb_deep(rng),
+            "amb_rain": make_amb_rain(rng),
+            "thunder": make_thunder(rng),
             "coin": make_coin(rng),
             "chord_rare": make_chord(rng, [659.25, 830.61, 987.77, 1318.5], 1.4, 0.15, 1.0),
             "chord_legend": make_chord(rng, [261.63, 392.0, 523.25, 659.25, 783.99, 1046.5], 2.4, 0.5, 2.0),
@@ -366,9 +465,9 @@ class Sfx:
             return
         ch = self.loops.get(name)
         if on:
+            snd = self.sounds[name]
+            snd.set_volume(self.volume * volume)
             if ch is None or not ch.get_busy():
-                snd = self.sounds[name]
-                snd.set_volume(self.volume * volume)
                 self.loops[name] = snd.play(loops=-1)
         elif ch is not None:
             ch.stop()

@@ -31,6 +31,8 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
         if f["spot"] != spot or period not in f["times"] or weather not in f["weathers"]:
             continue
         w = cfg["rarity_weight"].get(f["rarity"], 0)
+        if weather == "storm" and f["rarity"] in ("rare", "legend"):
+            w *= cfg["storm_rare_mult"]  # 폭풍: 희귀어 증가
         if bait:
             # 미끼: 물고기별·낚시터별 배율
             w *= bait.get("boost", {}).get(f["id"], 1.0) * bait.get("spot_boost", {}).get(spot, 1.0)
@@ -116,7 +118,8 @@ class BiteController:
     # ── 내부 ──
     def _to_wait(self) -> None:
         self.state = BiteState.WAIT
-        self.timer = self._rand(self.cfg["wait_sec"]) + self.cooldown
+        wait = self._rand(self.cfg["wait_sec"]) / self.cfg["weather_bite_mult"].get(self.weather, 1.0)
+        self.timer = wait + self.cooldown
         self.cooldown = 0.0
         self.fish = None
         self.shadow = None

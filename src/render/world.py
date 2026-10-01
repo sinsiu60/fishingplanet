@@ -81,7 +81,9 @@ class StarField:
             canvas.set_at((sx, int(y)), lerp_color(pal["sky_top"], STAR_COLOR, k))
 
 
-def draw_celestial(canvas, pal, cam, hour: float, t: float) -> None:
+def draw_celestial(canvas, pal, cam, hour: float, t: float, visible: bool = True) -> None:
+    if not visible:
+        return
     for body in celestial_bodies(hour):
         pos = body_screen_pos(cam, body)
         if pos is None:
@@ -150,18 +152,110 @@ def _mountain_near(u: float) -> float:
     return max(3.0, hill) + trees
 
 
-def draw_mountains(canvas, pal, cam) -> None:
+def _peak_far(u: float) -> float:
+    # 뾰족한 바위산: 삼각파 + 잔물결
+    def tri(x, p):
+        k = (x / p) % 1.0
+        return 1 - abs(2 * k - 1)
+    return 34 + 52 * tri(u + 40, 150) ** 1.5 + 18 * tri(u + 10, 63) + 4 * math.sin(u * 0.4)
+
+
+def _forest_near(u: float) -> float:
+    trees = 5 * abs(math.sin(u * 0.32)) + 3 * abs(math.sin(u * 0.71 + 1)) + 2 * abs(math.sin(u * 1.3))
+    return 16 + 6 * math.sin(u * 0.02 + 2) + trees
+
+
+def _island(u: float) -> float:
+    # 왼쪽 멀리 작은 섬 하나
+    d = (u + 140) / 70
+    return max(0.0, 9 * (1 - d * d)) if abs(d) < 1 else 0.0
+
+
+def _cliff(u: float) -> float:
+    # 폭포: 양옆 높은 절벽, 가운데 틈
+    a = abs(u - 240) / 240
+    return max(0.0, 20 + 110 * a ** 1.5 + 6 * math.sin(u * 0.15))
+
+
+TERRAIN = {
+    "hills": [(_mountain_far, 0.5, "mountain_far"), (_mountain_near, 0.8, "mountain_near")],
+    "peaks": [(_peak_far, 0.5, "mountain_far"), (_forest_near, 0.8, "mountain_near")],
+    "coast": [(_island, 0.5, "mountain_far")],
+    "open": [],
+    "falls": [(_cliff, 0.6, "mountain_near")],
+}
+
+
+def draw_mountains(canvas, pal, cam, terrain: str = "hills", t: float = 0.0) -> None:
     hz = cam.horizon
-    for fn, factor, color in (
-        (_mountain_far, 0.5, pal["mountain_far"]),
-        (_mountain_near, 0.8, pal["mountain_near"]),
-    ):
+    layers = TERRAIN.get(terrain, TERRAIN["hills"])
+    if terrain == "falls":
+        _draw_waterfall(canvas, pal, cam, t)
+    for fn, factor, key in layers:
+        color = pal[key]
         off = cam.parallax(factor)
         pts = [(0, hz + 1)]
         for x in range(0, cam.width + 4, 3):
             pts.append((x, hz - fn(x + off)))
         pts.append((cam.width, hz + 1))
         pygame.draw.polygon(canvas, color, pts)
+    if terrain == "peaks":
+        # 봉우리 눈
+        off = cam.parallax(0.5)
+        snow = lerp_color(pal["mountain_far"], (245, 245, 250), 0.55)
+        for x in range(0, cam.width, 2):
+            h = _peak_far(x + off)
+            if h > 72:
+                canvas.fill(snow, (x, int(hz - h), 2, int((h - 72) * 0.5) + 1))
+    if terrain == "coast":
+        _draw_lighthouse(canvas, pal, cam, t)
+
+
+def _draw_lighthouse(canvas, pal, cam, t: float) -> None:
+    x = cam.angle_to_x(math.radians(24))
+    if x is None:
+        return
+    hz = cam.horizon
+    rock = lerp_color(pal["mountain_far"], (60, 60, 70), 0.3)
+    pygame.draw.ellipse(canvas, rock, (x - 18, hz - 6, 36, 12))
+    body = lerp_color(pal["mountain_far"], (240, 240, 235), 0.6)
+    red = lerp_color(pal["mountain_far"], (200, 60, 50), 0.6)
+    canvas.fill(body, (int(x) - 3, hz - 34, 7, 30))
+    for i in range(3):
+        canvas.fill(red, (int(x) - 3, hz - 30 + i * 9, 7, 3))
+    canvas.fill(red, (int(x) - 4, hz - 38, 9, 4))
+    night = pal["stars"]
+    lamp = lerp_color((255, 240, 180), (255, 255, 220), night)
+    canvas.fill(lamp, (int(x) - 1, hz - 37, 3, 2))
+    if night > 0.2:
+        # 회전하는 등대 불빛
+        a = t * 1.6
+        reach = 110 * abs(math.cos(a))
+        side = 1 if math.sin(a) > 0 else -1
+        beam = pygame.Surface((int(reach) + 2, 20), pygame.SRCALPHA)
+        for i in range(int(reach)):
+            k = i / max(1, reach)
+            half = 1 + k * 7
+            alpha = int(110 * night * (1 - k) ** 0.8)
+            pygame.draw.line(beam, (255, 245, 200, alpha), (i, 10 - half), (i, 10 + half))
+        if side < 0:
+            beam = pygame.transform.flip(beam, True, False)
+            canvas.blit(beam, (x - reach, hz - 46))
+        else:
+            canvas.blit(beam, (x, hz - 46))
+
+
+def _draw_waterfall(canvas, pal, cam, t: float) -> None:
+    hz = cam.horizon
+    x = cam.cx - cam.parallax(0.6)
+    top = hz - 120
+    fall = lerp_color(pal["wave_light"], (255, 255, 255), 0.3)
+    canvas.fill(lerp_color(pal["water_top"], fall, 0.5), (int(x) - 16, top, 32, hz - top))
+    for i in range(10):
+        yy = top + ((t * 120 + i * 37) % (hz - top))
+        canvas.fill(fall, (int(x) - 14 + (i * 7) % 28, int(yy), 2, 8))
+    mist = lerp_color(pal["sky_bottom"], (255, 255, 255), 0.4)
+    pygame.draw.ellipse(canvas, mist, (x - 40, hz - 10, 80, 14))
 
 
 # ───────────────────────── 수면 ─────────────────────────
@@ -177,7 +271,7 @@ class Water:
         rows = np.arange(cam.horizon + 1, cam.height)
         self.row_t = ((rows - cam.horizon) / (cam.height - cam.horizon)) ** 0.55
 
-    def draw(self, canvas, pal, t: float, hour: float) -> None:
+    def draw(self, canvas, pal, t: float, hour: float, amp_mult: float = 1.0, show_reflection: bool = True) -> None:
         cam = self.cam
         hz = cam.horizon
         # 1) 바탕 그라데이션 (12단계로 끊어서 픽셀 느낌)
@@ -188,7 +282,7 @@ class Water:
         canvas.fill(lerp_color(pal["sky_bottom"], top, 0.35), (0, hz, cam.width, 1))
 
         # 2) 해·달 반사광 띠 (아래로 갈수록 넓어짐)
-        for body in celestial_bodies(hour):
+        for body in celestial_bodies(hour) if show_reflection else []:
             if body["elev"] < math.radians(-1.5):
                 continue
             x = cam.angle_to_x(body["az"])
@@ -208,7 +302,7 @@ class Water:
             u = (self.xs - cam.cx) / s + cam.yaw * z
             phase = t * (0.9 + 0.05 * i) + i * 1.7
             wave = np.sin(u * 1.3 + phase) * np.sin(u * 0.37 - phase * 0.6 + i)
-            amp = min(2.0, 5.0 / z)
+            amp = min(2.0, 5.0 / z) * amp_mult
             near = clamp(1.0 - z / 50.0, 0.25, 1.0)
             crest_color = lerp_color(lerp_color(top, bottom, (y0 - hz) / (cam.height - hz)), light, near)
             self._draw_runs(canvas, wave > 0.45, y0, amp, u, t, crest_color)
@@ -261,12 +355,12 @@ class Reeds:
                 "head": rnd.random() < 0.55,
             })
 
-    def draw(self, canvas, pal, t: float) -> None:
+    def draw(self, canvas, pal, t: float, wind: float = 1.0) -> None:
         base_y = self.cam.height + 2
         color = pal["reed"]
         head = scale_color(color, 0.7)
         for s in self.stems:
-            sway = math.sin(t * 1.3 + s["phase"]) * 3
+            sway = math.sin(t * 1.3 * wind + s["phase"]) * 3 * wind + (wind - 1) * 4
             tip = (s["x"] + s["lean"] + sway, base_y - s["h"])
             mid = (s["x"] + (s["lean"] + sway) * 0.35, base_y - s["h"] * 0.5)
             pygame.draw.lines(canvas, color, False, [(s["x"], base_y), mid, tip], 2)
@@ -330,3 +424,72 @@ class HazardDecor:
                 w = max(3, 1.5 * s * k)
                 off = (t * 30 + it["ph"] * 10) % (w * 2) - w
                 pygame.draw.line(canvas, col, (sx - w / 2 + off * 0.3, sy), (sx + w / 2 + off * 0.3, sy), 1)
+
+
+# ───────────────────────── 낚시터별 전경 ─────────────────────────
+
+def draw_boulders(canvas, pal, t: float) -> None:
+    """계곡: 왼쪽 아래 큰 바위들."""
+    base = lerp_color(pal["mountain_near"], (95, 95, 100), 0.35)
+    shade = scale_color(base, 0.7)
+    moss = lerp_color(base, (80, 130, 70), 0.4)
+    rocks = [[(-10, 270), (-6, 222), (22, 206), (58, 214), (78, 240), (84, 270)],
+             [(70, 270), (78, 248), (104, 238), (128, 246), (136, 270)],
+             [(-10, 210), (4, 196), (24, 200), (20, 214)]]
+    for pts in rocks:
+        pygame.draw.polygon(canvas, base, pts)
+        pygame.draw.polygon(canvas, shade, [pts[0]] + [(x + 4, y + 10) for x, y in pts[1:-1]] + [pts[-1]])
+        pygame.draw.lines(canvas, moss, False, pts[1:-1], 2)
+
+
+def _tetrapod(canvas, cx: float, cy: float, r: float, rot: float, col, shade) -> None:
+    for i in range(3):
+        a = rot + i * math.tau / 3
+        ex, ey = cx + math.cos(a) * r, cy + math.sin(a) * r * 0.8
+        pygame.draw.line(canvas, shade, (cx + 2, cy + 2), (ex + 2, ey + 2), int(r * 0.55))
+        pygame.draw.line(canvas, col, (cx, cy), (ex, ey), int(r * 0.5))
+        pygame.draw.circle(canvas, col, (int(ex), int(ey)), int(r * 0.26))
+    pygame.draw.circle(canvas, col, (int(cx), int(cy - r * 0.3)), int(r * 0.35))
+
+
+def draw_tetrapods(canvas, pal, t: float) -> None:
+    """방파제: 왼쪽 아래 테트라포드."""
+    col = lerp_color(pal["mountain_far"], (175, 175, 168), 0.55)
+    shade = scale_color(col, 0.62)
+    for cx, cy, r, rot in ((30, 262, 30, 0.4), (88, 270, 24, 1.3), (-6, 226, 22, 2.2)):
+        _tetrapod(canvas, cx, cy, r, rot, col, shade)
+
+
+def draw_boat(canvas, pal, t: float) -> None:
+    """배 위: 화면 아래 뱃전(난간)."""
+    wood = lerp_color(pal["rod"], (120, 82, 52), 0.5)
+    dark = scale_color(wood, 0.65)
+    light = lerp_color(wood, (230, 200, 160), 0.3)
+    top = [(0, 246), (480, 238)]
+    pygame.draw.polygon(canvas, wood, [top[0], top[1], (480, 270), (0, 270)])
+    pygame.draw.line(canvas, light, top[0], top[1], 3)
+    for i in range(1, 4):
+        y0, y1 = 246 + i * 7, 238 + i * 7
+        pygame.draw.line(canvas, dark, (0, y0), (480, y1), 1)
+    # 난간 기둥 + 로프
+    for px in (60, 210, 360):
+        py = 246 - px * 8 / 480
+        canvas.fill(dark, (px - 2, int(py) - 16, 5, 18))
+        canvas.fill(light, (px - 2, int(py) - 16, 5, 2))
+    rope = lerp_color(wood, (200, 180, 130), 0.6)
+    pts = [(x, 246 - x * 8 / 480 - 14 + math.sin(x * 0.04) * 2) for x in range(60, 361, 30)]
+    pygame.draw.lines(canvas, rope, False, pts, 1)
+
+
+def draw_ship_lamp(canvas, pal, cam) -> None:
+    """심해: 배 조명이 비추는 수면."""
+    glow = pygame.Surface((cam.width, cam.height), pygame.SRCALPHA)
+    for i, (z, w, a) in enumerate(((9.5, 3.4, 28), (8.5, 2.4, 34), (7.8, 1.4, 44))):
+        y = cam.row_for_distance(z)
+        rx = w * cam.f / z
+        ry = rx * cam.cam_h / z * 1.8
+        pygame.draw.ellipse(glow, (190, 230, 210, a), (cam.cx - rx, y - ry, rx * 2, ry * 2))
+    canvas.blit(glow, (0, 0))
+
+
+FOREGROUND = {"boulders": draw_boulders, "tetrapods": draw_tetrapods, "boat": draw_boat}

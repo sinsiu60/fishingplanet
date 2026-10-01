@@ -15,12 +15,13 @@ class PauseScene(Scene):
         bx, bw = w // 2 - 70, 140
         can_shop = fishing.can_open_menus()
         items = [("계속하기", self._resume, True),
+                 ("지도 (M)", lambda: self._open("map"), can_shop),
                  ("상점 (B)", lambda: self._open("shop"), can_shop),
                  ("도감 (Tab)", lambda: self._open("dex"), True),
                  ("설정", self._settings, True),
                  ("저장하고 타이틀로", self._to_title, True),
                  ("저장하고 종료", game.quit, True)]
-        self.buttons = [ui.Button((bx, 70 + i * 24, bw, 19), label, act, en) for i, (label, act, en) in
+        self.buttons = [ui.Button((bx, 66 + i * 22, bw, 18), label, act, en) for i, (label, act, en) in
                         enumerate(items)]
         self.saved_msg = 0.0
 
@@ -60,7 +61,7 @@ class PauseScene(Scene):
         self.fishing.draw(canvas)
         ui.dim(canvas, 160)
         w = canvas.get_width()
-        ui.panel(canvas, (w // 2 - 90, 34, 180, 192))
+        ui.panel(canvas, (w // 2 - 90, 32, 180, 200))
         text(canvas, "일시정지", (w // 2, 50), ui.ACCENT, 16, "center")
         for b in self.buttons:
             b.draw(canvas, self.mouse)

@@ -39,6 +39,7 @@ class ScreenFX:
         self.tilt = 0.0
         self.focus = (width / 2, height / 2)
         self.punch = 0.0          # 퍼펙트 줌 펀치
+        self.sway = 0             # 배 위: 1이면 화면이 천천히 출렁
         self.enabled = True
         # 테두리 효과 세기 0~1
         self.v_rush = self.v_jump = self.v_charge = self.v_tired = self.v_red = 0.0
@@ -146,6 +147,8 @@ class ScreenFX:
                 tgt["red"] = 0.45 + 0.4 * clamp((fight.tension - fight.green_high) / 30, 0, 1)
             elif fight.line_frac < 0.3:
                 tgt["red"] = 0.35
+        if self.sway:
+            tilt_t += math.sin(self.t * 0.9) * 0.9 * self.sway
         if not self.enabled:
             zoom_t, pan_t, tilt_t, focus_k = 1.0, 0.0, 0.0, 0.0
 
