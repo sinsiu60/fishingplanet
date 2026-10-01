@@ -18,6 +18,13 @@ def themed_palette(pal: dict, theme: dict, weather: str, flash: float = 0.0, leg
         for key in ("water_top", "water_bottom", "wave_dark"):
             out[key] = lerp_color(out[key], tint, k)
         out["wave_light"] = lerp_color(out["wave_light"], lerp_color(tint, (255, 255, 255), 0.6), k * 0.6)
+    sk = theme.get("sky_k", 0.0)
+    if sk > 0:
+        # 엘드라시온: 낚시터 고유 하늘색 (화산 = 붉은 하늘, 동굴 = 거의 검정 등)
+        tint = tuple(theme["sky_tint"])
+        for key in ("sky_top", "sky_bottom", "cloud", "mountain_far", "mountain_near"):
+            if key in out:
+                out[key] = lerp_color(out[key], tint, sk)
     dark = theme.get("dark", 0.0)
     if dark > 0:
         for key, v in out.items():

@@ -1,5 +1,5 @@
 {
- "_설명": "물고기 47종 (확장 Phase C: 낚시터마다 2종 추가) (DESIGN.md 3장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. legend는 Phase 7에서 등장 조건·페이즈 추가. hint3/hint10은 도감 힌트(Phase 5).",
+ "_설명": "물고기 89종: 샤르미온 47 (DESIGN.md 3·18장) + 엘드라시온 42 (23장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. hint3/hint10은 도감 힌트.",
  "fish": [
   {
    "id": "crucian",
@@ -3271,6 +3271,2890 @@
       "leap": 17
      }
     }
+   ]
+  },
+  {
+   "id": "silver_crucian",
+   "name": "은갈대붕어",
+   "spot": "marsh",
+   "times": [
+    "morning",
+    "day"
+   ],
+   "weathers": [
+    "clear",
+    "rain"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    20,
+    40
+   ],
+   "base_price": 700,
+   "difficulty": 5,
+   "telegraph_sec": 0.85,
+   "power": 1.25,
+   "stamina": 140,
+   "actions": {
+    "turn": 50,
+    "rush": 30,
+    "charge": 20
+   },
+   "gimmick_bias": 0.5,
+   "shadow_len_m": 0.28,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     200,
+     205,
+     215
+    ],
+    "belly": [
+     240,
+     240,
+     245
+    ],
+    "fin": [
+     170,
+     175,
+     190
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.22
+   },
+   "skill": "갈대 엉킴 관리",
+   "desc": "은빛 비늘이 갈대처럼 빛나는 붕어.",
+   "hint3": "갈대 쪽으로 버틴다. 엉킴 게이지를 보자.",
+   "hint10": "방향 전환 50%, 예고 0.85초."
+  },
+  {
+   "id": "firefly_minnow",
+   "name": "반딧불송사리",
+   "spot": "marsh",
+   "times": [
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    8,
+    15
+   ],
+   "base_price": 650,
+   "difficulty": 5,
+   "telegraph_sec": 0.85,
+   "power": 1.25,
+   "stamina": 90,
+   "actions": {
+    "rush": 60,
+    "turn": 40
+   },
+   "nibbles": [
+    3,
+    5
+   ],
+   "shadow_len_m": 0.11,
+   "colors": {
+    "body": [
+     120,
+     150,
+     110
+    ],
+    "belly": [
+     220,
+     235,
+     200
+    ],
+    "fin": [
+     180,
+     220,
+     120
+    ],
+    "stripe": [
+     230,
+     255,
+     140
+    ]
+   },
+   "shape": {
+    "height": 0.16,
+    "pattern": "spots"
+   },
+   "skill": "갈대 엉킴 관리",
+   "desc": "꼬리에 반딧불을 단 작은 물고기.",
+   "hint3": "반딧불 깜빡임에 가짜 입질이 많다.",
+   "hint10": "가짜 입질 3~5번."
+  },
+  {
+   "id": "marsh_eel",
+   "name": "늪뱀장어",
+   "spot": "marsh",
+   "times": [
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "rain",
+    "storm"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    50,
+    120
+   ],
+   "base_price": 1500,
+   "difficulty": 6,
+   "telegraph_sec": 0.75,
+   "power": 1.41,
+   "stamina": 180,
+   "actions": {
+    "turn": 60,
+    "rush": 25,
+    "charge": 15
+   },
+   "turn_chain": [
+    2,
+    3
+   ],
+   "shadow_len_m": 0.81,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     70,
+     80,
+     60
+    ],
+    "belly": [
+     150,
+     150,
+     120
+    ],
+    "fin": [
+     60,
+     70,
+     50
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.07,
+    "tail": "ribbon"
+   },
+   "skill": "갈대 엉킴 관리",
+   "desc": "갈대 사이를 S자로 휘젓는 뱀장어.",
+   "hint3": "방향 전환이 2~3번 이어져 엉킴이 빨리 찬다.",
+   "hint10": "연속 전환은 좌우 번갈아."
+  },
+  {
+   "id": "reed_piper",
+   "name": "갈대피리어",
+   "spot": "marsh",
+   "times": [
+    "morning",
+    "day"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    30,
+    55
+   ],
+   "base_price": 1400,
+   "difficulty": 6,
+   "telegraph_sec": 0.75,
+   "power": 1.41,
+   "stamina": 170,
+   "actions": {
+    "jump": 35,
+    "turn": 35,
+    "rush": 30
+   },
+   "combo": {
+    "jump": [
+     "turn",
+     0.5
+    ]
+   },
+   "shadow_len_m": 0.4,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     150,
+     170,
+     140
+    ],
+    "belly": [
+     230,
+     235,
+     220
+    ],
+    "fin": [
+     120,
+     150,
+     110
+    ],
+    "stripe": [
+     90,
+     110,
+     80
+    ]
+   },
+   "shape": {
+    "height": 0.18,
+    "pattern": "stripe"
+   },
+   "skill": "갈대 엉킴 관리",
+   "desc": "뛰어오를 때 갈대피리 같은 소리를 낸다.",
+   "hint3": "점프 뒤 갈대 쪽으로 몸을 튼다.",
+   "hint10": "점프 후 50% 방향 전환."
+  },
+  {
+   "id": "mist_catfish",
+   "name": "안개메기",
+   "spot": "marsh",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "rain",
+    "storm"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    80,
+    160
+   ],
+   "base_price": 4000,
+   "difficulty": 7,
+   "telegraph_sec": 0.65,
+   "power": 1.57,
+   "stamina": 240,
+   "actions": {
+    "charge": 40,
+    "rush": 35,
+    "turn": 25
+   },
+   "fake_tired": 0.4,
+   "shadow_len_m": 1.14,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     150,
+     160,
+     175
+    ],
+    "belly": [
+     200,
+     205,
+     215
+    ],
+    "fin": [
+     130,
+     140,
+     155
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.13,
+    "tail": "round",
+    "whiskers": true
+   },
+   "skill": "갈대 엉킴 관리",
+   "desc": "안개처럼 희미한 습지의 주인.",
+   "hint3": "지친 척을 한다. 기포를 보라.",
+   "hint10": "가짜 지침 40%."
+  },
+  {
+   "id": "silver_snakehead",
+   "name": "은비늘가물치",
+   "spot": "marsh",
+   "times": [
+    "evening"
+   ],
+   "weathers": [
+    "clear",
+    "rain"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    60,
+    110
+   ],
+   "base_price": 4200,
+   "difficulty": 7,
+   "telegraph_sec": 0.65,
+   "power": 1.57,
+   "stamina": 230,
+   "actions": {
+    "rush": 45,
+    "charge": 30,
+    "turn": 25
+   },
+   "first_rush": {
+    "power_mult": 1.6,
+    "sec": 2.0,
+    "telegraph_sec": 0.7,
+    "burst_after": 0.7
+   },
+   "gimmick_bias": 0.6,
+   "shadow_len_m": 0.81,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     170,
+     175,
+     185
+    ],
+    "belly": [
+     230,
+     232,
+     238
+    ],
+    "fin": [
+     140,
+     145,
+     160
+    ],
+    "stripe": [
+     100,
+     105,
+     120
+    ]
+   },
+   "shape": {
+    "height": 0.15,
+    "pattern": "spots",
+    "tail": "round",
+    "dorsal": "long"
+   },
+   "skill": "갈대 엉킴 관리",
+   "desc": "은빛으로 번쩍이는 습지의 폭군.",
+   "hint3": "물자마자 강한 첫 돌진!",
+   "hint10": "첫 돌진 뒤 빨리 지친다."
+  },
+  {
+   "id": "silva",
+   "name": "갈대왕 실바",
+   "spot": "marsh",
+   "times": [
+    "evening"
+   ],
+   "weathers": [
+    "rain"
+   ],
+   "rarity": "legend",
+   "size_cm": [
+    150,
+    220
+   ],
+   "base_price": 60000,
+   "difficulty": 9,
+   "telegraph_sec": 0.6,
+   "power": 1.8,
+   "stamina": 380,
+   "actions": {
+    "turn": 50,
+    "rush": 30,
+    "charge": 20
+   },
+   "shadow_len_m": 1.76,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     210,
+     215,
+     230
+    ],
+    "belly": [
+     245,
+     248,
+     255
+    ],
+    "fin": [
+     190,
+     200,
+     225
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.24,
+    "whiskers": true,
+    "dorsal": "long"
+   },
+   "skill": "전설: 갈대 엉킴 관리",
+   "desc": "은빛 갈대 습지를 다스리는 거대한 잉어.",
+   "hint3": "갈대를 감아 돈다! 엉킴이 빨리 찬다",
+   "hint10": "갈대 숲으로 돌진 직후 몸을 턴다!",
+   "bait": "silver_spike",
+   "phases": [
+    {
+     "desc": "갈대를 휘젓는다",
+     "telegraph_sec": 0.6,
+     "actions": {
+      "turn": 50,
+      "rush": 30,
+      "charge": 20
+     },
+     "gimmick_bias": 0.7
+    },
+    {
+     "desc": "갈대를 감아 돈다! 엉킴이 빨리 찬다",
+     "telegraph_sec": 0.5,
+     "turn_chain": [
+      2,
+      3
+     ],
+     "gimmick_mult": 1.5
+    },
+    {
+     "desc": "갈대 숲으로 돌진 직후 몸을 턴다!",
+     "telegraph_sec": 0.45,
+     "combo": {
+      "rush": [
+       "leap",
+       0.6
+      ]
+     },
+     "actions": {
+      "rush": 40,
+      "turn": 30,
+      "leap": 30
+     }
+    }
+   ]
+  },
+  {
+   "id": "crystal_minnow",
+   "name": "수정송사리",
+   "spot": "crystal_cave",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    8,
+    15
+   ],
+   "base_price": 980,
+   "difficulty": 5,
+   "telegraph_sec": 0.8,
+   "power": 1.25,
+   "stamina": 90,
+   "actions": {
+    "rush": 60,
+    "turn": 40
+   },
+   "nibbles": [
+    3,
+    6
+   ],
+   "shadow_len_m": 0.11,
+   "colors": {
+    "body": [
+     170,
+     200,
+     240
+    ],
+    "belly": [
+     230,
+     240,
+     255
+    ],
+    "fin": [
+     140,
+     170,
+     220
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.16
+   },
+   "skill": "반사광 읽기",
+   "desc": "몸이 수정처럼 투명한 송사리.",
+   "hint3": "어둠 속 가짜 입질이 많다.",
+   "hint10": "가짜 입질 3~6번."
+  },
+  {
+   "id": "blind_cavefish",
+   "name": "장님동굴어",
+   "spot": "crystal_cave",
+   "times": [
+    "morning",
+    "day"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    20,
+    45
+   ],
+   "base_price": 1050,
+   "difficulty": 5,
+   "telegraph_sec": 0.8,
+   "power": 1.25,
+   "stamina": 150,
+   "actions": {
+    "charge": 40,
+    "rush": 35,
+    "turn": 25
+   },
+   "shadow_len_m": 0.31,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     230,
+     210,
+     210
+    ],
+    "belly": [
+     245,
+     235,
+     235
+    ],
+    "fin": [
+     220,
+     190,
+     190
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.2,
+    "tail": "round"
+   },
+   "skill": "반사광 읽기",
+   "desc": "눈이 없는 동굴 물고기. 진동으로 미끼를 찾는다.",
+   "hint3": "천장 반사광을 읽는 연습 상대.",
+   "hint10": "예고 0.8초."
+  },
+  {
+   "id": "stalactite_catfish",
+   "name": "종유석메기",
+   "spot": "crystal_cave",
+   "times": [
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    50,
+    100
+   ],
+   "base_price": 2100,
+   "difficulty": 6,
+   "telegraph_sec": 0.7,
+   "power": 1.41,
+   "stamina": 220,
+   "actions": {
+    "charge": 45,
+    "rush": 35,
+    "turn": 20
+   },
+   "cover_bias": 0.6,
+   "shadow_len_m": 0.71,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     110,
+     100,
+     120
+    ],
+    "belly": [
+     170,
+     160,
+     180
+    ],
+    "fin": [
+     90,
+     80,
+     100
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.13,
+    "tail": "round",
+    "whiskers": true
+   },
+   "skill": "반사광 읽기",
+   "desc": "종유석 틈에 숨어 사는 메기.",
+   "hint3": "종유석 쪽으로 파고든다.",
+   "hint10": "도망의 60%가 종유석 쪽."
+  },
+  {
+   "id": "echo_eel",
+   "name": "메아리뱀장어",
+   "spot": "crystal_cave",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    60,
+    120
+   ],
+   "base_price": 2200,
+   "difficulty": 6,
+   "telegraph_sec": 0.7,
+   "power": 1.41,
+   "stamina": 190,
+   "actions": {
+    "turn": 55,
+    "rush": 30,
+    "charge": 15
+   },
+   "turn_chain": [
+    2,
+    3
+   ],
+   "echo": true,
+   "shadow_len_m": 0.85,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     90,
+     110,
+     150
+    ],
+    "belly": [
+     160,
+     180,
+     210
+    ],
+    "fin": [
+     70,
+     90,
+     130
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.07,
+    "tail": "ribbon"
+   },
+   "skill": "반사광 읽기",
+   "desc": "예고 소리가 동굴에 메아리친다.",
+   "hint3": "예고음이 두 번 들린다. 두 번째가 실제 박자.",
+   "hint10": "연속 전환 2~3번."
+  },
+  {
+   "id": "prism_carp",
+   "name": "프리즘잉어",
+   "spot": "crystal_cave",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    50,
+    90
+   ],
+   "base_price": 5600,
+   "difficulty": 7,
+   "telegraph_sec": 0.6,
+   "power": 1.57,
+   "stamina": 240,
+   "actions": {
+    "jump": 35,
+    "leap": 20,
+    "rush": 25,
+    "turn": 20
+   },
+   "jump_chain": [
+    2,
+    3
+   ],
+   "shadow_len_m": 0.67,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     220,
+     200,
+     255
+    ],
+    "belly": [
+     250,
+     240,
+     255
+    ],
+    "fin": [
+     180,
+     220,
+     255
+    ],
+    "stripe": [
+     255,
+     180,
+     220
+    ]
+   },
+   "shape": {
+    "height": 0.23,
+    "whiskers": true,
+    "pattern": "spots"
+   },
+   "skill": "반사광 읽기",
+   "desc": "빛을 받으면 일곱 빛깔로 갈라진다.",
+   "hint3": "점프가 2~3번 이어진다.",
+   "hint10": "반사광 색: 금색 = 점프, 하늘색 = 몸털기."
+  },
+  {
+   "id": "amethyst_bass",
+   "name": "자수정농어",
+   "spot": "crystal_cave",
+   "times": [
+    "morning",
+    "evening"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    50,
+    90
+   ],
+   "base_price": 5900,
+   "difficulty": 7,
+   "telegraph_sec": 0.6,
+   "power": 1.57,
+   "stamina": 230,
+   "actions": {
+    "jump": 30,
+    "leap": 25,
+    "turn": 25,
+    "rush": 20
+   },
+   "combo": {
+    "turn": [
+     "leap",
+     0.5
+    ]
+   },
+   "shadow_len_m": 0.67,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     150,
+     90,
+     200
+    ],
+    "belly": [
+     220,
+     190,
+     240
+    ],
+    "fin": [
+     120,
+     70,
+     170
+    ],
+    "stripe": [
+     100,
+     50,
+     150
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "pattern": "stripe"
+   },
+   "skill": "반사광 읽기",
+   "desc": "자수정빛 비늘의 동굴 사냥꾼.",
+   "hint3": "방향 전환 뒤 몸털기 점프가 온다.",
+   "hint10": "전환 후 50% 몸털기."
+  },
+  {
+   "id": "prisia",
+   "name": "결정어왕 프리시아",
+   "spot": "crystal_cave",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "legend",
+   "size_cm": [
+    140,
+    200
+   ],
+   "base_price": 80000,
+   "difficulty": 9,
+   "telegraph_sec": 0.6,
+   "power": 1.8,
+   "stamina": 400,
+   "actions": {
+    "rush": 30,
+    "jump": 30,
+    "turn": 25,
+    "leap": 15
+   },
+   "shadow_len_m": 1.61,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     200,
+     220,
+     255
+    ],
+    "belly": [
+     245,
+     250,
+     255
+    ],
+    "fin": [
+     170,
+     200,
+     255
+    ],
+    "stripe": [
+     255,
+     255,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.24,
+    "pattern": "spots"
+   },
+   "skill": "전설: 반사광 읽기",
+   "desc": "동굴 수정을 비늘로 두른 결정의 왕.",
+   "hint3": "빛이 꺼진다! 반사광만 믿어라",
+   "hint10": "결정 분열! 깜빡이는 반사광은 가짜",
+   "bait": "crystal_orb",
+   "phases": [
+    {
+     "desc": "수정 빛 속을 미끄러진다",
+     "telegraph_sec": 0.6,
+     "actions": {
+      "rush": 30,
+      "jump": 30,
+      "turn": 25,
+      "leap": 15
+     }
+    },
+    {
+     "desc": "빛이 꺼진다! 반사광만 믿어라",
+     "telegraph_sec": 0.5,
+     "dark": true
+    },
+    {
+     "desc": "결정 분열! 깜빡이는 반사광은 가짜",
+     "telegraph_sec": 0.45,
+     "fake_cue": 0.25,
+     "dark": false
+    }
+   ]
+  },
+  {
+   "id": "cloud_trout",
+   "name": "운해송어",
+   "spot": "sky_falls",
+   "times": [
+    "morning",
+    "day"
+   ],
+   "weathers": [
+    "clear",
+    "rain"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    30,
+    55
+   ],
+   "base_price": 1370,
+   "difficulty": 6,
+   "telegraph_sec": 0.75,
+   "power": 1.31,
+   "stamina": 160,
+   "actions": {
+    "jump": 30,
+    "rush": 30,
+    "turn": 25,
+    "charge": 15
+   },
+   "shadow_len_m": 0.4,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     180,
+     200,
+     230
+    ],
+    "belly": [
+     245,
+     248,
+     255
+    ],
+    "fin": [
+     150,
+     170,
+     210
+    ],
+    "stripe": [
+     110,
+     130,
+     180
+    ]
+   },
+   "shape": {
+    "height": 0.18,
+    "pattern": "spots"
+   },
+   "skill": "물살 박자 맞추기",
+   "desc": "구름 바다를 헤엄치는 송어.",
+   "hint3": "모든 신호가 골고루.",
+   "hint10": "물살 마루를 조심."
+  },
+  {
+   "id": "cloud_carp",
+   "name": "구름잉어",
+   "spot": "sky_falls",
+   "times": [
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    40,
+    70
+   ],
+   "base_price": 1300,
+   "difficulty": 6,
+   "telegraph_sec": 0.75,
+   "power": 1.31,
+   "stamina": 170,
+   "actions": {
+    "turn": 45,
+    "charge": 30,
+    "rush": 25
+   },
+   "gimmick_bias": 0.4,
+   "shadow_len_m": 0.52,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     235,
+     235,
+     245
+    ],
+    "belly": [
+     250,
+     250,
+     255
+    ],
+    "fin": [
+     210,
+     215,
+     235
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.23,
+    "whiskers": true
+   },
+   "skill": "물살 박자 맞추기",
+   "desc": "솜사탕처럼 하얀 잉어.",
+   "hint3": "물살 마루에 방향을 튼다.",
+   "hint10": "방향 전환 45%."
+  },
+  {
+   "id": "falls_salmon",
+   "name": "폭포오름연어",
+   "spot": "sky_falls",
+   "times": [
+    "morning",
+    "evening"
+   ],
+   "weathers": [
+    "clear",
+    "rain"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    60,
+    100
+   ],
+   "base_price": 2900,
+   "difficulty": 7,
+   "telegraph_sec": 0.65,
+   "power": 1.47,
+   "stamina": 200,
+   "actions": {
+    "jump": 45,
+    "rush": 30,
+    "turn": 25
+   },
+   "jump_chain": [
+    2,
+    3
+   ],
+   "gimmick_bias": 0.6,
+   "shadow_len_m": 0.76,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     200,
+     110,
+     100
+    ],
+    "belly": [
+     240,
+     210,
+     200
+    ],
+    "fin": [
+     170,
+     90,
+     90
+    ],
+    "stripe": [
+     120,
+     60,
+     60
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "pattern": "spots"
+   },
+   "skill": "물살 박자 맞추기",
+   "desc": "폭포를 거슬러 오르는 연어.",
+   "hint3": "물살 마루에 맞춰 점프한다.",
+   "hint10": "점프 2~3연속."
+  },
+  {
+   "id": "rainbow_char",
+   "name": "무지개곤들매기",
+   "spot": "sky_falls",
+   "times": [
+    "day"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    40,
+    70
+   ],
+   "base_price": 3000,
+   "difficulty": 7,
+   "telegraph_sec": 0.65,
+   "power": 1.47,
+   "stamina": 190,
+   "actions": {
+    "leap": 35,
+    "jump": 25,
+    "turn": 25,
+    "rush": 15
+   },
+   "shadow_len_m": 0.52,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     120,
+     150,
+     190
+    ],
+    "belly": [
+     250,
+     220,
+     200
+    ],
+    "fin": [
+     230,
+     120,
+     110
+    ],
+    "stripe": [
+     255,
+     200,
+     120
+    ]
+   },
+   "shape": {
+    "height": 0.19,
+    "pattern": "spots"
+   },
+   "skill": "물살 박자 맞추기",
+   "desc": "무지개빛 반점의 곤들매기.",
+   "hint3": "몸털기 점프가 잦다.",
+   "hint10": "몸털기 35%."
+  },
+  {
+   "id": "wind_cutter",
+   "name": "바람가르기",
+   "spot": "sky_falls",
+   "times": [
+    "day"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    80,
+    140
+   ],
+   "base_price": 7800,
+   "difficulty": 7,
+   "telegraph_sec": 0.55,
+   "power": 1.57,
+   "stamina": 250,
+   "actions": {
+    "rush": 55,
+    "turn": 35,
+    "charge": 10
+   },
+   "rush_sec": 1.8,
+   "combo": {
+    "rush": [
+     "turn",
+     0.6
+    ]
+   },
+   "shadow_len_m": 1.04,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     90,
+     140,
+     200
+    ],
+    "belly": [
+     230,
+     240,
+     250
+    ],
+    "fin": [
+     70,
+     120,
+     180
+    ],
+    "stripe": [
+     160,
+     200,
+     240
+    ]
+   },
+   "shape": {
+    "height": 0.17,
+    "tail": "lunate",
+    "finlets": true
+   },
+   "skill": "물살 박자 맞추기",
+   "desc": "바람을 가르며 질주하는 하늘의 화살.",
+   "hint3": "질주 직후 방향 전환!",
+   "hint10": "질주 1.8초."
+  },
+  {
+   "id": "thunder_flyer",
+   "name": "천둥날치",
+   "spot": "sky_falls",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "storm"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    40,
+    70
+   ],
+   "base_price": 8200,
+   "difficulty": 8,
+   "telegraph_sec": 0.55,
+   "power": 1.63,
+   "stamina": 220,
+   "actions": {
+    "jump": 50,
+    "leap": 20,
+    "rush": 20,
+    "turn": 10
+   },
+   "jump_chain": [
+    2,
+    3
+   ],
+   "lightning_cue": true,
+   "shadow_len_m": 0.52,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     60,
+     70,
+     120
+    ],
+    "belly": [
+     200,
+     210,
+     240
+    ],
+    "fin": [
+     250,
+     230,
+     90
+    ],
+    "stripe": [
+     255,
+     240,
+     120
+    ]
+   },
+   "shape": {
+    "height": 0.15,
+    "pattern": "stripe",
+    "dorsal": "crest"
+   },
+   "skill": "물살 박자 맞추기",
+   "desc": "번개를 타고 날아오르는 날치.",
+   "hint3": "번개가 점프 박자.",
+   "hint10": "점프 2~3연속."
+  },
+  {
+   "id": "aeris",
+   "name": "천공어 에어리스",
+   "spot": "sky_falls",
+   "times": [
+    "day"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "legend",
+   "size_cm": [
+    200,
+    300
+   ],
+   "base_price": 120000,
+   "difficulty": 9,
+   "telegraph_sec": 0.55,
+   "power": 1.8,
+   "stamina": 420,
+   "actions": {
+    "jump": 40,
+    "rush": 30,
+    "turn": 20,
+    "leap": 10
+   },
+   "shadow_len_m": 2.38,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     140,
+     190,
+     255
+    ],
+    "belly": [
+     240,
+     250,
+     255
+    ],
+    "fin": [
+     255,
+     255,
+     255
+    ],
+    "stripe": [
+     200,
+     230,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "tail": "lunate",
+    "dorsal": "crest",
+    "finlets": true
+   },
+   "skill": "전설: 물살 박자 맞추기",
+   "desc": "하늘섬 위 구름을 헤엄치는 날개 달린 물고기.",
+   "hint3": "물살을 탄다! 돌진이 물살 마루에 온다",
+   "hint10": "하늘로 솟구친다! 세 번 연속",
+   "bait": "cloud_feather",
+   "phases": [
+    {
+     "desc": "구름 위를 난다",
+     "telegraph_sec": 0.55,
+     "actions": {
+      "jump": 40,
+      "rush": 30,
+      "turn": 20,
+      "leap": 10
+     }
+    },
+    {
+     "desc": "물살을 탄다! 돌진이 물살 마루에 온다",
+     "telegraph_sec": 0.5,
+     "gimmick_mult": 1.5,
+     "actions": {
+      "rush": 45,
+      "jump": 30,
+      "turn": 25
+     }
+    },
+    {
+     "desc": "하늘로 솟구친다! 세 번 연속",
+     "telegraph_sec": 0.4,
+     "jump_chain": [
+      3,
+      3
+     ],
+     "jump_height_m": 2.2
+    }
+   ]
+  },
+  {
+   "id": "obsidian_bream",
+   "name": "흑요석도미",
+   "spot": "volcano",
+   "times": [
+    "morning",
+    "day"
+   ],
+   "weathers": [
+    "clear",
+    "rain"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    30,
+    60
+   ],
+   "base_price": 1900,
+   "difficulty": 6,
+   "telegraph_sec": 0.7,
+   "power": 1.31,
+   "stamina": 180,
+   "actions": {
+    "charge": 45,
+    "rush": 40,
+    "turn": 15
+   },
+   "charge_rush_mult": 1.3,
+   "shadow_len_m": 0.43,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     40,
+     40,
+     50
+    ],
+    "belly": [
+     100,
+     90,
+     100
+    ],
+    "fin": [
+     60,
+     40,
+     50
+    ],
+    "stripe": [
+     200,
+     70,
+     40
+    ]
+   },
+   "shape": {
+    "height": 0.3,
+    "pattern": "bars"
+   },
+   "skill": "빠른 결판",
+   "desc": "검은 유리 같은 비늘의 도미.",
+   "hint3": "멈춘 뒤 돌진이 세다.",
+   "hint10": "힘 모으기 45%."
+  },
+  {
+   "id": "ash_rockfish",
+   "name": "재비늘우럭",
+   "spot": "volcano",
+   "times": [
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    30,
+    55
+   ],
+   "base_price": 1850,
+   "difficulty": 6,
+   "telegraph_sec": 0.7,
+   "power": 1.31,
+   "stamina": 190,
+   "actions": {
+    "rush": 40,
+    "turn": 30,
+    "charge": 30
+   },
+   "cover_bias": 0.6,
+   "shadow_len_m": 0.4,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     110,
+     100,
+     100
+    ],
+    "belly": [
+     170,
+     160,
+     160
+    ],
+    "fin": [
+     90,
+     80,
+     80
+    ],
+    "stripe": [
+     60,
+     55,
+     55
+    ]
+   },
+   "shape": {
+    "height": 0.25,
+    "tail": "round",
+    "pattern": "bars"
+   },
+   "skill": "빠른 결판",
+   "desc": "화산재를 뒤집어쓴 우럭.",
+   "hint3": "암초 쪽으로 파고든다.",
+   "hint10": "도망의 60%가 암초 쪽."
+  },
+  {
+   "id": "lava_grouper",
+   "name": "용암게르치",
+   "spot": "volcano",
+   "times": [
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    50,
+    90
+   ],
+   "base_price": 4100,
+   "difficulty": 7,
+   "telegraph_sec": 0.6,
+   "power": 1.47,
+   "stamina": 280,
+   "actions": {
+    "rush": 40,
+    "charge": 35,
+    "turn": 25
+   },
+   "shadow_len_m": 0.67,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     180,
+     70,
+     40
+    ],
+    "belly": [
+     240,
+     170,
+     120
+    ],
+    "fin": [
+     150,
+     50,
+     30
+    ],
+    "stripe": [
+     255,
+     200,
+     80
+    ]
+   },
+   "shape": {
+    "height": 0.24,
+    "pattern": "spots",
+    "tail": "round"
+   },
+   "skill": "빠른 결판",
+   "desc": "용암처럼 붉은 무늬의 게르치.",
+   "hint3": "오래 버틴다 — 열 손상에 주의.",
+   "hint10": "체력 280."
+  },
+  {
+   "id": "sulfur_puffer",
+   "name": "유황복어",
+   "spot": "volcano",
+   "times": [
+    "day"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    20,
+    40
+   ],
+   "base_price": 4300,
+   "difficulty": 7,
+   "telegraph_sec": 0.6,
+   "power": 1.47,
+   "stamina": 200,
+   "actions": {
+    "charge": 50,
+    "rush": 30,
+    "turn": 20
+   },
+   "charge_sec": [
+    2.0,
+    3.0
+   ],
+   "shadow_len_m": 0.28,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     230,
+     210,
+     80
+    ],
+    "belly": [
+     250,
+     240,
+     180
+    ],
+    "fin": [
+     200,
+     180,
+     60
+    ],
+    "stripe": [
+     150,
+     120,
+     40
+    ]
+   },
+   "shape": {
+    "height": 0.4,
+    "tail": "round",
+    "pattern": "spots"
+   },
+   "skill": "빠른 결판",
+   "desc": "부풀면 유황 냄새가 나는 복어.",
+   "hint3": "부풀어 멈추는 2~3초가 기회.",
+   "hint10": "힘 모으기 50%."
+  },
+  {
+   "id": "flame_manta",
+   "name": "화염만타",
+   "spot": "volcano",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "storm"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    150,
+    300
+   ],
+   "base_price": 11000,
+   "difficulty": 8,
+   "telegraph_sec": 0.5,
+   "power": 1.63,
+   "stamina": 260,
+   "actions": {
+    "leap": 30,
+    "jump": 20,
+    "rush": 30,
+    "turn": 20
+   },
+   "shadow_len_m": 2.14,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     150,
+     40,
+     30
+    ],
+    "belly": [
+     240,
+     140,
+     90
+    ],
+    "fin": [
+     255,
+     120,
+     40
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "kind": "manta"
+   },
+   "skill": "빠른 결판",
+   "desc": "불꽃 날개를 펼치는 거대 가오리.",
+   "hint3": "넓은 몸으로 몸털기를 한다.",
+   "hint10": "몸털기 30%."
+  },
+  {
+   "id": "magma_moray",
+   "name": "마그마곰치",
+   "spot": "volcano",
+   "times": [
+    "morning",
+    "evening"
+   ],
+   "weathers": [
+    "rain",
+    "storm"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    100,
+    180
+   ],
+   "base_price": 11500,
+   "difficulty": 8,
+   "telegraph_sec": 0.5,
+   "power": 1.63,
+   "stamina": 270,
+   "actions": {
+    "rush": 45,
+    "turn": 35,
+    "charge": 20
+   },
+   "cover_bias": 0.8,
+   "hazard_mult": 1.3,
+   "shadow_len_m": 1.33,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     90,
+     30,
+     20
+    ],
+    "belly": [
+     200,
+     80,
+     40
+    ],
+    "fin": [
+     255,
+     120,
+     40
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.08,
+    "tail": "ribbon",
+    "dorsal": "crest"
+   },
+   "skill": "빠른 결판",
+   "desc": "암초 틈의 마그마 속에 사는 곰치.",
+   "hint3": "암초로 계속 파고든다.",
+   "hint10": "걸림 게이지 1.3배."
+  },
+  {
+   "id": "ignis",
+   "name": "불꽃상어 이그니스",
+   "spot": "volcano",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "storm"
+   ],
+   "rarity": "legend",
+   "size_cm": [
+    250,
+    400
+   ],
+   "base_price": 160000,
+   "difficulty": 9,
+   "telegraph_sec": 0.55,
+   "power": 1.8,
+   "stamina": 440,
+   "actions": {
+    "rush": 55,
+    "turn": 25,
+    "charge": 20
+   },
+   "shadow_len_m": 2.6,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     160,
+     40,
+     30
+    ],
+    "belly": [
+     250,
+     160,
+     90
+    ],
+    "fin": [
+     255,
+     110,
+     40
+    ],
+    "stripe": [
+     255,
+     200,
+     80
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "tail": "lunate",
+    "dorsal": "crest"
+   },
+   "skill": "전설: 빠른 결판",
+   "desc": "용암 속을 헤엄치는 불꽃의 상어.",
+   "hint3": "분화! 열 손상이 두 배",
+   "hint10": "마그마 질주! 긴 질주에 대비하라",
+   "bait": "lava_stone",
+   "phases": [
+    {
+     "desc": "열수를 가르며 질주한다",
+     "telegraph_sec": 0.55,
+     "actions": {
+      "rush": 55,
+      "turn": 25,
+      "charge": 20
+     }
+    },
+    {
+     "desc": "분화! 열 손상이 두 배",
+     "telegraph_sec": 0.5,
+     "gimmick_mult": 2.0,
+     "combo": {
+      "rush": [
+       "jump",
+       0.5
+      ]
+     },
+     "actions": {
+      "rush": 50,
+      "jump": 25,
+      "turn": 25
+     }
+    },
+    {
+     "desc": "마그마 질주! 긴 질주에 대비하라",
+     "telegraph_sec": 0.4,
+     "rush_sec": 2.4
+    }
+   ]
+  },
+  {
+   "id": "frost_cod",
+   "name": "서리대구",
+   "spot": "ice_sea",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "storm"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    40,
+    80
+   ],
+   "base_price": 2700,
+   "difficulty": 6,
+   "telegraph_sec": 0.65,
+   "power": 1.31,
+   "stamina": 190,
+   "actions": {
+    "charge": 40,
+    "rush": 35,
+    "turn": 25
+   },
+   "shadow_len_m": 0.57,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     150,
+     170,
+     190
+    ],
+    "belly": [
+     230,
+     240,
+     250
+    ],
+    "fin": [
+     130,
+     150,
+     170
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.2,
+    "whiskers": true
+   },
+   "skill": "구멍 안에서 버티기",
+   "desc": "서리가 내려앉은 대구.",
+   "hint3": "얼음 구멍 밖으로 끌려가지 않게.",
+   "hint10": "예고 0.65초."
+  },
+  {
+   "id": "snow_smelt",
+   "name": "눈꽃빙어",
+   "spot": "ice_sea",
+   "times": [
+    "morning",
+    "day"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    10,
+    18
+   ],
+   "base_price": 2500,
+   "difficulty": 6,
+   "telegraph_sec": 0.65,
+   "power": 1.31,
+   "stamina": 110,
+   "actions": {
+    "rush": 55,
+    "turn": 45
+   },
+   "turn_speed": 1.3,
+   "nibbles": [
+    3,
+    5
+   ],
+   "shadow_len_m": 0.13,
+   "colors": {
+    "body": [
+     210,
+     230,
+     245
+    ],
+    "belly": [
+     250,
+     252,
+     255
+    ],
+    "fin": [
+     190,
+     210,
+     235
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.14
+   },
+   "skill": "구멍 안에서 버티기",
+   "desc": "눈꽃처럼 투명한 빙어.",
+   "hint3": "재빠르게 방향을 바꾼다.",
+   "hint10": "방향 전환 속도 1.3배."
+  },
+  {
+   "id": "glacier_ray",
+   "name": "빙하가오리",
+   "spot": "ice_sea",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    80,
+    150
+   ],
+   "base_price": 5700,
+   "difficulty": 7,
+   "telegraph_sec": 0.55,
+   "power": 1.47,
+   "stamina": 230,
+   "actions": {
+    "turn": 50,
+    "rush": 30,
+    "charge": 20
+   },
+   "turn_speed": 1.3,
+   "gimmick_bias": 0.6,
+   "shadow_len_m": 1.09,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     130,
+     160,
+     190
+    ],
+    "belly": [
+     220,
+     235,
+     245
+    ],
+    "fin": [
+     110,
+     140,
+     170
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "kind": "manta"
+   },
+   "skill": "구멍 안에서 버티기",
+   "desc": "빙하 아래를 미끄러지는 가오리.",
+   "hint3": "얼음 구멍 가장자리로 끌고 간다.",
+   "hint10": "방향 전환 50%."
+  },
+  {
+   "id": "floe_flounder",
+   "name": "유빙넙치",
+   "spot": "ice_sea",
+   "times": [
+    "day",
+    "evening"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    50,
+    90
+   ],
+   "base_price": 5500,
+   "difficulty": 7,
+   "telegraph_sec": 0.55,
+   "power": 1.47,
+   "stamina": 240,
+   "actions": {
+    "charge": 50,
+    "turn": 30,
+    "rush": 20
+   },
+   "shadow_len_m": 0.67,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     170,
+     180,
+     170
+    ],
+    "belly": [
+     240,
+     240,
+     235
+    ],
+    "fin": [
+     150,
+     160,
+     150
+    ],
+    "stripe": [
+     110,
+     120,
+     110
+    ]
+   },
+   "shape": {
+    "height": 0.38,
+    "tail": "round",
+    "pattern": "spots"
+   },
+   "skill": "구멍 안에서 버티기",
+   "desc": "얼음 바닥에 납작 붙어 버티는 넙치.",
+   "hint3": "바닥에 붙어 오래 멈춘다.",
+   "hint10": "힘 모으기 50%."
+  },
+  {
+   "id": "aurora_salmon",
+   "name": "오로라연어",
+   "spot": "ice_sea",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    60,
+    100
+   ],
+   "base_price": 15000,
+   "difficulty": 8,
+   "telegraph_sec": 0.5,
+   "power": 1.63,
+   "stamina": 260,
+   "actions": {
+    "jump": 30,
+    "leap": 20,
+    "turn": 30,
+    "rush": 20
+   },
+   "combo": {
+    "turn": [
+     "leap",
+     0.5
+    ]
+   },
+   "shadow_len_m": 0.76,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     90,
+     200,
+     170
+    ],
+    "belly": [
+     230,
+     250,
+     245
+    ],
+    "fin": [
+     180,
+     120,
+     230
+    ],
+    "stripe": [
+     150,
+     255,
+     200
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "pattern": "stripe"
+   },
+   "skill": "구멍 안에서 버티기",
+   "desc": "오로라를 비늘에 담은 연어.",
+   "hint3": "방향 전환 뒤 몸털기.",
+   "hint10": "전환 후 50% 몸털기."
+  },
+  {
+   "id": "frostfang_shark",
+   "name": "서리이빨상어",
+   "spot": "ice_sea",
+   "times": [
+    "morning",
+    "evening"
+   ],
+   "weathers": [
+    "storm"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    150,
+    250
+   ],
+   "base_price": 16000,
+   "difficulty": 8,
+   "telegraph_sec": 0.5,
+   "power": 1.63,
+   "stamina": 280,
+   "actions": {
+    "rush": 55,
+    "turn": 30,
+    "jump": 15
+   },
+   "rush_sec": 2.0,
+   "shadow_len_m": 1.9,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     120,
+     140,
+     160
+    ],
+    "belly": [
+     220,
+     230,
+     240
+    ],
+    "fin": [
+     100,
+     120,
+     140
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.18,
+    "tail": "lunate",
+    "dorsal": "crest"
+   },
+   "skill": "구멍 안에서 버티기",
+   "desc": "얼음 이빨을 가진 빙해의 상어.",
+   "hint3": "2초 질주. 드랙을 낮춘 채로.",
+   "hint10": "질주 55%."
+  },
+  {
+   "id": "borealis",
+   "name": "극광어 보레알리스",
+   "spot": "ice_sea",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "legend",
+   "size_cm": [
+    180,
+    260
+   ],
+   "base_price": 200000,
+   "difficulty": 9,
+   "telegraph_sec": 0.55,
+   "power": 1.8,
+   "stamina": 460,
+   "actions": {
+    "turn": 50,
+    "rush": 25,
+    "jump": 25
+   },
+   "shadow_len_m": 2.09,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     80,
+     200,
+     170
+    ],
+    "belly": [
+     230,
+     250,
+     245
+    ],
+    "fin": [
+     190,
+     120,
+     240
+    ],
+    "stripe": [
+     150,
+     255,
+     200
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "pattern": "stripe",
+    "dorsal": "long"
+   },
+   "skill": "전설: 구멍 안에서 버티기",
+   "desc": "오로라를 몸에 두른 빙해의 전설.",
+   "hint3": "얼음 아래로 숨는다! 줄과 소리로 읽어라",
+   "hint10": "오로라의 춤! 연속 전환과 몸털기",
+   "bait": "aurora_crystal",
+   "phases": [
+    {
+     "desc": "오로라 아래를 맴돈다",
+     "telegraph_sec": 0.55,
+     "actions": {
+      "turn": 50,
+      "rush": 25,
+      "jump": 25
+     }
+    },
+    {
+     "desc": "얼음 아래로 숨는다! 줄과 소리로 읽어라",
+     "telegraph_sec": 0.5,
+     "dark": true,
+     "gimmick_bias": 0.8
+    },
+    {
+     "desc": "오로라의 춤! 연속 전환과 몸털기",
+     "telegraph_sec": 0.4,
+     "dark": false,
+     "turn_chain": [
+      3,
+      4
+     ],
+     "actions": {
+      "turn": 55,
+      "leap": 30,
+      "rush": 15
+     }
+    }
+   ]
+  },
+  {
+   "id": "root_eel",
+   "name": "뿌리장어",
+   "spot": "world_tree",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    60,
+    120
+   ],
+   "base_price": 3800,
+   "difficulty": 7,
+   "telegraph_sec": 0.6,
+   "power": 1.37,
+   "stamina": 220,
+   "actions": {
+    "turn": 55,
+    "rush": 30,
+    "charge": 15
+   },
+   "turn_chain": [
+    2,
+    2
+   ],
+   "shadow_len_m": 0.85,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     110,
+     90,
+     60
+    ],
+    "belly": [
+     180,
+     160,
+     120
+    ],
+    "fin": [
+     90,
+     70,
+     50
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.07,
+    "tail": "ribbon"
+   },
+   "skill": "모든 기술",
+   "desc": "세계수 뿌리처럼 생긴 장어.",
+   "hint3": "방향 전환 2연속.",
+   "hint10": "예고 0.6초."
+  },
+  {
+   "id": "dew_carp",
+   "name": "이슬잉어",
+   "spot": "world_tree",
+   "times": [
+    "morning",
+    "day"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "common",
+   "size_cm": [
+    40,
+    70
+   ],
+   "base_price": 3700,
+   "difficulty": 7,
+   "telegraph_sec": 0.6,
+   "power": 1.37,
+   "stamina": 210,
+   "actions": {
+    "turn": 40,
+    "rush": 30,
+    "jump": 30
+   },
+   "shadow_len_m": 0.52,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     140,
+     210,
+     190
+    ],
+    "belly": [
+     230,
+     250,
+     245
+    ],
+    "fin": [
+     110,
+     180,
+     160
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.23,
+    "whiskers": true
+   },
+   "skill": "모든 기술",
+   "desc": "세계수 잎의 이슬로 자란 잉어.",
+   "hint3": "골고루 섞인 패턴.",
+   "hint10": "예고 0.6초."
+  },
+  {
+   "id": "life_trout",
+   "name": "생명수송어",
+   "spot": "world_tree",
+   "times": [
+    "morning",
+    "evening"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    40,
+    70
+   ],
+   "base_price": 8000,
+   "difficulty": 8,
+   "telegraph_sec": 0.55,
+   "power": 1.53,
+   "stamina": 240,
+   "actions": {
+    "jump": 35,
+    "leap": 25,
+    "rush": 20,
+    "turn": 20
+   },
+   "jump_chain": [
+    2,
+    3
+   ],
+   "shadow_len_m": 0.52,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     120,
+     200,
+     120
+    ],
+    "belly": [
+     230,
+     250,
+     220
+    ],
+    "fin": [
+     250,
+     220,
+     120
+    ],
+    "stripe": [
+     255,
+     250,
+     180
+    ]
+   },
+   "shape": {
+    "height": 0.18,
+    "pattern": "spots"
+   },
+   "skill": "모든 기술",
+   "desc": "생명수를 마시고 빛나는 송어.",
+   "hint3": "점프 2~3연속, 몸털기 섞임.",
+   "hint10": "예고 0.55초."
+  },
+  {
+   "id": "oldwood_catfish",
+   "name": "고목메기",
+   "spot": "world_tree",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "rain",
+    "storm"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    100,
+    180
+   ],
+   "base_price": 8200,
+   "difficulty": 8,
+   "telegraph_sec": 0.55,
+   "power": 1.53,
+   "stamina": 300,
+   "actions": {
+    "charge": 45,
+    "rush": 35,
+    "turn": 20
+   },
+   "fake_tired": 0.4,
+   "shadow_len_m": 1.33,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     90,
+     80,
+     60
+    ],
+    "belly": [
+     150,
+     140,
+     110
+    ],
+    "fin": [
+     70,
+     60,
+     45
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.13,
+    "tail": "round",
+    "whiskers": true
+   },
+   "skill": "모든 기술",
+   "desc": "고목처럼 오래 산 메기.",
+   "hint3": "지친 척을 한다.",
+   "hint10": "가짜 지침 40%."
+  },
+  {
+   "id": "petal_flyer",
+   "name": "꽃잎날치",
+   "spot": "world_tree",
+   "times": [
+    "day"
+   ],
+   "weathers": [
+    "clear"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    30,
+    50
+   ],
+   "base_price": 21000,
+   "difficulty": 9,
+   "telegraph_sec": 0.45,
+   "power": 1.69,
+   "stamina": 230,
+   "actions": {
+    "jump": 40,
+    "leap": 30,
+    "turn": 20,
+    "rush": 10
+   },
+   "jump_chain": [
+    3,
+    3
+   ],
+   "shadow_len_m": 0.38,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     240,
+     170,
+     200
+    ],
+    "belly": [
+     255,
+     235,
+     245
+    ],
+    "fin": [
+     255,
+     200,
+     220
+    ],
+    "stripe": [
+     255,
+     255,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.15,
+    "dorsal": "crest",
+    "pattern": "spots"
+   },
+   "skill": "모든 기술",
+   "desc": "꽃잎처럼 흩날리며 날아오른다.",
+   "hint3": "점프 3연속.",
+   "hint10": "예고 0.45초."
+  },
+  {
+   "id": "spirit_fish",
+   "name": "정령어",
+   "spot": "world_tree",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    80,
+    140
+   ],
+   "base_price": 22000,
+   "difficulty": 9,
+   "telegraph_sec": 0.45,
+   "power": 1.69,
+   "stamina": 280,
+   "actions": {
+    "rush": 20,
+    "jump": 20,
+    "leap": 20,
+    "turn": 20,
+    "charge": 20
+   },
+   "fake_cue": 0.25,
+   "shadow_len_m": 1.04,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     180,
+     220,
+     255
+    ],
+    "belly": [
+     240,
+     250,
+     255
+    ],
+    "fin": [
+     200,
+     240,
+     255
+    ],
+    "stripe": [
+     255,
+     255,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.22,
+    "pattern": "spots"
+   },
+   "skill": "모든 기술",
+   "desc": "세계수를 지키는 정령이 물고기가 되었다.",
+   "hint3": "가짜 신호를 섞는다 (깜빡임).",
+   "hint10": "모든 행동 20%씩."
+  },
+  {
+   "id": "orsiel",
+   "name": "천해왕 오르시엘",
+   "spot": "world_tree",
+   "times": [
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm"
+   ],
+   "rarity": "legend",
+   "size_cm": [
+    300,
+    500
+   ],
+   "base_price": 500000,
+   "difficulty": 10,
+   "telegraph_sec": 0.6,
+   "power": 2.0,
+   "stamina": 600,
+   "actions": {
+    "rush": 30,
+    "turn": 35,
+    "jump": 20,
+    "charge": 15
+   },
+   "shadow_len_m": 2.6,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     40,
+     40,
+     110
+    ],
+    "belly": [
+     200,
+     200,
+     255
+    ],
+    "fin": [
+     255,
+     220,
+     120
+    ],
+    "stripe": [
+     255,
+     255,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.22,
+    "tail": "lunate",
+    "dorsal": "crest",
+    "whiskers": true
+   },
+   "skill": "전설: 모든 기술",
+   "desc": "하늘과 바다를 다스리는 천해의 왕.",
+   "hint3": "빛이 사라진다 — 수정의 반사광을 읽어라",
+   "hint10": "불과 얼음이 함께! 모든 것을 걸어라",
+   "bait": "world_fruit",
+   "phases": [
+    {
+     "desc": "천해의 왕이 깨어났다 — 갈대가 줄을 감는다",
+     "telegraph_sec": 0.6,
+     "gimmick": "tangle",
+     "actions": {
+      "rush": 30,
+      "turn": 35,
+      "jump": 20,
+      "charge": 15
+     }
+    },
+    {
+     "desc": "빛이 사라진다 — 수정의 반사광을 읽어라",
+     "telegraph_sec": 0.5,
+     "gimmick": "dark",
+     "dark": true
+    },
+    {
+     "desc": "하늘의 물살이 몰아친다",
+     "telegraph_sec": 0.45,
+     "gimmick": "current",
+     "dark": false,
+     "jump_chain": [
+      2,
+      3
+     ]
+    },
+    {
+     "desc": "불과 얼음이 함께! 모든 것을 걸어라",
+     "telegraph_sec": 0.35,
+     "gimmick": "heat+ice",
+     "actions": {
+      "rush": 35,
+      "turn": 30,
+      "jump": 20,
+      "leap": 15
+     },
+     "combo": {
+      "rush": [
+       "turn",
+       0.5
+      ]
+     }
+    }
+   ],
+   "phase_at": [
+    0.7,
+    0.45,
+    0.2
    ]
   }
  ]

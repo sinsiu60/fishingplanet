@@ -175,6 +175,7 @@ class FishingScene(Scene):
         self.cast.reset()
         self.cam.yaw = 0.0
         self._set_spot(spot_id)
+        self.save.data["continent"] = self.spot.get("continent", "sharmion")
         self._advance_hours(1.0)
         self.weather_sys.reroll_upcoming(self.spot["weather"])
         self.toasts.show(f"{self.spot['name']}에 도착했다", GOOD, 2.0)
@@ -217,7 +218,7 @@ class FishingScene(Scene):
                 continue
             if can_unlock_soon(self.save, sp):
                 notified.append(sp["id"])
-                name = sp["name"] if sp["id"] != "secret" else "숨겨진 장소"
+                name = sp["name"] if not sp.get("secret") else "숨겨진 장소"
                 self.toasts.show(f"새 낚시터 '{name}'을(를) 열 수 있어요! (M: 지도)", GOOD, 3.5, 11)
                 self.sfx.play("great", 0.7)
                 return
@@ -1053,12 +1054,16 @@ class FishingScene(Scene):
 
         world.draw_sky(canvas, pal, cam)
         self.stars.draw(canvas, pal, cam, t)
-        world.draw_celestial(canvas, pal, cam, hour, t, visible=weather == "clear")
+        world.draw_celestial(canvas, pal, cam, hour, t, visible=weather == "clear" and theme["terrain"] != "cave")
+        if theme.get("aurora"):
+            from src.render.eldra_world import draw_aurora
+            draw_aurora(canvas, pal, cam, t)
         self.clouds.draw(canvas, pal, cam)
         self.lightning.draw(canvas)
         world.draw_mountains(canvas, pal, cam, theme["terrain"], t)
         amp = {"clear": 1.0, "rain": 1.25, "storm": 1.9, "fog": 0.8}[weather] * (1.3 if theme.get("sea") else 1.0)
-        self.water.draw(canvas, pal, t, hour, amp_mult=amp, show_reflection=weather == "clear")
+        self.water.draw(canvas, pal, t, hour, amp_mult=amp,
+                        show_reflection=weather == "clear" and theme["terrain"] != "cave")
         if theme.get("lamp"):
             world.draw_ship_lamp(canvas, pal, cam)
         if self.landing is not None:
@@ -1115,8 +1120,9 @@ class FishingScene(Scene):
                       f.brain.jump_height)
 
         fg = theme["foreground"]
-        if fg == "reeds":
-            self.reeds.draw(canvas, pal, t, wind={"clear": 1.0, "rain": 1.4, "storm": 2.2, "fog": 0.6}[weather])
+        if fg in ("reeds", "silver_reeds"):
+            rpal = pal if fg == "reeds" else dict(pal, reed=lerp_color(pal["reed"], (215, 222, 235), 0.65))
+            self.reeds.draw(canvas, rpal, t, wind={"clear": 1.0, "rain": 1.4, "storm": 2.2, "fog": 0.6}[weather])
         else:
             world.FOREGROUND[fg](canvas, pal, t)
         draw_rod(canvas, pal, geo, c.reel_angle)

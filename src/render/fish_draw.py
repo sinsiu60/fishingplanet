@@ -38,6 +38,9 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
     if shape.get("kind") == "squid":
         draw_squid(canvas, cx, cy, length, angle, colors, facing, silhouette, tail_wag)
         return
+    if shape.get("kind") == "manta":
+        draw_manta(canvas, cx, cy, length, angle, colors, facing, silhouette, tail_wag)
+        return
     L = length
     H = L * shape.get("height", 0.17)
     tail_type = shape.get("tail", "fork")
@@ -159,6 +162,23 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
         lp = _xf([(-L * 0.4, -H * 0.9), (-L * 0.48, -H * 1.8), (-L * 0.55, -H * 1.6)], cx, cy, angle, facing)
         pygame.draw.lines(canvas, scale_color(base, 0.7), False, lp, 1)
         pygame.draw.circle(canvas, (255, 240, 150), lp[2], max(2, int(L / 40)))
+
+
+def draw_manta(canvas, cx, cy, length, angle, colors, facing, silhouette=None, tail_wag: float = 0.0) -> None:
+    """가오리 (옆에서 본 모습): 넓은 날개를 펄럭이는 마름모 + 가는 꼬리."""
+    L = length
+    body = silhouette or colors["body"]
+    belly = silhouette or colors["belly"]
+    fin = silhouette or colors["fin"]
+    flap = math.sin(tail_wag * 2) * 0.12
+    wing = [(L * 0.45, 0), (0, -L * (0.32 + flap)), (-L * 0.25, -L * 0.05), (-L * 0.25, L * 0.05), (0, L * (0.18 - flap * 0.5))]
+    pygame.draw.polygon(canvas, body, _xf(wing, cx, cy, angle, facing))
+    pygame.draw.polygon(canvas, belly, _xf([(L * 0.4, L * 0.02), (0, L * 0.16), (-L * 0.2, L * 0.04)], cx, cy, angle, facing))
+    tail = [(-L * 0.25, 0), (-L * 0.62, tail_wag * L * 0.04)]
+    pygame.draw.lines(canvas, fin, False, _xf(tail, cx, cy, angle, facing), max(1, int(L / 60)))
+    if not silhouette:
+        eye = _xf([(L * 0.3, -L * 0.04)], cx, cy, angle, facing)[0]
+        pygame.draw.circle(canvas, (20, 20, 25), (int(eye[0]), int(eye[1])), max(1, int(L / 45)))
 
 
 def draw_squid(canvas, cx, cy, length, angle, colors, facing, silhouette=None, tail_wag: float = 0.0) -> None:

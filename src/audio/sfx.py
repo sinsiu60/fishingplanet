@@ -282,6 +282,51 @@ def make_amb_stream(rng) -> np.ndarray:
     return water * mod + bubbles
 
 
+def make_amb_cave(rng) -> np.ndarray:
+    """수정 동굴: 낮은 울림 + 똑똑 떨어지는 물방울 (메아리)."""
+    t = _loop_t()
+    drone = _loop_noise(rng, 40, 220, 1.5) * 0.18
+    drops = np.zeros_like(t)
+    for start in rng.uniform(0.1, LOOP_SEC - 0.6, 9):
+        for k, g in enumerate((1.0, 0.35, 0.15)):  # 메아리
+            s0 = int((start + k * 0.18) * RATE)
+            f = rng.uniform(1100, 1700)
+            d = _sweep(f, f * 1.6, 0.05) * _env(int(RATE * 0.05), 0.001, 0.02)
+            drops[s0:s0 + len(d)] += d[: len(drops) - s0] * 0.12 * g
+    return drone + drops
+
+
+def make_amb_wind(rng) -> np.ndarray:
+    """부유섬: 높은 곳의 바람 (휘이잉)."""
+    t = _loop_t()
+    gust = 0.55 + 0.45 * np.sin(2 * np.pi * 2 * t / LOOP_SEC) ** 2
+    return _loop_noise(rng, 200, 1800, 0.8) * gust * 0.28
+
+
+def make_amb_vent(rng) -> np.ndarray:
+    """화산 열수: 부글부글 끓는 소리 + 낮은 울림."""
+    t = _loop_t()
+    rumble = _loop_noise(rng, 30, 160, 1.5) * 0.25
+    boil = np.zeros_like(t)
+    for _ in range(70):
+        s0 = rng.integers(0, len(t) - int(RATE * 0.05))
+        b = _sweep(rng.uniform(180, 320), rng.uniform(350, 600), 0.05) * _env(int(RATE * 0.05), 0.004, 0.015)
+        boil[s0:s0 + len(b)] += b * 0.06
+    return rumble + boil
+
+
+def make_amb_ice(rng) -> np.ndarray:
+    """빙해: 차가운 바람 + 가끔 얼음 갈라지는 소리."""
+    t = _loop_t()
+    wind = _loop_noise(rng, 300, 3000, 0.6) * (0.6 + 0.4 * np.sin(2 * np.pi * t / LOOP_SEC)) * 0.16
+    crack = np.zeros_like(t)
+    for start in (1.3, 4.1):
+        s0 = int(start * RATE)
+        c = _lowpass(_noise(0.12, rng), 2) * _env(int(RATE * 0.12), 0.001, 0.03)
+        crack[s0:s0 + len(c)] += c * 0.25
+    return wind + crack
+
+
 def make_amb_waves(rng) -> np.ndarray:
     """바다: 철썩이는 파도 (루프 길이에 맞춘 두 번의 너울)."""
     t = _loop_t()
@@ -629,6 +674,10 @@ class Sfx:
             "amb_waves": make_amb_waves(rng),
             "amb_boat": make_amb_boat(rng),
             "amb_deep": make_amb_deep(rng),
+            "amb_cave": make_amb_cave(rng),
+            "amb_wind": make_amb_wind(rng),
+            "amb_vent": make_amb_vent(rng),
+            "amb_ice": make_amb_ice(rng),
             "amb_rain": make_amb_rain(rng),
             "thunder": make_thunder(rng),
             "bgm_legend": make_bgm_legend(rng),

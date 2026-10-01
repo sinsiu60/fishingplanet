@@ -56,6 +56,9 @@ def migrate(data: dict, slot: int | None = None) -> dict:
         conts = ["sharmion"]
         if "dragon_carp" in data.get("dex", {}):
             conts.append("eldrasion")  # 이미 '등용'을 잡았으면 확장을 바로 시작
+            spots = data.setdefault("unlocked_spots", ["reservoir"])
+            if "marsh" not in spots:
+                spots.append("marsh")
         data.setdefault("unlocked_continents", conts)
         data["version"] = 2
     return data
@@ -234,6 +237,16 @@ class SaveGame:
             g["speed"] = round(g["speed"] * 0.95, 3)
         return g
 
+    def unlock_continent(self, cont: str) -> bool:
+        """대륙 해금 (처음이면 True). 첫 낚시터도 함께 연다."""
+        if cont in self.data["unlocked_continents"]:
+            return False
+        self.data["unlocked_continents"].append(cont)
+        first = next(c["first_spot"] for c in load_json("continents.json")["continents"] if c["id"] == cont)
+        if first not in self.data["unlocked_spots"]:
+            self.data["unlocked_spots"].append(first)
+        return True
+
     def charm_slots(self) -> int:
         return 2 if "eldrasion" in self.data["unlocked_continents"] else 1
 
@@ -407,6 +420,8 @@ class SaveGame:
         st["perfects"] += result.get("perfects", 0)
         if result["rank"] == "S":
             st["s_ranks"] += 1
+            if spot_continent(fish["spot"]) == "eldrasion":
+                st["s_ranks_eldra"] = st.get("s_ranks_eldra", 0) + 1
         return news
 
     def record_loss(self) -> None:

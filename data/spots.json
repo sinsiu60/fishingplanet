@@ -1,49 +1,680 @@
 {
-  "_설명": "낚시터. hazards = 환경 위협 구역 (angle: 정면 기준 좌우 각도 라디안, 음수=왼쪽 / dist: 거리 m). unlock = 해금 조건 (dex 도감 수 / dex_pct 대륙 도감 % / cost 비용 / line_tier 줄 등급 / rod_tier 낚싯대 티어 / all_gear_tier 장비 5종 티어 / spot_s 그 낚시터 물고기 S랭크 1회 / rare_total 희귀 이상 누적 마리 / legend 그 전설 포획 / legends 전설 수 / s_total S랭크 누적 / perfects 퍼펙트 누적). 이미 열린 낚시터는 조건이 바뀌어도 유지. theme = 배경 연출. weather = 날씨 가중치.",
-  "spots": [
-    {"id": "reservoir", "continent": "sharmion", "name": "동네 저수지", "short": "저수지", "map_pos": [70, 190],
-     "desc": "낮은 산에 둘러싸인 잔잔한 저수지. 모든 낚시꾼의 시작.",
-     "unlock": {},
-     "theme": {"terrain": "hills", "foreground": "reeds", "water_tint": [0, 0, 0], "tint_k": 0.0, "dark": 0.0,
-               "ambient": "amb_lake", "sway": 0, "sea": false},
-     "weather": {"clear": 60, "rain": 30, "storm": 10},
-     "hazards": [{"type": "weeds", "name": "수초", "angle": [-0.55, -0.22], "dist": [6, 32]}]},
-    {"id": "valley", "continent": "sharmion", "name": "계곡", "short": "계곡", "map_pos": [150, 92],
-     "desc": "높은 바위산 사이로 맑은 물이 흐른다. 바위가 많아 줄이 걸리기 쉽다.",
-     "unlock": {"dex": 4, "cost": 500},
-     "theme": {"terrain": "peaks", "foreground": "boulders", "water_tint": [70, 160, 140], "tint_k": 0.3,
-               "dark": 0.0, "ambient": "amb_stream", "sway": 0, "sea": false},
-     "weather": {"clear": 55, "rain": 33, "storm": 12},
-     "hazards": [{"type": "rocks", "name": "바위", "angle": [-0.55, -0.28], "dist": [5, 30]},
-                 {"type": "rocks", "name": "바위", "angle": [0.3, 0.55], "dist": [8, 26]}]},
-    {"id": "breakwater", "continent": "sharmion", "name": "바다 방파제", "short": "방파제", "map_pos": [250, 176],
-     "desc": "등대가 서 있는 방파제. 테트라포드 틈을 조심하라.",
-     "unlock": {"dex_pct": 25, "rod_tier": 2, "spot_s": "valley", "cost": 2500},
-     "theme": {"terrain": "coast", "foreground": "tetrapods", "water_tint": [30, 90, 150], "tint_k": 0.35,
-               "dark": 0.0, "ambient": "amb_waves", "sway": 0, "sea": true},
-     "weather": {"clear": 55, "rain": 30, "storm": 15},
-     "hazards": [{"type": "rocks", "name": "테트라포드", "angle": [0.22, 0.55], "dist": [4, 22]}]},
-    {"id": "offshore", "continent": "sharmion", "name": "먼바다 배낚시", "short": "먼바다", "map_pos": [345, 110],
-     "desc": "배를 타고 나간 먼바다. 대형어의 질주를 버텨라.",
-     "unlock": {"dex_pct": 45, "rare_total": 5, "legend": "silver_bass", "cost": 6000},
-     "theme": {"terrain": "open", "foreground": "boat", "water_tint": [20, 60, 140], "tint_k": 0.45,
-               "dark": 0.0, "ambient": "amb_boat", "sway": 1, "sea": true},
-     "weather": {"clear": 55, "rain": 28, "storm": 17},
-     "hazards": []},
-    {"id": "deep", "continent": "sharmion", "name": "심해", "short": "심해", "map_pos": [420, 190],
-     "desc": "배 조명 아래 깊은 바다. 빛을 모르는 물고기들이 산다.",
-     "unlock": {"dex_pct": 65, "all_gear_tier": 4, "legend": "marlin", "s_total": 15, "cost": 15000},
-     "theme": {"terrain": "open", "foreground": "boat", "water_tint": [8, 16, 44], "tint_k": 0.55,
-               "dark": 0.45, "ambient": "amb_deep", "sway": 1, "sea": true, "lamp": true},
-     "weather": {"clear": 55, "rain": 28, "storm": 17},
-     "hazards": [{"type": "rocks", "name": "암초", "angle": [0.2, 0.5], "dist": [5, 18]}]},
-    {"id": "secret", "continent": "sharmion", "name": "용문 폭포", "short": "???", "map_pos": [250, 40],
-     "desc": "다섯 전설을 낚은 자만이 찾을 수 있는 달빛 폭포.",
-     "unlock": {"dex_pct": 80, "legends": 5, "perfects": 100},
-     "theme": {"terrain": "falls", "foreground": "reeds", "water_tint": [60, 80, 140], "tint_k": 0.25,
-               "dark": 0.15, "ambient": "amb_stream", "sway": 0, "sea": false},
-     "weather": {"clear": 35, "rain": 25, "storm": 25, "fog": 15},
-     "hazards": [{"type": "current", "name": "폭포 물살", "angle": [-0.55, -0.3], "dist": [5, 40]},
-                 {"type": "current", "name": "폭포 물살", "angle": [0.3, 0.55], "dist": [5, 40]}]}
-  ]
+ "_설명": "낚시터. hazards = 환경 위협 구역 (angle: 정면 기준 좌우 각도 라디안, 음수=왼쪽 / dist: 거리 m). unlock = 해금 조건 (dex 도감 수 / dex_pct 대륙 도감 % / cost 비용 / line_tier 줄 등급 / rod_tier 낚싯대 티어 / all_gear_tier 장비 5종 티어 / spot_s 그 낚시터 물고기 S랭크 1회 / rare_total 희귀 이상 누적 마리 / legend 그 전설 포획 / legends 전설 수 / s_total S랭크 누적 / perfects 퍼펙트 누적). secret = 조건을 채우기 전까지 지도에 '?'로 숨김. gimmick = 엘드라시온 환경 기믹. float_req = 필요한 특수 찌 티어 (전설은 +1). 이미 열린 낚시터는 조건이 바뀌어도 유지. theme = 배경 연출. weather = 날씨 가중치.",
+ "spots": [
+  {
+   "id": "reservoir",
+   "continent": "sharmion",
+   "name": "동네 저수지",
+   "short": "저수지",
+   "map_pos": [
+    70,
+    190
+   ],
+   "desc": "낮은 산에 둘러싸인 잔잔한 저수지. 모든 낚시꾼의 시작.",
+   "unlock": {},
+   "theme": {
+    "terrain": "hills",
+    "foreground": "reeds",
+    "water_tint": [
+     0,
+     0,
+     0
+    ],
+    "tint_k": 0.0,
+    "dark": 0.0,
+    "ambient": "amb_lake",
+    "sway": 0,
+    "sea": false
+   },
+   "weather": {
+    "clear": 60,
+    "rain": 30,
+    "storm": 10
+   },
+   "hazards": [
+    {
+     "type": "weeds",
+     "name": "수초",
+     "angle": [
+      -0.55,
+      -0.22
+     ],
+     "dist": [
+      6,
+      32
+     ]
+    }
+   ]
+  },
+  {
+   "id": "valley",
+   "continent": "sharmion",
+   "name": "계곡",
+   "short": "계곡",
+   "map_pos": [
+    150,
+    92
+   ],
+   "desc": "높은 바위산 사이로 맑은 물이 흐른다. 바위가 많아 줄이 걸리기 쉽다.",
+   "unlock": {
+    "dex": 4,
+    "cost": 500
+   },
+   "theme": {
+    "terrain": "peaks",
+    "foreground": "boulders",
+    "water_tint": [
+     70,
+     160,
+     140
+    ],
+    "tint_k": 0.3,
+    "dark": 0.0,
+    "ambient": "amb_stream",
+    "sway": 0,
+    "sea": false
+   },
+   "weather": {
+    "clear": 55,
+    "rain": 33,
+    "storm": 12
+   },
+   "hazards": [
+    {
+     "type": "rocks",
+     "name": "바위",
+     "angle": [
+      -0.55,
+      -0.28
+     ],
+     "dist": [
+      5,
+      30
+     ]
+    },
+    {
+     "type": "rocks",
+     "name": "바위",
+     "angle": [
+      0.3,
+      0.55
+     ],
+     "dist": [
+      8,
+      26
+     ]
+    }
+   ]
+  },
+  {
+   "id": "breakwater",
+   "continent": "sharmion",
+   "name": "바다 방파제",
+   "short": "방파제",
+   "map_pos": [
+    250,
+    176
+   ],
+   "desc": "등대가 서 있는 방파제. 테트라포드 틈을 조심하라.",
+   "unlock": {
+    "dex_pct": 25,
+    "rod_tier": 2,
+    "spot_s": "valley",
+    "cost": 2500
+   },
+   "theme": {
+    "terrain": "coast",
+    "foreground": "tetrapods",
+    "water_tint": [
+     30,
+     90,
+     150
+    ],
+    "tint_k": 0.35,
+    "dark": 0.0,
+    "ambient": "amb_waves",
+    "sway": 0,
+    "sea": true
+   },
+   "weather": {
+    "clear": 55,
+    "rain": 30,
+    "storm": 15
+   },
+   "hazards": [
+    {
+     "type": "rocks",
+     "name": "테트라포드",
+     "angle": [
+      0.22,
+      0.55
+     ],
+     "dist": [
+      4,
+      22
+     ]
+    }
+   ]
+  },
+  {
+   "id": "offshore",
+   "continent": "sharmion",
+   "name": "먼바다 배낚시",
+   "short": "먼바다",
+   "map_pos": [
+    345,
+    110
+   ],
+   "desc": "배를 타고 나간 먼바다. 대형어의 질주를 버텨라.",
+   "unlock": {
+    "dex_pct": 45,
+    "rare_total": 5,
+    "legend": "silver_bass",
+    "cost": 6000
+   },
+   "theme": {
+    "terrain": "open",
+    "foreground": "boat",
+    "water_tint": [
+     20,
+     60,
+     140
+    ],
+    "tint_k": 0.45,
+    "dark": 0.0,
+    "ambient": "amb_boat",
+    "sway": 1,
+    "sea": true
+   },
+   "weather": {
+    "clear": 55,
+    "rain": 28,
+    "storm": 17
+   },
+   "hazards": []
+  },
+  {
+   "id": "deep",
+   "continent": "sharmion",
+   "name": "심해",
+   "short": "심해",
+   "map_pos": [
+    420,
+    190
+   ],
+   "desc": "배 조명 아래 깊은 바다. 빛을 모르는 물고기들이 산다.",
+   "unlock": {
+    "dex_pct": 65,
+    "all_gear_tier": 4,
+    "legend": "marlin",
+    "s_total": 15,
+    "cost": 15000
+   },
+   "theme": {
+    "terrain": "open",
+    "foreground": "boat",
+    "water_tint": [
+     8,
+     16,
+     44
+    ],
+    "tint_k": 0.55,
+    "dark": 0.45,
+    "ambient": "amb_deep",
+    "sway": 1,
+    "sea": true,
+    "lamp": true
+   },
+   "weather": {
+    "clear": 55,
+    "rain": 28,
+    "storm": 17
+   },
+   "hazards": [
+    {
+     "type": "rocks",
+     "name": "암초",
+     "angle": [
+      0.2,
+      0.5
+     ],
+     "dist": [
+      5,
+      18
+     ]
+    }
+   ]
+  },
+  {
+   "id": "secret",
+   "continent": "sharmion",
+   "name": "용문 폭포",
+   "short": "???",
+   "map_pos": [
+    250,
+    40
+   ],
+   "desc": "다섯 전설을 낚은 자만이 찾을 수 있는 달빛 폭포.",
+   "unlock": {
+    "dex_pct": 80,
+    "legends": 5,
+    "perfects": 100
+   },
+   "theme": {
+    "terrain": "falls",
+    "foreground": "reeds",
+    "water_tint": [
+     60,
+     80,
+     140
+    ],
+    "tint_k": 0.25,
+    "dark": 0.15,
+    "ambient": "amb_stream",
+    "sway": 0,
+    "sea": false
+   },
+   "weather": {
+    "clear": 35,
+    "rain": 25,
+    "storm": 25,
+    "fog": 15
+   },
+   "hazards": [
+    {
+     "type": "current",
+     "name": "폭포 물살",
+     "angle": [
+      -0.55,
+      -0.3
+     ],
+     "dist": [
+      5,
+      40
+     ]
+    },
+    {
+     "type": "current",
+     "name": "폭포 물살",
+     "angle": [
+      0.3,
+      0.55
+     ],
+     "dist": [
+      5,
+      40
+     ]
+    }
+   ],
+   "secret": true
+  },
+  {
+   "id": "marsh",
+   "name": "은빛 갈대 습지",
+   "short": "습지",
+   "map_pos": [
+    80,
+    175
+   ],
+   "gimmick": "tangle",
+   "desc": "은빛 갈대가 끝없이 펼쳐진 습지. 반딧불이 날고, 갈대가 줄을 휘감는다.",
+   "unlock": {},
+   "float_req": 1,
+   "theme": {
+    "terrain": "marsh",
+    "foreground": "silver_reeds",
+    "water_tint": [
+     90,
+     120,
+     130
+    ],
+    "tint_k": 0.3,
+    "dark": 0.05,
+    "ambient": "amb_lake",
+    "sway": 0,
+    "sea": false,
+    "sky_tint": [
+     150,
+     170,
+     200
+    ],
+    "sky_k": 0.25
+   },
+   "weather": {
+    "clear": 45,
+    "rain": 40,
+    "storm": 15
+   },
+   "hazards": [
+    {
+     "type": "weeds",
+     "name": "은빛 갈대",
+     "angle": [
+      -0.55,
+      -0.3
+     ],
+     "dist": [
+      6,
+      34
+     ]
+    },
+    {
+     "type": "weeds",
+     "name": "은빛 갈대",
+     "angle": [
+      0.3,
+      0.55
+     ],
+     "dist": [
+      6,
+      34
+     ]
+    }
+   ],
+   "continent": "eldrasion"
+  },
+  {
+   "id": "crystal_cave",
+   "name": "수정 동굴 호수",
+   "short": "수정 동굴",
+   "map_pos": [
+    175,
+    110
+   ],
+   "gimmick": "dark",
+   "desc": "지하 깊은 곳의 호수. 찌 주변만 보이고, 물고기의 움직임은 천장 수정에 비친다.",
+   "unlock": {
+    "dex_pct": 12,
+    "gear_count_tier": [
+     3,
+     5
+    ],
+    "cost": 25000
+   },
+   "float_req": 1,
+   "theme": {
+    "terrain": "cave",
+    "foreground": "crystals",
+    "water_tint": [
+     40,
+     60,
+     110
+    ],
+    "tint_k": 0.55,
+    "dark": 0.6,
+    "ambient": "amb_cave",
+    "sway": 0,
+    "sea": false,
+    "sky_tint": [
+     20,
+     18,
+     40
+    ],
+    "sky_k": 0.85,
+    "no_weather": true
+   },
+   "weather": {
+    "clear": 100
+   },
+   "hazards": [
+    {
+     "type": "rocks",
+     "name": "종유석",
+     "angle": [
+      -0.5,
+      -0.25
+     ],
+     "dist": [
+      8,
+      30
+     ]
+    }
+   ],
+   "continent": "eldrasion"
+  },
+  {
+   "id": "sky_falls",
+   "name": "부유섬 폭포",
+   "short": "부유섬",
+   "map_pos": [
+    290,
+    60
+   ],
+   "gimmick": "current",
+   "desc": "구름 바다 위에 뜬 섬. 폭포에서 쏟아지는 물살이 장력을 주기적으로 흔든다.",
+   "unlock": {
+    "dex_pct": 25,
+    "legend": "prisia",
+    "s_eldra": 5,
+    "cost": 60000
+   },
+   "float_req": 2,
+   "theme": {
+    "terrain": "sky_isles",
+    "foreground": "cloud_edge",
+    "water_tint": [
+     110,
+     170,
+     230
+    ],
+    "tint_k": 0.35,
+    "dark": 0.0,
+    "ambient": "amb_wind",
+    "sway": 0,
+    "sea": false,
+    "sky_tint": [
+     150,
+     200,
+     255
+    ],
+    "sky_k": 0.2
+   },
+   "weather": {
+    "clear": 60,
+    "rain": 25,
+    "storm": 15
+   },
+   "hazards": [
+    {
+     "type": "current",
+     "name": "폭포 물살",
+     "angle": [
+      -0.55,
+      -0.3
+     ],
+     "dist": [
+      5,
+      40
+     ]
+    }
+   ],
+   "continent": "eldrasion"
+  },
+  {
+   "id": "volcano",
+   "name": "화산 열수 해역",
+   "short": "화산",
+   "map_pos": [
+    400,
+    150
+   ],
+   "gimmick": "heat",
+   "desc": "붉은 하늘 아래 끓어오르는 바다. 오래 끌면 줄이 열에 상한다.",
+   "unlock": {
+    "dex_pct": 40,
+    "all_gear_tier": 6,
+    "legend": "aeris",
+    "cost": 120000
+   },
+   "float_req": 3,
+   "theme": {
+    "terrain": "volcano",
+    "foreground": "obsidian",
+    "water_tint": [
+     120,
+     50,
+     40
+    ],
+    "tint_k": 0.4,
+    "dark": 0.1,
+    "ambient": "amb_vent",
+    "sway": 1,
+    "sea": true,
+    "sky_tint": [
+     200,
+     70,
+     40
+    ],
+    "sky_k": 0.45
+   },
+   "weather": {
+    "clear": 50,
+    "rain": 25,
+    "storm": 25
+   },
+   "hazards": [
+    {
+     "type": "rocks",
+     "name": "흑요석 암초",
+     "angle": [
+      0.28,
+      0.55
+     ],
+     "dist": [
+      6,
+      30
+     ]
+    }
+   ],
+   "continent": "eldrasion"
+  },
+  {
+   "id": "ice_sea",
+   "name": "극광 빙해",
+   "short": "빙해",
+   "map_pos": [
+    330,
+    215
+   ],
+   "gimmick": "ice",
+   "desc": "오로라 아래 얼어붙은 바다. 얼음 구멍이 좁아 낚싯대를 크게 움직일 수 없다.",
+   "unlock": {
+    "dex_pct": 55,
+    "legends_list": [
+     "silva",
+     "prisia",
+     "aeris",
+     "ignis"
+    ],
+    "perfects": 200,
+    "cost": 200000
+   },
+   "float_req": 4,
+   "theme": {
+    "terrain": "ice",
+    "foreground": "ice_hole",
+    "water_tint": [
+     30,
+     60,
+     90
+    ],
+    "tint_k": 0.45,
+    "dark": 0.2,
+    "ambient": "amb_ice",
+    "sway": 0,
+    "sea": true,
+    "sky_tint": [
+     40,
+     90,
+     120
+    ],
+    "sky_k": 0.3,
+    "aurora": true
+   },
+   "weather": {
+    "clear": 55,
+    "rain": 15,
+    "storm": 30
+   },
+   "hazards": [],
+   "continent": "eldrasion"
+  },
+  {
+   "id": "world_tree",
+   "name": "세계수 뿌리 샘",
+   "short": "세계수",
+   "map_pos": [
+    200,
+    30
+   ],
+   "gimmick": "cycle",
+   "secret": true,
+   "desc": "거대한 세계수의 뿌리 사이로 빛나는 샘. 시간마다 다른 대지의 힘이 깃든다.",
+   "unlock": {
+    "dex_pct": 70,
+    "legends_list": [
+     "silva",
+     "prisia",
+     "aeris",
+     "ignis",
+     "borealis"
+    ],
+    "legend_s": 1,
+    "s_eldra": 30
+   },
+   "float_req": 5,
+   "theme": {
+    "terrain": "world_tree",
+    "foreground": "roots",
+    "water_tint": [
+     80,
+     160,
+     120
+    ],
+    "tint_k": 0.35,
+    "dark": 0.15,
+    "ambient": "amb_stream",
+    "sway": 0,
+    "sea": false,
+    "sky_tint": [
+     120,
+     200,
+     160
+    ],
+    "sky_k": 0.2
+   },
+   "weather": {
+    "clear": 40,
+    "rain": 30,
+    "storm": 30
+   },
+   "hazards": [
+    {
+     "type": "weeds",
+     "name": "세계수 뿌리",
+     "angle": [
+      -0.55,
+      -0.32
+     ],
+     "dist": [
+      5,
+      28
+     ]
+    },
+    {
+     "type": "rocks",
+     "name": "세계수 뿌리",
+     "angle": [
+      0.32,
+      0.55
+     ],
+     "dist": [
+      5,
+      28
+     ]
+    }
+   ],
+   "continent": "eldrasion"
+  }
+ ]
 }

@@ -22,15 +22,22 @@ def unlock_status(save, spot: dict) -> tuple[bool, list[tuple[str, bool]]]:
     """(조건을 모두 채웠는지, [(조건 설명, 충족 여부)]) — 지도 체크리스트."""
     cond = spot.get("unlock", {})
     rows = []
+    cont = spot.get("continent", "sharmion")
+    if cont not in save.data["unlocked_continents"]:
+        rows.append(("대륙이 아직 열리지 않았다", False))
     if "dex" in cond:
         rows.append((f"도감 {cond['dex']}종 ({save.dex_count()}/{cond['dex']})", save.dex_count() >= cond["dex"]))
     if "dex_pct" in cond:
         got, total = save.continent_dex(spot.get("continent", "sharmion"))
         need = math.ceil(total * cond["dex_pct"] / 100)
-        rows.append((f"도감 {cond['dex_pct']}% ({got}/{need}종)", got >= need))
+        rows.append((f"도감 {cond['dex_pct']}% ({min(got, need)}/{need}종)", got >= need))
     if "rod_tier" in cond:
         tier = save.gear_tier("rod")
         rows.append((f"낚싯대 T{cond['rod_tier']} 이상 (지금 T{tier})", tier >= cond["rod_tier"]))
+    if "gear_count_tier" in cond:
+        n, tier = cond["gear_count_tier"]
+        got = sum(1 for k in ("rod", "reel", "line", "net", "bait") if save.gear_tier(k) >= tier)
+        rows.append((f"장비 {n}종 T{tier} 이상 ({min(got, n)}/{n})", got >= n))
     if "line_tier" in cond:
         tier = save.gear_tier("line")
         rows.append((f"낚싯줄 T{cond['line_tier']} 이상 (지금 T{tier})", tier >= cond["line_tier"]))
@@ -49,10 +56,20 @@ def unlock_status(save, spot: dict) -> tuple[bool, list[tuple[str, bool]]]:
         fish = next(f for f in all_fish() if f["id"] == cond["legend"])
         rows.append((f"전설 {fish['name']}", save.caught(cond["legend"])))
     if "legends" in cond:
-        legends = [f["id"] for f in all_fish() if f["rarity"] == "legend" and f["spot"] != "secret"
-                   and f.get("spot") in SHARMION_SPOTS]
+        legends = [f["id"] for f in all_fish() if f["rarity"] == "legend" and f["spot"] in SHARMION_SPOTS]
         got = sum(1 for fid in legends if save.caught(fid))
         rows.append((f"전설 {got}/{cond['legends']}마리 포획", got >= cond["legends"]))
+    if "legends_list" in cond:
+        ids = cond["legends_list"]
+        got = sum(1 for fid in ids if save.caught(fid))
+        rows.append((f"전설 {got}/{len(ids)}마리 포획", got >= len(ids)))
+    if "legend_s" in cond:
+        legends = [f["id"] for f in all_fish() if f["rarity"] == "legend"]
+        n = sum(1 for fid in legends if save.caught(fid) and save.data["dex"][fid].get("best_rank") == "S")
+        rows.append((f"전설 S랭크 {min(n, cond['legend_s'])}/{cond['legend_s']}회", n >= cond["legend_s"]))
+    if "s_eldra" in cond:
+        n = save.data["stats"].get("s_ranks_eldra", 0)
+        rows.append((f"엘드라시온 S {min(n, cond['s_eldra'])}/{cond['s_eldra']}회", n >= cond["s_eldra"]))
     if "s_total" in cond:
         n = save.data["stats"]["s_ranks"]
         rows.append((f"S랭크 {min(n, cond['s_total'])}/{cond['s_total']}회", n >= cond["s_total"]))
@@ -78,13 +95,35 @@ class MapScene(Scene):
         self.save = game.save
         self.mouse = (0, 0)
         self.age = 0.0  # 열림 애니메이션
-        self.spots = load_json("spots.json")["spots"]
+        self.all_spots = load_json("spots.json")["spots"]
+        self.conts = load_json("continents.json")["continents"]
+        here = next(s for s in self.all_spots if s["id"] == fishing.spot_id)
+        self.cont = here.get("continent", "sharmion")
         self.sel = next(i for i, s in enumerate(self.spots) if s["id"] == fishing.spot_id)
+        self.cont_btns = [ui.Button((112, 9, 16, 15), "<", lambda: self._switch(-1)),
+                          ui.Button((262, 9, 16, 15), ">", lambda: self._switch(1))]
         self.t = 0.0
         self.msg, self.msg_t, self.msg_col = "", 0.0, ui.TEXT
         self.close_btn = ui.Button((404, 250, 64, 15), "닫기 (M)", self._close)
         self.go_btn = ui.Button((300, 214, 164, 17), "", self._go)
         self.rest_btn = ui.Button((300, 56, 164, 16), "텐트에서 쉬기", self._rest)
+
+    @property
+    def spots(self) -> list:
+        return [s for s in self.all_spots if s.get("continent", "sharmion") == self.cont]
+
+    @property
+    def cont_info(self) -> dict:
+        return next(c for c in self.conts if c["id"] == self.cont)
+
+    def _switch(self, d: int) -> None:
+        opened = [c["id"] for c in self.conts if c["id"] in self.save.data["unlocked_continents"]]
+        if len(opened) < 2:
+            return
+        self.cont = opened[(opened.index(self.cont) + d) % len(opened)]
+        here = [i for i, s in enumerate(self.spots) if s["id"] == self.fishing.spot_id]
+        self.sel = here[0] if here else 0
+        self.game.sfx.play("click")
 
     @property
     def spot(self) -> dict:
@@ -116,11 +155,12 @@ class MapScene(Scene):
             self.game.sfx.play("coin")
             self.game.sfx.play("catch", 0.7)
             self._say(f"{sp['name']} 해금!", ui.GOOD)
-            if sp["id"] == "secret" and not self.save.owns("bait", "dragon_pearl"):
+            reward = {"secret": ("dragon_pearl", "여의주"), "world_tree": ("world_fruit", "세계수 열매")}.get(sp["id"])
+            if reward and not self.save.owns("bait", reward[0]):
                 # 최종 전설을 부르는 미끼
-                self.save.data["owned"]["bait"].append("dragon_pearl")
+                self.save.data["owned"]["bait"].append(reward[0])
                 self.game.sfx.play("chord_legend", 0.7)
-                self._say("용문 폭포 해금! 여의주를 얻었다", (255, 214, 90))
+                self._say(f"{sp['name']} 해금! {reward[1]}을(를) 얻었다", (255, 214, 90))
             self.game.save_now()
 
     def _rest(self) -> None:
@@ -133,7 +173,7 @@ class MapScene(Scene):
             self._close()
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             m = self.game.to_canvas(event.pos)
-            for b in (self.close_btn, self.go_btn, self.rest_btn):
+            for b in (self.close_btn, self.go_btn, self.rest_btn) + tuple(self.cont_btns if self._multi() else ()):
                 if b.click(m):
                     return
             for i, sp in enumerate(self.spots):
@@ -141,6 +181,9 @@ class MapScene(Scene):
                 if math.hypot(m[0] - x, m[1] - y) < 13:
                     self.sel = i
                     self.game.sfx.play("click")
+
+    def _multi(self) -> bool:
+        return len(self.save.data["unlocked_continents"]) > 1
 
     def update(self, dt: float) -> None:
         self.age += dt
@@ -158,8 +201,12 @@ class MapScene(Scene):
         ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
         ui.panel(canvas, (6, 6, 468, 260))
         text(canvas, "지도", (14, 16), ui.ACCENT, 16, "midleft")
-        text(canvas, f"소지금 {ui.money_text(self.save.money)} · 도감 {self.save.dex_count()}/{len(all_fish())}",
-             (290, 16), ui.ACCENT, 11, "midright")
+        text(canvas, self.cont_info["name"], (195, 16), (220, 210, 255), 11, "center")
+        if self._multi():
+            for b in self.cont_btns:
+                b.draw(canvas, self.mouse)
+        got, total = self.save.continent_dex(self.cont)
+        text(canvas, f"{ui.money_text(self.save.money)} · 도감 {got}/{total}", (466, 16), ui.ACCENT, 11, "midright")
         self._draw_map(canvas)
         self._draw_weather(canvas)
         self._draw_info(canvas)
@@ -170,16 +217,21 @@ class MapScene(Scene):
 
     def _draw_map(self, canvas) -> None:
         area = pygame.Rect(12, 28, 280, 222)
-        canvas.fill(SEA, area)
+        ci = self.cont_info
+        sea, sea_light, land_c, land_dark = (tuple(ci[k]) for k in ("sea", "sea_light", "land", "land_dark"))
+        canvas.fill(sea, area)
         for i in range(0, area.h, 6):
             off = int(self.t * 6 + i * 3) % 24
-            canvas.fill(SEA_LIGHT, (area.x + off + (i * 37) % 200, area.y + i, 10, 1))
-        land = [(12, 28), (200, 28), (190, 70), (165, 110), (150, 150), (120, 180), (130, 215), (95, 250), (12, 250)]
-        pygame.draw.polygon(canvas, LAND, land)
-        pygame.draw.lines(canvas, LAND_DARK, False, land[1:-1], 2)
-        # 산 기호
-        for mx, my in ((60, 70), (90, 60), (115, 82), (45, 110)):
-            pygame.draw.polygon(canvas, LAND_DARK, [(mx - 9, my + 7), (mx, my - 7), (mx + 9, my + 7)])
+            canvas.fill(sea_light, (area.x + off + (i * 37) % 200, area.y + i, 10, 1))
+        if self.cont == "sharmion":
+            land = [(12, 28), (200, 28), (190, 70), (165, 110), (150, 150), (120, 180), (130, 215), (95, 250), (12, 250)]
+            pygame.draw.polygon(canvas, land_c, land)
+            pygame.draw.lines(canvas, land_dark, False, land[1:-1], 2)
+            # 산 기호
+            for mx, my in ((60, 70), (90, 60), (115, 82), (45, 110)):
+                pygame.draw.polygon(canvas, land_dark, [(mx - 9, my + 7), (mx, my - 7), (mx + 9, my + 7)])
+        else:
+            self._draw_eldra_land(canvas, land_c, land_dark)
         # 경로
         nodes = [self._node(sp) for sp in self.spots]
         for a, b in zip(nodes[:-2], nodes[1:-1]):
@@ -191,7 +243,7 @@ class MapScene(Scene):
                     canvas.fill(PATH, (int(x), int(y), 2, 2))
         for i, sp in enumerate(self.spots):
             x, y = nodes[i]
-            secret = sp["id"] == "secret"
+            secret = bool(sp.get("secret"))
             unlocked = self.unlocked(sp)
             if secret and not unlocked:
                 if not can_unlock_soon(self.save, sp):
@@ -217,6 +269,26 @@ class MapScene(Scene):
                 text(canvas, "현재", (x, y - 13), ui.ACCENT, 11, "center")
             text(canvas, sp["short"], (x, y + 13), col, 11, "center")
 
+    def _draw_eldra_land(self, canvas, land_c, land_dark) -> None:
+        """엘드라시온: 가운데 큰 섬 + 남쪽 얼음 + 하늘섬, 낚시터마다 기호."""
+        main = [(30, 70), (90, 40), (170, 50), (230, 90), (250, 150), (210, 200), (140, 215), (70, 195), (25, 140)]
+        pygame.draw.polygon(canvas, land_c, main)
+        pygame.draw.lines(canvas, land_dark, True, main, 2)
+        ice = (220, 232, 245)
+        pygame.draw.polygon(canvas, ice, [(170, 228), (230, 214), (285, 226), (285, 250), (160, 250)])
+        # 하늘섬 (북동)
+        bob = math.sin(self.t * 1.5) * 1.5
+        pygame.draw.ellipse(canvas, (200, 220, 245), (172, 40 + bob, 50, 12))
+        # 화산 (동)
+        pygame.draw.polygon(canvas, (70, 50, 60), [(240, 150), (260, 118), (280, 150)])
+        canvas.fill((255, 120, 50), (257, 116, 6, 3))
+        # 수정 (서)
+        for cx, cy in ((100, 128), (110, 120), (118, 130)):
+            pygame.draw.polygon(canvas, (170, 200, 255), [(cx - 3, cy + 6), (cx, cy - 6), (cx + 3, cy + 6)])
+        # 세계수 (북)
+        pygame.draw.circle(canvas, (90, 160, 110), (132, 46), 12)
+        canvas.fill((96, 72, 50), (130, 50, 5, 10))
+
     def _draw_weather(self, canvas) -> None:
         f = self.fishing
         w = f.weather_sys
@@ -237,7 +309,7 @@ class MapScene(Scene):
         box = pygame.Rect(298, 80, 168, 156)
         ui.panel(canvas, box, fill=(16, 20, 36))
         x, y = box.x + 6, box.y + 8
-        secret_hidden = sp["id"] == "secret" and not self.unlocked(sp) and not can_unlock_soon(self.save, sp)
+        secret_hidden = sp.get("secret") and not self.unlocked(sp) and not can_unlock_soon(self.save, sp)
         text(canvas, "???" if secret_hidden else sp["name"], (x, y + 2), ui.ACCENT, 11, "midleft")
         yy = y + 18
         desc = "어딘가에 숨겨진 장소가 있다고 한다." if secret_hidden else sp["desc"]

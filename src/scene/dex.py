@@ -13,6 +13,9 @@ from src.ui.hud import draw_cursor, text, wrap_text
 
 SPOT_TABS = [("reservoir", "저수지"), ("valley", "계곡"), ("breakwater", "방파제"), ("offshore", "먼바다"),
              ("deep", "심해"), ("secret", "비밀")]
+ELDRA_TABS = [("marsh", "습지"), ("crystal_cave", "동굴"), ("sky_falls", "부유섬"), ("volcano", "화산"),
+              ("ice_sea", "빙해"), ("world_tree", "세계수")]
+CONT_TABS = {"sharmion": SPOT_TABS, "eldrasion": ELDRA_TABS}
 TIME_KO = {"morning": "아침", "day": "낮", "evening": "저녁", "night": "밤"}
 RARITY_KO = {"common": "일반", "uncommon": "고급", "rare": "희귀", "legend": "전설"}
 RARITY_COL = {"common": (230, 230, 230), "uncommon": (130, 230, 150), "rare": (130, 190, 255),
@@ -35,14 +38,25 @@ class DexScene(Scene):
         self.mouse = (0, 0)
         self.age = 0.0  # 열림 애니메이션
         self.fish = load_json("fish.json")["fish"]
-        self.tabs = ui.Tabs(14, 30, [t[1] for t in SPOT_TABS], width=46)
-        self.tabs.index = next((i for i, t in enumerate(SPOT_TABS) if t[0] == fishing.spot_id), 0)
+        self.cont = "eldrasion" if fishing.spot_id in dict(ELDRA_TABS) else "sharmion"
+        self._make_tabs()
+        self.cont_btn = ui.Button((310, 30, 92, 16), "", self._switch)
         self.sel = 0
         self.t = 0.0
         self.close_btn = ui.Button((406, 250, 60, 15), "닫기 (Tab)", self._close)
 
+    def _make_tabs(self) -> None:
+        tabs = CONT_TABS[self.cont]
+        self.tabs = ui.Tabs(14, 30, [t[1] for t in tabs], width=46)
+        self.tabs.index = next((i for i, t in enumerate(tabs) if t[0] == self.fishing.spot_id), 0)
+
+    def _switch(self) -> None:
+        self.cont = "eldrasion" if self.cont == "sharmion" else "sharmion"
+        self._make_tabs()
+        self.sel = 0
+
     def spot_fish(self) -> list[dict]:
-        return [f for f in self.fish if f["spot"] == SPOT_TABS[self.tabs.index][0]]
+        return [f for f in self.fish if f["spot"] == CONT_TABS[self.cont][self.tabs.index][0]]
 
     def card_rect(self, i: int) -> pygame.Rect:
         return pygame.Rect(GRID_X + (i % 3) * (CARD_W + 4), GRID_Y + (i // 3) * (CARD_H + 4), CARD_W, CARD_H)
@@ -61,6 +75,9 @@ class DexScene(Scene):
                 return
             if self.close_btn.click(m):
                 return
+            if "eldrasion" in self.save.data["unlocked_continents"] and self.cont_btn.click(m):
+                self.game.sfx.play("click")
+                return
             for i in range(len(self.spot_fish())):
                 if self.card_rect(i).collidepoint(m):
                     self.sel = i
@@ -77,10 +94,13 @@ class DexScene(Scene):
         ui.panel(canvas, (6, 6, 468, 260))
         total = len(self.fish)
         got = self.save.dex_count()
-        golds = sum(1 for e in self.save.data["dex"].values() if e["best_rank"] == "S")
+        golds = sum(1 for e in self.save.data["dex"].values() if e.get("best_rank") == "S")
         text(canvas, "도감", (14, 16), ui.ACCENT, 16, "midleft")
         text(canvas, f"{got}/{total}종 ({got * 100 // total}%)   금테 {golds}", (466, 16), ui.ACCENT, 11, "midright")
         self.tabs.draw(canvas, self.mouse)
+        if "eldrasion" in self.save.data["unlocked_continents"]:
+            self.cont_btn.label = "엘드라시온 >" if self.cont == "sharmion" else "< 샤르미온"
+            self.cont_btn.draw(canvas, self.mouse)
         fishes = self.spot_fish()
         self.sel = min(self.sel, len(fishes) - 1)
         for i, f in enumerate(fishes):

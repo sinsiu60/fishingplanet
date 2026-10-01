@@ -1,0 +1,7 @@
+{
+  "_설명": "대륙. 지도 화면 위쪽에 이름, 좌우 화살표로 전환. first_spot = 처음 도착하는 낚시터.",
+  "continents": [
+    {"id": "sharmion", "name": "샤르미온 대륙", "first_spot": "reservoir", "land": [88, 128, 82], "land_dark": [66, 100, 64], "sea": [44, 84, 140], "sea_light": [70, 116, 170]},
+    {"id": "eldrasion", "name": "엘드라시온 대륙", "first_spot": "marsh", "land": [96, 92, 140], "land_dark": [70, 66, 112], "sea": [30, 50, 110], "sea_light": [80, 110, 180]}
+  ]
+}

@@ -15,6 +15,12 @@
     {"id": "glow_worm", "name": "형광 웜", "price": 12000, "window_mult": 1.0, "unlock_spot": "breakwater", "legend_for": "silver_bass", "desc": "폭풍 속에서도 빛나는 웜."},
     {"id": "trolling_lure", "name": "트롤링 루어", "price": 25000, "window_mult": 1.0, "unlock_spot": "offshore", "legend_for": "marlin", "desc": "배로 끌고 다니는 커다란 루어."},
     {"id": "glow_bait", "name": "발광 미끼", "price": 40000, "window_mult": 1.0, "unlock_spot": "deep", "legend_for": "coelacanth", "desc": "심연까지 닿는 빛."},
-    {"id": "dragon_pearl", "name": "여의주", "price": -1, "window_mult": 1.0, "legend_for": "dragon_carp", "desc": "다섯 전설을 모두 낚은 자에게 주어진다."}
+    {"id": "dragon_pearl", "name": "여의주", "price": -1, "window_mult": 1.0, "legend_for": "dragon_carp", "desc": "다섯 전설을 모두 낚은 자에게 주어진다."},
+    {"id": "silver_spike", "name": "은빛 갈대 이삭", "price": 50000, "window_mult": 1.0, "legend_for": "silva", "continent": "eldrasion", "desc": "갈대왕 실바을(를) 부른다는 미끼.", "unlock_spot": "marsh"},
+    {"id": "crystal_orb", "name": "수정 구슬", "price": 70000, "window_mult": 1.0, "legend_for": "prisia", "continent": "eldrasion", "desc": "결정어왕 프리시아을(를) 부른다는 미끼.", "unlock_spot": "crystal_cave"},
+    {"id": "cloud_feather", "name": "구름 깃털", "price": 100000, "window_mult": 1.0, "legend_for": "aeris", "continent": "eldrasion", "desc": "천공어 에어리스을(를) 부른다는 미끼.", "unlock_spot": "sky_falls"},
+    {"id": "lava_stone", "name": "용암석 미끼", "price": 140000, "window_mult": 1.0, "legend_for": "ignis", "continent": "eldrasion", "desc": "불꽃상어 이그니스을(를) 부른다는 미끼.", "unlock_spot": "volcano"},
+    {"id": "aurora_crystal", "name": "오로라 결정", "price": 180000, "window_mult": 1.0, "legend_for": "borealis", "continent": "eldrasion", "desc": "극광어 보레알리스을(를) 부른다는 미끼.", "unlock_spot": "ice_sea"},
+    {"id": "world_fruit", "name": "세계수 열매", "price": -1, "window_mult": 1.0, "legend_for": "orsiel", "continent": "eldrasion", "desc": "다섯 엘드라시온 전설을 모두 낚은 자에게 주어진다."}
   ]
 }

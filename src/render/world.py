@@ -187,6 +187,9 @@ TERRAIN = {
 
 
 def draw_mountains(canvas, pal, cam, terrain: str = "hills", t: float = 0.0) -> None:
+    from src.render import eldra_world
+    if eldra_world.draw_terrain(canvas, pal, cam, terrain, t):
+        return  # 엘드라시온 지형
     hz = cam.horizon
     layers = TERRAIN.get(terrain, TERRAIN["hills"])
     if terrain == "falls":
@@ -493,3 +496,11 @@ def draw_ship_lamp(canvas, pal, cam) -> None:
 
 
 FOREGROUND = {"boulders": draw_boulders, "tetrapods": draw_tetrapods, "boat": draw_boat}
+
+
+def _register_eldra() -> None:
+    from src.render.eldra_world import FOREGROUNDS
+    FOREGROUND.update(FOREGROUNDS)
+
+
+_register_eldra()
