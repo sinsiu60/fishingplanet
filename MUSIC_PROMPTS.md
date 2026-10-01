@@ -246,3 +246,34 @@ data/music/
 ```
 
 > ⚠️ AI 작곡 도구의 저작권·상업 이용 조건은 도구·요금제마다 다르다. 배포(특히 판매) 전에 해당 서비스 약관을 확인할 것.
+
+---
+
+## 5. 엘드라시온 대륙 (확장, 19곡)
+
+샤르미온보다 **신비롭고 마법적인** 음색 (신스 패드·글래스 벨·합창) + 낚시터마다 고유 악기. 파일 이름 규칙은 같다.
+엘드라시온 낚시터 id: `marsh` `crystal_cave` `sky_falls` `volcano` `ice_sea` `world_tree`
+
+| 파일 | Style (영어 그대로) |
+|---|---|
+| `spot_marsh` | `Ethereal silver-reed marsh at dusk with fireflies, gentle fantasy ambient. Soft breathy flute, shimmering glass bells, airy synth pads, slow plucked harp, light rain-stick textures. 70 BPM, A dorian, misty, dreamlike, sparse high end, seamless loop, instrumental.` |
+| `fight_marsh` | `Tense fantasy chase through tangled silver reeds. Plucked harp ostinato, low strings staccato, frame drum, flute stabs, swelling choir pad. 138 BPM, A minor, nimble and entangling, mid-range focused, sparse high end, seamless loop, instrumental.` |
+| `legend_silva` | `Majestic boss theme for the silver reed king, a giant carp ruling an enchanted marsh. Swirling harp and flute figures, heavy taiko, sweeping strings, wordless female choir, sudden tangled syncopation. 136 BPM, D minor, regal and mysterious, mid-range focused, sparse high end, seamless loop, instrumental.` |
+| `spot_crystal_cave` | `Underground crystal lake ambient, glowing crystals in total darkness. Slow celesta and glass harmonica, deep sub drones, water drip percussion with echo, distant choir. 60 BPM, E minor, cavernous reverb, still and glittering, sparse high end, seamless loop, instrumental.` |
+| `fight_crystal_cave` | `Dark crystalline battle in a cave, light reflections flickering. Pulsing synth bass, metallic mallet ostinato, echoing tom hits, glass bell accents. 124 BPM, E minor, tense and echoing, low-mid focused, very sparse high end, seamless loop, instrumental.` |
+| `legend_prisia` | `Boss theme for the crystal king, a prism fish that shatters light. Cascading celesta and glass arpeggios over heavy orchestral percussion, brass swells, sudden silences when the light goes out. 140 BPM, B minor, dazzling and eerie, mid-range focused, seamless loop, instrumental.` |
+| `spot_sky_falls` | `Floating sky islands above a sea of clouds, waterfalls falling into nothing. Soaring strings, light acoustic guitar, airy pan flute, soft wind chimes, gentle percussion. 84 BPM, D major, free and uplifting, wide stereo, sparse high end, seamless loop, instrumental.` |
+| `fight_sky_falls` | `Exhilarating aerial chase with rhythmic surges like waves of current. Driving strings in 6/8, pan flute melody, bodhran, swelling brass every four bars. 144 BPM, D mixolydian, breezy and urgent, mid-range focused, sparse high end, seamless loop, instrumental.` |
+| `legend_aeris` | `Epic sky boss theme for a winged fish soaring over clouds. Heroic horns, soaring violins, choir, big timpani, wind-like synth sweeps, three-beat leaping motif. 150 BPM, G major to E minor, majestic and airborne, mid-range focused, seamless loop, instrumental.` |
+| `spot_volcano` | `Hydrothermal volcanic sea under a red sky, bubbling and smoking. Low didgeridoo-like drones, slow hand drums, distorted cello swells, deep rumbling pads. 72 BPM, C phrygian, hot and heavy, ominous but calm, low-end focused, sparse high end, seamless loop, instrumental.` |
+| `fight_volcano` | `Fiery battle against time in boiling water. Driving tribal drums, distorted low brass, aggressive cello ostinato, urgent rising tension every bar. 148 BPM, C phrygian, relentless and scorching, low-mid focused, sparse high end, seamless loop, instrumental.` |
+| `legend_ignis` | `Boss theme for a flame shark swimming through magma. Massive taiko and war drums, roaring low brass, distorted guitar undertone, fiery string runs, eruption hits. 156 BPM, F minor, explosive and furious, mid-range focused, seamless loop, instrumental.` |
+| `spot_ice_sea` | `Frozen polar sea under shimmering aurora, ice cracking in the distance. Glassy synth pads, slow music box melody, bowed glass, soft low strings. 64 BPM, F sharp minor, cold, vast and beautiful, sparse high end, seamless loop, instrumental.` |
+| `fight_ice_sea` | `Tense fight through a narrow ice hole. Icy pizzicato ostinato, low strings, crisp but soft percussion, sharp glass stabs on accents. 132 BPM, F sharp minor, cold and precise, mid-range focused, sparse high end, seamless loop, instrumental.` |
+| `legend_borealis` | `Boss theme for the aurora fish dancing beneath the northern lights. Shimmering synth arpeggios, soaring choir, orchestral strings, deep drums, waltz-like swaying sections. 138 BPM, F sharp minor, ethereal and grand, mid-range focused, seamless loop, instrumental.` |
+| `spot_world_tree` | `Sacred spring at the roots of a colossal world tree, glowing motes in the air. Harp, kalimba, warm strings, soft choir, gentle wooden flute, nature ambience. 70 BPM, E major, reverent, ancient, healing, sparse high end, seamless loop, instrumental.` |
+| `fight_world_tree` | `Mystical battle where the land changes every hour. Shifting orchestration that blends harp, crystal bells, war drums and strings, constant forward pulse. 142 BPM, E minor, majestic and unpredictable, mid-range focused, sparse high end, seamless loop, instrumental.` |
+| `legend_orsiel` | `Ultimate final boss theme for the king of sky and sea at the world tree. Four-part structure growing in intensity: tangled harp, dark crystal echoes, soaring sky strings, fire and ice climax. Full orchestra, huge choir, taiko, brass fanfares, key changes. 158 BPM, E minor to E major, overwhelming, mythic, triumphant, seamless loop, instrumental.` |
+| `ending_final` | `Emotional final ending after catching the king of sky and sea, aurora over the world tree. Solo piano and harp opening, strings and choir rising to a warm grand climax, then gentle resolution. 74 BPM, E major, grateful, bittersweet, a long journey across two continents complete, instrumental.` |
+
+> 참고: `ending_final`은 아직 코드가 따로 부르지 않는다 (최종 엔딩도 `ending` 곡을 쓴다). 필요하면 알려주세요.

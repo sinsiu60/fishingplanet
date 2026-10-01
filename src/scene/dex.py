@@ -132,9 +132,15 @@ class DexScene(Scene):
             canvas.fill((16, 20, 36), badge)
             text(canvas, entry["best_rank"], badge.center, RANK_COLORS[entry["best_rank"]], 11, "center")
         else:
+            seen = self.save.data["dex"].get(f["id"], {}).get("seen")
             draw_fish_side(canvas, cx, cy, length, 0.0, fish_colors(f), -1, silhouette=(8, 8, 14),
                            shape=f.get("shape"))
-            text(canvas, "???", (cx, r.bottom - 9), ui.DIM, 11, "center")
+            if seen:
+                # 목격 (엘드라시온에서 도망친 물고기): 실루엣 + 이름
+                text(canvas, f["name"][:7], (cx, r.bottom - 9), ui.DIM, 11, "center")
+                text(canvas, "목격", (r.right - 16, r.y + 8), (200, 180, 255), 11, "center")
+            else:
+                text(canvas, "???", (cx, r.bottom - 9), ui.DIM, 11, "center")
 
     def _draw_detail(self, canvas, f: dict) -> None:
         d = DETAIL
@@ -142,7 +148,8 @@ class DexScene(Scene):
         entry = self.save.dex_entry(f["id"])
         x, y = d.x + 6, d.y + 8
         if entry is None:
-            text(canvas, "???", (d.centerx, y + 4), ui.DIM, 16, "center")
+            seen = self.save.data["dex"].get(f["id"], {}).get("seen")
+            text(canvas, f["name"] if seen else "???", (d.centerx, y + 4), ui.DIM, 16 if not seen else 11, "center")
             text(canvas, f"희귀도: {RARITY_KO[f['rarity']]}" if f["rarity"] == "legend" else "아직 잡지 못했다",
                  (d.centerx, y + 26), ui.DIM, 11, "center")
             if f["rarity"] == "legend":
