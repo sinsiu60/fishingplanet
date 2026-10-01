@@ -80,7 +80,7 @@
     "rod_align_lateral": 0.5,
     "center_pull_when_opposed": 0.08,
     "max_fish_angle": 0.5,
-    "line_damage_per_tension": 1.0,
+    "line_damage_per_tension": 1.3,
     "line_damage_over100_mult": 2.0,
     "hook_slack_rate": 18,
     "hook_slack_extra_per_tension": 0.6,
@@ -108,7 +108,10 @@
     "screen_shake": true,
     "shake_start_tension": 70,
     "shake_max_px": 2.0,
-    "net_pause_grace_sec": 0.04
+    "net_pause_grace_sec": 0.04,
+    "calm_reel_floor": 8,
+    "calm_reel_floor_per_drag": 12,
+    "hook_slack_mult_calm": 0.5
   },
   "fish_ai": {
     "_설명": "물고기 행동 공통 수치. 종별 값은 fish.json이 우선.",

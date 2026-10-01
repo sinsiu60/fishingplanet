@@ -39,6 +39,7 @@ def _documents_dir() -> Path:
 
 
 def save_dir() -> Path:
-    path = _documents_dir() / "FishingPlanet"
+    override = os.environ.get("FISHING_SAVE_DIR")  # 테스트용
+    path = Path(override) if override else _documents_dir() / "FishingPlanet"
     os.makedirs(path, exist_ok=True)
     return path

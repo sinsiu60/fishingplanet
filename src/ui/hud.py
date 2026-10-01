@@ -17,6 +17,22 @@ def text(canvas, s: str, pos, color, size: int = 11, anchor: str = "topleft") ->
     return rect
 
 
+def wrap_text(s: str, max_w: int, size: int = 11) -> list[str]:
+    """픽셀 폭 기준 줄바꿈 (공백 단위)."""
+    font = get_font(size)
+    lines, cur = [], ""
+    for word in s.split(" "):
+        cand = f"{cur} {word}".strip()
+        if cur and font.size(cand)[0] > max_w:
+            lines.append(cur)
+            cur = word
+        else:
+            cur = cand
+    if cur:
+        lines.append(cur)
+    return lines
+
+
 def draw_clock(canvas, pal, label: str, fast: bool, mult: int) -> None:
     r = text(canvas, label, (6, 4), pal["text"])
     if fast:

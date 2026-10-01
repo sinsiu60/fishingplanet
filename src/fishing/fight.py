@@ -202,6 +202,11 @@ class Fight:
             over = target - self.drag_limit
             payout = over * cfg["payout_speed_per_tension"]
             target = self.drag_limit + over * cfg["drag_overflow_keep"]
+        if reeling and calm:
+            # 지친 물고기를 감는 중엔 물고기 무게만큼 줄이 당겨짐 → 장력은 초록 구간 안에 유지
+            # (드랙 풀림 계산 뒤에 적용: 저항이 없으니 줄은 풀리지 않는다)
+            floor = self.green_low + cfg["calm_reel_floor"] + cfg["calm_reel_floor_per_drag"] * drag_frac
+            target = max(target, floor)
         if b.is_active:
             target += math.sin(self.elapsed * 13.0) * 2.5 + math.sin(self.elapsed * 5.3) * 2.0
         self.target = target
@@ -249,7 +254,10 @@ class Fight:
 
         # 바늘 빠짐 (느슨 구간에서 증가)
         if self.tension < self.green_low:
-            self.hook += (cfg["hook_slack_rate"] + (self.green_low - self.tension) * cfg["hook_slack_extra_per_tension"]) * dt
+            rate = cfg["hook_slack_rate"] + (self.green_low - self.tension) * cfg["hook_slack_extra_per_tension"]
+            if calm:
+                rate *= cfg["hook_slack_mult_calm"]  # 몸부림이 없으니 바늘이 덜 빠짐
+            self.hook += rate * dt
         else:
             self.hook -= cfg["hook_recover_rate"] * dt
         self.hook = clamp(self.hook, 0, 100)

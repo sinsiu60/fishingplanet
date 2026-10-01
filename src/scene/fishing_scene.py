@@ -18,17 +18,19 @@ from src.render.effects import (Bubbles, Droplets, Ripples, Sparkles, draw_bobbe
 from src.render.fish_draw import draw_catch_cut, draw_jump, draw_net_scene
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
+from src.save.settings import Settings
 from src.scene.base import Scene
 from src.ui import fight_hud, hud
+from src.ui import tutorial as tut
 
 HINTS = {
-    CastState.READY: "좌클릭 유지: 파워 충전   마우스: 방향   화면 끝: 둘러보기   T: 시간 가속",
+    CastState.READY: "좌클릭 유지: 파워 충전   마우스: 방향   화면 끝: 둘러보기   H: 도움말",
     CastState.CHARGING: "놓으면 던지기   우클릭: 취소",
     CastState.SWING: "",
     CastState.FLIGHT: "",
     CastState.LANDED: "좌클릭: 챔질 (찌가 쑥 잠길 때!)   우클릭: 줄 회수   화면 끝: 둘러보기",
     CastState.RETRIEVE: "줄 감는 중...",
-    CastState.HOOKED: "좌클릭 유지: 감기   우클릭: 숙이기   Q/E·휠: 드랙   마우스: 버티는 방향   F1: 수치",
+    CastState.HOOKED: "좌클릭 유지: 감기   우클릭: 숙이기   Q/E·휠: 드랙   마우스: 버티기   H: 도움말",
 }
 NET_HINT = "몸부림이 멈춘 순간 좌클릭!"
 GOOD = (140, 240, 150)
@@ -36,7 +38,7 @@ BAD = (255, 150, 130)
 INFO = (255, 235, 170)
 LOOK_STATES = (CastState.READY, CastState.LANDED)
 
-# 처음 몇 번은 예고 신호의 의미를 알려준다 (DESIGN.md 4장)
+# 튜토리얼 카드를 본 뒤 한 번 더 짧게 상기시킨다 (DESIGN.md 4장)
 TIPS = {
     "telegraph:rush": "꼬리 물보라 = 돌진! 드랙을 낮추고(Q) 감기를 멈추세요",
     "telegraph:jump": "그림자가 커진다 = 점프! 정점에서 우클릭",
@@ -44,7 +46,8 @@ TIPS = {
     "action:charge": "멈췄다 = 힘 모으기! 지금 확 감으세요",
     "tired": "지쳤다! 드랙을 올리고(E) 크게 감으세요",
 }
-TIP_REPEAT = 2
+TIP_REPEAT = 1
+SLACK_RED_CARD_SEC = 0.6  # 이 시간 이상 느슨/빨강이면 튜토리얼 카드
 
 
 class FishingScene(Scene):
@@ -77,7 +80,12 @@ class FishingScene(Scene):
         self.fx_t = 0.0
         self.tip_counts: dict[str, int] = {}
         self.debug = False
-        self.shake_on = self.fish_cfg["fight"]["screen_shake"]
+        self.settings = Settings()
+        self.tutorial = tut.Tutorial(self.settings)
+        self.card: dict | None = None    # 튜토리얼 카드 (표시 중엔 게임 정지)
+        self.help = False                # H 도움말 (표시 중엔 게임 정지)
+        self.slack_t = self.red_t = 0.0
+        self.shake_on = self.settings.get("screen_shake")
         self.shake_kick = 0.0
         self.reel_loop = None
         self.t = 0.0
@@ -86,17 +94,44 @@ class FishingScene(Scene):
         self.idle_ripple_t = 0.0
         self.wake_t = 0.0
         pygame.mouse.set_visible(False)
+        if self.tutorial.want("welcome"):
+            self._open_card("welcome", None)
+
+    def _open_card(self, key: str, focus: str | None) -> None:
+        self.card = {"key": key, "focus": focus, "t": 0.0}
+
+    def _card_focus(self):
+        focus = self.card["focus"]
+        if focus == "gauge":
+            return (14, 114)
+        if focus == "fish" and self.fight is not None:
+            return self._fish_screen()
+        return None
 
     # ───────────────────────── 입력 ─────────────────────────
     def handle_event(self, event: pygame.event.Event) -> None:
         f = self.fight
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.cast.release(self.cam.yaw)
+            return
+        if self.help:
+            if event.type == pygame.MOUSEBUTTONDOWN or (event.type == pygame.KEYDOWN and event.key == pygame.K_h):
+                self.help = False
+            return
+        if self.card is not None:
+            if event.type == pygame.MOUSEBUTTONDOWN and self.card["t"] > 0.35:
+                self.card = None
+            return
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_t:
+            if event.key == pygame.K_h:
+                self.help = True
+            elif event.key == pygame.K_t:
                 self.clock.fast = not self.clock.fast
             elif event.key == pygame.K_F1:
                 self.debug = not self.debug
             elif event.key == pygame.K_F2:
                 self.shake_on = not self.shake_on
+                self.settings.set("screen_shake", self.shake_on)
                 self.toasts.show("화면 흔들림 " + ("켬" if self.shake_on else "끔"), INFO, 1.2, 11)
             elif f and event.key == pygame.K_q:
                 f.change_drag(-1)
@@ -109,8 +144,6 @@ class FishingScene(Scene):
                 self._left_click()
             elif event.button == 3:
                 self._right_click()
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self.cast.release(self.cam.yaw)
 
     def _left_click(self) -> None:
         c, f = self.cast, self.fight
@@ -128,6 +161,7 @@ class FishingScene(Scene):
         c.jerk()
         result = self.bite.hookset()
         if result == "hooked":
+            self.tutorial.mark("guide_wait")
             c.hooked()
             self.sfx.play("hookset")
             self.toasts.show("챔질 성공!", GOOD, 1.0)
@@ -164,6 +198,9 @@ class FishingScene(Scene):
         self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw)
         self.bite.shadow = None
         self.end_t = 0.0
+        self.slack_t = self.red_t = 0.0
+        if self.tutorial.want("fight_intro"):
+            self._open_card("fight_intro", "gauge")
 
     def _end_fight(self) -> None:
         self.fight = None
@@ -173,6 +210,17 @@ class FishingScene(Scene):
 
     # ───────────────────────── 로직 (60틱 고정) ─────────────────────────
     def update(self, dt: float) -> None:
+        if self.card is not None or self.help:
+            # 튜토리얼 카드·도움말: 게임 정지 (예고 시간도 흐르지 않음)
+            if self.card is not None:
+                self.card["t"] += dt
+            mx, my = self.game.screen.to_canvas(pygame.mouse.get_pos())
+            self.mouse = (int(clamp(mx, 0, self.cam.width - 1)), int(clamp(my, 0, self.cam.height - 1)))
+            if self.reel_loop:
+                self.sfx.loop(self.reel_loop, False)
+                self.reel_loop = None
+            self.game.screen.shake = (0, 0)
+            return
         self.t += dt
         self.clock.update(dt)
         self.clouds.update(dt)
@@ -248,6 +296,15 @@ class FishingScene(Scene):
         f.events.clear()
         if f.phase != "fight":
             return
+        # 처음으로 느슨/빨간 구간에 머물면 설명
+        zone = f.zone()
+        self.slack_t = self.slack_t + dt if zone == "slack" else 0.0
+        self.red_t = self.red_t + dt if zone == "red" else 0.0
+        if self.card is None:
+            if self.slack_t > SLACK_RED_CARD_SEC and self.tutorial.want("slack"):
+                self._open_card("slack", "gauge")
+            elif self.red_t > SLACK_RED_CARD_SEC and self.tutorial.want("red"):
+                self._open_card("red", "gauge")
 
         # 예고 신호 연출
         b = f.brain
@@ -300,6 +357,7 @@ class FishingScene(Scene):
 
     # ───────────────────────── 이벤트 ─────────────────────────
     def _splash(self) -> None:
+        self.tutorial.mark("guide_cast")
         c = self.cast
         self._splash_at(c.bx, c.bz, big=1.0)
         self.sfx.play("splash")
@@ -345,7 +403,10 @@ class FishingScene(Scene):
     def _on_fight_event(self, ev: str) -> None:
         f = self.fight
         x, z = f.fish_xz()
-        self._tip(ev)
+        if ev in tut.CARDS and self.card is None and self.tutorial.want(ev):
+            self._open_card(ev, None if ev == "net_start" else "fish")
+        else:
+            self._tip(ev)
         if ev == "telegraph:rush":
             self.sfx.play("splash_small", 0.7)
         elif ev == "telegraph:jump":
@@ -459,6 +520,15 @@ class FishingScene(Scene):
                 hud.draw_hint(canvas, pal, hint)
             hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
         self.toasts.draw(canvas)
+        if f is None and self.card is None:
+            if not self.tutorial.is_seen("guide_cast") and c.state in (CastState.READY, CastState.CHARGING):
+                tut.draw_guide(canvas, "guide_cast", t)
+            elif not self.tutorial.is_seen("guide_wait") and c.state == CastState.LANDED:
+                tut.draw_guide(canvas, "guide_wait", t)
+        if self.card is not None:
+            tut.draw_card(canvas, self.card["key"], self._card_focus(), self.card["t"])
+        if self.help:
+            tut.draw_help(canvas)
         hud.draw_cursor(canvas, self.mouse)
 
     def _rod_geo(self) -> dict:
