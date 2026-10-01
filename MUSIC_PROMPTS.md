@@ -276,4 +276,4 @@ data/music/
 | `legend_orsiel` | `Ultimate final boss theme for the king of sky and sea at the world tree. Four-part structure growing in intensity: tangled harp, dark crystal echoes, soaring sky strings, fire and ice climax. Full orchestra, huge choir, taiko, brass fanfares, key changes. 158 BPM, E minor to E major, overwhelming, mythic, triumphant, seamless loop, instrumental.` |
 | `ending_final` | `Emotional final ending after catching the king of sky and sea, aurora over the world tree. Solo piano and harp opening, strings and choir rising to a warm grand climax, then gentle resolution. 74 BPM, E major, grateful, bittersweet, a long journey across two continents complete, instrumental.` |
 
-> 참고: `ending_final`은 아직 코드가 따로 부르지 않는다 (최종 엔딩도 `ending` 곡을 쓴다). 필요하면 알려주세요.
+> `ending_final`이 없으면 최종 엔딩도 `ending` 곡을 쓴다.

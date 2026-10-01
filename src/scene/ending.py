@@ -39,8 +39,9 @@ class EndingScene(Scene):
         self.stars = [(random.uniform(0, 480), random.uniform(0, 200), random.random()) for _ in range(120)]
         game.sfx.stop_all()
         game.music.stop()
-        if game.music.has("ending"):
-            game.music.play("ending")
+        self.track = "ending_final" if kind == "final" and game.music.has("ending_final") else "ending"
+        if game.music.has(self.track):
+            game.music.play(self.track)
         else:
             game.sfx.loop("bgm_ending", True, 0.6)
 
@@ -59,8 +60,8 @@ class EndingScene(Scene):
 
     def update(self, dt: float) -> None:
         self.t += dt
-        if self.game.music.has("ending"):
-            self.game.music.play("ending")
+        if self.game.music.has(self.track):
+            self.game.music.play(self.track)
         self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
 
     # ── 그리기 ──
