@@ -1,0 +1,40 @@
+{
+  "_설명": "보물상자 (DESIGN.md 20~21장). drop = 희귀도별 드랍 확률, s_rank_bonus·fish_bonus = 확률 가산(%p), legend_fish_grades = 전설을 잡으면 이 비율로 특별/전설 확정. grades weight = 상자 등급 확률. pity = 이 수만큼 연속으로 못 받으면 다음 상자 확정 (특별 이상 / 전설). contents = 열었을 때 내용물 (w = 가중치). gold mult = 현재 낚시터 평균 기본가 배수. shards = 중복 아이템 → 조각, exchange = 교환소 가격(조각). items = 상자 전용 아이템 (kind: consumable 소모품 / charm 부적 / cosmetic 외형 / rod·reel·net 장비).",
+  "drop": {"common": 0.04, "uncommon": 0.07, "rare": 0.12, "legend": 1.0},
+  "s_rank_bonus": 0.02,
+  "fish_bonus": {"minnow": 0.01},
+  "legend_fish_grades": {"special": 7, "legend": 1},
+  "grades": [
+    {"id": "common", "name": "일반", "color": [176, 120, 64], "weight": 70},
+    {"id": "rare", "name": "희귀", "color": [90, 160, 255], "weight": 22},
+    {"id": "special", "name": "특별", "color": [190, 100, 255], "weight": 7},
+    {"id": "legend", "name": "전설", "color": [255, 210, 80], "weight": 1}
+  ],
+  "pity": {"special": 30, "legend": 100},
+  "contents": {
+    "common": [{"type": "gold", "mult": 1.5, "w": 50}, {"type": "materials", "n": [3, 5], "w": 35}, {"type": "item", "grade": "common", "w": 15}],
+    "rare": [{"type": "gold", "mult": 3.0, "w": 30}, {"type": "materials", "n": [6, 6], "rare": 1, "w": 30}, {"type": "item", "grade": "rare", "w": 40}],
+    "special": [{"type": "item", "grade": "special", "w": 75}, {"type": "item", "grade": "rare", "w": 25}],
+    "legend": [{"type": "item", "grade": "legend", "w": 100}]
+  },
+  "shards": {"common": 1, "rare": 3, "special": 10, "legend": 30},
+  "exchange": {"common": 10, "rare": 30, "special": 100, "legend": 400},
+  "items": [
+    {"id": "repair_spool", "name": "수리용 실타래", "grade": "common", "kind": "consumable", "desc": "파이팅 중 1회, 줄 내구도 20% 회복.", "limit": "파이팅당 1개"},
+    {"id": "lucky_paste", "name": "행운의 떡밥", "grade": "common", "kind": "consumable", "desc": "다음 5번 캐스팅 동안 희귀 이상 확률 +3%p.", "limit": "중첩 불가"},
+    {"id": "sparkle_float", "name": "반짝이 찌", "grade": "common", "kind": "cosmetic", "desc": "찌 색이 바뀌고 입질 파문이 조금 더 잘 보인다."},
+    {"id": "fisher_lunch", "name": "어부의 도시락", "grade": "common", "kind": "consumable", "desc": "10분 동안 물고기 판매가 +10%.", "limit": "중첩 불가"},
+    {"id": "ear_bell", "name": "소리귀 방울", "grade": "rare", "kind": "charm", "desc": "예고 신호 직전 작은 방울 소리가 난다."},
+    {"id": "pinwheel_float", "name": "바람개비 찌", "grade": "rare", "kind": "charm", "desc": "가짜 입질 때 찌가 살짝 다른 색으로 깜빡인다.", "cost": "진짜 입질 판정 시간 -5%"},
+    {"id": "warm_gloves", "name": "온기 장갑", "grade": "rare", "kind": "charm", "desc": "빨간 장력 구간에서 줄 내구도 감소 -10%."},
+    {"id": "calm_charm", "name": "잔잔한 물 부적", "grade": "rare", "kind": "consumable", "desc": "다음 1회 파이팅 동안 줄 걸림 게이지가 50% 느리게 찬다.", "limit": "파이팅당 1개"},
+    {"id": "hourglass", "name": "시간의 모래시계", "grade": "special", "kind": "consumable", "desc": "현재 낚시터의 시간대를 원하는 시간으로 바꾼다."},
+    {"id": "storm_conch", "name": "폭풍 부르는 소라", "grade": "special", "kind": "consumable", "desc": "현재 낚시터 날씨를 원하는 날씨로 바꾼다 (10분).", "limit": "안개는 부를 수 없음"},
+    {"id": "twin_hook", "name": "쌍둥이 바늘", "grade": "special", "kind": "charm", "desc": "5% 확률로 같은 물고기 1마리를 더 얻는다 (판매·소재용).", "limit": "도감·랭크 기록 없음, 전설 제외"},
+    {"id": "moon_rod", "name": "달빛 낚싯대", "grade": "special", "kind": "rod", "desc": "밤에 장력 안전 구간 +10%.", "cost": "낮에는 -5%. 기본 성능 = 얻은 대륙 상점 최고 티어"},
+    {"id": "dragon_scale_rod", "name": "용린 낚싯대", "grade": "legend", "kind": "rod", "desc": "퍼펙트 성공 시 줄 내구도 10% 회복.", "cost": "기본 성능이 대륙 최고 티어보다 5% 낮음"},
+    {"id": "ancient_reel", "name": "고대 어부의 릴", "grade": "legend", "kind": "reel", "desc": "돌진 예고 때 드랙이 자동으로 1단계 내려가고, 돌진이 끝나면 돌아온다.", "cost": "감기 속도 -5%"},
+    {"id": "abyss_eye", "name": "심연의 눈", "grade": "legend", "kind": "charm", "desc": "수면 아래 그림자에 도감에 등록된 물고기 이름이 보인다.", "limit": "미등록 물고기는 ???"},
+    {"id": "golden_net", "name": "황금 뜰채", "grade": "legend", "kind": "net", "desc": "뜰채 성공 시 크기 +3%, 금빛 포획 연출.", "cost": "판정 창은 상점 최고 티어와 같음 (더 넓지 않음)"}
+  ]
+}

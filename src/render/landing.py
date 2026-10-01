@@ -11,6 +11,7 @@ import random
 import pygame
 
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
+from src.render.chest import draw_chest, draw_glow
 from src.render.fish_draw import draw_fish_side, fish_colors
 from src.ui.fight_fx import big_text
 
@@ -44,8 +45,13 @@ def _ease_out(k: float) -> float:
 
 
 class LandingCinematic:
-    def __init__(self, fish: dict, size_cm: float, start_x: float):
+    def __init__(self, fish: dict, size_cm: float, start_x: float, chest: str | None = None):
         self.fish = fish
+        self.chest = chest  # 보물상자 등급 (물고기가 물고 나온다)
+        self.chest_color = None
+        if chest:
+            from src.save.treasure import grade_info
+            self.chest_color = tuple(grade_info(chest)["color"])
         self.colors = fish_colors(fish)
         self.shape = fish.get("shape")
         self.length = clamp(size_cm * 3.4, 80, 165)
@@ -268,6 +274,13 @@ class LandingCinematic:
             self._draw_net(canvas, pal, nx, ny, r, in_net=False, fish=None)
             draw_fish_side(canvas, fx, fy, self.length * scale, spin, self.colors, -1,
                            tail_wag=math.sin(t * 20) * (1 - k * 0.7), shape=self.shape)
+            if self.chest_color:
+                # 입에 문 보물상자: 머리(왼쪽 끝) 쪽에 매달려 함께 돈다. 등급 색으로 빛남
+                L = self.length * scale
+                mx = fx - math.cos(spin) * L * 0.5
+                my = fy - math.sin(spin) * L * 0.5
+                draw_glow(canvas, mx, my + 7, 26 + 4 * math.sin(t * 8), self.chest_color, 1.4)
+                draw_chest(canvas, mx, my + 14, 1.4, self.chest_color, 0.0, 0.0, t)
 
         # 4) 입자
         drip_col = lerp_color(pal["wave_light"], (255, 255, 255), 0.4)

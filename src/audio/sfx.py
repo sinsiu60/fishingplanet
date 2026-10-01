@@ -538,6 +538,38 @@ def make_cue_lure(rng) -> np.ndarray:
     return tone * _env(int(RATE * sec), 0.002, 0.18) * 0.18
 
 
+def make_chest_open(rng) -> np.ndarray:
+    """상자 열림: 걸쇠 '딸깍' + 나무 뚜껑 '끼익'."""
+    out = np.zeros(int(RATE * 0.55))
+    latch = np.sin(2 * np.pi * 2200 * _t(0.03)) * _env(int(RATE * 0.03), 0.001, 0.006)
+    out[: len(latch)] += latch * 0.5
+    sec = 0.35
+    n = int(RATE * sec)
+    freq = 380 + 160 * np.linspace(0, 1, n) + rng.uniform(-20, 20, n)
+    saw = 2 * ((np.cumsum(freq) / RATE) % 1.0) - 1
+    creak = _lowpass(saw, 8) * np.sin(np.pi * np.linspace(0, 1, n)) * 0.18
+    s = int(RATE * 0.08)
+    out[s:s + n] += creak
+    return out
+
+
+def make_chest_legend(rng) -> np.ndarray:
+    """전설 상자: 낮은 울림 → 상승하는 금빛 아르페지오 → 큰 화음."""
+    sec = 2.2
+    out = np.zeros(int(RATE * sec))
+    boom = _sweep(70, 40, 0.8) * _env(int(RATE * 0.8), 0.01, 0.4) * 0.6
+    out[: len(boom)] += boom
+    notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568.0]
+    for i, f in enumerate(notes):
+        s = int(RATE * (0.35 + i * 0.09))
+        tone = np.sin(2 * np.pi * f * _t(0.5)) * _env(int(RATE * 0.5), 0.004, 0.25) * 0.18
+        out[s:s + len(tone)] += tone[: len(out) - s]
+    s = int(RATE * 0.95)
+    chord = make_chord(rng, [523.25, 659.25, 783.99, 1046.5, 1318.5], 1.2, 0.05, 1.5)
+    out[s:s + len(chord)] += chord[: len(out) - s] * 0.8
+    return out
+
+
 def make_flee(rng) -> np.ndarray:
     """놀라 도망: 작은 철썩 두 번."""
     a = make_splash(rng, 0.2) * 0.5
@@ -611,6 +643,8 @@ class Sfx:
             "cue_leap": make_cue_leap(rng),
             "cue_charge": make_cue_charge(rng),
             "cue_lure": make_cue_lure(rng),
+            "chest_open": make_chest_open(rng),
+            "chest_legend": make_chest_legend(rng),
         }
         for name, wave in bank.items():
             self.sounds[name] = self._to_sound(wave)

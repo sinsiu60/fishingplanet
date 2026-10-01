@@ -28,7 +28,7 @@ from src.ui import fight_fx, fight_hud, hud
 from src.ui import tutorial as tut
 
 HINTS = {
-    CastState.READY: "좌클릭 유지: 던지기   M: 지도   B: 상점   Tab: 도감   H: 도움말   ESC: 메뉴",
+    CastState.READY: "좌클릭 유지: 던지기  M: 지도  B: 상점  Tab: 도감  C: 상자  H: 도움말  ESC: 메뉴",
     CastState.CHARGING: "놓으면 던지기   우클릭: 취소",
     CastState.SWING: "",
     CastState.FLIGHT: "",
@@ -223,7 +223,7 @@ class FishingScene(Scene):
                 return
 
     def _cycle_debug(self, key: int) -> None:
-        """F3 물고기 고정 / F4 낚시터 / F5 날씨 (테스트용)."""
+        """F3 물고기 고정 / F4 낚시터 / F5 날씨 / F6 상자 지급 (테스트용)."""
         if key == pygame.K_F3:
             self.force_i = self.force_i + 1 if self.force_i + 1 < len(self.all_fish) else -1
             name = self.all_fish[self.force_i]["name"] if self.force_i >= 0 else "없음 (자연 출현)"
@@ -232,6 +232,12 @@ class FishingScene(Scene):
             i = (self.spot_ids.index(self.spot_id) + 1) % len(self.spot_ids)
             self._set_spot(self.spot_ids[i])
             self.toasts.show(f"[테스트] 낚시터: {self.spot['name']} (해금 무시)", INFO, 1.5, 11)
+        elif key == pygame.K_F6:
+            from src.save import treasure
+            self.debug_chest = (getattr(self, "debug_chest", -1) + 1) % len(treasure.GRADES)
+            grade = treasure.GRADES[self.debug_chest]
+            treasure.give_chest(self.save, grade)
+            self.toasts.show(f"[테스트] {treasure.grade_info(grade)['name']} 상자 지급 (C: 열기)", INFO, 1.5, 11)
         elif key == pygame.K_F5:
             w = self.weather_sys
             w.current = WEATHERS[(WEATHERS.index(w.current) + 1) % len(WEATHERS)]
@@ -275,7 +281,10 @@ class FishingScene(Scene):
                 self.open_menu("dex")
             elif event.key == pygame.K_m and self.can_open_menus():
                 self.open_menu("map")
-            elif event.key in (pygame.K_F3, pygame.K_F4, pygame.K_F5) and f is None and self.fish_cfg.get("debug_keys"):
+            elif event.key == pygame.K_c and self.can_open_menus():
+                self.open_menu("chest")
+            elif event.key in (pygame.K_F3, pygame.K_F4, pygame.K_F5, pygame.K_F6) and f is None \
+                    and self.fish_cfg.get("debug_keys"):
                 self._cycle_debug(event.key)
             elif event.key == pygame.K_t:
                 self.clock.fast = not self.clock.fast
@@ -320,6 +329,11 @@ class FishingScene(Scene):
                 return
             from src.scene.map_scene import MapScene
             self.game.scenes.push(MapScene(self.game, self))
+        elif which == "chest":
+            if not self.can_open_menus():
+                return
+            from src.scene.chest_scene import ChestScene
+            self.game.scenes.push(ChestScene(self.game, self))
         if self.reel_loop:
             self.sfx.loop(self.reel_loop, False)
             self.reel_loop = None
@@ -698,6 +712,8 @@ class FishingScene(Scene):
                 self.sfx.play("splash_small", 0.6)
             elif ev == "apex":
                 self.sfx.play("perfect", 0.5)
+                if self.landing.chest:
+                    self.sfx.play("coin", 0.9)  # 물고기가 상자를 물고 나왔다
                 if self.landing.tier == 2:
                     self.sfx.play("chord_rare", 0.9)
                 elif self.landing.tier >= 3:
@@ -705,9 +721,14 @@ class FishingScene(Scene):
                     self.sfx.play("chord_rare", 0.8)
                     self.shake_kick = 3.0
         if self.landing.done:
+            chest = self.landing.chest
             self.landing = None
             self.end_t = 0.0
             self.sfx.play("catch")
+            if chest:
+                from src.save import treasure
+                info = treasure.grade_info(chest)
+                self.toasts.show(f"{info['name']} 보물상자 획득! (C: 열기)", tuple(info["color"]), 3.0, 11)
 
     def _detect_flick(self, dt: float) -> None:
         """마우스를 짧은 시간에 좌우로 크게 움직이면 슬라이드(꺾기)."""
@@ -963,10 +984,13 @@ class FishingScene(Scene):
         elif ev == "caught":
             pose, _ = f.net_pose()
             shown = self._display_fish(f.fish)
-            self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46)
+            from src.save import treasure
+            self.chest_drop = treasure.roll_drop(self.save, f.fish, f.result["rank"])
+            self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46, chest=self.chest_drop)
             f.result["fish"] = shown
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
+            self.catch_news["chest"] = self.chest_drop
             self.game.save_now()
         elif ev.startswith("lost:"):
             self.save.record_loss()
