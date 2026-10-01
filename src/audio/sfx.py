@@ -164,6 +164,27 @@ def make_launch(rng) -> np.ndarray:
     return out
 
 
+def make_chord(rng, notes, sec: float, swell: float, shimmer: float) -> np.ndarray:
+    """희귀·전설 연출용 화음: 천천히 부풀었다 사라짐 + 반짝임."""
+    n = int(RATE * sec)
+    t = _t(sec)
+    out = np.zeros(n)
+    for i, f in enumerate(notes):
+        vib = 1 + 0.003 * np.sin(2 * np.pi * 5 * t + i)
+        out += np.sin(2 * np.pi * f * vib * t) * (0.5 / len(notes) ** 0.5)
+        out += np.sin(4 * np.pi * f * t) * (0.12 / len(notes) ** 0.5)
+    env = np.clip(t / swell, 0, 1) * np.exp(-np.maximum(t - swell, 0) / (sec * 0.45))
+    out *= env
+    if shimmer:
+        sp = np.zeros(n)
+        for _ in range(int(14 * shimmer)):
+            st = rng.integers(0, n - int(RATE * 0.05))
+            b = np.sin(2 * np.pi * rng.uniform(2500, 4200) * _t(0.05)) * _env(int(RATE * 0.05), 0.001, 0.015)
+            sp[st:st + len(b)] += b * 0.12
+        out += sp
+    return out * 0.8
+
+
 def make_miss(rng) -> np.ndarray:
     """실수: 낮은 쿵 + 줄 튕김."""
     sec = 0.35
@@ -286,6 +307,8 @@ class Sfx:
             "great": make_great(rng),
             "impact": make_impact(rng),
             "rise": make_rise(rng),
+            "chord_rare": make_chord(rng, [659.25, 830.61, 987.77, 1318.5], 1.4, 0.15, 1.0),
+            "chord_legend": make_chord(rng, [261.63, 392.0, 523.25, 659.25, 783.99, 1046.5], 2.4, 0.5, 2.0),
             "launch": make_launch(rng),
             "miss": make_miss(rng),
             "creak": make_creak(rng),

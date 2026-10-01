@@ -415,11 +415,20 @@ class FishingScene(Scene):
                 self.shake_kick = 2.0
             elif ev == "lift":
                 self.sfx.play("rise", 0.9)
+                if self.landing.tier >= 3:
+                    self.sfx.play("chord_legend", 0.9)   # 하늘이 어두워지며 금빛 기둥
+                    self.shake_kick = 1.5
             elif ev == "launch":
                 self.sfx.play("launch", 0.9)
                 self.sfx.play("splash_small", 0.6)
             elif ev == "apex":
                 self.sfx.play("perfect", 0.5)
+                if self.landing.tier == 2:
+                    self.sfx.play("chord_rare", 0.9)
+                elif self.landing.tier >= 3:
+                    self.sfx.play("impact", 1.0)
+                    self.sfx.play("chord_rare", 0.8)
+                    self.shake_kick = 3.0
         if self.landing.done:
             self.landing = None
             self.end_t = 0.0

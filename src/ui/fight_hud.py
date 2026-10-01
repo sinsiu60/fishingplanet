@@ -113,6 +113,16 @@ def draw_catch_info(canvas, result: dict, t: float) -> None:
         dy = int((1 - k) * -10)
         text(canvas, fish["name"], (w // 2, 24 + dy), RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 16, "center")
         text(canvas, f"{result['size']:.1f}cm", (w // 2, 44 + dy), (255, 255, 255), 16, "center")
+        # 희귀 이상: 희귀도 리본
+        if fish["rarity"] in ("rare", "legend"):
+            label = {"rare": "희귀", "legend": "★ 전설 ★"}[fish["rarity"]]
+            col = RARITY_COLOR[fish["rarity"]]
+            rw = 44 if fish["rarity"] == "rare" else 70
+            rect = pygame.Rect(0, 0, rw, 13)
+            rect.center = (w // 2, 62 + dy)
+            canvas.fill(lerp_color((20, 20, 30), col, 0.35), rect)
+            pygame.draw.rect(canvas, col, rect, 1)
+            text(canvas, label, rect.center, col, 11, "center")
     # 랭크 도장: 크게 날아와 쾅
     if t > STAMP_T:
         k = clamp((t - STAMP_T) / 0.14, 0, 1)

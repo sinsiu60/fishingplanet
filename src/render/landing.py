@@ -12,17 +12,30 @@ import pygame
 
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 from src.render.fish_draw import draw_fish_side, fish_colors
+from src.ui.fight_fx import big_text
 
 T_HIT = 0.22      # 뜰채가 물고기에 닿음
 T_SCOOP = 0.5     # 퍼 담기 끝
 T_LIFT = 1.25     # 끌어올리기 끝 → 튀어 오름 시작
-T_APEX = 1.7      # 공중 정점
-T_FLASH = 1.92    # 섬광 최대
-TOTAL = 2.1
 HIT_STOP = 0.07   # 닿는 순간 잠깐 멈춤
 
 RARITY_GLOW = {"common": (255, 245, 210), "uncommon": (150, 255, 170), "rare": (140, 200, 255),
                "legend": (255, 210, 90)}
+TIER = {"common": 0, "uncommon": 1, "rare": 2, "legend": 3}
+# 희귀도가 높을수록: 오르는 시간·정점 머무는 시간·회전 수가 늘어난다
+RISE_SEC = (0.45, 0.48, 0.55, 0.7)
+APEX_HOLD = (0.22, 0.27, 0.45, 0.95)
+SPINS = (1.0, 1.0, 1.5, 2.0)
+BANNER = {2: "희귀!", 3: "전설!"}
+
+
+def draw_star(canvas, x: float, y: float, r: float, color) -> None:
+    """4방향 반짝 별."""
+    x, y, r = int(x), int(y), max(1, int(r))
+    pygame.draw.line(canvas, color, (x - r, y), (x + r, y), 1)
+    pygame.draw.line(canvas, color, (x, y - r), (x, y + r), 1)
+    if r >= 3:
+        canvas.fill((255, 255, 255), (x - 1, y - 1, 2, 2))
 
 
 def _ease_out(k: float) -> float:
@@ -35,7 +48,7 @@ class LandingCinematic:
         self.fish = fish
         self.colors = fish_colors(fish)
         self.shape = fish.get("shape")
-        self.length = clamp(size_cm * 3.4, 80, 210)
+        self.length = clamp(size_cm * 3.4, 80, 165)
         self.t = 0.0
         self.x0 = start_x
         self.y0 = 200.0
@@ -45,14 +58,22 @@ class LandingCinematic:
         self.fired: set[str] = set()
         self.hold = 0.0
         self.glow = RARITY_GLOW.get(fish["rarity"], (255, 255, 255))
+        self.tier = TIER.get(fish["rarity"], 0)
+        self.t_apex = T_LIFT + RISE_SEC[self.tier]
+        self.t_flash = self.t_apex + APEX_HOLD[self.tier]
+        self.total = self.t_flash + 0.18
+        self.trail: list[list[float]] = []
+        self.rain = [[random.uniform(0, 480), random.uniform(-270, 0), random.uniform(40, 110), random.uniform(0, 6)]
+                     for _ in range(70)] if self.tier >= 3 else []
+        self.rings: list[float] = []
 
     @property
     def done(self) -> bool:
-        return self.t >= TOTAL
+        return self.t >= self.total
 
     def skip(self) -> None:
         if self.t > 0.3:
-            self.t = TOTAL
+            self.t = self.total
 
     # ───────────────────────── 틱 ─────────────────────────
     def update(self, dt: float) -> list[str]:
@@ -62,7 +83,8 @@ class LandingCinematic:
             self.hold -= dt
         else:
             self.t += dt
-        for key, at in (("hit", T_HIT), ("lift", T_SCOOP), ("launch", T_LIFT), ("apex", T_APEX), ("done", TOTAL)):
+        for key, at in (("hit", T_HIT), ("lift", T_SCOOP), ("launch", T_LIFT), ("apex", self.t_apex),
+                        ("done", self.total)):
             if self.t >= at and key not in self.fired:
                 self.fired.add(key)
                 events.append(key)
@@ -76,10 +98,14 @@ class LandingCinematic:
                                             random.uniform(0.4, 0.8)])
                 elif key == "apex":
                     fx, fy = self.fish_pos()
-                    for i in range(28):
-                        a = i / 28 * math.tau
-                        sp = random.uniform(60, 140)
-                        self.sparks.append([fx, fy, math.cos(a) * sp, math.sin(a) * sp, random.uniform(0.3, 0.6)])
+                    n = (28, 36, 56, 90)[self.tier]
+                    for i in range(n):
+                        a = i / n * math.tau
+                        sp = random.uniform(60, 140) * (1 + 0.25 * self.tier)
+                        self.sparks.append([fx, fy, math.cos(a) * sp, math.sin(a) * sp, random.uniform(0.3, 0.6 + 0.2 * self.tier)])
+                    # 희귀 이상: 충격파
+                    for i in range(max(0, self.tier - 1) * 2):
+                        self.rings.append(-i * 0.1)
         # 물방울: 끌어올리는 동안 그물에서 뚝뚝
         if T_HIT < self.t < T_LIFT + 0.2:
             nx, ny, r = self.net_pos()
@@ -100,6 +126,23 @@ class LandingCinematic:
             p[4] -= dt
         self.splash = [p for p in self.splash if p[4] > 0]
         self.sparks = [p for p in self.sparks if p[4] > 0]
+        # 고급 이상: 튀어 오를 때 반짝이 꼬리
+        if self.tier >= 1 and T_LIFT < self.t < self.t_flash:
+            fx, fy = self.fish_pos()
+            for _ in range(self.tier):
+                self.trail.append([fx + random.uniform(-14, 14), fy + random.uniform(-8, 8), random.uniform(0.3, 0.6)])
+        for p in self.trail:
+            p[1] += 12 * dt
+            p[2] -= dt
+        self.trail = [p for p in self.trail if p[2] > 0]
+        self.rings = [r + dt for r in self.rings if r < 0.6]
+        # 전설: 화면 전체 금가루
+        if self.t > T_SCOOP:
+            for d in self.rain:
+                d[1] += d[2] * dt
+                if d[1] > 275:
+                    d[1] = random.uniform(-40, -5)
+                    d[0] = random.uniform(0, 480)
         return events
 
     # ───────────────────────── 위치 계산 ─────────────────────────
@@ -124,7 +167,7 @@ class LandingCinematic:
             k = smoothstep((t - T_SCOOP) / (T_LIFT - T_SCOOP))
             return lerp(self.x0, 240, k), lerp(self.y0 - 20, 128, k), r
         # 튀어 오르면 뜰채는 아래로 빠짐
-        k = (t - T_LIFT) / (TOTAL - T_LIFT)
+        k = (t - T_LIFT) / (self.total - T_LIFT)
         return 240, 128 + 260 * k * k, r
 
     def fish_pos(self):
@@ -134,11 +177,11 @@ class LandingCinematic:
         if t < T_LIFT:
             nx, ny, r = self.net_pos()
             return nx, ny + r * 0.32
-        k = clamp((t - T_LIFT) / (T_APEX - T_LIFT), 0, 1)
+        k = clamp((t - T_LIFT) / (self.t_apex - T_LIFT), 0, 1)
         start_y = 128 + self.length * 0.58 * 0.32
         y = lerp(start_y, 78, _ease_out(k))
-        if t > T_APEX:
-            y += math.sin((t - T_APEX) * 6) * 2
+        if t > self.t_apex:
+            y += math.sin((t - self.t_apex) * 6) * 2
         return 240, y
 
     # ───────────────────────── 그리기 ─────────────────────────
@@ -161,18 +204,48 @@ class LandingCinematic:
                 yy = water_line + 3 + i * 6
                 canvas.fill(pal["wave_light"], (int((t * 30 + i * 50) % 80) + i * 60, yy, 22, 1))
 
-        # 2) 튀어 오를 때 뒤로 퍼지는 빛살
+        tier = self.tier
+        # 1-1) 전설: 끌어올리는 동안 하늘이 어두워지고 물에서 금빛 기둥이 솟음
+        if tier >= 3 and t > T_SCOOP:
+            dk = clamp((t - T_SCOOP) / 0.5, 0, 1) * (1 - clamp((t - self.t_flash) / 0.2, 0, 1))
+            dim = pygame.Surface((w, h))
+            dim.fill((10, 6, 20))
+            dim.set_alpha(int(150 * dk))
+            canvas.blit(dim, (0, 0))
+            nx0 = self.net_pos()[0]
+            pk = clamp((t - T_SCOOP) / 0.6, 0, 1)
+            pw = int(lerp(4, 70, pk) + math.sin(t * 20) * 3)
+            pillar = pygame.Surface((pw * 2, h), pygame.SRCALPHA)
+            for i in range(pw):
+                a = int(150 * (1 - i / pw) * dk)
+                pygame.draw.line(pillar, (255, 220, 120, a), (pw - i, 0), (pw - i, h))
+                pygame.draw.line(pillar, (255, 220, 120, a), (pw + i, 0), (pw + i, h))
+            canvas.blit(pillar, (nx0 - pw, 0))
+
+        # 2) 튀어 오를 때 뒤로 퍼지는 빛살 (희귀 이상은 반대로 도는 빛살 한 겹 더)
         if t > T_LIFT:
             k = clamp((t - T_LIFT) / 0.35, 0, 1)
             fx, fy = self.fish_pos()
-            sky = pal["sky_top"]
-            for i in range(14):
-                a = t * 0.8 + i * math.tau / 14
-                ln = 320 * k
-                col = lerp_color(sky, self.glow, 0.55 if i % 2 else 0.3)
-                pygame.draw.polygon(canvas, col, [(fx, fy), (fx + math.cos(a) * ln, fy + math.sin(a) * ln),
-                                                  (fx + math.cos(a + 0.13) * ln, fy + math.sin(a + 0.13) * ln)])
-            pygame.draw.circle(canvas, lerp_color(sky, self.glow, 0.7), (int(fx), int(fy)), int(30 * k + 6))
+            sky = pal["sky_top"] if tier < 3 else (30, 20, 40)
+            layers = [(14, 0.8, 0.55, 0.3)]
+            if tier >= 2:
+                layers.append((10, -1.3, 0.75, 0.45))
+            for n, speed, strong, weak in layers:
+                for i in range(n):
+                    a = t * speed + i * math.tau / n
+                    ln = (320 + 60 * tier) * k
+                    col = lerp_color(sky, self.glow, strong if i % 2 else weak)
+                    pygame.draw.polygon(canvas, col, [(fx, fy), (fx + math.cos(a) * ln, fy + math.sin(a) * ln),
+                                                      (fx + math.cos(a + 0.13) * ln, fy + math.sin(a + 0.13) * ln)])
+            pygame.draw.circle(canvas, lerp_color(sky, self.glow, 0.7), (int(fx), int(fy)), int((30 + 8 * tier) * k + 6))
+            # 희귀 이상: 주변에 별 반짝임
+            if tier >= 2:
+                for i in range(6 + tier * 4):
+                    a = i * 2.39 + t * 0.6
+                    rr = 50 + (i * 17) % 60
+                    tw = 0.5 + 0.5 * math.sin(t * 9 + i * 1.7)
+                    draw_star(canvas, fx + math.cos(a) * rr, fy + math.sin(a) * rr * 0.7, 1 + tw * (2 + tier),
+                              lerp_color(self.glow, (255, 255, 255), tw))
 
         # 3) 물고기 + 뜰채
         nx, ny, r = self.net_pos()
@@ -189,9 +262,9 @@ class LandingCinematic:
             self._draw_net(canvas, pal, nx, ny, r, in_net=True, fish=(fx, fy, flap))
         else:
             # 그물에서 튀어 올라 빙글
-            k = clamp((t - T_LIFT) / (T_APEX - T_LIFT), 0, 1)
-            spin = _ease_out(k) * math.tau * 1.0
-            scale = lerp(1.0, 1.25, _ease_out(k))
+            k = clamp((t - T_LIFT) / (self.t_apex - T_LIFT), 0, 1)
+            spin = _ease_out(k) * math.tau * SPINS[tier]
+            scale = lerp(1.0, 1.2 + 0.05 * tier, _ease_out(k))
             self._draw_net(canvas, pal, nx, ny, r, in_net=False, fish=None)
             draw_fish_side(canvas, fx, fy, self.length * scale, spin, self.colors, -1,
                            tail_wag=math.sin(t * 20) * (1 - k * 0.7), shape=self.shape)
@@ -205,16 +278,38 @@ class LandingCinematic:
             canvas.fill(drip_col, (int(x), int(y), s, s))
         for x, y, _, _, life in self.sparks:
             canvas.fill((255, 255, 255) if life > 0.25 else self.glow, (int(x), int(y), 2, 2))
+        for x, y, life in self.trail:
+            if life > 0.35:
+                draw_star(canvas, x, y, 2, (255, 255, 255))
+            else:
+                canvas.fill(self.glow, (int(x), int(y), 2, 2))
+        for x, y, _, ph in self.rain:
+            tw = 0.5 + 0.5 * math.sin(t * 8 + ph)
+            canvas.fill(lerp_color((200, 150, 40), (255, 240, 170), tw), (int(x), int(y), 2, 2 if tw > 0.5 else 1))
+        if self.rings:
+            fx, fy = self.fish_pos()
+            for age in self.rings:
+                if age < 0:
+                    continue
+                kk = age / 0.6
+                pygame.draw.circle(canvas, lerp_color(self.glow, (255, 255, 255), 1 - kk), (int(fx), int(fy)),
+                                   int(10 + kk * 160), max(1, int(3 * (1 - kk))))
+        # 희귀 이상: 정점에서 배너
+        if tier >= 2 and t > self.t_apex:
+            bk = t - self.t_apex
+            pop = 1.0 + 0.8 * math.exp(-bk * 12) * math.cos(bk * 25)
+            big_text(canvas, BANNER[tier], (w // 2, 214), self.glow, (2.2 if tier == 2 else 3.4) * max(0.5, pop),
+                     outline=True)
 
         # 5) 섬광: 닿는 순간 짧게, 마지막엔 하얗게 덮음
         flash = 0.0
         if T_HIT <= t < T_HIT + 0.12:
             flash = 0.55 * (1 - (t - T_HIT) / 0.12)
-        if t > T_APEX:
-            flash = max(flash, clamp((t - T_APEX) / (T_FLASH - T_APEX), 0, 1))
+        if t > self.t_flash - 0.22:
+            flash = max(flash, clamp((t - (self.t_flash - 0.22)) / 0.22, 0, 1))
         if flash > 0.01:
             fl = pygame.Surface((w, h))
-            fl.fill((255, 255, 250))
+            fl.fill((255, 245, 200) if tier >= 3 else (255, 255, 250))
             fl.set_alpha(int(255 * flash))
             canvas.blit(fl, (0, 0))
 

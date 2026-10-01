@@ -136,12 +136,12 @@ class JudgePopups:
             x = clamp(x, 60, canvas.get_width() - 60)
             if age > 0.85 and int(age * 20) % 2 == 0:
                 continue
-            _big_text(canvas, it["text"], (x, y), it["color"], scale, outline=it["kind"] in ("perfect", "good"))
+            big_text(canvas, it["text"], (x, y), it["color"], scale, outline=it["kind"] in ("perfect", "good"))
             if it["streak"] >= 2:
-                _big_text(canvas, f"×{it['streak']} 연속", (x, y + 14 * scale * 0.6 + 6), GOLD, 1.0, outline=True)
+                big_text(canvas, f"×{it['streak']} 연속", (x, y + 14 * scale * 0.6 + 6), GOLD, 1.0, outline=True)
 
 
-def _big_text(canvas, s: str, center, color, scale: float, outline: bool = False) -> None:
+def big_text(canvas, s: str, center, color, scale: float, outline: bool = False) -> None:
     """픽셀 느낌 그대로 키운 큰 글씨 (테두리 포함)."""
     font = get_font(16 if scale >= 1.5 else 11)
     img = font.render(s, False, color)

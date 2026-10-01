@@ -7,6 +7,8 @@ from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 
 DEFAULT_COLORS = {"body": [120, 130, 120], "belly": [220, 220, 210], "fin": [90, 100, 90], "stripe": None}
 RANK_COLORS = {"S": (255, 214, 90), "A": (150, 200, 255), "B": (140, 220, 150), "C": (190, 190, 190)}
+RARITY_GLOW = {"common": (255, 245, 210), "uncommon": (150, 255, 170), "rare": (140, 200, 255),
+               "legend": (255, 210, 90)}
 
 
 def fish_colors(fish: dict) -> dict:
@@ -268,13 +270,24 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
     shade.fill((8, 10, 24, 190))
     canvas.blit(shade, (0, 0))
     cx, cy = w // 2, 112
-    ray = lerp_color((40, 46, 80), rc, 0.25)
-    for i in range(12):
-        a = t * 0.4 + i * math.tau / 12
+    tier = {"common": 0, "uncommon": 1, "rare": 2, "legend": 3}.get(fish["rarity"], 0)
+    glow = RARITY_GLOW[fish["rarity"]]
+    if tier >= 3:
+        # 전설: 배경 전체가 금빛으로 물듦
+        gold = pygame.Surface((w, h))
+        gold.fill((90, 60, 10))
+        gold.set_alpha(110)
+        canvas.blit(gold, (0, 0))
+    ray_col = rc if tier < 2 else lerp_color(rc, glow, 0.6)
+    ray = lerp_color((40, 46, 80), ray_col, 0.25 + 0.12 * tier)
+    for i in range(12 + 4 * tier):
+        a = t * 0.4 + i * math.tau / (12 + 4 * tier)
         pts = [(cx, cy),
                (cx + math.cos(a) * 300, cy + math.sin(a) * 300),
                (cx + math.cos(a + 0.12) * 300, cy + math.sin(a + 0.12) * 300)]
         pygame.draw.polygon(canvas, ray, pts)
+    if tier >= 2:
+        pygame.draw.circle(canvas, lerp_color((40, 46, 80), glow, 0.45), (cx, cy), 70 + int(4 * math.sin(t * 3)))
 
     lo, hi = fish["size_cm"]
     k = clamp((result["size"] - lo) / max(1, hi - lo), 0, 1.2)
@@ -302,6 +315,27 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
         sleeve = [(hx - 12, hy + 6), (hx + 12, hy + 6), (hx + 12 + out * 34, h + 60), (hx - 12 + out * 34, h + 60)]
         pygame.draw.polygon(canvas, (60, 80, 120), sleeve)
         pygame.draw.line(canvas, (44, 60, 94), (hx + out * 10, hy + 8), (hx + out * 44, h), 2)
+    # 희귀 이상: 별 반짝임 / 전설: 금가루 + 금테
+    if tier >= 2:
+        for i in range(10 + 6 * tier):
+            a = i * 2.39 + t * 0.3
+            rr = 70 + (i * 23) % 90
+            tw = 0.5 + 0.5 * math.sin(t * 7 + i * 1.3)
+            sx, sy = int(cx + math.cos(a) * rr * 1.4), int(cy + math.sin(a) * rr * 0.8)
+            r = int(1 + tw * (1 + tier))
+            col = lerp_color(glow, (255, 255, 255), tw)
+            pygame.draw.line(canvas, col, (sx - r, sy), (sx + r, sy), 1)
+            pygame.draw.line(canvas, col, (sx, sy - r), (sx, sy + r), 1)
+    if tier >= 3:
+        for i in range(60):
+            x = (i * 73 + int(math.sin(i) * 40)) % w
+            y = (t * (40 + i % 5 * 15) + i * 37) % (h + 20) - 10
+            tw = 0.5 + 0.5 * math.sin(t * 8 + i)
+            canvas.fill(lerp_color((200, 150, 40), (255, 240, 170), tw), (x, int(y), 2, 2 if tw > 0.5 else 1))
+        pulse = 0.6 + 0.4 * math.sin(t * 4)
+        frame = lerp_color((150, 100, 20), (255, 220, 110), pulse)
+        pygame.draw.rect(canvas, frame, (2, 2, w - 4, h - 4), 2)
+        pygame.draw.rect(canvas, lerp_color(frame, (60, 40, 0), 0.5), (6, 6, w - 12, h - 12), 1)
     # 연출에서 넘어온 하얀 섬광이 걷힘
     if t < 0.25:
         fl = pygame.Surface((w, h))
