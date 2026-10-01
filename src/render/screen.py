@@ -12,6 +12,11 @@ class PixelScreen:
         self.canvas = pygame.Surface((width, height))
         self.scale = scale or self._best_scale()
         self.shake = (0, 0)  # 화면 흔들림 (캔버스 픽셀)
+        try:
+            from src.render.icon import icon_surface
+            pygame.display.set_icon(icon_surface(32))  # set_mode 전에 해야 작업표시줄에도 적용
+        except pygame.error:
+            pass
         self.window = pygame.display.set_mode((width * self.scale, height * self.scale))
         pygame.display.set_caption(title)
 

@@ -8,6 +8,7 @@ import math
 
 import pygame
 
+from src.core.config import load_json
 from src.ui.hud import SHADOW, text, wrap_text
 
 CARDS = {
@@ -84,8 +85,8 @@ HELP_CONTROLS = [
     ("드랙", "Q 낮추기 / E 올리기 / 휠"),
     ("버티기·꺾기", "마우스를 반대쪽으로 / 꺾는 순간 확 슬라이드"),
     ("기타", "우클릭: 줄 회수  T: 시간 가속  F1: 수치  F2: 흔들림"),
-    ("테스트", "F3: 물고기 고정  F4: 낚시터  F5: 날씨"),
 ]
+DEBUG_CONTROLS = ("테스트", "F3: 물고기 고정  F4: 낚시터  F5: 날씨")
 HELP_SIGNALS = [
     ("꼬리 물보라", "돌진", "드랙 낮추기 (빨강이면 감기 멈춤)"),
     ("그림자 커짐 + 기포", "점프", "원이 겹칠 때 우클릭"),
@@ -181,7 +182,8 @@ def draw_help(canvas) -> None:
     yy = y + 24
     text(canvas, "조작", (x + 10, yy), (150, 200, 255), 11)
     yy += 13
-    for name, desc in HELP_CONTROLS:
+    controls = HELP_CONTROLS + ([DEBUG_CONTROLS] if load_json("fishing_config.json").get("debug_keys") else [])
+    for name, desc in controls:
         text(canvas, name, (x + 14, yy), (255, 240, 200), 11)
         text(canvas, desc, (x + 100, yy), (230, 232, 240), 11)
         yy += 12

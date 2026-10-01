@@ -192,7 +192,7 @@
     },
     "s_size_bonus": 0.1
   },
-  "debug_keys": true,
+  "debug_keys": false,
   "_debug_설명": "debug_keys: F3 물고기 고정 / F4 낚시터 / F5 날씨 테스트 키 (배포 전 false). debug_force_fish: 항상 이 물고기.",
   "legend": {
     "_설명": "전설: 조건(시간·날씨·전용 미끼·거리)이 맞으면 캐스트당 chance 확률로 등장. phase_at = 페이즈 전환 체력 비율.",

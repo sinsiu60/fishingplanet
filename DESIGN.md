@@ -441,7 +441,7 @@ S ≥ 100   A ≥ 85   B ≥ 65   C 그 외
 | F1 | 디버그 표시 (장력·스태미나·상태·판정 구간 수치) |
 | F2 | 화면 연출(흔들림·줌) 켜기/끄기 (Phase 5 설정 화면 전까지 임시) |
 | H | 도움말 (조작법 + 예고 신호 표) |
-| F3 / F4 / F5 | (테스트용) 물고기 고정 / 낚시터 전환 / 날씨 전환 — 대기 중에만 |
+| F3 / F4 / F5 | (테스트용) 물고기 고정 / 낚시터 전환 / 날씨 전환 — 대기 중에만. `fishing_config.json`의 `debug_keys: true`일 때만 (배포본은 false) |
 | T | (테스트용) 시간 빠르게 |
 
 ---
@@ -559,8 +559,11 @@ fishingplanet/
 ├── main.py                 # 진입점
 ├── run.bat                 # 더블클릭 실행 (가상환경 없으면 setup.bat 자동 호출)
 ├── setup.bat               # .venv 생성 + requirements 설치
-├── build.bat               # (Phase 8) PyInstaller 빌드
+├── build.bat               # (Phase 8) PyInstaller 빌드 → dist/FishingGame/
 ├── requirements.txt
+├── requirements-build.txt  # pyinstaller (빌드할 때만)
+├── dist_readme.txt         # 배포 폴더에 README.txt로 복사
+├── tools/make_icon.py      # 물고기 아이콘 → build/icon.ico (Pillow 없이 ICO 직접 기록)
 ├── DESIGN.md
 ├── data/
 │   ├── game_config.json     # 해상도, 틱, 창 제목
@@ -619,6 +622,15 @@ fishingplanet/
 | **5** | 장비 + 상점 + 도감 + 저장 | 장비 수치 반영, 상점·도감 화면, 슬롯 3개 저장, 시작 메뉴·설정 ✅ |
 | **6** | 낚시터 + 시간대 + 날씨 | 5곳 배경·환경음, 지도 화면, 날씨 연출, 출현 테이블, 환경 파티클 ✅ |
 | **7** | 전설 + 연출 마감 | 전설 6마리 페이즈, 전용 BGM, 비밀 장소, 엔딩 + 통계, 전환 페이드 ✅ |
-| **8** | exe 배포 | `build.bat` → `dist/FishingGame/`, 콘솔 없음, 물고기 아이콘 |
+| **8** | exe 배포 | `build.bat` → `dist/FishingGame/`(onedir), 콘솔 없음, 코드 생성 물고기 아이콘, 크래시 로그, 디버그 키 OFF ✅ |
 
 > ⚠️ Phase 3이 이 게임의 전부. 최소 20판 플레이 후 "왜 졌는지 아는가?", "퍼펙트가 기분 좋은가?"가 둘 다 YES면 다음으로.
+
+## 15. 배포 (Phase 8)
+
+- `build.bat` 더블클릭 → `.venv` 확인 → PyInstaller 설치 → 아이콘 생성 → 빌드 → `dist\FishingGame\` 폴더가 열림
+- **onedir** 방식: `FishingGame.exe` + `_internal\`(파이썬·pygame·numpy·`data\`). 시작이 빠르고 백신 오탐이 onefile보다 적다.
+- 경로: 읽기 전용 `data\`는 `sys._MEIPASS`(= `_internal`), 세이브·설정·`crash.log`는 `내 문서\FishingPlanet` (exe 폴더가 Program Files여도 쓰기 가능)
+- `--windowed`라 콘솔이 없으므로, 예외가 나면 `crash.log`에 기록하고 메시지 박스로 알린다.
+- 아이콘: `src/render/icon.py`가 32×32 픽셀아트 물고기를 그림 → 창/작업표시줄 아이콘(`set_icon`)과 `.ico`(16~256px 7종) 둘 다 같은 그림.
+- 폰트는 Windows 기본 맑은 고딕을 쓰므로 따로 포함하지 않는다.
