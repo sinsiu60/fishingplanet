@@ -1,0 +1,8 @@
+{
+  "title": "낚시 게임",
+  "width": 480,
+  "height": 270,
+  "scale": null,
+  "tick_rate": 60,
+  "fps_cap": 144
+}
