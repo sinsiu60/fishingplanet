@@ -52,6 +52,7 @@ def start_game(game, save: SaveGame) -> None:
     game.save.save()
     game.scenes.stack.clear()
     game.scenes.push(FishingScene(game))
+    game.fade_in(0.7)
 
 
 class TitleScene(Scene):

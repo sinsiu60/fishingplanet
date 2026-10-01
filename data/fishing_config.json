@@ -123,7 +123,9 @@
     "ink_sec": 4.0,
     "payout_max_speed": 3.5,
     "par_power_weight": 0.5,
-    "hook_slack_power_min": 0.4
+    "hook_slack_power_min": 0.4,
+    "net_min_stamina": 0.35,
+    "net_min_stamina_legend": 0.2
   },
   "fish_ai": {
     "_설명": "물고기 행동 공통 수치. 종별 값은 fish.json이 우선.",
@@ -190,5 +192,19 @@
     "s_size_bonus": 0.1
   },
   "debug_keys": true,
-  "_debug_설명": "debug_keys: F3 물고기 고정 / F4 낚시터 / F5 날씨 테스트 키 (배포 전 false). debug_force_fish: 항상 이 물고기."
+  "_debug_설명": "debug_keys: F3 물고기 고정 / F4 낚시터 / F5 날씨 테스트 키 (배포 전 false). debug_force_fish: 항상 이 물고기.",
+  "legend": {
+    "_설명": "전설: 조건(시간·날씨·전용 미끼·거리)이 맞으면 캐스트당 chance 확률로 등장. phase_at = 페이즈 전환 체력 비율.",
+    "chance": 0.25,
+    "min_distance": 25,
+    "approach_mult": 1.6,
+    "shadow_scale": 2.2,
+    "phase_at": [
+      0.6,
+      0.25
+    ],
+    "phase_pause_sec": 1.4,
+    "phase_slowmo_real": 0.6,
+    "phase_slowmo_scale": 0.35
+  }
 }

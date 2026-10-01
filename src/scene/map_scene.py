@@ -47,6 +47,7 @@ class MapScene(Scene):
         self.fishing = fishing
         self.save = game.save
         self.mouse = (0, 0)
+        self.age = 0.0  # 열림 애니메이션
         self.spots = load_json("spots.json")["spots"]
         self.sel = next(i for i, s in enumerate(self.spots) if s["id"] == fishing.spot_id)
         self.t = 0.0
@@ -76,6 +77,7 @@ class MapScene(Scene):
             self.fishing.travel(sp["id"])
             self.game.sfx.play("splash_small", 0.6)
             self.game.scenes.pop()
+            self.game.fade_in(0.8)
             return
         ok, _ = unlock_status(self.save, sp)
         if ok:
@@ -84,6 +86,11 @@ class MapScene(Scene):
             self.game.sfx.play("coin")
             self.game.sfx.play("catch", 0.7)
             self._say(f"{sp['name']} 해금!", ui.GOOD)
+            if sp["id"] == "secret" and not self.save.owns("bait", "dragon_pearl"):
+                # 최종 전설을 부르는 미끼
+                self.save.data["owned"]["bait"].append("dragon_pearl")
+                self.game.sfx.play("chord_legend", 0.7)
+                self._say("용문 폭포 해금! 여의주를 얻었다", (255, 214, 90))
             self.game.save_now()
 
     def _rest(self) -> None:
@@ -106,6 +113,7 @@ class MapScene(Scene):
                     self.game.sfx.play("click")
 
     def update(self, dt: float) -> None:
+        self.age += dt
         self.t += dt
         self.msg_t = max(0.0, self.msg_t - dt)
         self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
@@ -117,7 +125,7 @@ class MapScene(Scene):
     # ───────────────────────── 그리기 ─────────────────────────
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)
-        ui.dim(canvas, 170)
+        ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
         ui.panel(canvas, (6, 6, 468, 260))
         text(canvas, "지도", (14, 16), ui.ACCENT, 16, "midleft")
         text(canvas, f"소지금 {ui.money_text(self.save.money)} · 도감 {self.save.dex_count()}/{len(all_fish())}",

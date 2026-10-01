@@ -57,6 +57,7 @@ class ShopScene(Scene):
         self.fishing = fishing
         self.save = game.save
         self.mouse = (0, 0)
+        self.age = 0.0  # 열림 애니메이션
         self.tabs = ui.Tabs(16, 30, [t[1] for t in TABS], width=58)
         self.sel = 0
         self.scroll = 0
@@ -144,13 +145,14 @@ class ShopScene(Scene):
                     self.game.sfx.play("click")
 
     def update(self, dt: float) -> None:
+        self.age += dt
         self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
         self.msg_t = max(0.0, self.msg_t - dt)
 
     # ── 그리기 ──
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)
-        ui.dim(canvas, 170)
+        ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
         ui.panel(canvas, (8, 6, 464, 258))
         text(canvas, "상점", (16, 16), ui.ACCENT, 16, "midleft")
         text(canvas, f"소지금 {ui.money_text(self.save.money)}", (464, 16), ui.ACCENT, 11, "midright")

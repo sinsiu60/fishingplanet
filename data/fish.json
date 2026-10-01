@@ -448,7 +448,31 @@
    "hint10": "마지막엔 가짜 지침. 기포가 계속 올라오면 가짜다.",
    "bait": "golden_paste",
    "cover_bias": 0.5,
-   "phases": null
+   "phases": [
+    {
+     "desc": "물살을 가르며 좌우로 휘젓는다",
+     "telegraph_sec": 0.9
+    },
+    {
+     "desc": "방향 전환이 두 번씩 이어진다!",
+     "telegraph_sec": 0.75,
+     "turn_chain": [
+      2,
+      2
+     ],
+     "actions": {
+      "turn": 55,
+      "rush": 25,
+      "charge": 10,
+      "jump": 10
+     }
+    },
+    {
+     "desc": "지친 척을 한다! 기포를 잘 보라",
+     "telegraph_sec": 0.6,
+     "fake_tired": 0.7
+    }
+   ]
   },
   {
    "id": "pale_chub",
@@ -841,7 +865,31 @@
    "hint10": "마지막엔 예고 0.5초의 도주→점프 콤보.",
    "bait": "golden_spinner",
    "cover_bias": 0.9,
-   "phases": null
+   "phases": [
+    {
+     "desc": "바위 틈으로 파고들려 한다",
+     "telegraph_sec": 0.8
+    },
+    {
+     "desc": "바위에서 바위로 연달아 도주한다!",
+     "telegraph_sec": 0.65,
+     "turn_chain": [
+      2,
+      2
+     ],
+     "cover_bias": 0.95
+    },
+    {
+     "desc": "도주하자마자 뛰어오른다!",
+     "telegraph_sec": 0.5,
+     "combo": {
+      "turn": [
+       "jump",
+       0.75
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "goby",
@@ -1234,7 +1282,30 @@
     1,
     2
    ],
-   "phases": null
+   "phases": [
+    {
+     "desc": "은빛 몸을 번뜩이며 뛰어오른다",
+     "telegraph_sec": 0.7
+    },
+    {
+     "desc": "두 번 연속 점프! 두 번째 원까지",
+     "telegraph_sec": 0.55,
+     "jump_chain": [
+      2,
+      2
+     ]
+    },
+    {
+     "desc": "번개가 칠 때마다 뛰어오른다!",
+     "telegraph_sec": 0.45,
+     "lightning_cue": true,
+     "actions": {
+      "jump": 70,
+      "turn": 20,
+      "rush": 10
+     }
+    }
+   ]
   },
   {
    "id": "jack_mackerel",
@@ -1704,7 +1775,41 @@
      0.6
     ]
    },
-   "phases": null
+   "phases": [
+    {
+     "desc": "바다 끝까지 질주한다",
+     "telegraph_sec": 0.6,
+     "actions": {
+      "rush": 70,
+      "jump": 20,
+      "turn": 10
+     }
+    },
+    {
+     "desc": "뛰어오르자마자 질주! 드랙을 낮춰라",
+     "telegraph_sec": 0.5,
+     "combo": {
+      "jump": [
+       "rush",
+       0.9
+      ]
+     }
+    },
+    {
+     "desc": "꼬리로 수면을 세 번 내려친다! 박자를 맞춰라",
+     "telegraph_sec": 0.4,
+     "jump_chain": [
+      3,
+      3
+     ],
+     "jump_height_m": 0.45,
+     "actions": {
+      "jump": 65,
+      "rush": 25,
+      "turn": 10
+     }
+    }
+   ]
   },
   {
    "id": "blackthroat",
@@ -2082,7 +2187,28 @@
    "hint3": "체력이 매우 많다.",
    "hint10": "어둠 속에서 그림자가 사라지고, 마지막엔 가짜 지침.",
    "bait": "glow_bait",
-   "phases": null
+   "phases": [
+    {
+     "desc": "심연의 무게로 버틴다",
+     "telegraph_sec": 0.6
+    },
+    {
+     "desc": "어둠이 그림자를 삼킨다! 줄과 소리로 읽어라",
+     "telegraph_sec": 0.5,
+     "dark": true
+    },
+    {
+     "desc": "지친 척하다 질주한다! 지느러미 빛을 보라",
+     "telegraph_sec": 0.4,
+     "dark": false,
+     "fake_tired": 0.6,
+     "actions": {
+      "rush": 50,
+      "turn": 30,
+      "charge": 20
+     }
+    }
+   ]
   },
   {
    "id": "galaxy_trout",
@@ -2278,7 +2404,42 @@
     3
    ],
    "fake_tired": 0.3,
-   "phases": null
+   "phases": [
+    {
+     "desc": "폭포의 주인이 깨어났다",
+     "telegraph_sec": 0.6
+    },
+    {
+     "desc": "폭포를 거슬러 오른다! 세 번 연속 점프",
+     "telegraph_sec": 0.5,
+     "jump_chain": [
+      3,
+      3
+     ],
+     "actions": {
+      "jump": 60,
+      "rush": 20,
+      "turn": 20
+     }
+    },
+    {
+     "desc": "용이 되었다!!",
+     "telegraph_sec": 0.35,
+     "dragon": true,
+     "fake_tired": 0.45,
+     "combo": {
+      "rush": [
+       "turn",
+       0.8
+      ]
+     },
+     "actions": {
+      "rush": 40,
+      "turn": 30,
+      "jump": 30
+     }
+    }
+   ]
   }
  ]
 }

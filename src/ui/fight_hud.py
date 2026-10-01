@@ -74,7 +74,18 @@ def draw_boss_bar(canvas, pal, fight) -> None:
     x = (w - bw) // 2
     y = 20
     fish = fight.fish
-    text(canvas, fish["name"], (x - 6, y + 3), RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 11, "midright")
+    name = fish["name"]
+    if fight.brain.dragon:
+        name = "용 '등용'"
+    text(canvas, name, (x - 6, y + 3), RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 11, "midright")
+    phases = fight.brain.phases
+    if phases:
+        # 페이즈 표시: ◆◆◇
+        for i in range(len(phases)):
+            cx = x + bw // 2 - (len(phases) - 1) * 6 + i * 12
+            cy = y + 13
+            col = (255, 214, 90) if i <= fight.brain.phase else (80, 70, 50)
+            pygame.draw.polygon(canvas, col, [(cx, cy - 3), (cx + 3, cy), (cx, cy + 3), (cx - 3, cy)])
     canvas.fill(SHADOW, (x - 1, y - 1, bw + 2, bh + 2))
     canvas.fill((50, 30, 36), (x, y, bw, bh))
     canvas.fill((235, 90, 80), (x, y, int(bw * fight.stamina_frac), bh))

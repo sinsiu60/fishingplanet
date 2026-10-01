@@ -40,6 +40,8 @@ class ScreenFX:
         self.focus = (width / 2, height / 2)
         self.punch = 0.0          # 퍼펙트 줌 펀치
         self.sway = 0             # 배 위: 1이면 화면이 천천히 출렁
+        self.legend = False       # 전설 등장 중: 금빛 테두리 맥동
+        self.v_legend = 0.0
         self.enabled = True
         # 테두리 효과 세기 0~1
         self.v_rush = self.v_jump = self.v_charge = self.v_tired = self.v_red = 0.0
@@ -168,6 +170,7 @@ class ScreenFX:
         self.v_tired = lerp(self.v_tired, tgt["tired"], fe)
         self.v_red = lerp(self.v_red, tgt["red"], fe)
         self.v_turn = lerp(self.v_turn, tgt["turn"], fe)
+        self.v_legend = lerp(self.v_legend, 1.0 if self.legend else 0.0, 1 - math.exp(-dt / 0.6))
 
         # 집중선: 돌진 중 가장자리에서 중심으로 뻗는 선
         if self.v_rush > 0.25:
@@ -221,6 +224,9 @@ class ScreenFX:
     def draw_edges(self, canvas: pygame.Surface) -> None:
         t = self.t
         w, h = self.w, self.h
+        if self.v_legend > 0.02:
+            pulse = 0.55 + 0.45 * math.sin(t * 2.2)
+            self._blit_vignette(canvas, (255, 196, 70), self.v_legend * 0.45 * pulse)
         if self.v_red > 0.02:
             pulse = 0.75 + 0.25 * math.sin(t * 14)
             self._blit_vignette(canvas, COL_RED, self.v_red * pulse)

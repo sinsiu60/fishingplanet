@@ -18,6 +18,13 @@ stamina가 0이면: exhausted (끝까지 저항 거의 없음)
   charge_rush_mult      힘 모으기 뒤 돌진의 힘 배율
   fake_tired 0~1        지칠 때 '가짜 지침'일 확률 (단서: 기포가 계속 올라옴)
   ink 0~1               돌진 후 먹물을 뿜을 확률 (그림자 신호를 가림)
+
+전설 (phases): 체력 비율이 phase_at 아래로 떨어지면 다음 페이즈 값으로 덮어쓴다.
+  전환 순간에는 잠깐 행동을 멈춘다 (숨 돌릴 틈). 추가 필드:
+  dark            그림자 신호가 사라짐 (줄·소리로 읽기)
+  lightning_cue   점프 예고마다 번개가 친다 (번개 = 박자)
+  jump_height_m   점프 높이 (꼬리 연타는 낮게)
+  dragon          용으로 변신 (연출)
 """
 import random
 
@@ -34,23 +41,16 @@ STATE_NAMES = {
 class FishBrain:
     def __init__(self, fish: dict, rnd: random.Random | None = None):
         self.fish = fish
-        self.cfg = load_json("fishing_config.json")["fish_ai"]
+        root = load_json("fishing_config.json")
+        self.cfg = root["fish_ai"]
+        self.legend_cfg = root["legend"]
         self.rnd = rnd or random.Random()
         cfg = self.cfg
-        self.telegraph_sec = fish.get("telegraph_sec", 1.0)
-        self.actions = fish.get("actions", {"rush": 1})
-        self.tired_range = fish.get("tired_sec", cfg["tired_sec"])
-        self.rush_sec = fish.get("rush_sec", cfg["rush_sec"])
-        self.turn_sec = fish.get("turn_sec", cfg["turn_sec"])
-        self.turn_speed = fish.get("turn_speed", cfg["turn_speed"])
-        self.charge_range = fish.get("charge_sec", cfg["charge_sec"])
-        self.jump_chain = fish.get("jump_chain", [1, 1])
-        self.turn_chain = fish.get("turn_chain", [1, 1])
-        self.combo = fish.get("combo", {})
-        self.cover_bias = fish.get("cover_bias", 0.0)
-        self.charge_rush_mult = fish.get("charge_rush_mult", 1.0)
-        self.fake_tired_p = fish.get("fake_tired", 0.0)
-        self.ink_p = fish.get("ink", 0.0)
+        self.phases = fish.get("phases") or []
+        self.phase = 0
+        self._load_params(fish)
+        if self.phases:
+            self._load_params({**fish, **self.phases[0]})
         self.state = "idle"
         self.pending: str | None = None   # telegraph 중일 때 다음 행동
         self.cur_telegraph = self.telegraph_sec
@@ -67,6 +67,51 @@ class FishBrain:
 
     def _rand(self, pair) -> float:
         return self.rnd.uniform(pair[0], pair[1])
+
+    def _load_params(self, src: dict) -> None:
+        cfg = self.cfg
+        self.telegraph_sec = src.get("telegraph_sec", 1.0)
+        self.actions = src.get("actions", {"rush": 1})
+        self.tired_range = src.get("tired_sec", cfg["tired_sec"])
+        self.rush_sec = src.get("rush_sec", cfg["rush_sec"])
+        self.turn_sec = src.get("turn_sec", cfg["turn_sec"])
+        self.turn_speed = src.get("turn_speed", cfg["turn_speed"])
+        self.charge_range = src.get("charge_sec", cfg["charge_sec"])
+        self.jump_chain = src.get("jump_chain", [1, 1])
+        self.turn_chain = src.get("turn_chain", [1, 1])
+        self.combo = src.get("combo", {})
+        self.cover_bias = src.get("cover_bias", 0.0)
+        self.charge_rush_mult = src.get("charge_rush_mult", 1.0)
+        self.fake_tired_p = src.get("fake_tired", 0.0)
+        self.ink_p = src.get("ink", 0.0)
+        self.dark = src.get("dark", False)
+        self.lightning_cue = src.get("lightning_cue", False)
+        self.jump_height = src.get("jump_height_m", cfg["jump_height_m"])
+        self.dragon = src.get("dragon", False)
+
+    @property
+    def phase_desc(self) -> str:
+        return self.phases[self.phase].get("desc", "") if self.phases else ""
+
+    def _check_phase(self, stamina_frac: float) -> None:
+        """전설: 체력이 기준 아래로 떨어지면 다음 페이즈로 (점프 중이면 착수 뒤에)."""
+        if not self.phases or self.phase >= len(self.phases) - 1 or self.state in ("jump", "exhausted"):
+            return
+        threshold = self.legend_cfg["phase_at"][self.phase]
+        if stamina_frac > threshold:
+            return
+        self.phase += 1
+        # 이전 페이즈 값 위에 새 페이즈 값을 쌓는다
+        merged = dict(self.fish)
+        for ph in self.phases[: self.phase + 1]:
+            merged.update(ph)
+        self._load_params(merged)
+        self.pending = None
+        self.chain_left = 0
+        self.chain_action = None
+        self.burst = max(self.burst, 0.8)
+        self._enter("idle", self.legend_cfg["phase_pause_sec"])  # 숨 돌릴 틈
+        self.events.append(f"phase:{self.phase + 1}")
 
     # ── 조회 ──
     @property
@@ -183,9 +228,10 @@ class FishBrain:
         else:
             self._begin_telegraph(action)
 
-    def update(self, dt: float, stamina_empty: bool) -> None:
+    def update(self, dt: float, stamina_empty: bool, stamina_frac: float = 1.0) -> None:
         self.state_t += dt
         self.timer -= dt
+        self._check_phase(stamina_frac)
         if self.state == "exhausted":
             return
         if stamina_empty and self.state not in ("jump",):

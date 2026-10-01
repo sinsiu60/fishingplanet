@@ -9,7 +9,7 @@ from src.core.mathutil import clamp, lerp, lerp_color, scale_color
 KEEP = ("text", "bobber", "bobber_base")
 
 
-def themed_palette(pal: dict, theme: dict, weather: str, flash: float = 0.0) -> dict:
+def themed_palette(pal: dict, theme: dict, weather: str, flash: float = 0.0, legend: float = 0.0) -> dict:
     """시간대 팔레트에 낚시터 물색·어두움, 날씨 색감, 번개 섬광을 입힌다."""
     out = dict(pal)
     k = theme.get("tint_k", 0.0)
@@ -32,6 +32,12 @@ def themed_palette(pal: dict, theme: dict, weather: str, flash: float = 0.0) -> 
         out["stars"] = 0.0
         out["reflect"] = out["reflect"] * 0.25
         out["cloud"] = lerp_color(out["sky_top"], (80, 84, 96) if weather == "rain" else (30, 32, 44), 0.6)
+    if legend > 0:
+        # 전설 등장: 하늘·물이 보랏빛 황혼처럼 물든다
+        for key, v in out.items():
+            if isinstance(v, tuple) and key not in KEEP:
+                out[key] = lerp_color(v, (70, 36, 96), 0.22 * legend)
+        out["wave_light"] = lerp_color(out["wave_light"], (255, 214, 120), 0.3 * legend)
     if flash > 0:
         for key, v in out.items():
             if isinstance(v, tuple) and key not in KEEP:
@@ -99,18 +105,26 @@ class Lightning:
         self.timer -= dt
         if self.timer <= 0:
             self.timer = random.uniform(5, 12)
-            self.flash = 1.0
-            self.bolt_t = 0.18
-            x = random.uniform(40, width - 40)
-            pts = [(x, 0)]
-            y = 0
-            while y < horizon - 4:
-                y += random.uniform(8, 18)
-                x += random.uniform(-12, 12)
-                pts.append((x, min(y, horizon - 2)))
-            self.bolt = pts
-            self.thunder_in = random.uniform(0.3, 1.2)
-            self.events.append("strike")
+            self._strike(horizon, width)
+
+    def strike(self, horizon: int, width: int) -> None:
+        """강제로 번개 (전설 '번개'의 점프 박자)."""
+        self.timer = 0.0
+        self._strike(horizon, width)
+
+    def _strike(self, horizon: int, width: int) -> None:
+        self.flash = 1.0
+        self.bolt_t = 0.18
+        x = random.uniform(40, width - 40)
+        pts = [(x, 0)]
+        y = 0
+        while y < horizon - 4:
+            y += random.uniform(8, 18)
+            x += random.uniform(-12, 12)
+            pts.append((x, min(y, horizon - 2)))
+        self.bolt = pts
+        self.thunder_in = random.uniform(0.2, 0.5)
+        self.events.append("strike")
 
     def draw(self, canvas) -> None:
         if self.bolt_t > 0 and len(self.bolt) > 1:

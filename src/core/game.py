@@ -32,6 +32,8 @@ class Game:
         # 슬로우모션용 (퍼펙트 0.3초 슬로우 등). 틱 간격은 그대로, 쌓이는 시간만 줄인다.
         self.time_scale = 1.0
         self.slow_timer = 0.0  # 실제 시간 기준 남은 슬로우모션
+        self.fade = 0.0        # 화면 전환 페이드 인 (남은 시간)
+        self.fade_total = 1.0
         self.running = True
         self.max_frames = max_frames  # 자동 테스트용
         if start_scene is None:
@@ -42,6 +44,10 @@ class Game:
     def slowmo(self, real_sec: float, scale: float) -> None:
         self.slow_timer = real_sec
         self.time_scale = scale
+
+    def fade_in(self, sec: float = 0.5) -> None:
+        """검은 화면에서 서서히 밝아지는 전환."""
+        self.fade = self.fade_total = sec
 
     def to_canvas(self, pos) -> tuple[int, int]:
         x, y = self.screen.to_canvas(pos)
@@ -90,6 +96,11 @@ class Game:
 
             if self.scenes.current:
                 self.scenes.current.draw(self.screen.canvas)
+            if self.fade > 0:
+                self.fade = max(0.0, self.fade - frame_time)
+                veil = pygame.Surface(self.screen.canvas.get_size())
+                veil.set_alpha(int(255 * self.fade / self.fade_total))
+                self.screen.canvas.blit(veil, (0, 0))
             self.screen.present()
 
             frames += 1

@@ -41,6 +41,9 @@ INFO = (255, 235, 170)
 LOOK_STATES = (CastState.READY, CastState.LANDED)
 WEATHERS = ["clear", "rain", "storm"]
 GLOW = {"rare": (150, 210, 255), "legend": (255, 215, 100)}
+DRAGON_LOOK = {"colors": {"body": [200, 40, 40], "belly": [255, 214, 110], "fin": [255, 170, 40],
+                          "stripe": [255, 230, 140]},
+               "shape": {"height": 0.13, "whiskers": True, "dorsal": "crest", "tail": "fork", "pattern": "spots"}}
 
 # 튜토리얼 카드를 본 뒤 한 번 더 짧게 상기시킨다 (DESIGN.md 4장)
 TIPS = {
@@ -99,6 +102,8 @@ class FishingScene(Scene):
         self.lightning = Lightning()
         self.ambient = Ambient(canvas.get_width(), canvas.get_height(), self.cam.horizon)
         self.amb_loops: set[str] = set()
+        self.legend_on = False   # 전설 등장 중 (BGM·색감·금빛 테두리)
+        self.legend_k = 0.0
         self.catch_news: dict | None = None
         self.ink_t = 0.0
         self.fake_bubble_t = 0.0
@@ -137,6 +142,13 @@ class FishingScene(Scene):
     @property
     def weather(self) -> str:
         return self.weather_sys.current
+
+    def _display_fish(self, fish: dict) -> dict:
+        """용으로 변신한 '등용'은 붉은 용의 모습으로 그린다."""
+        f = self.fight
+        if f is not None and f.brain.dragon:
+            return {**fish, **DRAGON_LOOK}
+        return fish
 
     # ───────────────────────── 이동 · 휴식 ─────────────────────────
     def travel(self, spot_id: str) -> None:
@@ -236,6 +248,7 @@ class FishingScene(Scene):
             if event.key == pygame.K_h:
                 self.help = True
             elif event.key == pygame.K_ESCAPE and self.landing is None:
+                self.sfx.play("click")
                 from src.scene.pause import PauseScene
                 self.game.scenes.push(PauseScene(self.game, self))
             elif event.key == pygame.K_b and self.can_open_menus():
@@ -272,6 +285,7 @@ class FishingScene(Scene):
         return self.fight is None and self.cast.state in (CastState.READY, CastState.LANDED, CastState.RETRIEVE)
 
     def open_menu(self, which: str) -> None:
+        self.sfx.play("click")
         if which == "shop":
             if not self.can_open_menus():
                 return
@@ -354,6 +368,11 @@ class FishingScene(Scene):
         angle = math.atan2(c.bx, c.bz)
         self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(),
                            hazards=self.spot["hazards"])
+        if fish["rarity"] == "legend":
+            self.toasts.show(f"전설 등장! {fish['name']}", (255, 214, 90), 3.0)
+            self.sfx.play("impact", 1.0)
+            self.sfx.play("chord_legend", 0.7)
+            self.shake_kick = 2.5
         self.ink_t = 0.0
         self.bite.shadow = None
         self.end_t = 0.0
@@ -362,9 +381,15 @@ class FishingScene(Scene):
             self._open_card("fight_intro", "gauge")
 
     def _end_fight(self) -> None:
+        last = self.fight.result if self.fight is not None else None
         self.fight = None
         self.landing = None
         self._check_new_spots()
+        if last and last["fish"]["id"] == "dragon_carp" and not self.save.data.get("ending_seen"):
+            self.save.data["ending_seen"] = True
+            self.game.save_now()
+            from src.scene.ending import EndingScene
+            self.game.scenes.push(EndingScene(self.game, self))
         self.screen_fx.reset()
         self.bite.stop()
         self.cast.reset()
@@ -426,6 +451,7 @@ class FishingScene(Scene):
 
         self._update_reel_sound()
         self._update_shake(dt)
+        self._update_legend(dt)
         f = self.fight
         fighting = f is not None and f.phase == "fight"
         fish_pos = self._fish_screen() if fighting else None
@@ -435,6 +461,18 @@ class FishingScene(Scene):
             p = self.cam.project(*f.fish_xz())
             scale = p[2] / 20 if p else 1.0
         self.gather.update(dt, fighting and f.brain.state == "charge" and self.ink_t <= 0, fish_pos, scale)
+
+    def _update_legend(self, dt: float) -> None:
+        f = self.fight
+        if f is not None:
+            on = f.fish["rarity"] == "legend" and f.phase in ("fight", "net")
+        else:
+            on = self.bite.legend and self.bite.state in (BiteState.APPROACH, BiteState.NIBBLE, BiteState.BITE)
+        if on != self.legend_on:
+            self.legend_on = on
+            self.sfx.loop("bgm_legend", on, 0.55)
+        self.screen_fx.legend = on
+        self.legend_k += ((1.0 if on else 0.0) - self.legend_k) * min(1.0, dt / 0.8)
 
     def _update_weather(self, dt: float) -> None:
         w = self.weather_sys
@@ -461,6 +499,8 @@ class FishingScene(Scene):
             self.sfx.loop(name, False)
         for name in want:
             vol = 0.35 if name != "amb_rain" else (0.4 if self.weather == "rain" else 0.65)
+            if self.legend_on:
+                vol *= 0.4  # 전설 BGM이 들리게
             self.sfx.loop(name, True, vol)
         self.amb_loops = want
 
@@ -541,7 +581,7 @@ class FishingScene(Scene):
             self.ripples.spawn(x + math.sin(back) * 0.4, z + math.cos(back) * 0.4, size=0.45, life=0.7)
             if p:
                 self.droplets.burst(p[0] + random.uniform(-3, 3), p[1], max(0.5, p[2] / 25), count=4)
-        elif sig == "jump" and p and self.ink_t <= 0:
+        elif sig == "jump" and p and self.ink_t <= 0 and not b.dark:
             # 그림자 커짐 + 기포
             self.bubbles.spawn(p[0], p[1], max(3.0, f.fish["shadow_len_m"] * p[2]))
         elif b.state in ("idle", "rush", "turn", "recover") and self.fx_t > (0.15 if b.state == "rush" else 0.6):
@@ -622,7 +662,11 @@ class FishingScene(Scene):
 
     def _on_bite_event(self, ev: str) -> None:
         c = self.cast
-        if ev == "nibble":
+        if ev == "legend_approach":
+            self.toasts.show("수면 아래 거대한 그림자가...!", (255, 214, 120), 3.0)
+            self.sfx.play("roar", 0.6)
+            self.shake_kick = 1.5
+        elif ev == "nibble":
             self.sfx.play("nibble")
             self.ripples.spawn(c.bx, c.bz, size=0.35, life=0.8)
         elif ev == "bite":
@@ -646,7 +690,7 @@ class FishingScene(Scene):
         x, z = f.fish_xz()
         if h == 0.0 and f.brain.state == "jump":
             ph = f.brain.jump_phase()
-            h = 4 * f.brain.cfg["jump_height_m"] * ph * (1 - ph)
+            h = 4 * f.brain.jump_height * ph * (1 - ph)
         p = self.cam.project(x, z, h)
         return (p[0], p[1]) if p else (self.cam.cx, self.cam.horizon + 20)
 
@@ -663,6 +707,22 @@ class FishingScene(Scene):
             self.sfx.play("splash_small", 0.7)
         elif ev == "telegraph:jump":
             self.sfx.play("bubbles", 0.8)
+            if f.brain.lightning_cue:
+                # 전설 '번개': 번개 섬광이 점프 박자
+                self.lightning.strike(self.cam.horizon, self.cam.width)
+        elif ev.startswith("phase:"):
+            n = int(ev.split(":")[1])
+            pos = self._fish_screen()
+            self.toasts.show(f"페이즈 {n}/{len(f.brain.phases)} — {f.brain.phase_desc}", (255, 214, 90), 3.2, 11)
+            self.sfx.play("roar", 1.0)
+            self.sfx.play("impact", 0.8)
+            self.screen_fx.great(self.screen_fx.map(pos))
+            self.sparkles.burst(*pos, count=30, speed=1.4)
+            self.shake_kick = 3.0
+            lc = self.fish_cfg["legend"]
+            self.game.slowmo(lc["phase_slowmo_real"], lc["phase_slowmo_scale"])
+            if f.brain.dragon:
+                self.toasts.show("용이 되었다!!", (255, 120, 80), 3.2)
         elif ev == "telegraph:turn":
             self.sfx.play("scrape", 0.8)
         elif ev == "action:rush":
@@ -678,6 +738,8 @@ class FishingScene(Scene):
         elif ev == "ink":
             self.ink_t = self.fish_cfg["fight"]["ink_sec"]
             self.sfx.play("splash_small", 0.5)
+        elif ev == "bolt":
+            self.toasts.show("아직 힘이 남았다! 다시 도망친다", BAD, 1.8, 11)
         elif ev == "exhausted":
             self.toasts.show("완전히 지쳤다! 끝까지 감으세요", GOOD, 2.0, 11)
         elif ev == "perfect":
@@ -718,7 +780,9 @@ class FishingScene(Scene):
             self._splash_at(x, z, 1.0)
         elif ev == "caught":
             pose, _ = f.net_pose()
-            self.landing = LandingCinematic(f.fish, f.result["size"], 240 + pose * 46)
+            shown = self._display_fish(f.fish)
+            self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46)
+            f.result["fish"] = shown
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
             self.game.save_now()
@@ -734,7 +798,7 @@ class FishingScene(Scene):
     def draw(self, canvas: pygame.Surface) -> None:
         hour = self.clock.hour
         theme, weather = self.theme, self.weather
-        pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash)
+        pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash, self.legend_k)
         cam, c, t, f = self.cam, self.cast, self.t, self.fight
 
         world.draw_sky(canvas, pal, cam)
@@ -759,7 +823,7 @@ class FishingScene(Scene):
             if self.ink_t > 0:
                 x, z = f.fish_xz()
                 draw_ink(canvas, pal, cam, x, z, min(1.0, self.ink_t), t)
-            else:
+            elif not f.brain.dark:
                 draw_fish_shadow(canvas, pal, cam, self._fight_shadow(), t)
         self.ripples.draw(canvas, pal, cam)
         self.bubbles.draw(canvas, pal)
@@ -782,8 +846,8 @@ class FishingScene(Scene):
 
         if f is not None and f.phase == "fight" and f.brain.state == "jump":
             x, z = f.fish_xz()
-            draw_jump(canvas, pal, cam, f.fish, f.size_cm, x, z, f.brain.jump_phase(), self.jump_facing,
-                      f.brain.cfg["jump_height_m"])
+            draw_jump(canvas, pal, cam, self._display_fish(f.fish), f.size_cm, x, z, f.brain.jump_phase(), self.jump_facing,
+                      f.brain.jump_height)
 
         fg = theme["foreground"]
         if fg == "reeds":
@@ -865,6 +929,8 @@ class FishingScene(Scene):
                "tired": 3.0, "fake_tired": 3.0, "charge": 0.0, "exhausted": 2.0}.get(b.state, 10.0)
         scale = 1.0 + 0.9 * b.signal_progress() if b.signal == "jump" else 1.0
         alpha = 0.0 if b.state == "jump" else 0.7 if b.state in ("tired", "fake_tired", "exhausted") else 1.0
+        if f.fish["rarity"] == "legend":
+            scale *= self.fish_cfg["legend"]["shadow_scale"] * 0.55
         return {"x": x, "z": z, "heading": heading, "alpha": alpha, "len": f.fish["shadow_len_m"],
                 "scale": scale, "wag": wag, "glow": GLOW.get(f.fish["rarity"])}
 
@@ -902,7 +968,7 @@ class FishingScene(Scene):
             self.screen_fx.draw_edges(canvas)  # 섬광이 남아 있으면 마저 사라지게
         if f.phase == "net":
             pose, still = f.net_pose()
-            draw_net_scene(canvas, pal, f.fish, f.size_cm, pose, still, t, self.net_anim, self.mouse)
+            draw_net_scene(canvas, pal, self._display_fish(f.fish), f.size_cm, pose, still, t, self.net_anim, self.mouse)
             fight_hud.draw_boss_bar(canvas, pal, f)
             hud.draw_hint(canvas, pal, NET_HINT)
             return
@@ -928,7 +994,7 @@ class FishingScene(Scene):
         """물고기 머리 위 행동 아이콘 + 점프 판정 원."""
         f, b, t = self.fight, self.fight.brain, self.t
         mapped = self.screen_fx.map(self._fish_screen())
-        inked = self.ink_t > 0
+        inked = self.ink_t > 0 or b.dark
         sig = b.signal
         if sig in ("rush", "turn"):
             fight_fx.draw_behavior_icon(canvas, mapped, sig, b.signal_progress(), b.turn_dir, t)
@@ -944,7 +1010,7 @@ class FishingScene(Scene):
         jumping = b.state == "jump" and not b.jump_judged
         if (sig == "jump" and not inked and not f.pre_judged) or jumping:
             x, z = f.fish_xz()
-            apex = self.cam.project(x, z, b.cfg["jump_height_m"])
+            apex = self.cam.project(x, z, b.jump_height)
             if apex:
                 total = b.cur_telegraph + b.jump_air / 2
                 fc = self.fish_cfg["fight"]

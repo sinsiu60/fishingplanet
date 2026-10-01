@@ -33,6 +33,7 @@ class DexScene(Scene):
         self.fishing = fishing
         self.save = game.save
         self.mouse = (0, 0)
+        self.age = 0.0  # 열림 애니메이션
         self.fish = load_json("fish.json")["fish"]
         self.tabs = ui.Tabs(14, 30, [t[1] for t in SPOT_TABS], width=46)
         self.tabs.index = next((i for i, t in enumerate(SPOT_TABS) if t[0] == fishing.spot_id), 0)
@@ -66,12 +67,13 @@ class DexScene(Scene):
                     self.game.sfx.play("click")
 
     def update(self, dt: float) -> None:
+        self.age += dt
         self.t += dt
         self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
 
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)
-        ui.dim(canvas, 180)
+        ui.dim(canvas, int(180 * min(1.0, self.age / 0.15)))
         ui.panel(canvas, (6, 6, 468, 260))
         total = len(self.fish)
         got = self.save.dex_count()
@@ -128,6 +130,15 @@ class DexScene(Scene):
                 lines = ["특별한 조건에서만 나타난다고 한다."]
                 if bait:
                     lines.append(f"필요한 미끼: {bait['name']}")
+                    revealed = self.save.owns("bait", bait["id"]) or (
+                        bait.get("price", 0) >= 0 and not self.save.bait_locked_reason(bait))
+                    if revealed:
+                        # 미끼를 살 수 있게 되면 등장 조건 공개
+                        lines.append(f"조건: {_join(f['times'], TIME_KO, 4)} · {_join(f['weathers'], WEATHER_KO, 3)}"
+                                     f" · 25m 이상 던지기")
+                        lines.append("지도에서 날씨 예보를 확인하세요.")
+                    else:
+                        lines.append("이 낚시터의 다른 물고기를 모두 잡으면 단서가 보인다.")
                 yy = y + 46
                 for ln in lines:
                     for w in wrap_text(ln, d.w - 12):

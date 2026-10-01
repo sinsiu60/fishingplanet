@@ -195,7 +195,7 @@ class Fight:
         self.rod_aim = rod_aim
 
         b.cover_dir = self._cover_dir()
-        b.update(dt, self.stamina <= 0)
+        b.update(dt, self.stamina <= 0, self.stamina_frac)
         for ev in b.events:
             if ev == "action:jump" and self.pre_judged:
                 b.jump_judged = True
@@ -324,7 +324,14 @@ class Fight:
         elif self.hook >= 100:
             self._lose("jump" if self.elapsed - self.last_jump_miss_t < 1.5 else "slack")
         elif self.distance <= cfg["net_distance"] and b.state not in ("jump", "telegraph"):
-            self._start_net()
+            need = cfg["net_min_stamina_legend"] if self.fish["rarity"] == "legend" else cfg["net_min_stamina"]
+            if self.stamina_frac > need and b.state not in ("rush",):
+                # 아직 힘이 남았으면 뜰채 앞에서 다시 도망친다 (예고 후 돌진)
+                b.chain_left = 0
+                b._begin_telegraph("rush")
+                self.events.append("bolt")
+            elif self.stamina_frac <= need:
+                self._start_net()
 
     # ── 뜰채 ──
     def _start_net(self) -> None:

@@ -49,6 +49,19 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
     return rnd.choices(candidates, weights)[0]
 
 
+def legend_candidate(spot: str, period: str, weather: str, cast_distance: float, bait: dict | None) -> dict | None:
+    """전설 등장 조건: 낚시터·시간대·날씨·전용 미끼·거리를 모두 만족해야 한다."""
+    if not bait or not bait.get("legend_for"):
+        return None
+    if cast_distance < load_json("fishing_config.json")["legend"]["min_distance"]:
+        return None
+    for f in load_json("fish.json")["fish"]:
+        if (f["id"] == bait["legend_for"] and f["spot"] == spot and period in f["times"]
+                and weather in f["weathers"]):
+            return f
+    return None
+
+
 def roll_size(fish: dict, cast_distance: float, rnd=random) -> float:
     lo, hi = fish["size_cm"]
     u = rnd.betavariate(2.0, 2.4)
@@ -79,6 +92,7 @@ class BiteController:
         self.spot = "reservoir"
         self.force_fish: dict | None = None  # 테스트용 강제 물고기
         self.bait: dict | None = None        # 장착한 미끼
+        self.legend = False                  # 이번 입질이 전설인지
 
     def _rand(self, pair) -> float:
         return self.rnd.uniform(pair[0], pair[1])
@@ -94,6 +108,7 @@ class BiteController:
     def stop(self) -> None:
         """줄 회수 등으로 대기 종료."""
         self.active = False
+        self.legend = False
         self.state = BiteState.WAIT
         self.shadow = None
         self.dip = 0.0
@@ -146,13 +161,25 @@ class BiteController:
         if self.state == BiteState.WAIT:
             self.dip = lerp(self.dip, 0.0, 0.2)
             if self.timer <= 0:
-                self.fish = self.force_fish or pick_fish(self.period, self.weather, self.cast_distance, self.rnd,
-                                                         self.spot, self.bait)
+                self.legend = False
+                legend = legend_candidate(self.spot, self.period, self.weather, self.cast_distance, self.bait)
+                if self.force_fish is not None:
+                    self.fish = self.force_fish
+                elif legend and self.rnd.random() < load_json("fishing_config.json")["legend"]["chance"]:
+                    self.fish = legend
+                else:
+                    self.fish = pick_fish(self.period, self.weather, self.cast_distance, self.rnd, self.spot,
+                                          self.bait)
+                self.legend = self.fish is not None and self.fish["rarity"] == "legend"
                 if self.fish is None:
                     self.timer = 3.0
                     return
                 self.state = BiteState.APPROACH
                 self.approach_dur = self._rand(cfg["approach_sec"])
+                if self.legend:
+                    # 전설: 거대한 그림자가 천천히 다가온다
+                    self.approach_dur *= load_json("fishing_config.json")["legend"]["approach_mult"]
+                    self.events.append("legend_approach")
                 self.timer = self.approach_dur
                 ang = self.rnd.uniform(0, math.tau)
                 d0 = cfg["approach_start_distance_m"]
@@ -161,6 +188,7 @@ class BiteController:
                     "x": bx + math.sin(ang) * d0, "z": bz + math.cos(ang) * d0,
                     "heading": ang + math.pi, "alpha": 0.0,
                     "len": self.fish["shadow_len_m"], "vx": 0.0, "vz": 0.0,
+                    "scale": load_json("fishing_config.json")["legend"]["shadow_scale"] if self.legend else 1.0,
                 }
 
         elif self.state == BiteState.APPROACH:

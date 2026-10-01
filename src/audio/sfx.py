@@ -293,6 +293,92 @@ def make_thunder(rng) -> np.ndarray:
     return crack + rumble
 
 
+# ───────────────────────── 음악 (코드 생성) ─────────────────────────
+
+def _note_freq(name: str) -> float:
+    names = {"C": -9, "C#": -8, "D": -7, "D#": -6, "E": -5, "F": -4, "F#": -3, "G": -2, "G#": -1, "A": 0,
+             "A#": 1, "B": 2}
+    pitch, octave = name[:-1], int(name[-1])
+    return 440.0 * 2 ** ((names[pitch] + (octave - 4) * 12) / 12)
+
+
+def _place(buf: np.ndarray, wave: np.ndarray, start: int) -> None:
+    """루프 버퍼에 소리를 얹는다. 끝을 넘으면 앞으로 감아서 끊김 없는 루프가 되게."""
+    n = len(buf)
+    idx = (np.arange(len(wave)) + start) % n
+    np.add.at(buf, idx, wave)
+
+
+def _tone(freq: float, sec: float, kind: str = "sine", attack: float = 0.005, decay: float = 0.2) -> np.ndarray:
+    t = _t(sec)
+    if kind == "square":
+        w = np.sign(np.sin(2 * np.pi * freq * t)) * 0.35 + np.sin(2 * np.pi * freq * t) * 0.4
+    elif kind == "saw":
+        w = 2 * ((freq * t) % 1.0) - 1
+        w = _lowpass(w, 4) * 0.6
+    else:
+        w = np.sin(2 * np.pi * freq * t) + 0.3 * np.sin(4 * np.pi * freq * t)
+    return w * _env(len(t), attack, decay)
+
+
+def make_bgm_legend(rng) -> np.ndarray:
+    """전설 BGM: D단조, 120BPM 4마디 루프 (8초). 북 + 베이스 오스티나토 + 긴장감 있는 아르페지오."""
+    beat = 0.5
+    sec = beat * 16
+    buf = np.zeros(int(RATE * sec))
+    bass_line = ["D2", "D2", "A1", "A1", "A#1", "A#1", "C2", "A1"]
+    for i, note in enumerate(bass_line):
+        _place(buf, _tone(_note_freq(note), beat * 2, "saw", 0.01, 0.5) * 0.5, int(i * beat * 2 * RATE))
+    # 북: 정박 쿵, 엇박 딱
+    for b in range(16):
+        kick = _sweep(110, 45, 0.25) * _env(int(RATE * 0.25), 0.001, 0.08) * (0.9 if b % 4 == 0 else 0.55)
+        _place(buf, kick, int(b * beat * RATE))
+        if b % 2 == 1:
+            tom = _sweep(220, 140, 0.15) * _env(int(RATE * 0.15), 0.001, 0.05) * 0.3
+            _place(buf, tom, int((b * beat + beat * 0.5) * RATE))
+    # 아르페지오 (8분음표)
+    chords = [["D4", "F4", "A4", "D5"], ["A3", "C#4", "E4", "A4"], ["A#3", "D4", "F4", "A#4"], ["C4", "E4", "G4", "C5"]]
+    for bar, chord in enumerate(chords):
+        for k in range(8):
+            n = chord[[0, 1, 2, 3, 2, 1, 2, 3][k]]
+            _place(buf, _tone(_note_freq(n), beat * 0.5, "square", 0.003, 0.12) * 0.16,
+                   int((bar * 4 + k * 0.5) * beat * RATE))
+    # 긴 현악 패드
+    for bar, chord in enumerate(chords):
+        for n in chord[:3]:
+            pad = _tone(_note_freq(n) / 2, beat * 4, "sine", 0.4, 1.4) * 0.07
+            _place(buf, pad, int(bar * 4 * beat * RATE))
+    return buf / (np.max(np.abs(buf)) + 1e-9) * 0.8
+
+
+def make_bgm_ending(rng) -> np.ndarray:
+    """엔딩: C장조, 느리고 따뜻한 아르페지오 + 패드 (16초 루프)."""
+    beat = 0.75
+    sec = beat * 16
+    buf = np.zeros(int(RATE * sec))
+    chords = [["C3", "E4", "G4", "C5"], ["A2", "C4", "E4", "A4"], ["F2", "A3", "C4", "F4"], ["G2", "B3", "D4", "G4"]]
+    for bar, chord in enumerate(chords):
+        _place(buf, _tone(_note_freq(chord[0]), beat * 4, "sine", 0.05, 1.6) * 0.35, int(bar * 4 * beat * RATE))
+        for k in range(8):
+            n = chord[1 + [0, 1, 2, 1, 0, 1, 2, 1][k]]
+            _place(buf, _tone(_note_freq(n), beat, "sine", 0.01, 0.5) * 0.2, int((bar * 4 + k * 0.5) * beat * RATE))
+        for n in chord[1:]:
+            _place(buf, _tone(_note_freq(n), beat * 4, "sine", 0.8, 2.0) * 0.06, int(bar * 4 * beat * RATE))
+    return buf / (np.max(np.abs(buf)) + 1e-9) * 0.7
+
+
+def make_roar(rng) -> np.ndarray:
+    """전설 페이즈 전환: 깊은 포효 + 물기둥."""
+    sec = 1.2
+    n = int(RATE * sec)
+    growl = _sweep(90, 55, sec) * (0.6 + 0.4 * np.sin(np.linspace(0, 60, n))) * _env(n, 0.05, 0.4)
+    noise = _lowpass(_noise(sec, rng), 12) * _env(n, 0.02, 0.35) * 3
+    splash = np.zeros(n)
+    sp = make_splash(rng, 1.0)[:n]
+    splash[: len(sp)] = sp
+    return growl * 0.8 + noise * 0.5 + splash * 0.4
+
+
 def make_miss(rng) -> np.ndarray:
     """실수: 낮은 쿵 + 줄 튕김."""
     sec = 0.35
@@ -423,6 +509,9 @@ class Sfx:
             "amb_deep": make_amb_deep(rng),
             "amb_rain": make_amb_rain(rng),
             "thunder": make_thunder(rng),
+            "bgm_legend": make_bgm_legend(rng),
+            "bgm_ending": make_bgm_ending(rng),
+            "roar": make_roar(rng),
             "coin": make_coin(rng),
             "chord_rare": make_chord(rng, [659.25, 830.61, 987.77, 1318.5], 1.4, 0.15, 1.0),
             "chord_legend": make_chord(rng, [261.63, 392.0, 523.25, 659.25, 783.99, 1046.5], 2.4, 0.5, 2.0),
