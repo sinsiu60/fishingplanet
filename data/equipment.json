@@ -5,26 +5,80 @@
     {"id": "glass", "name": "글라스 로드", "tier": 2, "price": 250, "green": [33, 73], "desc": "잘 휘어서 충격을 흡수한다."},
     {"id": "carbon", "name": "카본 로드", "tier": 3, "price": 1500, "green": [30, 75], "desc": "가볍고 탄탄한 표준 장비."},
     {"id": "hm_carbon", "name": "고탄성 카본 로드", "tier": 4, "price": 6000, "green": [28, 78], "desc": "큰 물고기의 힘도 받아낸다."},
-    {"id": "master_rod", "name": "명인의 죽간", "tier": 5, "price": 25000, "green": [25, 80], "desc": "명인이 대나무를 깎아 만든 전설의 낚싯대."}
+    {"id": "master_rod", "name": "명인의 죽간", "tier": 5, "price": 25000, "green": [25, 80], "desc": "명인이 대나무를 깎아 만든 전설의 낚싯대."},
+    {"id": "crystal_rod", "name": "수정골 낚싯대", "tier": 6, "price": 55000, "green": [23, 82], "continent": "eldrasion", "desc": "수정 결정으로 뼈대를 세운 낚싯대."},
+    {"id": "nebula_rod", "name": "성운강 낚싯대", "tier": 7, "price": 121000, "green": [21, 84], "continent": "eldrasion", "scales": 2, "desc": "성운의 빛을 담금질한 강철."},
+    {"id": "abyss_rod", "name": "천해 낚싯대", "tier": 8, "price": 266200, "green": [19, 86], "continent": "eldrasion", "scales": 5, "desc": "하늘과 바다를 잇는다는 낚싯대."}
   ],
   "reel": [
     {"id": "basic_reel", "name": "기본 스피닝 릴", "tier": 1, "price": 0, "speed": 1.0, "drag_steps": 5, "desc": "평범한 릴."},
     {"id": "light_reel", "name": "경량 스피닝 릴", "tier": 2, "price": 400, "speed": 1.15, "drag_steps": 6, "desc": "가볍고 부드럽게 감긴다."},
     {"id": "bait_reel", "name": "베이트 릴", "tier": 3, "price": 2000, "speed": 1.3, "drag_steps": 7, "desc": "감는 힘이 좋다."},
     {"id": "large_reel", "name": "대형 스피닝 릴", "tier": 4, "price": 8000, "speed": 1.45, "drag_steps": 8, "desc": "바다 대물용."},
-    {"id": "artisan_reel", "name": "장인의 릴", "tier": 5, "price": 28000, "speed": 1.6, "drag_steps": 10, "desc": "드랙을 아주 세밀하게 조절할 수 있다."}
+    {"id": "artisan_reel", "name": "장인의 릴", "tier": 5, "price": 28000, "speed": 1.6, "drag_steps": 10, "desc": "드랙을 아주 세밀하게 조절할 수 있다."},
+    {"id": "crystal_reel", "name": "수정 코어 릴", "tier": 6, "price": 61600, "speed": 1.75, "drag_steps": 11, "continent": "eldrasion", "desc": "수정 코어가 매끄럽게 돈다."},
+    {"id": "nebula_reel", "name": "성운 릴", "tier": 7, "price": 135500, "speed": 1.9, "drag_steps": 11, "continent": "eldrasion", "scales": 2, "desc": "별이 도는 소리가 난다."},
+    {"id": "abyss_reel", "name": "천해 릴", "tier": 8, "price": 298100, "speed": 2.05, "drag_steps": 12, "continent": "eldrasion", "scales": 5, "desc": "끝없이 감긴다."}
   ],
   "line": [
     {"id": "nylon2", "name": "나일론 2호", "tier": 1, "price": 0, "durability": 100, "desc": "기본 낚싯줄."},
     {"id": "nylon4", "name": "나일론 4호", "tier": 2, "price": 300, "durability": 125, "desc": "조금 더 굵고 질기다."},
     {"id": "carbon4", "name": "카본 4호", "tier": 3, "price": 1800, "durability": 155, "desc": "물속에서 잘 안 보이고 단단하다."},
     {"id": "pe3", "name": "PE 합사 3호", "tier": 4, "price": 7000, "durability": 190, "desc": "여러 가닥을 꼬아 만든 튼튼한 줄."},
-    {"id": "silk", "name": "명주 합사", "tier": 5, "price": 26000, "durability": 230, "desc": "비단처럼 매끄럽고 끊어지지 않는다."}
+    {"id": "silk", "name": "명주 합사", "tier": 5, "price": 26000, "durability": 230, "desc": "비단처럼 매끄럽고 끊어지지 않는다."},
+    {"id": "crystal_line", "name": "수정사", "tier": 6, "price": 57200, "durability": 275, "continent": "eldrasion", "desc": "수정 섬유를 꼬아 만든 줄."},
+    {"id": "nebula_line", "name": "성운사", "tier": 7, "price": 125800, "durability": 325, "continent": "eldrasion", "scales": 2, "desc": "성운의 실."},
+    {"id": "abyss_line", "name": "천해사", "tier": 8, "price": 276800, "durability": 380, "continent": "eldrasion", "scales": 5, "desc": "끊어진 적이 없다는 줄."}
   ],
   "net": [
     {"id": "basic_net", "name": "기본 뜰채", "tier": 1, "price": 0, "window": 0.15, "fail_distance": 6.0, "desc": "평범한 뜰채."},
     {"id": "alu_net", "name": "알루미늄 뜰채", "tier": 2, "price": 350, "window": 0.19, "fail_distance": 5.0, "desc": "가볍게 휘두를 수 있다."},
     {"id": "carbon_net", "name": "카본 뜰채", "tier": 3, "price": 2500, "window": 0.23, "fail_distance": 4.5, "desc": "넓고 깊은 그물."},
-    {"id": "master_net", "name": "명인의 뜰채", "tier": 4, "price": 10000, "window": 0.27, "fail_distance": 4.0, "desc": "놓치는 법이 없다."}
-  ]
+    {"id": "master_net", "name": "명인의 뜰채", "tier": 4, "price": 10000, "window": 0.27, "fail_distance": 4.0, "desc": "놓치는 법이 없다."},
+    {"id": "mithril_net", "name": "미스릴 뜰채", "tier": 5, "price": 25000, "window": 0.3, "fail_distance": 3.8, "desc": "가볍고 단단한 미스릴 그물."},
+    {"id": "crystal_net", "name": "수정 뜰채", "tier": 6, "price": 55000, "window": 0.33, "fail_distance": 3.6, "continent": "eldrasion", "desc": "수정 그물."},
+    {"id": "nebula_net", "name": "성운 뜰채", "tier": 7, "price": 121000, "window": 0.36, "fail_distance": 3.4, "continent": "eldrasion", "scales": 2, "desc": "빛나는 그물."},
+    {"id": "abyss_net", "name": "천해 뜰채", "tier": 8, "price": 266200, "window": 0.39, "fail_distance": 3.2, "continent": "eldrasion", "scales": 5, "desc": "닿는 것은 놓치지 않는다."}
+  ],
+  "_rules": {
+    "_설명": "강화(+1~+3, 실패 없음)와 분해. 강화는 능력치 좋은 방향으로 단계당 per_level. gold = 장비 가격 × gold_frac (가격 0이면 gold_free). 재료 = 장비 대륙 소재.",
+    "enhance_kinds": [
+      "rod",
+      "reel",
+      "line",
+      "net"
+    ],
+    "per_level": 0.03,
+    "max_level": 3,
+    "gold_frac": [
+      0.15,
+      0.3,
+      0.5
+    ],
+    "gold_free": [
+      100,
+      250,
+      500
+    ],
+    "materials": [
+      5,
+      12,
+      20
+    ],
+    "rare_materials": [
+      0,
+      0,
+      3
+    ],
+    "disassemble": {
+      "common": 1,
+      "uncommon": 2,
+      "rare": 4
+    },
+    "disassemble_rare_bonus": {
+      "rare": 1
+    },
+    "bait_tier_rare_bonus": 0.04,
+    "bait_tier_window_bonus": 0.02
+  }
 }

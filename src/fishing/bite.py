@@ -23,6 +23,13 @@ class BiteState(Enum):
     SCARED = auto()
 
 
+def bait_tier_mult(bait: dict | None, key: str) -> float:
+    """미끼 티어 공통 보너스 배율 (티어 1 = 1.0). 티어 없는 전설 미끼는 1.0."""
+    if not bait or not bait.get("tier"):
+        return 1.0
+    return 1.0 + load_json("equipment.json")["_rules"][key] * (bait["tier"] - 1)
+
+
 def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir",
               bait: dict | None = None) -> dict | None:
     cfg = load_json("fishing_config.json")["bite"]
@@ -34,8 +41,10 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
         if weather == "storm" and f["rarity"] in ("rare", "legend"):
             w *= cfg["storm_rare_mult"]  # 폭풍: 희귀어 증가
         if bait:
-            # 미끼: 물고기별·낚시터별 배율
+            # 미끼: 물고기별·낚시터별 배율 + 티어 공통 보너스(희귀 이상)
             w *= bait.get("boost", {}).get(f["id"], 1.0) * bait.get("spot_boost", {}).get(spot, 1.0)
+            if f["rarity"] in ("rare", "legend"):
+                w *= bait_tier_mult(bait, "bait_tier_rare_bonus")
         if f["rarity"] != "common":
             if cast_distance >= cfg["far_cast_distance"]:
                 w *= cfg["far_rare_mult"]
@@ -229,7 +238,8 @@ class BiteController:
                 else:
                     self.state = BiteState.BITE
                     # 예민한 물고기(감성돔 등)는 챔질 창이 짧다
-                    bait_mult = self.bait.get("window_mult", 1.0) if self.bait else 1.0
+                    bait_mult = (self.bait.get("window_mult", 1.0) if self.bait else 1.0) \
+                        * bait_tier_mult(self.bait, "bait_tier_window_bonus")
                     self.timer = cfg["bite_window_sec"] * self.fish.get("bite_window_mult", 1.0) * bait_mult
                     self.bite_t = 0.0
                     self.tip_pull = 12.0
