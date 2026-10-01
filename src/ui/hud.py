@@ -59,3 +59,46 @@ def draw_cursor(canvas, pos) -> None:
         canvas.fill(SHADOW, (x + dx, y - 3 + dy, 1, 7))
     canvas.fill((255, 255, 255), (x - 3, y, 7, 1))
     canvas.fill((255, 255, 255), (x, y - 3, 1, 7))
+
+
+class Toasts:
+    """화면 위쪽 가운데 알림 메시지 (서서히 사라짐)."""
+
+    def __init__(self):
+        self.items: list[dict] = []
+
+    def show(self, s: str, color=(255, 255, 255), duration: float = 2.0, size: int = 16) -> None:
+        self.items = [{"text": s, "color": color, "life": duration, "dur": duration, "size": size}]
+
+    def update(self, dt: float) -> None:
+        for it in self.items:
+            it["life"] -= dt
+        self.items = [it for it in self.items if it["life"] > 0]
+
+    def draw(self, canvas) -> None:
+        for it in self.items:
+            age = it["dur"] - it["life"]
+            # 처음 0.15초 위에서 툭 떨어지며 등장
+            dy = -6 * max(0.0, 1 - age / 0.15)
+            if it["life"] < 0.4 and int(it["life"] * 20) % 2 == 0:
+                continue
+            text(canvas, it["text"], (canvas.get_width() // 2, 58 + dy), it["color"], it["size"], "center")
+
+
+def draw_catch_card(canvas, pal, fish_name: str, size_cm: float, rarity: str, t: float) -> None:
+    """임시 획득 카드 (Phase 3에서 두 손으로 드는 컷으로 교체)."""
+    w, h = 190, 84
+    x = (canvas.get_width() - w) // 2
+    y = 74
+    rarity_color = {"common": (220, 220, 220), "uncommon": (120, 220, 140),
+                    "rare": (120, 180, 255), "legend": (255, 210, 90)}.get(rarity, (255, 255, 255))
+    rarity_name = {"common": "일반", "uncommon": "고급", "rare": "희귀", "legend": "전설"}.get(rarity, "")
+    canvas.fill(SHADOW, (x + 2, y + 2, w, h))
+    canvas.fill((28, 34, 56), (x, y, w, h))
+    pygame.draw.rect(canvas, rarity_color, (x, y, w, h), 1)
+    cx = x + w // 2
+    text(canvas, "획득!", (cx, y + 13), (255, 230, 120), 16, "center")
+    text(canvas, fish_name, (cx, y + 36), (255, 255, 255), 16, "center")
+    text(canvas, f"{size_cm:.1f}cm  ·  {rarity_name}", (cx, y + 56), rarity_color, 11, "center")
+    if int(t * 2) % 2 == 0:
+        text(canvas, "클릭해서 계속", (cx, y + 73), (170, 180, 200), 11, "center")

@@ -74,27 +74,67 @@ class Droplets:
 
 # ───────────────────────── 찌 ─────────────────────────
 
-def draw_bobber(canvas, pal, x: float, y: float, size: float, floating: bool) -> None:
-    """size: 찌 전체 높이(px). floating이면 아래쪽은 물에 잠김."""
+def draw_bobber(canvas, pal, x: float, y: float, size: float, floating: bool, dip: float = 0.0) -> None:
+    """size: 찌 전체 높이(px). floating이면 아래쪽은 물에 잠김. dip: 0~1 추가 잠김."""
     x, y = int(x), int(y)
     red, white = pal["bobber"], pal["bobber_base"]
+    hl = lerp_color(pal["wave_light"], white, 0.5)
     if size < 3:
         canvas.fill(red, (x - 1, y - 1, 2, 2))
         return
     w = max(2, int(size * 0.45))
     h = int(size)
     if floating:
-        # 수면 위로 머리만: 빨간 몸통 + 흰 띠 + 안테나
-        top = y - h // 2
-        pygame.draw.ellipse(canvas, red, (x - w // 2, top, w, h // 2 + 1))
-        canvas.fill(white, (x - w // 2, y - max(1, h // 8), w, max(1, h // 8)))
+        if dip >= 0.95:
+            # 완전히 잠김: 수면에 동그란 물결만
+            canvas.fill(hl, (x - w // 2 - 1, y, w + 2, 1))
+            return
+        # 수면 위로 머리만: 빨간 몸통 + 흰 띠 + 안테나. dip만큼 아래로 가라앉으며 잘림
+        sink = int(round(h * 0.75 * dip))
+        top = y - h // 2 + sink
+        body = pygame.Rect(x - w // 2, top, w, h // 2 + 1)
+        clip = canvas.get_clip()
+        canvas.set_clip(pygame.Rect(0, 0, canvas.get_width(), y).clip(clip))
+        pygame.draw.ellipse(canvas, red, body)
+        canvas.fill(white, (x - w // 2, top + h // 2 - max(1, h // 8), w, max(1, h // 8)))
         pygame.draw.line(canvas, scale_color(red, 0.7), (x, top), (x, top - h // 3), 1)
-        hl = lerp_color(pal["wave_light"], white, 0.5)
+        canvas.set_clip(clip)
         canvas.fill(hl, (x - w // 2 - 1, y, w + 2, 1))
     else:
         pygame.draw.ellipse(canvas, red, (x - w // 2, y - h // 2, w, h // 2 + 1))
         pygame.draw.ellipse(canvas, white, (x - w // 2, y - 1, w, h // 2))
         pygame.draw.line(canvas, scale_color(red, 0.7), (x, y - h // 2), (x, y - h // 2 - h // 3), 1)
+
+
+def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:
+    """수면 아래 물고기 그림자. 읽기 쉽게 원근 압축은 약하게 (화면 공간 타원)."""
+    if shadow is None or shadow["alpha"] <= 0.02:
+        return
+    p = cam.project(shadow["x"], shadow["z"], -0.2)
+    if p is None:
+        return
+    sx, sy, s = p
+    # 멀리서도 읽히도록 실제보다 크게 + 최소 크기 보장 (공정함 > 사실감)
+    length = max(7.0, shadow["len"] * s * 1.8)
+    # 진행 방향의 화면 좌우 성분 (정면/뒤로 향하면 짧아 보임)
+    rel = shadow["heading"] - cam.yaw
+    side = math.sin(rel)
+    body_w = max(2.0, length * (0.45 + 0.55 * abs(side)))
+    body_h = max(3.0, length * 0.34)
+    row = clamp((sy - cam.horizon) / (cam.height - cam.horizon), 0, 1) ** 0.55
+    water = lerp_color(pal["water_top"], pal["water_bottom"], row)
+    color = lerp_color(water, scale_color(pal["wave_dark"], 0.8), 0.8 * shadow["alpha"])
+    pygame.draw.ellipse(canvas, color, (sx - body_w / 2, sy - body_h / 2, body_w, body_h))
+    # 꼬리 (진행 반대쪽, 살랑)
+    direction = 1 if side >= 0 else -1
+    tail_x = sx - direction * body_w / 2
+    wag = math.sin(t * 9) * body_h * 0.35
+    tail_len = max(2.0, body_w * 0.3)
+    pygame.draw.polygon(canvas, color, [
+        (tail_x, sy),
+        (tail_x - direction * tail_len, sy - body_h * 0.45 + wag),
+        (tail_x - direction * tail_len, sy + body_h * 0.45 + wag),
+    ])
 
 
 # ───────────────────────── 낚싯줄 ─────────────────────────

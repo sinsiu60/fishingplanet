@@ -12,6 +12,7 @@ MAX_FRAME_TIME = 0.25  # 창 드래그 등으로 멈췄을 때 틱이 폭주하�
 class Game:
     def __init__(self, max_frames: int | None = None):
         cfg = game_config()
+        pygame.mixer.pre_init(44100, -16, 2, 512)
         pygame.init()
         self.tick_rate = cfg["tick_rate"]
         self.tick_dt = 1.0 / self.tick_rate

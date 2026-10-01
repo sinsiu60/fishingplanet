@@ -5,11 +5,14 @@ import pygame
 
 from src.core.config import game_config
 from src.core.game_clock import GameClock
+from src.audio.sfx import Sfx
 from src.core.mathutil import clamp, lerp, smoothstep
+from src.fishing.bite import BiteController, BiteState, roll_size
 from src.fishing.casting import CastController, CastState
 from src.render import world
 from src.render.camera import Camera
-from src.render.effects import Droplets, Ripples, draw_bobber, draw_line, landing_marker, rod_tip_drop
+from src.render.effects import (Droplets, Ripples, draw_bobber, draw_fish_shadow, draw_line, landing_marker,
+                                rod_tip_drop)
 from src.render.palette import Palette
 from src.render.rod import draw_rod, rod_geometry
 from src.scene.base import Scene
@@ -20,9 +23,13 @@ HINTS = {
     CastState.CHARGING: "놓으면 던지기   우클릭: 취소",
     CastState.SWING: "",
     CastState.FLIGHT: "",
-    CastState.LANDED: "우클릭: 줄 회수   화면 끝: 둘러보기",
+    CastState.LANDED: "좌클릭: 챔질 (찌가 쑥 잠길 때!)   우클릭: 줄 회수   화면 끝: 둘러보기",
     CastState.RETRIEVE: "줄 감는 중...",
+    CastState.HOOKED: "",
 }
+GOOD = (140, 240, 150)
+BAD = (255, 150, 130)
+INFO = (255, 235, 170)
 LOOK_STATES = (CastState.READY, CastState.LANDED)
 
 
@@ -40,6 +47,11 @@ class FishingScene(Scene):
         self.water = world.Water(self.cam)
         self.reeds = world.Reeds(self.cam)
         self.cast = CastController()
+        self.bite = BiteController()
+        self.sfx = Sfx()
+        self.toasts = hud.Toasts()
+        self.catch: dict | None = None     # 획득 카드 표시 중인 물고기
+        self.hook_timer = 0.0
         self.ripples = Ripples()
         self.droplets = Droplets()
         self.t = 0.0
@@ -55,11 +67,42 @@ class FishingScene(Scene):
             self.clock.fast = not self.clock.fast
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                self.cast.press()
-            elif event.button == 3:
+                self._left_click()
+            elif event.button == 3 and self.catch is None:
+                if self.cast.state == CastState.LANDED:
+                    self.bite.stop()
                 self.cast.cancel_or_retrieve()
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.cast.release(self.cam.yaw)
+
+    def _left_click(self) -> None:
+        c = self.cast
+        if self.catch is not None:
+            if self.catch.get("ready"):
+                self.catch = None
+                self.bite.stop()
+                c.reset()
+            return
+        if c.state != CastState.LANDED:
+            c.press()
+            return
+        # 챔질
+        c.jerk()
+        result = self.bite.hookset()
+        if result == "hooked":
+            c.hooked()
+            self.sfx.play("hookset")
+            self.toasts.show("챔질 성공!", GOOD, 1.2)
+            self.hook_timer = 0.9
+            self._splash_at(c.bx, c.bz, big=0.6)
+        elif result == "scared":
+            self.sfx.play("hookset", 0.5)
+            self.sfx.play("flee")
+            self.toasts.show("물고기가 놀라 도망갔다...", BAD, 2.4)
+        else:
+            self.sfx.play("cast", 0.4)
+            if self.bite.state == BiteState.MISSED:
+                self.toasts.show("미끼가 없어요. 우클릭으로 회수", INFO, 2.0, 11)
 
     # ── 로직 (60틱 고정) ──
     def update(self, dt: float) -> None:
@@ -90,9 +133,27 @@ class FishingScene(Scene):
         for ev in self.cast.events:
             if ev == "splash":
                 self._splash()
+            elif ev == "launch":
+                self.sfx.play("cast")
         self.cast.events.clear()
 
-        if self.cast.state == CastState.LANDED:
+        self.bite.set_conditions(self.clock.period()[0], "clear")
+        self.bite.update(dt)
+        for ev in self.bite.events:
+            self._on_bite_event(ev)
+        self.bite.events.clear()
+        self.toasts.update(dt)
+        self.sfx.loop("reel", self.cast.state == CastState.RETRIEVE, 0.5)
+
+        if self.hook_timer > 0:
+            self.hook_timer -= dt
+            if self.hook_timer <= 0:
+                self._land_fish()
+        if self.catch is not None:
+            self.catch["t"] += dt
+            self.catch["ready"] = self.catch["t"] > 0.5
+
+        if self.cast.state == CastState.LANDED and self.bite.state != BiteState.BITE:
             self.idle_ripple_t += dt
             if self.idle_ripple_t > 2.2:
                 self.idle_ripple_t = 0.0
@@ -105,11 +166,38 @@ class FishingScene(Scene):
 
     def _splash(self) -> None:
         c = self.cast
-        self.ripples.spawn(c.bx, c.bz, size=1.0, life=1.8, rings=3)
-        p = self.cam.project(c.bx, c.bz)
-        if p:
-            self.droplets.burst(p[0], p[1], p[2] / 20, count=12)
+        self._splash_at(c.bx, c.bz, big=1.0)
+        self.sfx.play("splash")
+        self.bite.start((c.bx, c.bz), c.current_distance())
         self.idle_ripple_t = 0.0
+
+    def _splash_at(self, x: float, z: float, big: float) -> None:
+        self.ripples.spawn(x, z, size=big, life=1.8, rings=3 if big >= 0.8 else 2)
+        p = self.cam.project(x, z)
+        if p:
+            self.droplets.burst(p[0], p[1], p[2] / 20 * big, count=int(6 + 6 * big))
+
+    def _on_bite_event(self, ev: str) -> None:
+        c = self.cast
+        if ev == "nibble":
+            self.sfx.play("nibble")
+            self.ripples.spawn(c.bx, c.bz, size=0.35, life=0.8)
+        elif ev == "bite":
+            self.sfx.play("bite")
+            self.ripples.spawn(c.bx, c.bz, size=1.3, life=1.5, rings=3)
+            p = self.cam.project(c.bx, c.bz)
+            if p:
+                self.droplets.burst(p[0], p[1], max(0.6, p[2] / 20), count=10)
+        elif ev == "missed":
+            self.sfx.play("flee", 0.6)
+            self.toasts.show("미끼만 먹고 도망갔다... (우클릭: 회수)", BAD, 2.6)
+
+    def _land_fish(self) -> None:
+        """임시: 챔질 성공 = 바로 획득. Phase 3에서 파이팅으로 교체."""
+        fish = self.bite.fish
+        size = roll_size(fish, self.bite.cast_distance)
+        self.catch = {"fish": fish, "size": size, "t": 0.0, "ready": False}
+        self.sfx.play("catch")
 
     # ── 그리기 ──
     def draw(self, canvas: pygame.Surface) -> None:
@@ -123,9 +211,11 @@ class FishingScene(Scene):
         self.clouds.draw(canvas, pal, cam)
         world.draw_mountains(canvas, pal, cam)
         self.water.draw(canvas, pal, t, hour)
+        draw_fish_shadow(canvas, pal, cam, self.bite.shadow, t)
         self.ripples.draw(canvas, pal, cam)
 
-        geo = rod_geometry(c.aim, c.swing_deg, c.bend, c.rod_hand_offset())
+        geo = rod_geometry(c.aim, c.swing_deg + c.jerk_offset(), c.bend + self.bite.tip_pull,
+                           c.rod_hand_offset())
         tip = geo["tip"]
 
         if c.state == CastState.CHARGING:
@@ -154,8 +244,12 @@ class FishingScene(Scene):
             hud.text(canvas, f"찌 거리 {c.current_distance():.0f}m", (cam.width - 6, 4), pal["text"],
                      anchor="topright")
         hint = HINTS[c.state]
-        if hint:
+        if hint and self.catch is None:
             hud.draw_hint(canvas, pal, hint)
+        self.toasts.draw(canvas)
+        if self.catch is not None:
+            f = self.catch
+            hud.draw_catch_card(canvas, pal, f["fish"]["name"], f["size"], f["fish"]["rarity"], f["t"])
         hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
         hud.draw_cursor(canvas, self.mouse)
 
@@ -177,8 +271,14 @@ class FishingScene(Scene):
             draw_bobber(canvas, pal, sx, sy, size, floating=False)
             return
         bob = 0.0
+        dip = self.bite.dip if c.state in (CastState.LANDED, CastState.HOOKED) else 0.0
         if c.state == CastState.LANDED:
+            # 살랑살랑: 위아래 + 좌우로 아주 조금
             bob = math.sin(self.t * 2.0) * max(0.5, s * 0.012)
-        sag = 4 if c.state == CastState.RETRIEVE else 10 + abs(tip[0] - sx) * 0.04
-        draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5), sag, bias=0.6)
-        draw_bobber(canvas, pal, sx, sy + bob, size, floating=True)
+            sx += math.sin(self.t * 1.3) * max(0.3, s * 0.006)
+        if c.state == CastState.RETRIEVE or dip > 0.5:
+            sag = 3  # 팽팽
+        else:
+            sag = 10 + abs(tip[0] - sx) * 0.04
+        draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5 * (1 - dip)), sag, bias=0.6)
+        draw_bobber(canvas, pal, sx, sy + bob, size, floating=True, dip=dip)

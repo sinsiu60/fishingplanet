@@ -17,6 +17,7 @@ class CastState(Enum):
     FLIGHT = auto()
     LANDED = auto()
     RETRIEVE = auto()
+    HOOKED = auto()   # 챔질 성공 (Phase 3에서 파이팅으로 이어짐)
 
 
 BACK_SWING_DEG = 62
@@ -43,6 +44,7 @@ class CastController:
         self.bend = 4.0
         self.reel_angle = 0.0
         self.reel_speed = 0.0
+        self.jerk_t = 0.0         # 챔질 시 낚싯대 확 들어올림
         self.events: list[str] = []
 
     # ── 입력 ──
@@ -65,6 +67,24 @@ class CastController:
         elif self.state == CastState.LANDED:
             self._enter(CastState.RETRIEVE)
 
+    def jerk(self) -> None:
+        self.jerk_t = 0.3
+
+    def hooked(self) -> None:
+        if self.state == CastState.LANDED:
+            self._enter(CastState.HOOKED)
+
+    def reset(self) -> None:
+        self._enter(CastState.READY)
+        self.power = 0.0
+
+    def jerk_offset(self) -> float:
+        """챔질 들어올림 각도 (뒤로 젖힘)."""
+        if self.jerk_t <= 0:
+            return 0.0
+        k = self.jerk_t / 0.3
+        return 30 * math.sin(math.pi * (1 - k)) * k ** 0.3
+
     # ── 계산 ──
     def distance_for_power(self, power: float) -> float:
         return lerp(self.cfg["min_distance"], self.cfg["max_distance"], power)
@@ -86,6 +106,7 @@ class CastController:
     # ── 틱 ──
     def update(self, dt: float, aim: float) -> None:
         self.state_t += dt
+        self.jerk_t = max(0.0, self.jerk_t - dt)
         cfg = self.cfg
         if self.state not in (CastState.SWING, CastState.FLIGHT):
             self.aim = aim
@@ -142,6 +163,11 @@ class CastController:
             if d <= cfg["retrieve_done_distance"]:
                 self._enter(CastState.READY)
                 self.events.append("retrieved")
+
+        elif self.state == CastState.HOOKED:
+            self.swing_deg = lerp(self.swing_deg, 14.0, 0.15)
+            self.bend = lerp(self.bend, 18.0 + 3 * math.sin(self.state_t * 25), 0.3)
+            reel_target = -10.0
 
         self.reel_speed = lerp(self.reel_speed, reel_target, 0.2)
         self.reel_angle = (self.reel_angle + self.reel_speed * dt) % math.tau
