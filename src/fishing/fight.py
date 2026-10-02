@@ -21,6 +21,21 @@ LOSE_REASONS = {
 }
 
 
+def fish_gear_tier(fish: dict) -> int:
+    """이 물고기에 맞는 낚싯대 티어 = 그 낚시터 gear_tier (전설 +1, 최대 8)."""
+    spot = next((sp for sp in load_json("spots.json")["spots"] if sp["id"] == fish.get("spot")), {})
+    return min(8, spot.get("gear_tier", 1) + (1 if fish.get("rarity") == "legend" else 0))
+
+
+def heave_amp(fish: dict, cfg: dict, rod_tier: int | None = None) -> float:
+    """울렁임 폭: 맞는 장비 티어와 희귀도로 정하고, 낚싯대가 그보다 낮으면 티어당 heave_deficit_mult 만큼 커진다."""
+    need = fish_gear_tier(fish)
+    amp = (cfg["heave_base"] + cfg["heave_per_tier"] * need) * cfg["heave_rarity"].get(fish.get("rarity"), 1.0)
+    if rod_tier is not None and rod_tier < need:
+        amp *= 1 + cfg["heave_deficit_mult"] * (need - rod_tier)  # 약한 낚싯대로는 감당이 안 된다
+    return amp
+
+
 class Fight:
     def __init__(self, fish: dict, size_cm: float, cast_distance: float, angle: float, yaw: float,
                  gear: dict | None = None, rnd: random.Random | None = None, hazards: list | None = None,
@@ -43,7 +58,7 @@ class Fight:
         self.hook = 0.0
         self.hook_floor = 0.0  # 신호 대응 실패로 쌓인, 줄어들지 않는 바늘 게이지 (한 번에 1/3)
         # 힘센 물고기의 울렁임 (장력이 천천히 크게 오르내림) — 좋은 낚싯대(넓은 초록)일수록 버티기 쉽다
-        self.heave_amp = max(0.0, fish.get("power", 1.0) - self.cfg["heave_from_power"]) * self.cfg["heave_per_power"]
+        self.heave_amp = heave_amp(fish, self.cfg, self.gear.get("rod_tier"))
         self.heave_phase = self.rnd.uniform(0, math.tau)
         self.stamina_max = float(fish.get("stamina", 100))
         self.stamina = self.stamina_max
@@ -298,6 +313,7 @@ class Fight:
         """신호 대응 실패: 바늘 게이지 바닥이 1/3씩 올라가 다시 내려오지 않는다."""
         self.hook_floor = min(100.0, self.hook_floor + self.cfg["fail_hook_floor"])
         self.hook = max(self.hook, self.hook_floor)
+        self.events.append(f"hook_floor:{round(self.hook_floor / self.cfg['fail_hook_floor'])}")
 
     def _miss(self, kind: str) -> None:
         self.misses += 1

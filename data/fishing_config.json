@@ -64,7 +64,7 @@
     "net_fail_distance": 6.0
   },
   "fight": {
-    "_설명": "파이팅 수치. 장력은 0~100(최대 110). 시간은 초, 거리는 m. fail_hook_floor = 신호 대응(숙이기·몸털기·꺾기)을 놓칠 때마다 바늘 게이지에 쌓이는, 다시 줄어들지 않는 몫 (3번 = 바늘 빠짐). heave_* = 힘이 센 물고기가 날뛰는 동안 장력이 천천히 크게 울렁인다: 폭 = (power - heave_from_power) × heave_per_power (0 미만은 0), 속도 rad/s. 초록 구간이 좁은 낚싯대로는 버티기 어렵다. drag_floor_per_power = 힘센 물고기는 드랙을 최소로 풀어도 장력이 (power-1)×이 값만큼 더 높다 (돌진 때 낮은 티어 낚싯대·줄로는 버티기 어려움).",
+    "_설명": "파이팅 수치. 장력은 0~100(최대 110). 시간은 초, 거리는 m. fail_hook_floor = 신호 대응(숙이기·몸털기·꺾기)을 놓칠 때마다 바늘 게이지에 쌓이는, 다시 줄어들지 않는 몫 (3번 = 바늘 빠짐). heave_* = 물고기가 날뛰는 동안(돌진·점프 제외) 장력이 천천히 크게 울렁인다: 폭 = (heave_base + heave_per_tier × 그 낚시터 장비 티어(spots.json gear_tier, 전설은 +1)) × 희귀도 배율. 낚싯대 초록 구간 반폭이 이보다 좁으면 버티기 어렵다 → 높은 낚시터일수록 좋은 낚싯대가 필요. heave_speed rad/s. heave_deficit_mult = 낚싯대 티어가 그 물고기에 맞는 티어보다 낮으면 1티어당 울렁임 폭 +50%.",
     "tension_response_sec": 0.15,
     "base_line_tension": 12,
     "fish_pull_scale": 60,
@@ -127,10 +127,17 @@
     "net_min_stamina": 0.35,
     "net_min_stamina_legend": 0.2,
     "fail_hook_floor": 33.333333333333336,
-    "heave_from_power": 0.7,
-    "heave_per_power": 18,
     "heave_speed": 2.2,
-    "drag_floor_per_power": 15
+    "drag_floor_per_power": 0,
+    "heave_base": 8.5,
+    "heave_per_tier": 2.4,
+    "heave_rarity": {
+      "common": 0.6,
+      "uncommon": 0.8,
+      "rare": 1.0,
+      "legend": 1.0
+    },
+    "heave_deficit_mult": 0.5
   },
   "fish_ai": {
     "_설명": "물고기 행동 공통 수치. 종별 값은 fish.json이 우선.",

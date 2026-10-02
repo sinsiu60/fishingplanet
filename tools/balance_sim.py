@@ -34,8 +34,9 @@ SKILLS = {
     "average": dict(sigma=0.10, react=0.40, miss_jump=0.10, turn_sigma=0.11),
 }
 # 그 낚시터에 처음 도착할 무렵의 장비 티어 (진행 경로 가정)
-SPOT_TIER = {"reservoir": 1, "valley": 2, "breakwater": 3, "offshore": 4, "deep": 4, "secret": 5,
-             "marsh": 5, "crystal_cave": 6, "sky_falls": 6, "volcano": 6, "ice_sea": 7, "world_tree": 8}
+SPOT_TIER = {s["id"]: s.get("gear_tier", 1) for s in load_json("spots.json")["spots"]}  # spots.json gear_tier
+# 낚싯대가 그 물고기 티어보다 낮을 때 성공률 배율 (울렁임 ×1.5/티어 — tools 벤치 측정값을 반올림)
+DEFICIT_SUCCESS = {"common": [1.0, 1.0, 0.9], "uncommon": [1.0, 0.95, 0.5], "rare": [1.0, 0.85, 0.1], "legend": [1.0, 0.05, 0.0]}
 PERIODS = [(6.0, "morning"), (10.0, "day"), (17.0, "evening"), (20.0, "night")]
 # 봇은 장력 수치를 정확히 보고 반응하므로 사람보다 잘한다 → 진행 시뮬에선 사람 기준으로 보정
 HUMAN = {"skilled": {"success": 0.92, "ranks": {"S": 0.35, "A": 0.40, "B": 0.20, "C": 0.05}},
@@ -46,7 +47,7 @@ def gear_for_tier(tier: int) -> dict:
     eq = equipment()
     pick = {k: max((g for g in eq[k] if g["tier"] <= tier), key=lambda g: g["tier"]) for k in ("rod", "reel", "line", "net")}
     rod, reel, line, net = pick["rod"], pick["reel"], pick["line"], pick["net"]
-    return {"rod_green": list(rod["green"]), "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
+    return {"rod_green": list(rod["green"]), "rod_tier": rod["tier"], "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
             "line_max": line["durability"], "net_window_sec": net["window"], "net_fail_distance": net["fail_distance"]}
 
 
@@ -243,6 +244,21 @@ class Sim:
         cont_open = set(s.data["unlocked_continents"])
         eq = equipment()
         # 낚싯대·릴·줄·뜰채: 다음 티어를 살 수 있고 돈이 1.3배 이상 있으면
+        # 낚싯대는 열린 낚시터의 권장 티어까지는 무엇보다 먼저 산다 (권장보다 낮으면 희귀·전설이 거의 안 잡힘)
+        def need_of(x):
+            leg = next((f for f in all_fish() if f["spot"] == x and f["rarity"] == "legend"), None)
+            extra = 1 if leg and not s.caught(leg["id"]) else 0
+            return min(8, self.spots[x].get("gear_tier", 1) + extra)  # 아직 못 잡은 전설이 있으면 +1
+        need_rod = max(need_of(x) for x in s.data["unlocked_spots"])
+        if s.gear_tier("rod") < need_rod:
+            for g in sorted(eq["rod"], key=lambda g: g["tier"]):
+                if g["tier"] <= s.gear_tier("rod") or g["tier"] > need_rod or \
+                        (g.get("continent") and g["continent"] not in cont_open):
+                    continue
+                if s.data["money"] >= g["price"] and s.data["scales"] >= g.get("scales", 0):
+                    if s.buy("rod", g) == "ok":
+                        self.note(f"{g['name']} 구매 (T{g['tier']})")
+                break
         for kind in ("rod", "line", "reel", "net") if not saving else ():
             cur = s.gear_tier(kind)
             for g in sorted(eq[kind], key=lambda g: g["tier"]):
@@ -416,10 +432,13 @@ class Sim:
             self.advance(self.OVERHEAD)
             return
         rec = self.d[fish["id"]][self.skill]
+        from src.fishing.fight import fish_gear_tier
+        deficit = min(2, max(0, fish_gear_tier(fish) - s.gear_tier("rod")))
+        rod_k = DEFICIT_SUCCESS[fish["rarity"]][deficit]
         need = s.float_need(fish, sp)
         escape = need > s.float_tier()
         hum = HUMAN[self.skill]
-        ok = self.rnd.random() < rec["success"] * hum["success"] and not escape
+        ok = self.rnd.random() < rec["success"] * hum["success"] * rod_k and not escape
         t_fight = rec["t_ok"] if ok and rec["t_ok"] else rec["t_all"]
         self.advance(self.OVERHEAD + (t_fight or 40))
         if not ok:

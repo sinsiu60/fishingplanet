@@ -2,7 +2,7 @@
  "_설명": "낚시터. hazards = 환경 위협 구역 (angle: 정면 기준 좌우 각도 라디안, 음수=왼쪽 / dist: 거리 m). unlock = 해금 조건 (dex 도감 수 / dex_pct 대륙 도감 % / cost 비용 / line_tier 줄 등급 / rod_tier 낚싯대 티어 / all_gear_tier 장비 5종 티어 / spot_s 그 낚시터 물고기 S랭크 1회 / rare_total 희귀 이상 누적 마리 / legend 그 전설 포획 / legends 전설 수 / s_total S랭크 누적 / perfects 퍼펙트 누적). secret = 조건을 채우기 전까지 지도에 '?'로 숨김. gimmick = 엘드라시온 환경 기믹. float_req = 필요한 특수 찌 티어 (전설은 +1). 이미 열린 낚시터는 조건이 바뀌어도 유지. theme = 배경 연출. weather = 날씨 가중치.",
  "spots": [
   {
-   "id": "reservoir",
+   "id": "reservoir", "gear_tier": 1,
    "continent": "sharmion",
    "name": "동네 저수지",
    "short": "저수지",
@@ -47,7 +47,7 @@
    ]
   },
   {
-   "id": "valley",
+   "id": "valley", "gear_tier": 2,
    "continent": "sharmion",
    "name": "계곡",
    "short": "계곡",
@@ -107,7 +107,7 @@
    ]
   },
   {
-   "id": "breakwater",
+   "id": "breakwater", "gear_tier": 3,
    "continent": "sharmion",
    "name": "바다 방파제",
    "short": "방파제",
@@ -157,7 +157,7 @@
    ]
   },
   {
-   "id": "offshore",
+   "id": "offshore", "gear_tier": 4,
    "continent": "sharmion",
    "name": "먼바다 배낚시",
    "short": "먼바다",
@@ -194,7 +194,7 @@
    "hazards": []
   },
   {
-   "id": "deep",
+   "id": "deep", "gear_tier": 4,
    "continent": "sharmion",
    "name": "심해",
    "short": "심해",
@@ -246,7 +246,7 @@
    ]
   },
   {
-   "id": "secret",
+   "id": "secret", "gear_tier": 5,
    "continent": "sharmion",
    "name": "용문 폭포",
    "short": "???",
@@ -309,7 +309,7 @@
    "secret": true
   },
   {
-   "id": "marsh",
+   "id": "marsh", "gear_tier": 5,
    "name": "은빛 갈대 습지",
    "short": "습지",
    "map_pos": [
@@ -374,7 +374,7 @@
    "continent": "eldrasion"
   },
   {
-   "id": "crystal_cave",
+   "id": "crystal_cave", "gear_tier": 6,
    "name": "수정 동굴 호수",
    "short": "수정 동굴",
    "map_pos": [
@@ -433,7 +433,7 @@
    "continent": "eldrasion"
   },
   {
-   "id": "sky_falls",
+   "id": "sky_falls", "gear_tier": 6,
    "name": "부유섬 폭포",
    "short": "부유섬",
    "map_pos": [
@@ -491,7 +491,7 @@
    "continent": "eldrasion"
   },
   {
-   "id": "volcano",
+   "id": "volcano", "gear_tier": 6,
    "name": "화산 열수 해역",
    "short": "화산",
    "map_pos": [
@@ -549,7 +549,7 @@
    "continent": "eldrasion"
   },
   {
-   "id": "ice_sea",
+   "id": "ice_sea", "gear_tier": 7,
    "name": "극광 빙해",
    "short": "빙해",
    "map_pos": [
@@ -600,7 +600,7 @@
    "continent": "eldrasion"
   },
   {
-   "id": "world_tree",
+   "id": "world_tree", "gear_tier": 7,
    "name": "세계수 뿌리 샘",
    "short": "세계수",
    "map_pos": [

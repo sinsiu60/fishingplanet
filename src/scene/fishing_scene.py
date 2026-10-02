@@ -455,6 +455,11 @@ class FishingScene(Scene):
             key = f"gimmick:{g}"
             if self.card is None and self.tutorial.want(key):
                 self._open_card(key, "gauge")
+        from src.fishing.fight import fish_gear_tier
+        need_rod = fish_gear_tier(fish)
+        if self.save.gear_tier("rod") < need_rod and fish["rarity"] != "common":
+            # 낚싯대가 약하면 울렁임이 커진다 — 왜 어려운지 알려 준다
+            self.toasts.show(f"낚싯대가 버거워한다! 이 물고기는 T{need_rod} 이상 권장", BAD, 2.6, 11)
         if fish["rarity"] == "legend":
             self.toasts.show(f"전설 등장! {fish['name']}", (255, 214, 90), 3.0)
             self.game.haptics.vibrate("legend")
@@ -1065,6 +1070,10 @@ class FishingScene(Scene):
         elif ev in ("flick_perfect", "flick_good"):
             self._swipe_vfx(ev == "flick_perfect")
             self.popups.add(ev, self._fish_screen(), f.perfect_streak if ev == "flick_perfect" else 0)
+        elif ev.startswith("hook_floor:"):
+            n = int(ev.split(":")[1])
+            if n < 3:
+                self.toasts.show(f"바늘이 헐거워졌다 ({n}/3) — 신호를 놓칠 때마다 바늘 게이지가 줄지 않고 쌓여요", BAD, 2.2, 11)
         elif ev == "flick_miss":
             pos = self._fish_screen()
             self.sfx.play("miss")

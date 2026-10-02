@@ -1,5 +1,5 @@
 {
-  "_설명": "장비 4종 (DESIGN.md 6장). 실력 > 장비: 최고 등급도 기본의 약 1.5배까지만.",
+  "_설명": "장비 4종 (DESIGN.md 6장·28장). 낚싯대 초록 구간은 좁게 시작해 티어마다 넓어지고(T1 20칸 → T8 54칸), 줄 내구도는 낮게 시작한다(T1 40 → T8 250). 그 낚시터에 맞는 티어보다 낮은 낚싯대는 물고기의 울렁임을 감당하기 어렵다 (fishing_config fight.heave_*).",
   "rod": [
     {"id": "bamboo", "name": "대나무 낚싯대", "tier": 1, "price": 0, "green": [42, 62], "desc": "할아버지가 쓰던 낚싯대. 손에 익숙하다."},
     {"id": "glass", "name": "글라스 로드", "tier": 2, "price": 250, "green": [40, 64], "desc": "잘 휘어서 충격을 흡수한다."},
@@ -23,12 +23,12 @@
   "line": [
     {"id": "nylon2", "name": "나일론 2호", "tier": 1, "price": 0, "durability": 40, "desc": "기본 낚싯줄."},
     {"id": "nylon4", "name": "나일론 4호", "tier": 2, "price": 300, "durability": 55, "desc": "조금 더 굵고 질기다."},
-    {"id": "carbon4", "name": "카본 4호", "tier": 3, "price": 1800, "durability": 70, "desc": "물속에서 잘 안 보이고 단단하다."},
-    {"id": "pe3", "name": "PE 합사 3호", "tier": 4, "price": 7000, "durability": 90, "desc": "여러 가닥을 꼬아 만든 튼튼한 줄."},
-    {"id": "silk", "name": "명주 합사", "tier": 5, "price": 26000, "durability": 115, "desc": "비단처럼 매끄럽고 끊어지지 않는다."},
-    {"id": "crystal_line", "name": "수정사", "tier": 6, "price": 57200, "durability": 145, "continent": "eldrasion", "desc": "수정 섬유를 꼬아 만든 줄."},
-    {"id": "nebula_line", "name": "성운사", "tier": 7, "price": 125800, "durability": 180, "continent": "eldrasion", "scales": 2, "desc": "성운의 실."},
-    {"id": "abyss_line", "name": "천해사", "tier": 8, "price": 276800, "durability": 220, "continent": "eldrasion", "scales": 5, "desc": "끊어진 적이 없다는 줄."}
+    {"id": "carbon4", "name": "카본 4호", "tier": 3, "price": 1800, "durability": 75, "desc": "물속에서 잘 안 보이고 단단하다."},
+    {"id": "pe3", "name": "PE 합사 3호", "tier": 4, "price": 7000, "durability": 95, "desc": "여러 가닥을 꼬아 만든 튼튼한 줄."},
+    {"id": "silk", "name": "명주 합사", "tier": 5, "price": 26000, "durability": 125, "desc": "비단처럼 매끄럽고 끊어지지 않는다."},
+    {"id": "crystal_line", "name": "수정사", "tier": 6, "price": 57200, "durability": 160, "continent": "eldrasion", "desc": "수정 섬유를 꼬아 만든 줄."},
+    {"id": "nebula_line", "name": "성운사", "tier": 7, "price": 125800, "durability": 200, "continent": "eldrasion", "scales": 2, "desc": "성운의 실."},
+    {"id": "abyss_line", "name": "천해사", "tier": 8, "price": 276800, "durability": 250, "continent": "eldrasion", "scales": 5, "desc": "끊어진 적이 없다는 줄."}
   ],
   "net": [
     {"id": "basic_net", "name": "기본 뜰채", "tier": 1, "price": 0, "window": 0.15, "fail_distance": 6.0, "desc": "평범한 뜰채."},

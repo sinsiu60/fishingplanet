@@ -324,6 +324,12 @@ class MapScene(Scene):
         got = sum(1 for f in fishes if self.save.dex_entry(f["id"]))
         if not secret_hidden:
             text(canvas, f"도감 {got}/{len(fishes)}종", (x, yy), ui.TEXT, 11, "midleft")
+            yy += 13
+            # 권장 낚싯대: 이보다 낮으면 희귀·전설이 크게 날뛰어 버티기 어렵다 (fight.heave_amp)
+            need = sp.get("gear_tier", 1)
+            have = self.save.gear_tier("rod")
+            text(canvas, f"권장 낚싯대 T{need}+ · 전설 T{min(8, need + 1)}+", (x, yy),
+                 ui.TEXT if have >= need else ui.BAD, 11, "midleft")  # 지금 낚싯대보다 높으면 빨강
             yy += 14
         self.go_btn.rect.topleft = (box.x + 2, box.bottom - 20)
         self.go_btn.rect.size = (box.w - 4, 17)
