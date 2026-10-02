@@ -24,14 +24,13 @@ jobs:
       - name: 아이콘
         run: python tools/make_icon.py build/icon.ico
       - name: PyInstaller (build.bat 과 같은 옵션)
-        shell: bash
+        shell: cmd
         run: |
-          python -m PyInstaller --noconfirm --clean --onedir --windowed \
-            --name FishingGame --icon "$PWD/build/icon.ico" \
-            --add-data "$PWD/data;data" --exclude-module tkinter \
-            --specpath build main.py
-          cp dist_readme.txt dist/FishingGame/README.txt
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name FishingGame --icon "%CD%\build\icon.ico" --add-data "%CD%\data;data" --exclude-module tkinter --specpath build "%CD%\main.py"
+          if errorlevel 1 exit /b 1
+          copy /y dist_readme.txt dist\FishingGame\README.txt
       - name: 실행 확인 (화면 없이 120프레임)
+        timeout-minutes: 5
         shell: bash
         env:
           SDL_VIDEODRIVER: dummy
