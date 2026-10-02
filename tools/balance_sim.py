@@ -51,7 +51,7 @@ def gear_for_tier(tier: int) -> dict:
     pick = {k: max((g for g in eq[k] if g["tier"] <= tier), key=lambda g: g["tier"]) for k in ("rod", "reel", "line", "net")}
     rod, reel, line, net = pick["rod"], pick["reel"], pick["line"], pick["net"]
     return {"rod_green": list(rod["green"]), "rod_tier": rod["tier"], "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
-            "line_max": line["durability"], "net_window_sec": net["window"], "net_fail_distance": net["fail_distance"]}
+            "drag_cushion": reel.get("drag_cushion", 0.0), "line_max": line["durability"], "net_window_sec": net["window"], "net_fail_distance": net["fail_distance"]}
 
 
 # ───────────────────────── 1단계: 헤드리스 봇 ─────────────────────────

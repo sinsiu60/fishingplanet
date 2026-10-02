@@ -49,9 +49,15 @@ def _bar(canvas, x, y, w, frac, need, col) -> None:
 
 
 def draw_pattern_panel(canvas, fight, touch: bool, t: float) -> None:
+    y0 = 76  # 알림(58) 아래, 수평선 위
+    y = _draw_panel_rows(canvas, fight, touch, t, y0)
+    draw_mini_tension(canvas, fight, t, y if y > y0 else None)
+
+
+def _draw_panel_rows(canvas, fight, touch: bool, t: float, y: int) -> int:
+    """안내 줄들을 위에서부터 그리고, 다음 줄이 올 y를 돌려준다 (아무것도 없으면 그대로)."""
     b = fight.brain
     w = canvas.get_width()
-    y = 76  # 알림(58) 아래, 수평선 위
     # 연쇄 콤보: 순서 줄
     combo_seq = None
     if b.signal == "chain" and not b.sound_only:
@@ -107,6 +113,67 @@ def draw_pattern_panel(canvas, fight, touch: bool, t: float) -> None:
         text(canvas, "꼬임", (x - 4, y + 1), BAD if danger else TEXT, 11, "midright")
         _bar(canvas, x, y, gw, tw / 100, None, col)
         text(canvas, f"{int(tw)}", (x + gw + 4, y + 1), col, 11, "midleft")
+        y += 17
+    return y
+
+
+# ── 가운데 미니 장력 바 ──
+# 패턴 안내가 떠 있는 동안만 그 바로 아래에 얇게 (왼쪽 장력 게이지와 같은 색·같은 눈금, 가로로).
+# 장력으로 판정하는 패턴은 목표 구간을 겹쳐 그린다: 숨기 = 풀어 줄 구간(금색), 콤보 돌진 = 빨간 구간 경계 강조.
+_T_GREEN, _T_RED, _T_SLACK = (70, 180, 95), (205, 62, 58), (80, 98, 130)
+_TARGET = (255, 214, 90)
+
+
+def _dark(c, k):
+    return tuple(int(v * (1 - k)) for v in c)
+
+
+def draw_mini_tension(canvas, fight, t: float, y: int | None) -> None:
+    """y = 안내 패널 다음 줄 위치 (패널이 없으면 None → 서서히 사라짐). 패널 아래에 붙은 얇은 줄로 그린다."""
+    st = fight.__dict__.setdefault("_mini_tension", {"a": 0.0, "y": 0, "t": t})
+    dt = max(0.0, min(0.1, t - st["t"]))
+    st["t"] = t
+    if y is not None:
+        st["y"] = y
+        st["a"] = min(1.0, st["a"] + dt * 6)  # 약 0.17초에 걸쳐 나타남
+    else:
+        st["a"] = max(0.0, st["a"] - dt * 4)
+    if st["a"] <= 0:
+        return
+    pw, ph = 250, 12
+    surf = pygame.Surface((pw, ph + 4), pygame.SRCALPHA)
+    surf.fill(PANEL, (0, 0, pw, ph))
+    pygame.draw.rect(surf, (52, 60, 88), (0, 0, pw, ph), 1)
+    text(surf, "장력", (5, ph // 2), DIM, 11, "midleft")
+    bx, bw, by = 30, pw - 36, ph // 2 - 2
+
+    def tx(v):
+        return bx + int(max(0.0, min(100.0, v)) / 100 * bw)
+
+    gl, gh = fight.green_low, fight.green_high
+    surf.fill(SHADOW, (bx - 1, by - 1, bw + 2, 6))
+    surf.fill(_dark(_T_SLACK, 0.35), (bx, by, tx(gl) - bx, 4))
+    surf.fill(_dark(_T_GREEN, 0.45), (tx(gl), by, tx(gh) - tx(gl), 4))
+    surf.fill(_dark(_T_RED, 0.4), (tx(gh), by, tx(100) - tx(gh), 4))
+    # 목표 구간 (장력으로 판정하는 패턴): 숨기 = 풀어 줄 구간, 그 위 초록 가운데부터는 줄이 쓸림
+    hide = next((p for p in fight.pats if p.id == "hide" and p.active and not p.success), None)
+    if hide is not None:
+        lo, hi = tx(gl + hide.c["low_min"]), tx(gl + hide.c["low_max"])
+        on = hide.hold_t > 0 or hide.peeking
+        surf.fill((*_TARGET, 150 if on else 110), (lo, by, max(2, hi - lo), 4))
+        pygame.draw.rect(surf, _TARGET, (lo - 1, by - 2, max(2, hi - lo) + 2, 8), 1)
+        surf.fill(_T_RED, (tx((gl + gh) / 2), by - 2, 1, 8))
+    rush_combo = fight.combo is not None and fight.brain.state == "rush"
+    surf.fill((255, 120, 110) if rush_combo else (230, 255, 230), (tx(gh), by - 1, 1, 6))
+    surf.fill((230, 255, 230), (tx(gl), by - 1, 1, 6))
+    # 현재 장력 (왼쪽 게이지와 같은 색·깜빡임)
+    zone = fight.zone()
+    blink = zone != "green" and int(t * 8) % 2 == 0
+    col = {"green": _T_GREEN, "red": _T_RED, "slack": (140, 160, 200)}[zone]
+    mc = (255, 255, 255) if not blink else col
+    surf.fill(mc, (tx(fight.tension) - 1, by - 2, 2, 8))
+    surf.set_alpha(int(255 * st["a"]))
+    canvas.blit(surf, (canvas.get_width() // 2 - pw // 2, st["y"] - 9))
 
 
 def _judge_row(canvas, fight, pat, touch: bool, t: float, w: int, y: int) -> None:

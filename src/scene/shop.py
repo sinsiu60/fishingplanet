@@ -26,7 +26,7 @@ def stat_lines(kind: str, item: dict) -> list[str]:
         lo, hi = item["green"]
         return [f"초록 구간 {lo}~{hi} (폭 {hi - lo})"]
     if kind == "reel":
-        return [f"감기 속도 ×{item['speed']:.2f}", f"드랙 {item['drag_steps']}단계"]
+        return [f"감기 속도 ×{item['speed']:.2f}", f"드랙 완충 −{item.get('drag_cushion', 0) * 100:.0f}% (돌진 때 장력)"]
     if kind == "line":
         return [f"줄 내구도 {item['durability']}"]
     if kind == "net":
@@ -60,7 +60,7 @@ def stat_rows(kind: str, item: dict) -> list[tuple[str, float, str, bool]]:
         lo, hi = item["green"]
         return [("초록 구간 폭", hi - lo, "{:.0f}", True)]
     if kind == "reel":
-        return [("감기 속도", item["speed"], "×{:.2f}", True), ("드랙 단계", item["drag_steps"], "{:.0f}", True)]
+        return [("감기 속도", item["speed"], "×{:.2f}", True), ("드랙 완충", item.get("drag_cushion", 0) * 100, "−{:.0f}%", True)]
     if kind == "line":
         return [("줄 내구도", item["durability"], "{:.0f}", True)]
     if kind == "net":

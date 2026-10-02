@@ -647,6 +647,8 @@ class Fight:
         # 목표 장력
         drag_frac = self.drag_frac
         pull = b.pull * self.fish.get("power", 1.0) * cfg["fish_pull_scale"] * dir_mult
+        if b.state == "rush":
+            pull *= 1 - self.gear.get("drag_cushion", 0.0)  # 릴 드랙 완충: 돌진 때 장력이 덜 튄다
         calm = not b.is_active
         reel_t = 0.0
         if reeling:
