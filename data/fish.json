@@ -1,5 +1,5 @@
 {
- "_설명": "물고기 89종: 샤르미온 47 (DESIGN.md 3·18장) + 엘드라시온 42 (23장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. hint3/hint10은 도감 힌트.",
+ "_설명": "물고기 89종: 샤르미온 47 (DESIGN.md 3·18장) + 엘드라시온 42 (23장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. hint3/hint10은 도감 힌트. spawn_weight = 출현 가중치 덮어쓰기 (없으면 희귀도 기본값). 조건이 까다로운 가물치·숭어·어름치·만새기는 희귀로 올리되 출현 빈도는 고급 그대로(25).",
  "fish": [
   {
    "id": "crucian",
@@ -461,7 +461,7 @@
    "weathers": [
     "rain"
    ],
-   "rarity": "uncommon",
+   "rarity": "rare",
    "size_cm": [
     40,
     80
@@ -518,7 +518,8 @@
     1,
     2
    ],
-   "shadow_len_m": 0.57
+   "shadow_len_m": 0.57,
+   "spawn_weight": 25
   },
   {
    "id": "golden_carp",
@@ -948,7 +949,7 @@
     "clear",
     "rain"
    ],
-   "rarity": "uncommon",
+   "rarity": "rare",
    "size_cm": [
     20,
     40
@@ -1003,7 +1004,8 @@
     1,
     2
    ],
-   "shadow_len_m": 0.28
+   "shadow_len_m": 0.28,
+   "spawn_weight": 25
   },
   {
    "id": "tunggari",
@@ -1493,7 +1495,7 @@
     "clear",
     "rain"
    ],
-   "rarity": "uncommon",
+   "rarity": "rare",
    "size_cm": [
     40,
     70
@@ -1546,7 +1548,8 @@
     1,
     2
    ],
-   "shadow_len_m": 0.52
+   "shadow_len_m": 0.52,
+   "spawn_weight": 25
   },
   {
    "id": "rockfish_bollak",
@@ -1777,7 +1780,7 @@
    "weathers": [
     "clear"
    ],
-   "rarity": "uncommon",
+   "rarity": "rare",
    "size_cm": [
     60,
     120
@@ -1833,7 +1836,8 @@
    "jump_chain": [
     1,
     3
-   ]
+   ],
+   "spawn_weight": 25
   },
   {
    "id": "red_seabream",

@@ -37,7 +37,7 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
     for f in load_json("fish.json")["fish"]:
         if f["spot"] != spot or period not in f["times"] or weather not in f["weathers"]:
             continue
-        w = cfg["rarity_weight"].get(f["rarity"], 0)
+        w = f.get("spawn_weight", cfg["rarity_weight"].get(f["rarity"], 0))  # 종별 덮어쓰기 (조건 까다로운 희귀)
         if weather == "storm" and f["rarity"] in ("rare", "legend"):
             w *= cfg["storm_rare_mult"]  # 폭풍: 희귀어 증가
         if bait:
