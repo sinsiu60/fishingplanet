@@ -99,6 +99,11 @@ class PcInput:
         return 0.0  # PC: 둘러보기는 화면 끝에 마우스
 
 
+# 미리보기에서 키보드로 누르는 터치 버튼 (platform/preview.py 설명)
+VIRTUAL_KEYS = {pygame.K_SPACE: "dip", pygame.K_UP: "drag_up", pygame.K_DOWN: "drag_down", pygame.K_f: "pad",
+                pygame.K_r: "retrieve"}
+
+
 class TouchInput(PcInput):
     """모바일 터치 (DESIGN.md 26-10). 미리보기 모드에선 마우스 왼쪽 버튼이 손가락 하나.
 
@@ -125,6 +130,19 @@ class TouchInput(PcInput):
     # ── 원시 이벤트 → 손가락 ──
     def translate(self, event):
         et = event.type
+        if et in (pygame.KEYDOWN, pygame.KEYUP) and event.key in VIRTUAL_KEYS:
+            # 키보드 = 두 번째 손가락 (미리보기·키보드 달린 기기): 낚시 화면의 그 버튼을 누른 것과 같다
+            fid = ("key", event.key)
+            if et == pygame.KEYUP:
+                return self._up(fid, self.fingers[fid]["pos"], pygame.time.get_ticks()) if fid in self.fingers else None
+            ctx = self._scene_ctx()
+            if ctx is not None and fid not in self.fingers:
+                from src.platform import touch_ui
+                ctrls = touch_ui.layout(self.game.screen.width, self.game.screen.height, ctx, self.game.settings,
+                                        self.items_open)
+                c = next((c for c in ctrls if c.id == VIRTUAL_KEYS[event.key]), None)
+                if c is not None:
+                    return self._down(fid, c.center, pygame.time.get_ticks())
         if et == pygame.KEYDOWN:
             if event.key == pygame.K_AC_BACK:
                 return Action("back")

@@ -25,6 +25,7 @@ class PixelScreen:
     def __init__(self, width: int, height: int, scale: int | None, title: str, mobile_window=None):
         """mobile_window: None = PC, (w, h) = 모바일 미리보기 창 크기, (0, 0) = 기기 전체 화면."""
         self.mobile = mobile_window is not None
+        self.overlay = None  # 창 위에 덧그리는 함수 (모바일 미리보기: 노치·진동 표시)
         self.shake = (0, 0)  # 화면 흔들림 (캔버스 픽셀)
         try:
             from src.render.icon import icon_surface
@@ -44,6 +45,11 @@ class PixelScreen:
         self.height = height
         self.canvas = pygame.Surface((width, height))
         self.ui_rect = pygame.Rect((width - BASE_W) // 2, (height - BASE_H) // 2, BASE_W, BASE_H)
+        # 좌우 안전 여백 (캔버스 px): 가로가 긴 폰은 가장자리에 카메라 구멍·둥근 모서리가 있다. PC·태블릿은 0
+        self.safe_x = 0
+        if self.mobile and width >= 540:
+            from src.core.config import load_json
+            self.safe_x = load_json("mobile_config.json")["safe_x_px"]
         if not self.mobile:
             self.scale = scale or self._best_scale()
             self.window = pygame.display.set_mode((width * self.scale, height * self.scale))
@@ -81,4 +87,6 @@ class PixelScreen:
             scaled = pygame.transform.scale(self.canvas, self.window.get_size())
             self.window.fill((0, 0, 0))
             self.window.blit(scaled, (self.shake[0] * self.scale, self.shake[1] * self.scale))
+        if self.overlay is not None:
+            self.overlay(self.window)
         pygame.display.flip()

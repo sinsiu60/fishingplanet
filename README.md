@@ -17,6 +17,13 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## 모바일 화면 미리보기 (PC에서)
+
+`run_mobile_preview.bat` 더블클릭 (또는 `python main.py --mobile-preview --preset phone20`)
+- 마우스 = 손가락. **F7** 화면 프리셋 바꾸기 (폰 18:9·20:9·21:9, 태블릿 16:10·4:3), **F8** 노치·둥근 모서리 표시
+- 두 번째 손가락 대신 키보드: 스페이스 = 숙이기, ↑/↓ = 드랙, F 누르고 있기 = 릴 감기, R = 회수
+- 진동은 화면 아래에 `[진동] 종류`로 표시. 세이브는 PC와 같은 것을 씁니다.
+
 ## 음악 넣기 (선택)
 
 `data/music/`에 정해진 이름의 ogg/mp3 파일을 넣으면 낚시터·파이팅·전설별로 자동 재생됩니다.

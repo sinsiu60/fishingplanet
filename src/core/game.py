@@ -30,6 +30,15 @@ class Game:
         if self.input.kind == "touch":
             from src.ui import hud
             hud.SHOW_CURSOR = False
+        from src.platform.haptics import Haptics
+        self.haptics = Haptics()  # 진동 (PC는 아무것도 안 함)
+        self.preview = None
+        from src.platform.detect import PREVIEW
+        if PREVIEW:
+            from src.platform.preview import Preview
+            self.preview = Preview(self)
+            self.screen.overlay = self.preview.draw
+            pygame.display.set_caption(self.preview.caption())
         self.clock = pygame.time.Clock()
         self.sfx = Sfx()
         self.sfx.volume = self.settings.get("volume")
@@ -48,6 +57,26 @@ class Game:
             from src.scene.menu import TitleScene
             start_scene = TitleScene
         self.scenes.push(start_scene(self))
+
+    def switch_preset(self, name: str) -> None:
+        """미리보기: 화면 프리셋을 바꾸고 지금 화면을 새 크기로 다시 연다 (낚시 중이면 낚시터 처음 상태로)."""
+        from src.platform import detect
+        from src.platform.input import create_input
+        self.save_now()
+        self.sfx.stop_all()
+        detect.set_preset(name)
+        cfg = game_config()
+        self.screen = PixelScreen(cfg["width"], cfg["height"], None, cfg["title"], detect.mobile_window())
+        self.screen.overlay = self.preview.draw
+        pygame.display.set_caption(self.preview.caption())
+        self.input = create_input(self)
+        self.scenes.stack.clear()
+        if self.save is not None:
+            from src.scene.menu import start_game
+            start_game(self, self.save)
+        else:
+            from src.scene.menu import TitleScene
+            self.scenes.push(TitleScene(self))
 
     def slowmo(self, real_sec: float, scale: float) -> None:
         self.slow_timer = real_sec
@@ -94,6 +123,8 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.quit()
+                elif self.preview is not None and self.preview.handle_event(event):
+                    pass
                 elif self.scenes.current:
                     self.scenes.current.handle_event(event)
 

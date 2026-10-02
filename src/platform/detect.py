@@ -31,10 +31,23 @@ def preview_preset() -> str:
     return "phone20"
 
 
+_current = None
+
+
+def current_preset() -> str:
+    return _current or preview_preset()
+
+
+def set_preset(name: str) -> None:
+    """미리보기 실행 중 프리셋 바꾸기 (F7)."""
+    global _current
+    _current = name
+
+
 def mobile_window():
     """PixelScreen에 넘길 창: PC = None, 안드로이드 = 전체 화면 (0, 0), 미리보기 = 프리셋 크기."""
     if IS_ANDROID:
         return (0, 0)
     if PREVIEW:
-        return PREVIEW_PRESETS[preview_preset()]
+        return PREVIEW_PRESETS[current_preset()]
     return None

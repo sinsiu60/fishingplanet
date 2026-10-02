@@ -243,7 +243,8 @@ def draw_lose_panel(canvas, fight, title_reason: tuple[str, str], t: float) -> N
 
 
 def _wrap(s: str, width: int) -> list[str]:
-    words = s.split(" ")
+    from src.platform.hints import localize
+    words = localize(s).split(" ")  # 모바일: 조작 문구를 터치 문구로 바꾼 뒤 줄바꿈
     lines, cur = [], ""
     for wd in words:
         if len(cur) + len(wd) + 1 > width and cur:

@@ -53,7 +53,8 @@ def layout(w: int, h: int, ctx: dict, settings, items_open: bool = False) -> lis
     """지금 상황(ctx: FishingScene.touch_context)에 보여 줄 버튼들. 앞쪽이 먼저 판정된다."""
     s = ui_scale(h, settings)
     left_handed = settings.get("touch_left")
-    m = 8
+    sx = ctx.get("safe_x", 0)  # 폰 가장자리 카메라 구멍·둥근 모서리
+    m = 8 + sx
     out: list[Control] = []
 
     def add(cid, x, y, cw, ch, shape="rect", label=""):
@@ -66,18 +67,16 @@ def layout(w: int, h: int, ctx: dict, settings, items_open: bool = False) -> lis
         return out  # 튜토리얼 카드·도움말: 화면 아무 곳이나 탭하면 닫힘
     top = 22
     if ctx.get("show_pause"):
-        add("pause", 4, 4, top, top)
+        add("pause", 4 + sx, 4, top, top)
     if ctx.get("fight"):
         items = ctx.get("items") or []
         if items:
-            add("item", w - 4 - top, 4, top, top, label="도구")
+            add("item", w - 4 - sx - top, 4, top, top, label="도구")
             if items_open:
-                x = w - 4 - top - 6
-                for n, (slot, name, count) in enumerate(reversed(items)):
-                    bw = 66
-                    x -= bw
-                    add(f"item{slot}", x, 4, bw, top, label=f"{name} ×{count}")
-                    x -= 4
+                # 도구 버튼 아래로 펼침 (옆으로 펼치면 물고기 이름·체력 바를 가린다)
+                bw = 70
+                for n, (slot, name, count) in enumerate(items):
+                    add(f"item{slot}", w - 4 - sx - bw, 4 + top + 6 + n * (top + 4), bw, top, label=f"{name} ×{count}")
         r = 20 * s
         add("dip", m, h - m - 2 * r, 2 * r, 2 * r, "circle", "숙이기")
         bw, bh = 28 * s, 22 * s
@@ -88,7 +87,7 @@ def layout(w: int, h: int, ctx: dict, settings, items_open: bool = False) -> lis
         add("pad", w - m - 2 * pr, h - m - 2 * pr, 2 * pr, 2 * pr, "circle", "감기")
     else:
         if ctx.get("show_bag"):
-            add("bag", w - 4 - top, 4, top, top)
+            add("bag", w - 4 - sx - top, 4, top, top)
         if ctx.get("can_retrieve"):
             add("retrieve", m, h - m - 24 * s, 52 * s, 24 * s, label="회수")
     return out

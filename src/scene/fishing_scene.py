@@ -249,11 +249,13 @@ class FishingScene(Scene):
                 if n and not f.consumable_used:
                     items.append((slot, name, n))
         free = not overlay and self.landing is None
+        ending = f is not None and f.phase in ("caught", "lost")  # 결과 화면: 탭하면 넘어가니 버튼은 숨김
         return {"fight": fighting, "overlay": overlay, "horizon": self.cam.horizon,
                 "can_look": free and f is None and c.state in LOOK_STATES,
-                "show_pause": free, "show_bag": free and self.can_open_menus(),
+                "show_pause": free and not ending, "show_bag": free and self.can_open_menus(),
                 "can_retrieve": free and f is None and c.state == CastState.LANDED,
-                "items": items, "drag": (f.drag, f.drag_steps) if fighting else None}
+                "items": items, "drag": (f.drag, f.drag_steps) if fighting else None,
+                "safe_x": self.game.screen.safe_x}
 
     def _cycle_debug(self, key: str) -> None:
         """F3 물고기 고정 / F4 낚시터 / F5 날씨 / F6 상자 지급 (테스트용)."""
@@ -282,9 +284,10 @@ class FishingScene(Scene):
     def _card_focus(self):
         focus = self.card["focus"]
         if focus == "gauge":
+            sx = self.game.screen.safe_x
             if self.touch and self.settings.get("touch_left"):
-                return (self.cam.width - self.GAUGE_W + 14, 114)
-            return (14, 114)
+                return (self.cam.width - self.GAUGE_W - sx + 14, 114)
+            return (14 + sx, 114)
         if focus == "fish" and self.fight is not None:
             return self._fish_screen()
         return None
@@ -454,6 +457,7 @@ class FishingScene(Scene):
                 self._open_card(key, "gauge")
         if fish["rarity"] == "legend":
             self.toasts.show(f"전설 등장! {fish['name']}", (255, 214, 90), 3.0)
+            self.game.haptics.vibrate("legend")
             self.sfx.play("impact", 1.0)
             self.sfx.play("chord_legend", 0.7)
             self.shake_kick = 2.5
@@ -709,6 +713,12 @@ class FishingScene(Scene):
                     self.sfx.play("perfect", 0.6)
             return
         reeling = self.game.input.held("reel") and f.phase == "fight"
+        if f.phase == "fight" and f.zone() == "red":
+            # 장력 빨강: 빨간 정도에 비례한 약한 진동을 0.3초마다
+            self.red_buzz_t = getattr(self, "red_buzz_t", 0.0) - dt
+            if self.red_buzz_t <= 0:
+                self.red_buzz_t = 0.3
+                self.game.haptics.vibrate("tension", min(1.0, max(0.2, (f.tension - f.green_high) / 30)))
         if f.phase == "fight" and not self.touch:
             self._detect_flick(dt)  # 터치는 릴 패드에서 튕기기 → "flick" 행동
         f.update(dt, reeling, aim)
@@ -834,6 +844,7 @@ class FishingScene(Scene):
         self.sparkles.burst(*pos, count=30 if perfect else 14, speed=1.5 if perfect else 1.0)
         self.sfx.play("whip", 1.0)
         if perfect:
+            self.game.haptics.vibrate("perfect")
             self.sfx.play("perfect", 0.9)
             self.sfx.play("impact", 0.7)
             self.game.slowmo(0.18, 0.25)  # 히트스톱
@@ -952,10 +963,12 @@ class FishingScene(Scene):
             self.shake_kick = 1.5
         elif ev == "nibble":
             self.sfx.play("nibble")
+            self.game.haptics.vibrate("nibble")
             big = self.save.cosmetic_on("sparkle_float")  # 반짝이 찌: 입질 파문이 더 잘 보임
             self.ripples.spawn(c.bx, c.bz, size=0.5 if big else 0.35, life=1.0 if big else 0.8)
         elif ev == "bite":
             self.sfx.play("bite")
+            self.game.haptics.vibrate("bite")
             self.ripples.spawn(c.bx, c.bz, size=1.3, life=1.5, rings=3)
             p = self.cam.project(c.bx, c.bz)
             if p:
@@ -1080,6 +1093,7 @@ class FishingScene(Scene):
         elif ev == "perfect":
             # 퍼펙트: 섬광 + 충격파 + 빛줄기 + 줌 펀치 + 큰 반짝임 + 슬로우 + 묵직한 타격음
             pos = self._fish_screen()
+            self.game.haptics.vibrate("perfect")
             self.sfx.play("perfect")
             self.sfx.play("impact", 0.9)
             self.sparkles.burst(*pos, count=40, speed=1.7)
@@ -1148,6 +1162,7 @@ class FishingScene(Scene):
             self.sfx.play("splash", 1.0)
             self.shake_kick = 4.0
         elif ev == "escape_snap":
+            self.game.haptics.vibrate("lose")
             self.sfx.play("snap", 1.0)  # 투둑
             self.screen_fx.miss(self.screen_fx.map(self._fish_screen()))
             self.game.slowmo(1.0, 0.35)
@@ -1167,6 +1182,8 @@ class FishingScene(Scene):
                 self.save.record_seen(f.fish["id"])
                 self.toasts.show(f"이 물고기를 붙잡으려면 [{float_name(f.float_need)}] 이상이 필요합니다.", BAD, 3.5, 11)
             self.game.save_now()
+            if ev != "lost:escape":  # 도주는 '투둑' 순간(escape_snap)에 이미 진동
+                self.game.haptics.vibrate("lose")
             self.sfx.play("snap" if ev == "lost:snap" else "flee")
             self.sfx.play("lose", 0.8)
             self.end_t = 0.0
@@ -1471,19 +1488,24 @@ class FishingScene(Scene):
             out = dict(out, bobber=(90, 220, 255))
         return out
 
-    GAUGE_W = 104  # 파이팅 게이지 묶음 폭 (fight_hud.draw_gauges 가 왼쪽 0~104px에 그림)
+    GAUGE_W = 170  # 파이팅 게이지 묶음 폭 (fight_hud.draw_gauges 가 왼쪽 0~170px에 그림, 물살 표시 포함)
 
     def _gauge_canvas(self, canvas):
         """왼손잡이 터치 모드면 게이지를 오른쪽 가장자리에 (왼쪽 아래는 릴 패드 자리)."""
+        sx = self.game.screen.safe_x
         if self.touch and self.settings.get("touch_left"):
             w, h = canvas.get_size()
-            return canvas.subsurface((w - self.GAUGE_W, 0, self.GAUGE_W, h))
+            return canvas.subsurface((w - self.GAUGE_W - sx, 0, self.GAUGE_W, h))
+        if sx:
+            return canvas.subsurface((sx, 0, self.GAUGE_W, canvas.get_height()))
         return canvas
 
     @property
     def hud_inset(self) -> int:
         """모바일: 위쪽 HUD 글자를 일시정지·가방 버튼만큼 안쪽으로."""
-        return load_json("mobile_config.json")["hud_inset_px"] if self.touch else 0
+        if not self.touch:
+            return 0
+        return load_json("mobile_config.json")["hud_inset_px"] + self.game.screen.safe_x
 
     def _draw_touch_controls(self, canvas) -> None:
         from src.platform import touch_ui
