@@ -708,6 +708,46 @@ def make_twist_click(rng) -> np.ndarray:
     return np.sin(2 * np.pi * 1300 * _t(0.05)) * _env(n, 0.001, 0.015) * 0.35
 
 
+# ── 신규 패턴 예고 (U4) ──
+def make_cue_hide(rng) -> np.ndarray:
+    """⑦ 숨기: 바위에 부딪히는 묵직한 '쿵' + 자갈 긁힘."""
+    sec = 0.6
+    n = int(RATE * sec)
+    body = _sweep(70, 35, sec) * _env(n, 0.003, 0.2) * 0.65
+    grit = (_noise(sec, rng) - _lowpass(_noise(sec, rng), 3)) * _env(n, 0.02, 0.12) * 0.25
+    return body + grit
+
+
+def make_cue_drum(rng) -> np.ndarray:
+    """⑧ 펌핑 박자 북 한 번 '둥' (박마다 울림 — 짧고 어택이 또렷해야 박자가 맞게 들린다)."""
+    sec = 0.25
+    n = int(RATE * sec)
+    drum = _sweep(150, 60, sec) * _env(n, 0.001, 0.08)
+    hit = _lowpass(_noise(sec, rng), 4) * _env(n, 0.0005, 0.012)
+    return drum * 0.85 + hit * 0.35
+
+
+def make_cue_bite(rng) -> np.ndarray:
+    """⑩ 줄 물어뜯기: 이빨이 맞부딪히는 날카로운 '딱'."""
+    sec = 0.2
+    n = int(RATE * sec)
+    crack = _noise(sec, rng) * _env(n, 0.0003, 0.01)
+    ping = np.sin(2 * np.pi * 3100 * _t(sec)) * _env(n, 0.0005, 0.03) * 0.4
+    return (crack + ping) * 0.8
+
+
+def make_double_perfect(rng) -> np.ndarray:
+    """⑨ 더블 퍼펙트: 위로 쭉 올라가는 반짝임 + 화음."""
+    sec = 0.9
+    n = int(RATE * sec)
+    out = np.zeros(n)
+    for i, f in enumerate((784.0, 1046.5, 1318.5, 1568.0, 2093.0)):
+        s = int(RATE * i * 0.06)
+        tone = np.sin(2 * np.pi * f * _t(0.5)) * _env(int(RATE * 0.5), 0.004, 0.2)
+        out[s:s + len(tone)] += tone[: n - s] * 0.22
+    return out
+
+
 def _cache_path(rate: int, channels: int, seed: int):
     """소리 캐시 파일: 이 파일(합성 코드) 내용이 바뀌면 이름이 바뀌어 새로 만든다."""
     import hashlib
@@ -803,6 +843,11 @@ class Sfx:
             "cue_twist": make_cue_twist(rng),
             "cue_combo": make_cue_combo(rng),
             "twist_click": make_twist_click(rng),
+            # U4
+            "cue_hide": make_cue_hide(rng),
+            "cue_drum": make_cue_drum(rng),
+            "cue_bite": make_cue_bite(rng),
+            "double_perfect": make_double_perfect(rng),
         }
         pcms = {}
         for name, wave in bank.items():

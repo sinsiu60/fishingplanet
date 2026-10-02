@@ -151,7 +151,7 @@ def new_data() -> dict:
         "keepnet": [],
         "dex": {},
         "stats": {"catches": 0, "s_ranks": 0, "perfects": 0, "lost": 0, "earned": 0,
-                  "chests_opened": 0, "s_ranks_eldra": 0},
+                  "chests_opened": 0, "s_ranks_eldra": 0, "double_perfects": 0},
         # ── 확장 (v2) ──
         "continent": "sharmion",
         "unlocked_continents": ["sharmion"],

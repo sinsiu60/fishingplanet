@@ -1,5 +1,5 @@
 {
-  "_설명": "모바일 터치 조작 수치 (DESIGN.md 26-10). 좌표·거리는 캔버스 픽셀(폰 기준 1px ≈ 0.25mm), 시간은 ms. safe_x_px = 폰(캔버스 폭 540 이상)에서 좌우 HUD·버튼을 카메라 구멍·둥근 모서리만큼 안쪽으로 (Phase M5에서 기기 실제 값으로 바꿀 예정). debug_build = true면 다섯 손가락 탭으로 수치 표시(F1) — 릴리스 APK에선 false. pad_pitch_range = 릴 패드 노브를 위아래로 반경의 이 비율만큼 밀면 낚싯대 상하 최대, circle_min_frac = 원 그리기 최소 반경(패드 반경 비율), drag_min_hold_ms = ▼를 이만큼 누르고 있으면 드랙 순간 최저 (U2). touch_lead_sec = 신규 패턴 예고를 터치에선 이만큼 길게 (U3, 손가락 반응 여유).",
+  "_설명": "모바일 터치 조작 수치 (DESIGN.md 26-10). 좌표·거리는 캔버스 픽셀(폰 기준 1px ≈ 0.25mm), 시간은 ms. safe_x_px = 폰(캔버스 폭 540 이상)에서 좌우 HUD·버튼을 카메라 구멍·둥근 모서리만큼 안쪽으로 (Phase M5에서 기기 실제 값으로 바꿀 예정). debug_build = true면 다섯 손가락 탭으로 수치 표시(F1) — 릴리스 APK에선 false. pad_pitch_range = 릴 패드 노브를 위아래로 반경의 이 비율만큼 밀면 낚싯대 상하 최대, circle_min_frac = 원 그리기 최소 반경(패드 반경 비율), drag_min_hold_ms = ▼를 이만큼 누르고 있으면 드랙 순간 최저 (U2). touch_lead_sec = 신규 패턴 예고를 터치에선 이만큼 길게 (U3, 손가락 반응 여유). pump_latency_sec = 펌핑 리듬 판정 창을 터치에선 이만큼 늦춤(터치 입력 지연 보정, U4).",
   "tap_slop_px": 6,
   "button_slop_px": 4,
   "long_press_ms": 450,
@@ -25,5 +25,6 @@
   "pad_pitch_range": 0.6,
   "circle_min_frac": 0.35,
   "drag_min_hold_ms": 250,
-  "touch_lead_sec": 0.1
+  "touch_lead_sec": 0.1,
+  "pump_latency_sec": 0.06
 }

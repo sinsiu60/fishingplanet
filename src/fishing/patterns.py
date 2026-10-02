@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from src.core.config import load_json
 from src.core.mathutil import clamp
 
-PATTERN_IDS = ("shake", "dive", "surface", "reverse", "twist")
+PATTERN_IDS = ("shake", "dive", "surface", "reverse", "twist", "hide", "pump", "bite")  # 판정 객체가 있는 상태형 패턴
 
 
 def cfg() -> dict:
@@ -34,6 +34,8 @@ class PatternInput:
 
 
 TIP_SHORT = {"shake": "손 멈춤", "dive": "낚싯대 위로", "surface": "낚싯대 아래로", "reverse": "연타",
+             "hide": "풀어 주다 고개 내밀 때 감기", "pump": "박자 사이에 감기", "thrash": "정점·착수 직전 숙이기",
+             "bite": "번쩍일 때 드랙 최저", "fake": "가짜면 감지 않기", "dual": "두 손으로 따로",
              "twist": "원 그리기", "chain": "순서대로 대응"}
 
 
@@ -44,7 +46,12 @@ def fish_patterns(fish: dict) -> list[str]:
         used |= set(ph.get("actions", {}))
         used |= set(ph.get("chain_seq", []))
     used |= set(fish.get("chain_seq", []))
-    return [p for p in PATTERN_IDS + ("chain",) if p in used]
+    if fish.get("fake_tired") or any(ph.get("fake_tired") for ph in fish.get("phases", [])):
+        used.add("fake")
+    for pair in fish.get("dual_pairs", []):
+        used |= set(pair)
+    order = ("shake", "dive", "surface", "reverse", "twist", "chain", "hide", "pump", "thrash", "bite", "fake", "dual")
+    return [p for p in order if p in used]
 
 
 class Judge:
@@ -117,6 +124,9 @@ class Judge:
     # Fight가 묻는 것
     def tension_override(self, f) -> float | None:
         return None
+
+    def tension_add(self, f) -> float:
+        return 0.0
 
     @property
     def hold_payout(self) -> bool:
@@ -276,7 +286,200 @@ class TwistGauge:
         return True
 
 
-JUDGES = {"shake": Shake, "dive": Dive, "surface": Surface, "reverse": Reverse, "twist": Twist}
+class Hide(Judge):
+    """⑦ 숨기: 감지 말고 풀어 줘서(장력 초록 아래 끝) 버티면 고개를 내민다 → 그때 감기."""
+
+    def __init__(self, fight):
+        super().__init__("hide", fight)
+        self.hold_t = 0.0
+        self.peek_t = 0.0
+        self.peeks = 0
+        self.success = False
+        self.reeling = False
+
+    @property
+    def ratio(self) -> float:
+        return 1.0 if self.peek_t > 0 else self.hold_t / self.c["hold_sec"]
+
+    @property
+    def peeking(self) -> bool:
+        return self.peek_t > 0
+
+    def update(self, dt, inp, reeling, aim_rate):
+        self.reeling = reeling
+        super().update(dt, inp, reeling, aim_rate)
+
+    def during(self, dt, inp, ok):
+        f, c = self.fight, self.c
+        if self.success:
+            return
+        if self.peek_t > 0:
+            self.peek_t -= dt
+            if self.reeling:
+                self.success = True
+                f.brain.end_pattern("hide")
+            elif self.peek_t <= 0:
+                self.hold_t = 0.0  # 놓쳤다 → 다시 숨는다
+            return
+        lo, hi = f.green_low + c["low_min"], f.green_low + c["low_max"]
+        if lo <= f.tension <= hi and not self.reeling:
+            self.hold_t += dt
+            if self.hold_t >= c["hold_sec"]:
+                self.peek_t = c["peek_sec"]
+                self.peeks += 1
+                f.events.append("hide_peek")
+        else:
+            self.hold_t = 0.0
+        if f.tension > (f.green_low + f.green_high) / 2:
+            dmg = f.line_max * c["pull_line_frac"] * dt  # 바위 틈에서 억지로 당기면 줄이 쓸린다
+            f.line -= dmg
+            f.line_damage += dmg
+
+    def tension_override(self, f):
+        if not self.active or self.success:
+            return None
+        # 숨은 물고기는 버티기만 한다: 감지 않으면 초록 아래 끝 근처, 감으면 감는 만큼 올라감
+        if not self.reeling:
+            return f.green_low - 2
+        cfg = f.cfg
+        return f.green_low + cfg["reel_tension_min"] + cfg["reel_tension_per_drag"] * f.drag_frac
+
+    def finish(self) -> str:
+        f = self.fight
+        if self.success:
+            self.result = "ok"
+            f.distance = max(0.0, f.distance - self.c["ok_distance"])
+        else:
+            self.result = "neutral"  # 시간이 지나 그냥 나왔다 (보너스 없음)
+        f.pattern_result(self.id, self.result)
+        return self.result
+
+
+class Pump(Judge):
+    """⑧ 펌핑 리듬: 박마다 당김(장력 +), 빈 박 가운데에만 감기. 박자는 예고 때 두 박 미리 들려준다."""
+
+    def __init__(self, fight):
+        super().__init__("pump", fight)
+        self.interval = self.c["interval"]
+        self.beat = -1          # 지금 박 번호 (행동 기준)
+        self.hits: list[bool] = []
+        self.bad: list[bool] = []
+        self.streak = 0
+        self.best = 0
+        self.preview_sent = 1   # 예고 시작 박은 예고 이벤트가 대신 낸다
+        self.reeling = False
+
+    def update(self, dt, inp, reeling, aim_rate):
+        self.reeling = reeling
+        super().update(dt, inp, reeling, aim_rate)
+
+    def pre(self, dt, inp):
+        b = self.fight.brain
+        if not self.active and b.state == "telegraph":
+            k = int(b.state_t / self.interval + 1e-6)
+            if k >= self.preview_sent and k < self.c["preview_beats"]:
+                self.preview_sent = k + 1
+                self.fight.events.append("pump_beat:preview")
+
+    def _phase(self) -> tuple[int, float]:
+        k = int(self.t / self.interval + 1e-6)
+        return k, self.t - k * self.interval
+
+    def during(self, dt, inp, ok):
+        f, c = self.fight, self.c
+        k, ph = self._phase()
+        if k >= f.brain.pump_beats:
+            return
+        while self.beat < k:
+            self._close_beat()
+            self.beat += 1
+            self.hits.append(False)
+            self.bad.append(False)
+            f.events.append(f"pump_beat:{self.beat}")
+        lat = f.input_latency
+        if ph < c["pull_sec"] + lat and self.reeling:
+            self.bad[k] = True   # 당길 때 감았다
+        center = self.interval / 2 + lat
+        if abs(ph - center) <= c["window"] and self.reeling:
+            self.hits[k] = True
+
+    def _close_beat(self) -> None:
+        if self.beat < 0:
+            return
+        good = self.hits[self.beat] and not self.bad[self.beat]
+        self.streak = self.streak + 1 if good else 0
+        self.best = max(self.best, self.streak)
+        self.fight.events.append("pump_hit" if good else "pump_miss")
+
+    def tension_add(self, f) -> float:
+        if not self.active:
+            return 0.0
+        k, ph = self._phase()
+        if k >= f.brain.pump_beats or ph >= self.c["pull_sec"]:
+            return 0.0
+        return self.c["pull_tension"] + (self.c["reel_in_pull"] if self.reeling else 0.0)
+
+    @property
+    def ratio(self) -> float:
+        n = max(1, self.beat + 1)
+        return sum(1 for h, b in zip(self.hits, self.bad) if h and not b) / n
+
+    def finish(self) -> str:
+        f, c = self.fight, self.c
+        self._close_beat()
+        self.beat = len(self.hits)  # 다시 닫지 않게
+        n = max(1, len(self.hits))
+        good = sum(1 for h, b in zip(self.hits, self.bad) if h and not b)
+        if self.best > 0:
+            f.reel_bonus = min(c["reel_bonus_max"], c["reel_bonus_per"] * self.best)
+            f.reel_bonus_t = c["bonus_sec"]
+        self.result = "ok" if good >= n * c["ok_frac"] else "fail"
+        f.pattern_result(self.id, self.result)
+        return self.result
+
+
+class Bite(Judge):
+    """⑩ 줄 물어뜯기: 예고가 끝나는 순간 ±window 안에 드랙 순간 최저를 '새로' 누르기."""
+
+    def __init__(self, fight):
+        super().__init__("bite", fight)
+        self.prev = False
+        self.edges: list[float] = []
+        self.t0 = None
+
+    def pre(self, dt, inp):
+        f = self.fight
+        if inp.drag_min and not self.prev:
+            self.edges.append(f.elapsed)
+        self.prev = inp.drag_min
+
+    def begin(self, dur):
+        super().begin(dur)
+        self.t0 = self.fight.elapsed
+
+    def passed(self) -> bool:
+        w = self.c["window"]
+        return self.t0 is not None and any(abs(e - self.t0) <= w for e in self.edges)
+
+    @property
+    def ratio(self) -> float:
+        return 1.0 if self.passed() else 0.0
+
+    def _success(self, f):
+        b = f.brain
+        if b.state == "dual":
+            f.stiff_after_dual = self.c["stiff_sec"]
+        else:
+            b.enter_stiff(self.c["stiff_sec"])
+
+    def _fail(self, f):
+        dmg = f.line_max * self.c["fail_line_frac"]
+        f.line -= dmg
+        f.line_damage += dmg
+
+
+JUDGES = {"shake": Shake, "dive": Dive, "surface": Surface, "reverse": Reverse, "twist": Twist,
+          "hide": Hide, "pump": Pump, "bite": Bite}
 
 
 class Combo:

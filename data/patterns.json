@@ -1,5 +1,5 @@
 {
-  "_설명": "신규 패턴 수치 (DESIGN.md 27-2, Phase U3 ①~⑥). 모든 패턴: 예고(telegraph) → 행동 → 결과. 예고 길이 = 물고기 telegraph_sec × telegraph_mult (최소 min_telegraph_sec, 모바일은 mobile_config.touch_lead_sec 더함). sec = 행동 길이 [최소, 최대]. pull = 행동 중 당기는 힘(기존 fish_ai.pull과 같은 단위). burst_cost = 기세 소모. grace_sec = 행동 시작 뒤 판정을 세지 않는 시간(반응 시간). 실패는 즉사 없이 손해만 (바늘 1/3 바닥은 타이밍형에만, 여기 패턴은 해당 없음).",
+  "_설명": "신규 패턴 수치 (DESIGN.md 27-2, Phase U3 ①~⑥). 모든 패턴: 예고(telegraph) → 행동 → 결과. 예고 길이 = 물고기 telegraph_sec × telegraph_mult (최소 min_telegraph_sec, 모바일은 mobile_config.touch_lead_sec 더함). sec = 행동 길이 [최소, 최대]. pull = 행동 중 당기는 힘(기존 fish_ai.pull과 같은 단위). burst_cost = 기세 소모. grace_sec = 행동 시작 뒤 판정을 세지 않는 시간(반응 시간). 실패는 즉사 없이 손해만 (바늘 1/3 바닥은 타이밍형에만, 여기 패턴은 해당 없음). U4(엘드라시온 ⑦~⑫): hide·pump·bite는 상태, thrash는 점프 변형(jump_kind thrash), fake는 기존 가짜 지침(fake_tired)에 효과를 붙인 것, dual은 두 패턴을 동시에.",
   "min_telegraph_sec": 0.4,
   "names": {
     "shake": "머리 흔들기",
@@ -7,12 +7,21 @@
     "surface": "수면 질주",
     "reverse": "역주행",
     "twist": "줄 비틀기",
-    "chain": "연쇄 콤보"
+    "chain": "연쇄 콤보",
+    "hide": "숨기",
+    "pump": "펌핑 리듬",
+    "thrash": "공중 몸부림",
+    "bite": "줄 물어뜯기",
+    "fake": "가짜 지침",
+    "dual": "이중 패턴"
   },
   "shake": {
     "_설명": "① 줄이 빠르게 떨림. 감기·방향 조작을 멈춰야 한다. 위반 = 감는 중이거나 낚싯대 방향이 초당 aim_rate_max 넘게 바뀜. 위반 시간이 길이의 fail_frac 넘으면 실패 → 위반 1초당 바늘 +hook_per_sec. 성공 → 스태미나 −, 기세 −.",
     "telegraph_mult": 1.0,
-    "sec": [1.6, 2.2],
+    "sec": [
+      1.6,
+      2.2
+    ],
     "pull": 0.55,
     "burst_cost": 0.2,
     "grace_sec": 0.25,
@@ -25,7 +34,10 @@
   "dive": {
     "_설명": "② 그림자가 작아지며 가라앉음 + 기포 멈춤. 낚싯대를 위로(pitch ≥ pitch_need) hold_need 이상 유지. 올리고 있는 동안은 줄이 풀리지 않는다. 실패 → 줄 −line_frac, 거리 +distance. 성공 → 스태미나 −.",
     "telegraph_mult": 1.0,
-    "sec": [1.5, 2.0],
+    "sec": [
+      1.5,
+      2.0
+    ],
     "pull": 0.85,
     "burst_cost": 0.2,
     "grace_sec": 0.5,
@@ -38,7 +50,10 @@
   "surface": {
     "_설명": "③ 수면에 V자 물살. 낚싯대를 아래로(pitch ≤ −pitch_need) hold_need 이상 유지. 실패 → 바로 점프 시도(예고 fail_jump_telegraph초, 기존 숙이기 판정). 성공 → 거리 −distance.",
     "telegraph_mult": 1.0,
-    "sec": [1.4, 1.8],
+    "sec": [
+      1.4,
+      1.8
+    ],
     "pull": 0.6,
     "burst_cost": 0.2,
     "grace_sec": 0.5,
@@ -50,7 +65,10 @@
   "reverse": {
     "_설명": "④ 그림자가 정면으로 다가오며 줄이 처짐. 연타로 감기: 회수 게이지(탭당 +tap_gain, 초당 −decay)를 keep_level 이상 hold_need 유지. 예고 중 연타도 게이지에 들어간다. 행동 중 장력 = 초록 아래 끝 + slack_offset + 게이지 × gauge_tension. 실패 → 장력 0, 바늘 +hook. 성공 → 거리 −distance.",
     "telegraph_mult": 1.0,
-    "sec": [1.2, 1.6],
+    "sec": [
+      1.2,
+      1.6
+    ],
     "pull": 0.0,
     "burst_cost": 0.2,
     "grace_sec": 0.3,
@@ -66,7 +84,10 @@
   "twist": {
     "_설명": "⑤ 물고기가 돌며 줄에 나선 무늬. 꼬임 게이지가 행동 중 초당 rise만큼 차고(설계 25 = 4초에 100이었으나 행동이 3~4초라 손을 놓아도 거의 안 끊겨서 30 = 3.3초), 원 그리기 1바퀴 = −per_turn. 게이지는 행동이 끝나도 남아 초당 −decay로 풀림. 100이 되면 줄 −snap_line_frac, 게이지 snap_to로. 행동이 끝날 때 ok_below 미만이면 성공 → ok_calm_sec초간 장력 울렁임 없음, fail_at 이상이거나 끊겼으면 실패, 그 사이는 무승부.",
     "telegraph_mult": 1.0,
-    "sec": [3.0, 4.0],
+    "sec": [
+      3.0,
+      4.0
+    ],
     "pull": 0.5,
     "burst_cost": 0.25,
     "rise": 30,
@@ -77,7 +98,11 @@
     "ok_below": 10,
     "fail_at": 60,
     "ok_calm_sec": 3.0,
-    "haptic_steps": [25, 50, 75]
+    "haptic_steps": [
+      25,
+      50,
+      75
+    ]
   },
   "chain": {
     "_설명": "⑥ 예고 한 번(telegraph_sec, 화면 위 '콤보' + 순서) 뒤 물고기마다 정해진 3행동(fish.json chain_seq)을 gap_telegraph_sec 예고로 이어 간다. 각 행동은 원래 방식으로 대응. 중간 실패 → 남은 행동 힘 ×fail_power_mult. 3연속 성공 → 스태미나 −ok_stamina_frac(최대치 비율). 돌진은 빨간 구간에 rush_red_fail_sec 넘게 있으면 실패.",
@@ -87,7 +112,11 @@
     "fail_power_mult": 1.3,
     "ok_stamina_frac": 0.15,
     "rush_red_fail_sec": 0.4,
-    "default_seq": ["shake", "dive", "rush"]
+    "default_seq": [
+      "shake",
+      "dive",
+      "rush"
+    ]
   },
   "first_meet": {
     "_설명": "처음 보는 패턴의 예고 순간: real_sec(실제 초) 동안 시간 ×scale + 한 줄 안내. 세이브 patterns_seen에 기록.",
@@ -100,6 +129,100 @@
     "surface": "수면으로 질주한다! 낚싯대를 아래로 눌러 띄우지 마세요",
     "reverse": "정면으로 달려온다! 줄이 처지지 않게 연타로 감으세요",
     "twist": "몸을 돌려 줄을 꼰다! 원을 그려 꼬임을 풀어 주세요",
-    "chain": "콤보 예고! 위에 보이는 순서대로 하나씩 대응하세요"
+    "chain": "콤보 예고! 위에 보이는 순서대로 하나씩 대응하세요",
+    "hide": "바위 틈에 숨었다! 장력을 초록 아래 끝까지 풀어 주고, 고개를 내밀 때 감으세요",
+    "pump": "북소리 박자! 당길 땐 멈추고, 박자 사이에만 감으세요",
+    "thrash": "크게 뛰어오른다! 정점에 한 번, 떨어지기 직전에 한 번 더 숙이세요",
+    "bite": "줄을 물어뜯으려 한다! 이빨이 번쩍이는 순간 드랙 순간 최저(Shift)",
+    "fake": "지친 척일 수 있다! 꼬리가 까딱이고 기포가 오르면 가짜 — 감지 마세요",
+    "dual": "두 가지를 동시에! 서로 다른 손으로 각각 대응하세요"
+  },
+  "hide": {
+    "_설명": "⑦ 위협 구역(바위·갈대) 쪽으로 파고들어 숨는다. 장력을 초록 아래 끝 low_min~low_max(초록 아래 끝 기준 +값) 사이로 hold_sec 연속 유지(풀어 줌) → 물고기가 고개를 내미는 신호 peek_sec 동안 감으면 성공(거리 −ok_distance, 즉시 끝). 숨은 동안 장력이 초록 가운데 위면 줄 −pull_line_frac/초. 최대 sec 지나면 그냥 나온다(보너스 없음 = 무승부).",
+    "telegraph_mult": 1.0,
+    "sec": [
+      6.0,
+      6.0
+    ],
+    "pull": 0.15,
+    "burst_cost": 0.2,
+    "low_min": -8,
+    "low_max": 4,
+    "hold_sec": 1.5,
+    "peek_sec": 0.6,
+    "ok_distance": 6.0,
+    "pull_line_frac": 0.04
+  },
+  "pump": {
+    "_설명": "⑧ 북 '둥 둥' 두 박을 예고로 미리 들려준 뒤 같은 박자로 beats박. 박마다 물고기가 pull_sec 동안 장력 +pull_tension으로 당긴다. 빈 박 가운데(박 + interval/2) ±window 안에서만 감기 = 그 박 성공. 당기는 중에 감으면 장력 +reel_in_pull 더(그 박 실패). 끝나면 최장 연속 성공 × reel_bonus_per (최대 reel_bonus_max)만큼 bonus_sec초간 감기 속도 증가. 성공 = 박의 절반 이상. 모바일은 판정 창을 mobile_config.pump_latency_sec 만큼 늦춘다(터치 지연).",
+    "beats": [
+      4,
+      6
+    ],
+    "interval": 0.6,
+    "preview_beats": 2,
+    "pull": 0.4,
+    "burst_cost": 0.25,
+    "pull_sec": 0.15,
+    "pull_tension": 18,
+    "reel_in_pull": 12,
+    "window": 0.12,
+    "reel_bonus_per": 0.1,
+    "reel_bonus_max": 0.4,
+    "bonus_sec": 10.0,
+    "ok_frac": 0.5
+  },
+  "thrash": {
+    "_설명": "⑨ 평소보다 큰 그림자 + 기포. 체공 air_sec(평소 0.9). 정점에 숙이기 + 착수 land_before초 전에 한 번 더 숙이기 = 저스트 2번. 1번째 실패 = 기존 점프 실패(바늘 1/3 바닥 포함), 2번째 실패 = 바늘 +second_fail_hook + 바늘 1/3 바닥. 둘 다 퍼펙트 = 더블 퍼펙트(퍼펙트 보상 ×2, 전용 연출).",
+    "telegraph_mult": 1.0,
+    "air_sec": 1.6,
+    "land_before": 0.25,
+    "burst_cost": 0.3,
+    "second_fail_hook": 40,
+    "height_mult": 1.25
+  },
+  "bite": {
+    "_설명": "⑩ 이빨 반짝 + 고개 돌림 / '딱'. 예고가 끝나는 순간 ±window 안에 드랙 순간 최저를 새로 누르면 성공 → stiff_sec초 경직(저항 없음, 감기 쉬움). 놓치면 줄 −fail_line_frac. 행동 자체는 sec초 (판정 창 뒤쪽).",
+    "telegraph_mult": 1.0,
+    "sec": [
+      0.3,
+      0.3
+    ],
+    "pull": 0.9,
+    "burst_cost": 0.2,
+    "window": 0.25,
+    "fail_line_frac": 0.3,
+    "stiff_sec": 1.2,
+    "stiff_pull": 0.0
+  },
+  "fake": {
+    "_설명": "⑪ 가짜 지침(fish.json fake_tired 확률) 일반화. 진짜 지침 = 꼬리가 축 처지고 기포 없음, 가짜 = 꼬리지느러미가 까딱 + 기포. 가짜일 때 reel_fail_sec 넘게 감으면 이어지는 돌진 힘 ×rush_mult, 버티면 다음 진짜 지침 ×tired_mult.",
+    "reel_fail_sec": 0.3,
+    "rush_mult": 1.4,
+    "tired_mult": 1.3
+  },
+  "dual": {
+    "_설명": "⑫ 두 예고가 동시에(색·소리 각각). 서로 다른 손이라 동시에 대응 가능한 짝만 (fish.json dual_pairs, 허용: allowed). 행동 길이 = 두 패턴 각자 길이, 둘 다 끝나면 끝. 둘 다 성공 → 스태미나 −ok_stamina_frac 추가.",
+    "telegraph_mult": 1.2,
+    "burst_cost": 0.35,
+    "ok_stamina_frac": 0.12,
+    "allowed": [
+      [
+        "dive",
+        "twist"
+      ],
+      [
+        "surface",
+        "twist"
+      ],
+      [
+        "shake",
+        "bite"
+      ],
+      [
+        "pump",
+        "twist"
+      ]
+    ]
   }
 }

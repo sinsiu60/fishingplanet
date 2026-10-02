@@ -1,5 +1,5 @@
 {
- "_설명": "물고기 89종: 샤르미온 47 (DESIGN.md 3·18장) + 엘드라시온 42 (23장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. hint3/hint10은 도감 힌트. spawn_weight = 출현 가중치 덮어쓰기 (없으면 희귀도 기본값). 조건이 까다로운 가물치·숭어·어름치·만새기는 희귀로 올리되 출현 빈도는 고급 그대로(25). 신규 패턴(U3, data/patterns.json): actions에 shake·dive·surface·reverse·twist·chain 가중치, chain_seq = 연쇄 콤보 3행동 (DESIGN.md 27-3 배치표).",
+ "_설명": "물고기 89종: 샤르미온 47 (DESIGN.md 3·18장) + 엘드라시온 42 (23장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. hint3/hint10은 도감 힌트. spawn_weight = 출현 가중치 덮어쓰기 (없으면 희귀도 기본값). 조건이 까다로운 가물치·숭어·어름치·만새기는 희귀로 올리되 출현 빈도는 고급 그대로(25). 신규 패턴(U3, data/patterns.json): actions에 shake·dive·surface·reverse·twist·chain 가중치, chain_seq = 연쇄 콤보 3행동 (DESIGN.md 27-3 배치표). U4: hide·pump·thrash·bite·dual 가중치, dual_pairs = 이중 패턴 짝, fake_tired = 가짜 지침 확률(⑪).",
  "fish": [
   {
    "id": "crucian",
@@ -3502,7 +3502,8 @@
    "actions": {
     "turn": 60,
     "rush": 25,
-    "charge": 15
+    "charge": 15,
+    "hide": 28
    },
    "turn_chain": [
     2,
@@ -3632,7 +3633,9 @@
    "actions": {
     "charge": 40,
     "rush": 35,
-    "turn": 25
+    "turn": 25,
+    "hide": 20,
+    "dive": 15
    },
    "fake_tired": 0.4,
    "shadow_len_m": 1.14,
@@ -3692,7 +3695,9 @@
    "actions": {
     "rush": 45,
     "charge": 30,
-    "turn": 25
+    "turn": 25,
+    "hide": 20,
+    "reverse": 15
    },
    "first_rush": {
     "power_mult": 1.6,
@@ -3815,7 +3820,13 @@
       2,
       3
      ],
-     "gimmick_mult": 1.5
+     "gimmick_mult": 1.5,
+     "actions": {
+      "turn": 50,
+      "rush": 30,
+      "charge": 20,
+      "hide": 25
+     }
     },
     {
      "desc": "갈대 숲으로 돌진 직후 몸을 턴다!",
@@ -3980,7 +3991,8 @@
    "actions": {
     "charge": 45,
     "rush": 35,
-    "turn": 20
+    "turn": 20,
+    "pump": 26
    },
    "cover_bias": 0.6,
    "shadow_len_m": 0.71,
@@ -4109,7 +4121,9 @@
     "jump": 35,
     "leap": 20,
     "rush": 25,
-    "turn": 20
+    "turn": 20,
+    "pump": 20,
+    "surface": 15
    },
    "jump_chain": [
     2,
@@ -4179,7 +4193,9 @@
     "jump": 30,
     "leap": 25,
     "turn": 25,
-    "rush": 20
+    "rush": 20,
+    "pump": 20,
+    "shake": 15
    },
    "combo": {
     "turn": [
@@ -4301,7 +4317,14 @@
     {
      "desc": "빛이 꺼진다! 반사광만 믿어라",
      "telegraph_sec": 0.5,
-     "dark": true
+     "dark": true,
+     "actions": {
+      "rush": 30,
+      "jump": 30,
+      "turn": 25,
+      "leap": 15,
+      "pump": 28
+     }
     },
     {
      "desc": "결정 분열! 깜빡이는 반사광은 가짜",
@@ -4461,7 +4484,8 @@
    "actions": {
     "jump": 45,
     "rush": 30,
-    "turn": 25
+    "turn": 25,
+    "thrash": 26
    },
    "jump_chain": [
     2,
@@ -4589,7 +4613,9 @@
    "actions": {
     "rush": 55,
     "turn": 35,
-    "charge": 10
+    "charge": 10,
+    "thrash": 20,
+    "reverse": 15
    },
    "rush_sec": 1.8,
    "combo": {
@@ -4659,7 +4685,9 @@
     "jump": 50,
     "leap": 20,
     "rush": 20,
-    "turn": 10
+    "turn": 10,
+    "thrash": 22,
+    "twist": 15
    },
    "jump_chain": [
     2,
@@ -4795,7 +4823,13 @@
       3,
       3
      ],
-     "jump_height_m": 2.2
+     "jump_height_m": 2.2,
+     "actions": {
+      "rush": 45,
+      "jump": 30,
+      "turn": 25,
+      "thrash": 30
+     }
     }
    ]
   },
@@ -4954,7 +4988,8 @@
    "actions": {
     "rush": 40,
     "charge": 35,
-    "turn": 25
+    "turn": 25,
+    "bite": 26
    },
    "shadow_len_m": 0.67,
    "nibbles": [
@@ -5083,7 +5118,9 @@
     "leap": 30,
     "jump": 20,
     "rush": 30,
-    "turn": 20
+    "turn": 20,
+    "bite": 20,
+    "thrash": 15
    },
    "shadow_len_m": 2.14,
    "nibbles": [
@@ -5141,7 +5178,9 @@
    "actions": {
     "rush": 45,
     "turn": 35,
-    "charge": 20
+    "charge": 20,
+    "bite": 20,
+    "hide": 15
    },
    "cover_bias": 0.8,
    "hazard_mult": 1.3,
@@ -5263,7 +5302,8 @@
      "actions": {
       "rush": 50,
       "jump": 25,
-      "turn": 25
+      "turn": 25,
+      "bite": 28
      }
     },
     {
@@ -5451,7 +5491,8 @@
    "skill": "구멍 안에서 버티기",
    "desc": "빙하 아래를 미끄러지는 가오리.",
    "hint3": "얼음 구멍 가장자리로 끌고 간다.",
-   "hint10": "방향 전환 50%."
+   "hint10": "방향 전환 50%.",
+   "fake_tired": 0.6
   },
   {
    "id": "floe_flounder",
@@ -5540,7 +5581,8 @@
     "jump": 30,
     "leap": 20,
     "turn": 30,
-    "rush": 20
+    "rush": 20,
+    "thrash": 18
    },
    "combo": {
     "turn": [
@@ -5582,7 +5624,8 @@
    "skill": "구멍 안에서 버티기",
    "desc": "오로라를 비늘에 담은 연어.",
    "hint3": "방향 전환 뒤 몸털기.",
-   "hint10": "전환 후 50% 몸털기."
+   "hint10": "전환 후 50% 몸털기.",
+   "fake_tired": 0.5
   },
   {
    "id": "frostfang_shark",
@@ -5608,7 +5651,8 @@
    "actions": {
     "rush": 55,
     "turn": 30,
-    "jump": 15
+    "jump": 15,
+    "bite": 18
    },
    "rush_sec": 2.0,
    "shadow_len_m": 1.9,
@@ -5642,7 +5686,8 @@
    "skill": "구멍 안에서 버티기",
    "desc": "얼음 이빨을 가진 빙해의 상어.",
    "hint3": "2초 질주. 드랙을 낮춘 채로.",
-   "hint10": "질주 55%."
+   "hint10": "질주 55%.",
+   "fake_tired": 0.5
   },
   {
    "id": "borealis",
@@ -5720,7 +5765,8 @@
      "desc": "얼음 아래로 숨는다! 줄과 소리로 읽어라",
      "telegraph_sec": 0.5,
      "dark": true,
-     "gimmick_bias": 0.8
+     "gimmick_bias": 0.8,
+     "fake_tired": 0.6
     },
     {
      "desc": "오로라의 춤! 연속 전환과 몸털기",
@@ -5888,7 +5934,8 @@
     "jump": 35,
     "leap": 25,
     "rush": 20,
-    "turn": 20
+    "turn": 20,
+    "dual": 24
    },
    "jump_chain": [
     2,
@@ -5928,7 +5975,17 @@
    "skill": "모든 기술",
    "desc": "생명수를 마시고 빛나는 송어.",
    "hint3": "점프 2~3연속, 몸털기 섞임.",
-   "hint10": "예고 0.55초."
+   "hint10": "예고 0.55초.",
+   "dual_pairs": [
+    [
+     "dive",
+     "twist"
+    ],
+    [
+     "shake",
+     "bite"
+    ]
+   ]
   },
   {
    "id": "oldwood_catfish",
@@ -6014,7 +6071,8 @@
     "jump": 40,
     "leap": 30,
     "turn": 20,
-    "rush": 10
+    "rush": 10,
+    "dual": 22
    },
    "jump_chain": [
     3,
@@ -6055,7 +6113,13 @@
    "skill": "모든 기술",
    "desc": "꽃잎처럼 흩날리며 날아오른다.",
    "hint3": "점프 3연속.",
-   "hint10": "예고 0.45초."
+   "hint10": "예고 0.45초.",
+   "dual_pairs": [
+    [
+     "surface",
+     "twist"
+    ]
+   ]
   },
   {
    "id": "spirit_fish",
@@ -6084,7 +6148,8 @@
     "jump": 20,
     "leap": 20,
     "turn": 20,
-    "charge": 20
+    "charge": 20,
+    "dual": 22
    },
    "fake_cue": 0.25,
    "shadow_len_m": 1.04,
@@ -6121,7 +6186,13 @@
    "skill": "모든 기술",
    "desc": "세계수를 지키는 정령이 물고기가 되었다.",
    "hint3": "가짜 신호를 섞는다 (깜빡임).",
-   "hint10": "모든 행동 20%씩."
+   "hint10": "모든 행동 20%씩.",
+   "dual_pairs": [
+    [
+     "pump",
+     "twist"
+    ]
+   ]
   },
   {
    "id": "orsiel",

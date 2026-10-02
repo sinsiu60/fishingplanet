@@ -15,7 +15,10 @@ ICON_COL = {"rush": (255, 150, 60), "jump": (110, 220, 255), "turn": (255, 230, 
             "tired": (110, 255, 140), "leap": (120, 255, 240),
             # 신규 패턴 (U3)
             "shake": (255, 120, 200), "dive": (90, 150, 255), "surface": (150, 240, 255), "reverse": (255, 190, 120),
-            "twist": (200, 255, 120), "chain": (255, 214, 90)}
+            "twist": (200, 255, 120), "chain": (255, 214, 90),
+            # U4
+            "hide": (190, 170, 140), "pump": (255, 160, 90), "thrash": (120, 200, 255), "bite": (255, 80, 80),
+            "dual": (230, 140, 255), "fake": (180, 220, 255)}
 SWIPE = (120, 255, 240)
 
 RING_R = 13          # 판정 원 반지름
@@ -114,6 +117,20 @@ def draw_behavior_icon(canvas, pos, kind: str, progress: float, turn_dir: int, t
         pygame.draw.lines(canvas, col, False, pts, 1)
     elif kind == "chain":
         text(canvas, "x3", (x, y), col, 11, "center")
+    elif kind == "hide":  # 바위 + 아래로 파고듦
+        pygame.draw.polygon(canvas, col, [(x - 5, y + 4), (x - 2, y - 3), (x + 3, y - 4), (x + 5, y + 4)], 1)
+        canvas.fill(col, (x - 1, y, 2, 3))
+    elif kind == "pump":  # 북 박자: 점 두 개
+        pygame.draw.circle(canvas, col, (x - 3, y), 2)
+        pygame.draw.circle(canvas, col, (x + 3, y), 2)
+    elif kind == "thrash":  # 위 화살표 두 개
+        for dy in (-1, 4):
+            pygame.draw.lines(canvas, col, False, [(x - 4, y + dy), (x, y + dy - 4), (x + 4, y + dy)], 2)
+    elif kind == "bite":  # 송곳니 두 개 (위아래)
+        pygame.draw.polygon(canvas, col, [(x - 5, y - 4), (x - 1, y - 4), (x - 3, y + 1)])
+        pygame.draw.polygon(canvas, col, [(x + 1, y + 4), (x + 5, y + 4), (x + 3, y - 1)])
+    elif kind == "dual":
+        text(canvas, "x2", (x, y), col, 11, "center")
     elif kind == "tired":
         canvas.fill(col, (x - 1, y - 5, 3, 7))
         canvas.fill(col, (x - 1, y + 3, 3, 2))
@@ -147,6 +164,17 @@ class JudgePopups:
         "fail_reverse": ("줄이 처졌다!", MISS_COL, 1.2),
         "fail_twist": ("줄이 꼬였다!", MISS_COL, 1.2),
         "combo_ok": ("콤보 완파!", GOLD, 2.0),
+        # U4
+        "ok_hide": ("끌어냈다!", GREAT_COL, 1.6),
+        "ok_pump": ("박자 완벽!", GREAT_COL, 1.6),
+        "fail_pump": ("박자가 어긋났다!", MISS_COL, 1.2),
+        "ok_bite": ("헛물었다!", GREAT_COL, 1.6),
+        "fail_bite": ("줄을 물어뜯겼다!", MISS_COL, 1.2),
+        "ok_fake": ("속지 않았다!", GREAT_COL, 1.6),
+        "fail_fake": ("속았다!", MISS_COL, 1.2),
+        "hide_peek": ("지금 감아!", GOLD, 1.6),
+        "double_perfect": ("DOUBLE PERFECT!!", GOLD, 2.4),
+        "dual_ok": ("이중 완파!", GOLD, 2.0),
     }
 
     def __init__(self):

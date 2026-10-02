@@ -77,13 +77,23 @@ class Fight:
         self.ctl = None  # 추가 조작 상태 (src/platform/gesture.Controls, 낚시 씬이 넣어 줌)
         # 신규 패턴 (U3): 진행 중 판정, 꼬임 게이지, 연쇄 콤보
         self.inp = PatternInput()
-        self.pat = None
+        self.pats: list = []        # 진행 중 패턴 판정 (이중 패턴이면 2개)
+        self.dual_results: list[str] = []
+        self.dual_ids: set = set()
+        self.stiff_after_dual = 0.0  # 이중 패턴 중 물어뜯기 성공 → 끝나면 경직
+        self.fake_reel = 0.0        # 가짜 지침 동안 감은 시간
+        self.reel_bonus = 0.0       # 펌핑 리듬 보상: 감기 속도 +
+        self.reel_bonus_t = 0.0
+        self.input_latency = 0.0    # 모바일: 펌핑 판정 창을 늦춤 (낚시 씬이 넣어 줌)
         self.twist = TwistGauge(self)
         self.combo: Combo | None = None
         self.calm_heave_t = 0.0     # 줄 비틀기 성공: 장력 울렁임 없음
         self.aim_rate = 0.0         # 낚싯대 방향이 바뀌는 빠르기 (머리 흔들기 판정)
         self.last_pattern_fail: tuple[str, float] | None = None
         self.brain.telegraph_lead = touch_lead  # 모바일: 신규 패턴 예고 +0.1초
+        self.pcfg = self.brain.pcfg
+        self.double_perfects = 0
+        self.thrash_first = None
         self.perfects = self.goods = self.misses = 0
         self.perfect_streak = 0
         self.elapsed = 0.0
@@ -196,6 +206,9 @@ class Fight:
         b = self.brain
         cfg = self.cfg
         self.last_judge_kind = "dip"
+        if b.state == "jump" and b.jump_kind == "thrash" and not b.jump_judged:
+            self._thrash_dip()
+            return
         if b.state == "jump" and b.jump_kind == "dip" and not b.jump_judged:
             b.jump_judged = True
             off = b.time_to_apex()  # + 면 이름, - 면 늦음
@@ -205,9 +218,70 @@ class Fight:
                 self._good()
             else:
                 self._miss("miss_early" if off > 0 else "miss_late")
-        elif b.state == "telegraph" and b.pending == "jump" and not self.pre_judged:
+        elif b.state == "telegraph" and b.pending in ("jump", "thrash") and not self.pre_judged:
             self.pre_judged = True
             self._miss("miss_early")
+
+    # ── 공중 몸부림 (⑨): 정점 + 착수 직전, 저스트 2번 ──
+    def _thrash_dip(self) -> None:
+        b, cfg = self.brain, self.cfg
+        first = not b.thrash_judged[0]
+        off = b.time_to_apex() if first else b.time_to_second()
+        if first and off < -cfg["good_window_sec"] and b.time_to_second() <= cfg["good_window_sec"] * 2:
+            # 정점을 이미 놓쳤고 두 번째 쪽에 가깝다 → 첫 번째는 놓침 처리 후 두 번째로 판정
+            self._thrash_miss(0)
+            first, off = False, b.time_to_second()
+        idx = 0 if first else 1
+        b.thrash_judged[idx] = True
+        w = cfg["perfect_window_sec"], cfg["good_window_sec"]
+        kind = "perfect" if abs(off) <= w[0] else "good" if abs(off) <= w[1] else None
+        if kind == "perfect":
+            self._perfect()
+        elif kind == "good":
+            self._good()
+        elif idx == 0:
+            self._miss("miss_early" if off > 0 else "miss_late")
+        else:
+            self._thrash_miss(1, "miss_early" if off > 0 else "miss_late")
+        if idx == 0:
+            self.thrash_first = kind
+        else:
+            b.jump_judged = True
+            if kind == "perfect" and self.thrash_first == "perfect":
+                self._perfect()  # 더블 퍼펙트: 퍼펙트 보상 ×2
+                self.double_perfects += 1
+                self.events.append("double_perfect")
+
+    def _thrash_miss(self, idx: int, kind: str = "miss_none") -> None:
+        b = self.brain
+        b.thrash_judged[idx] = True
+        if idx == 0:
+            self.thrash_first = None
+            self._miss(kind)
+            return
+        b.jump_judged = True
+        self.misses += 1
+        self.perfect_streak = 0
+        if self.combo:
+            self.combo.fail()
+        self.hook = min(100.0, self.hook + self.pcfg["thrash"]["second_fail_hook"])
+        self._fail_floor()
+        self.last_jump_miss_t = self.elapsed
+        self.last_judge = kind
+        self.events.append(kind)
+        self.events.append("thrash_second_miss")
+
+    def _update_thrash(self) -> None:
+        """공중 몸부림: 판정 창을 그냥 지나치면 놓침."""
+        b, g = self.brain, self.cfg["good_window_sec"]
+        if b.state != "jump" or b.jump_kind != "thrash" or b.jump_judged:
+            return
+        if not b.thrash_judged[0] and b.time_to_apex() < -g and b.time_to_second() > g * 2:
+            self._thrash_miss(0)
+        elif not b.thrash_judged[1] and b.time_to_second() < -g:
+            if not b.thrash_judged[0]:
+                self._thrash_miss(0)
+            self._thrash_miss(1)
 
     @property
     def net_pause(self) -> float:
@@ -389,22 +463,58 @@ class Fight:
         elif self.phase == "net":
             self._update_net(dt)
 
-    # ── 신규 패턴 (U3) ──
+    # ── 신규 패턴 (U3·U4) ──
+    @property
+    def pat(self):
+        """첫 번째 진행 중 판정 (하나만 볼 때)."""
+        return self.pats[0] if self.pats else None
+
+    def _judge(self, pid: str):
+        return next((p for p in self.pats if p.id == pid), None)
+
     def _pattern_event(self, ev: str) -> None:
         b = self.brain
         kind, _, pid = ev.partition(":")
         if self.combo is not None:
             self.combo.on_event(ev)
-        if kind == "telegraph" and pid in PATTERN_IDS:
-            self.pat = JUDGES[pid](self)
+        if kind == "telegraph" and pid == "dual":
+            self.pats = [JUDGES[a](self) for a in b.dual_pair]
+            self.dual_ids = set(b.dual_pair)
+            self.dual_results = []
+        elif kind == "telegraph" and pid in PATTERN_IDS:
+            self.pats = [JUDGES[pid](self)]
         elif kind == "action" and pid in PATTERN_IDS:
-            if self.pat is None or self.pat.id != pid or self.pat.active:
-                self.pat = JUDGES[pid](self)
-            self.pat.begin(b.timer)
+            j = self._judge(pid)
+            if j is None or j.active:
+                j = JUDGES[pid](self)
+                self.pats.append(j)
+            j.begin(b.dual_dur.get(pid, b.timer) if b.state == "dual" else b.timer)
         elif kind == "end" and pid in PATTERN_IDS:
-            if self.pat is not None and self.pat.id == pid and self.pat.active:
-                self.pat.finish()
-            self.pat = None
+            j = self._judge(pid)
+            if j is not None and j.active:
+                res = j.finish()
+                if pid in self.dual_ids:
+                    self.dual_results.append(res)
+            self.pats = [p for p in self.pats if p is not j]
+        elif ev == "end:dual":
+            if len(self.dual_results) == 2 and all(r == "ok" for r in self.dual_results):
+                self.stamina -= self.stamina_max * self.pcfg["dual"]["ok_stamina_frac"]
+                self.events.append("dual_ok")
+            self.dual_results = []
+            self.dual_ids = set()
+            if self.stiff_after_dual > 0:
+                b.enter_stiff(self.stiff_after_dual)
+                self.stiff_after_dual = 0.0
+        elif ev == "fake_tired":
+            self.fake_reel = 0.0
+        elif ev == "fake_end":
+            fc = self.pcfg["fake"]
+            if self.fake_reel > fc["reel_fail_sec"]:
+                b.rush_mult_next = fc["rush_mult"]  # 가짜에 속아 감았다 → 이어지는 돌진이 세다
+                self.pattern_result("fake", "fail")
+            else:
+                b.tired_mult_next = fc["tired_mult"]  # 버텼다 → 다음 진짜 지침이 길다
+                self.pattern_result("fake", "ok")
         elif ev == "action:chain":
             self.combo = Combo(self, b.combo_all)
             self.combo.on_event("action:" + b.state)  # 첫 행동은 바로 시작
@@ -413,14 +523,18 @@ class Fight:
             self.combo = None
 
     def _update_patterns(self, dt: float, reeling: bool) -> None:
-        b, p = self.brain, self.pat
-        if p is not None:
-            # 페이즈 전환·지침 등으로 끊기면 효과 없이 버린다
-            if (not p.active and not (b.state == "telegraph" and b.pending == p.id)) or (p.active and b.state != p.id):
-                self.pat = p = None
-        if p is not None:
+        b = self.brain
+        # 페이즈 전환·지침 등으로 끊기면 효과 없이 버린다
+        self.pats = [p for p in self.pats if (p.active and b.doing(p.id)) or (not p.active and b.telegraphing(p.id))]
+        for p in self.pats:
             p.update(dt, self.inp, reeling, self.aim_rate)
-        self.twist.update(dt, self.inp, b.state == "twist")
+        self.twist.update(dt, self.inp, b.doing("twist"))
+        if b.state == "fake_tired" and reeling:
+            self.fake_reel += dt
+        self.reel_bonus_t = max(0.0, self.reel_bonus_t - dt)
+        if self.reel_bonus_t <= 0:
+            self.reel_bonus = 0.0
+        self._update_thrash()
         if self.combo is not None:
             if not b.combo_on:
                 self.combo = None  # 페이즈 전환 등으로 콤보가 끊김
@@ -442,14 +556,23 @@ class Fight:
         if b.cover_dir == 0 and b.gimmick_bias > 0 and self.gim.kinds(b) & {"tangle", "ice", "current"}:
             b.cover_dir = 1 if self.angle - self.yaw >= 0 else -1  # 기믹 쪽(바깥)으로 끌고 간다
             b.cover_from_gimmick = True
-        b.busy = (1 if self.pat is not None else 0) + (1 if self.twist.value > 0 else 0)
+        b.busy = len(self.pats) + (1 if self.twist.value > 0 else 0)
         b.update(dt, self.stamina <= 0, self.stamina_frac)
         for ev in b.events:
             if ev == "action:jump" and self.pre_judged:
                 b.jump_judged = True
                 self.pre_judged = False
             if ev == "jump_land" and not b.jump_judged:
-                self._miss("miss_none")
+                if b.jump_kind == "thrash":
+                    for i in (0, 1):
+                        if not b.thrash_judged[i]:
+                            self._thrash_miss(i)
+                else:
+                    self._miss("miss_none")
+            if ev == "action:thrash" and self.pre_judged:
+                b.thrash_judged[0] = True  # 예고 중 숙여서 이미 놓친 첫 번째
+                self.thrash_first = None
+                self.pre_judged = False
             self.events.append(ev)
             self._pattern_event(ev)
         b.events.clear()
@@ -489,13 +612,16 @@ class Fight:
             target = max(target, floor)
         if b.is_active:
             target += math.sin(self.elapsed * 13.0) * 2.5 + math.sin(self.elapsed * 5.3) * 2.0
-            if b.state not in ("rush", "jump") and self.calm_heave_t <= 0:  # 돌진·점프는 따로 대응(드랙·숙이기)이 있으니 겹치지 않게
+            if b.state not in ("rush", "jump", "hide") and self.calm_heave_t <= 0:  # 돌진·점프는 따로 대응(드랙·숙이기)이 있으니 겹치지 않게
                 target += self.heave_amp * math.sin(self.elapsed * cfg["heave_speed"] + self.heave_phase)
             if b.state == "shake":
                 target += math.sin(self.elapsed * 47.0) * 4.0  # 머리 흔들기: 장력이 잘게 떨림
-        ov = self.pat.tension_override(self) if self.pat is not None else None
-        if ov is not None:
-            target = ov + math.sin(self.elapsed * 13.0) * 2.0  # 역주행: 줄이 처진다 (연타로 끌어올림)
+        for p in self.pats:
+            ov = p.tension_override(self)
+            if ov is not None:
+                target = ov + math.sin(self.elapsed * 13.0) * 2.0  # 역주행: 줄이 처진다 / 숨기: 바위 틈에서 버팀
+                break
+        target += sum(p.tension_add(self) for p in self.pats)  # 펌핑: 박마다 당김
         target += self.gim.tension_offset(self)  # 부유섬 물살
         self.target = target
         k = 1 - math.exp(-dt / cfg["tension_response_sec"])
@@ -509,7 +635,9 @@ class Fight:
             reel_in = self.gear["reel_speed"] * (cfg["reel_speed_drag_min"] + cfg["reel_speed_drag_add"] * drag_frac) * mult
         else:
             reel_in = 0.0
-        if self.pat is not None and self.pat.hold_payout:
+        if self.reel_bonus_t > 0:
+            reel_in *= 1 + self.reel_bonus  # 펌핑 리듬 보상
+        if any(p.hold_payout for p in self.pats):
             payout = 0.0  # 잠수 중 낚싯대를 세우고 있으면 줄이 풀리지 않는다
         self.reel_speed_now = reel_in
         self.payout_now = payout
