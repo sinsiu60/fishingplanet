@@ -582,38 +582,6 @@ def make_cue_lure(rng) -> np.ndarray:
     return tone * _env(int(RATE * sec), 0.002, 0.18) * 0.18
 
 
-def make_chest_open(rng) -> np.ndarray:
-    """상자 열림: 걸쇠 '딸깍' + 나무 뚜껑 '끼익'."""
-    out = np.zeros(int(RATE * 0.55))
-    latch = np.sin(2 * np.pi * 2200 * _t(0.03)) * _env(int(RATE * 0.03), 0.001, 0.006)
-    out[: len(latch)] += latch * 0.5
-    sec = 0.35
-    n = int(RATE * sec)
-    freq = 380 + 160 * np.linspace(0, 1, n) + rng.uniform(-20, 20, n)
-    saw = 2 * ((np.cumsum(freq) / RATE) % 1.0) - 1
-    creak = _lowpass(saw, 8) * np.sin(np.pi * np.linspace(0, 1, n)) * 0.18
-    s = int(RATE * 0.08)
-    out[s:s + n] += creak
-    return out
-
-
-def make_chest_legend(rng) -> np.ndarray:
-    """전설 상자: 낮은 울림 → 상승하는 금빛 아르페지오 → 큰 화음."""
-    sec = 2.2
-    out = np.zeros(int(RATE * sec))
-    boom = _sweep(70, 40, 0.8) * _env(int(RATE * 0.8), 0.01, 0.4) * 0.6
-    out[: len(boom)] += boom
-    notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568.0]
-    for i, f in enumerate(notes):
-        s = int(RATE * (0.35 + i * 0.09))
-        tone = np.sin(2 * np.pi * f * _t(0.5)) * _env(int(RATE * 0.5), 0.004, 0.25) * 0.18
-        out[s:s + len(tone)] += tone[: len(out) - s]
-    s = int(RATE * 0.95)
-    chord = make_chord(rng, [523.25, 659.25, 783.99, 1046.5, 1318.5], 1.2, 0.05, 1.5)
-    out[s:s + len(chord)] += chord[: len(out) - s] * 0.8
-    return out
-
-
 def make_bell(rng) -> np.ndarray:
     """소리귀 방울: 작고 맑은 '딸랑'."""
     sec = 0.35
@@ -747,95 +715,13 @@ def make_double_perfect(rng) -> np.ndarray:
     return out
 
 
-# ── 신호 사전 6계열 (31장 C3): 같은 대응 = 같은 소리 ──
-def make_rush_hum(rng, hz: float) -> np.ndarray:
-    """돌진 예고 줄 울림 한 박: 팽팽한 줄이 웅— 하고 우는 짧은 음 (배음 + 살짝 떨림)."""
-    sec = 0.13
-    t = _t(sec)
-    vib = 1 + 0.01 * np.sin(2 * np.pi * 28 * t)
-    tone = (np.sin(2 * np.pi * hz * t * vib) + 0.45 * np.sin(2 * np.pi * hz * 2 * t * vib)
-            + 0.2 * np.sin(2 * np.pi * hz * 3.01 * t))
-    return tone * _env(len(t), 0.008, 0.07) * 0.45
-
-
-def make_rush_go(rng) -> np.ndarray:
-    """돌진 시작 '쉬익': 줄이 확 당겨지며 물을 가르는 소리."""
-    w = make_whoosh(rng, 0.34, 1.8)
-    sec = 0.34
-    n = int(RATE * sec)
-    snap = np.sin(2 * np.pi * np.cumsum(np.linspace(900, 300, n)) / RATE) * _env(n, 0.002, 0.04) * 0.5
-    return w[:n] * 0.9 + snap
-
-
-def make_sig_release(rng) -> np.ndarray:
-    """풀기: 낮게 빠지는 '쉬익' (아래로 미끄러지는 노이즈)."""
-    sec = 0.32
-    n = int(RATE * sec)
-    noise = _lowpass(_noise(sec, rng), 6)
-    tone = np.sin(2 * np.pi * np.cumsum(np.linspace(420, 160, n)) / RATE) * 0.35
-    return (noise * 0.5 + tone) * _env(n, 0.01, 0.16) * 0.8
-
-
-def make_sig_reel(rng) -> np.ndarray:
-    """감기: 높은 '딸깍' 두 번."""
-    out = np.zeros(int(RATE * 0.16))
-    for i in range(2):
-        s = int(RATE * i * 0.07)
-        k = int(RATE * 0.025)
-        click = np.sin(2 * np.pi * 3200 * _t(0.025)) * _env(k, 0.0005, 0.008)
-        out[s:s + k] += click * 0.6
-    return out
-
-
-def make_sig_timing(rng) -> np.ndarray:
-    """타이밍: 맑은 '띵'."""
-    sec = 0.45
-    n = int(RATE * sec)
-    t = _t(sec)
-    return (np.sin(2 * np.pi * 1568 * t) + 0.35 * np.sin(2 * np.pi * 3136 * t)) * _env(n, 0.002, 0.16) * 0.45
-
-
-def make_sig_direction(rng) -> np.ndarray:
-    """방향: 짧고 밝은 '휙'."""
-    w = make_whoosh(rng, 0.2, 1.6)
-    return w / max(1e-6, float(np.abs(w).max())) * 0.6
-
-
-def make_sig_endure(rng) -> np.ndarray:
-    """참기: '타타탁' (줄 떨림)."""
-    return make_cue_shake(rng)
-
-
-def make_sig_gesture(rng) -> np.ndarray:
-    """제스처: 올라가는 '끼릭' 톱니 소리."""
-    out = np.zeros(int(RATE * 0.36))
-    for i in range(5):
-        s = int(RATE * i * 0.06)
-        k = int(RATE * 0.03)
-        f = 900 + i * 180
-        saw = 2 * ((_t(0.03) * f) % 1.0) - 1
-        out[s:s + k] += saw * _env(k, 0.001, 0.012) * 0.3
-    return out
-
-
-def _rush_hums(rng) -> dict:
-    from src.core.config import load_json
-    c = load_json("signals.json")["rush_pulse"]
-    n = c["hum_steps"]
-    return {f"rush_hum{i}": make_rush_hum(rng, c["hum_base_hz"] * (c["hum_top_hz"] / c["hum_base_hz"]) ** (i / max(1, n - 1)))
-            for i in range(n)}
-
-
 def _cache_path(rate: int, channels: int, seed: int):
     """소리 캐시 파일: 이 파일(합성 코드) 내용이 바뀌면 이름이 바뀌어 새로 만든다."""
     import hashlib
     from src.core.paths import save_dir
     try:
         with open(__file__, "rb") as f:
-            from src.core.config import load_json
-            hum = load_json("signals.json")["rush_pulse"]  # 줄 울림 음높이를 바꾸면 캐시도 새로
-            extra = f"{hum['hum_steps']}/{hum['hum_base_hz']}/{hum['hum_top_hz']}"
-            key = hashlib.sha1(f.read() + f"{rate}/{channels}/{seed}/{extra}".encode()).hexdigest()[:12]
+            key = hashlib.sha1(f.read() + f"{rate}/{channels}/{seed}".encode()).hexdigest()[:12]
     except OSError:
         return None
     return save_dir() / "cache" / f"sfx_{key}.npz"
@@ -915,9 +801,7 @@ class Sfx:
             "cue_leap": make_cue_leap(rng),
             "cue_charge": make_cue_charge(rng),
             "cue_lure": make_cue_lure(rng),
-            "chest_open": make_chest_open(rng),
             "bell": make_bell(rng),
-            "chest_legend": make_chest_legend(rng),
             # 신규 패턴 (U3) — 맨 뒤에 붙여 기존 소리의 난수가 바뀌지 않게
             "cue_shake": make_cue_shake(rng),
             "cue_dive": make_cue_dive(rng),
@@ -931,16 +815,6 @@ class Sfx:
             "cue_drum": make_cue_drum(rng),
             "cue_bite": make_cue_bite(rng),
             "double_perfect": make_double_perfect(rng),
-            # 신호 사전 6계열 (31장 C3) — 맨 뒤
-            "sig_release": make_sig_release(rng),
-            "sig_reel": make_sig_reel(rng),
-            "sig_timing": make_sig_timing(rng),
-            "sig_direction": make_sig_direction(rng),
-            "sig_endure": make_sig_endure(rng),
-            "sig_gesture": make_sig_gesture(rng),
-            # 돌진 줄 펄스 (31-14) — 맨 뒤. 울림 음높이는 signals.json rush_pulse
-            "rush_go": make_rush_go(rng),
-            **_rush_hums(rng),
         }
         pcms = {}
         for name, wave in bank.items():
@@ -1048,6 +922,11 @@ class Sfx:
         self.slowed: dict[str, pygame.mixer.Sound] = {}
         self._bus_cache: dict[str, str] = {}
         self.clock = 0.0
+        from src.platform.detect import IS_ANDROID
+        self.latency = c["buffer_mobile" if IS_ANDROID else "buffer_pc"] / max(1, self.rate)  # 출력 버퍼 지연 (초)
+        self.offset_s = 0.0      # 설정 '오디오 지연 보정' (game.apply_audio_settings)
+        self.haptics = None      # game이 넣어 줌
+        self.attack_t: dict[str, float] = {}
 
     def bus_of(self, name: str) -> str:
         b = self._bus_cache.get(name)
@@ -1154,8 +1033,32 @@ class Sfx:
         e["ch"].stop()
         return e["ch"]
 
-    def play(self, name: str, volume: float = 1.0, pan: float | None = None) -> pygame.mixer.Channel | None:
-        """효과음 한 번. pan: -1(왼쪽)~1(오른쪽). 같은 소리 동시 3개·최소 간격·우선순위 채널·변주 적용."""
+    def play(self, name: str, volume: float = 1.0, pan: float | None = None, haptic: str | None = None,
+             strength: float = 1.0) -> pygame.mixer.Channel | None:
+        """효과음 한 번. pan: -1(왼쪽)~1(오른쪽). 같은 소리 동시 3개·최소 간격·우선순위 채널·변주 적용.
+        haptic: 진동 종류 — 소리의 어택(처음 큰 소리) 순간에 맞춰 울린다 (출력 지연 + 보정 + 어택 시각, 32장 S5)."""
+        ch = self._play(name, volume, pan)
+        if haptic and self.haptics is not None:
+            delay = self.latency + self.offset_s + self.attack_of(name) if ch is not None else 0.0
+            self.haptics.vibrate(haptic, strength, delay=max(0.0, delay))
+        return ch
+
+    def attack_of(self, name: str) -> float:
+        """소리가 처음 최대 음량의 절반에 닿는 시각 (초, 최대 1.5초). 처음 쓸 때 계산해 둔다."""
+        t = self.attack_t.get(name)
+        if t is None:
+            t = 0.0
+            snd = self.sounds.get(name)
+            if snd is not None:
+                a = np.abs(pygame.sndarray.array(snd)[: int(self.rate * 1.5)].astype(np.int32))
+                if a.ndim > 1:
+                    a = a.max(axis=1)
+                if len(a) and a.max() > 0:
+                    t = float(np.argmax(a >= a.max() * 0.5)) / self.rate
+            self.attack_t[name] = t
+        return t
+
+    def _play(self, name: str, volume: float, pan: float | None) -> pygame.mixer.Channel | None:
         if not self.enabled or name not in self.sounds:
             return None
         c = self.cfg

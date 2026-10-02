@@ -5,7 +5,7 @@
  "buffer_pc": 512,
  "buffer_mobile": 1024,
  "priority": {"sig": 1, "sfx": 2, "reward": 3, "mus": 4, "amb": 5, "ui": 6},
- "bus_rules": [["sig_", "sig"], ["rush_hum", "sig"], ["rush_go", "sig"], ["cue_", "sig"], ["mus_", "mus"], ["bgm_", "mus"],
+ "bus_rules": [["sig_", "sig"], ["cue_", "sig"], ["mus_", "mus"], ["bgm_", "mus"],
                ["amb_", "amb"], ["thunder", "amb"], ["ui_", "ui"], ["click", "ui"],
                ["sfx_rank", "reward"], ["sfx_record", "reward"], ["sfx_chest", "reward"], ["sfx_mut_", "reward"],
                ["sfx_legend", "reward"], ["sfx_net_success", "reward"], ["chord_", "reward"], ["catch", "reward"],

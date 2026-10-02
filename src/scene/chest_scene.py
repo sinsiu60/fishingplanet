@@ -68,11 +68,9 @@ class ChestScene(Scene):
             return
         self.anim = {"grade": grade, "t": 0.0, "reward": reward, "fired": set()}
         self.particles.clear()
-        sfx = self.game.sfx
-        if grade == "legend":
-            sfx.play("chest_legend", 1.0)
-        else:
-            sfx.play("rise", 0.5 if grade == "common" else 0.8)
+        # 등급 소리 하나가 처음부터 열리는 순간(OPEN_AT)까지 다 맡는다 (32장 S5):
+        # 일반 삐걱→딸깍 / 희귀 상승→차임 / 특별 덜컹→폭발 / 전설 빌드업→0.1초 무음→웅장한 터짐
+        self.game.sfx.play(f"sfx_chest_{grade}", 1.0)
         self.game.save_now()
 
     def _anim_event(self, key: str) -> None:
@@ -82,7 +80,6 @@ class ChestScene(Scene):
         cx, cy = 240, 150
         sfx = self.game.sfx
         if key == "open":
-            sfx.play("chest_open", 1.0)
             n = {"common": 14, "rare": 30, "special": 60, "legend": 110}[grade]
             for i in range(n):
                 ang = random.uniform(math.pi * 1.05, math.pi * 1.95) if grade == "common" else i / n * math.tau
@@ -90,17 +87,11 @@ class ChestScene(Scene):
                 self.particles.append([cx, cy - 18, math.cos(ang) * sp, math.sin(ang) * sp, random.uniform(0.5, 1.1),
                                        col])
             if grade == "common":
-                sfx.play("coin", 0.6)
-            elif grade == "rare":
-                sfx.play("great", 0.8)
-                sfx.play("chord_rare", 0.6)
+                sfx.play("coin", 0.5)
             elif grade == "special":
-                sfx.play("impact", 0.9)
-                sfx.play("perfect", 0.8)
-                sfx.play("chord_rare", 0.9)
                 self.game.screen.shake = (2, 1)
-            else:
-                sfx.play("impact", 1.0)
+            if grade in ("special", "legend"):
+                self.game.haptics.vibrate("perfect" if grade == "special" else "double_perfect")
         elif key == "card":
             r = a["reward"]
             if r["type"] == "item" and not r.get("dup"):

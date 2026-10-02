@@ -261,14 +261,11 @@
   "assist_mult": 1.2
  },
  "rush_pulse": {
-  "_설명": "돌진 예고 = 낚싯줄 펄스 (31-14). 예고 앞 crouch_frac 동안 웅크림(그림자 압축·꼬리 S자·안쪽 물결·줄 느슨), 남은 시간 동안 빛 펄스가 줄을 타고 물고기→손. 펄스가 손에 닿는 순간 돌진. 예고 길이 자체는 물고기 난이도·계열 최소(0.7초, 모바일 +0.15) 규칙 그대로.",
+  "_설명": "돌진 예고 = 낚싯줄 펄스 (31-14). 예고 앞 crouch_frac 동안 웅크림(그림자 압축·꼬리 S자·안쪽 물결·줄 느슨), 남은 시간 동안 빛 펄스가 줄을 타고 물고기→손. 펄스가 손에 닿는 순간 돌진. 예고 길이 자체는 물고기 난이도·계열 최소(0.7초, 모바일 +0.15) 규칙 그대로. 줄 울림 소리·음높이는 data/sfx_recipes.json sig_release_hum (8단계), 소리 시각은 src/audio/signal_audio.py (32장 S5).",
   "crouch_frac": 0.35,
   "ripples": 3,
   "ripple_period_sec": 0.6,
   "silence_sec": 0.1,
-  "hum_steps": 8,
-  "hum_base_hz": 170,
-  "hum_top_hz": 520,
   "haptic_min": 0.15,
   "haptic_max": 0.7,
   "big_fish_cm": 150,

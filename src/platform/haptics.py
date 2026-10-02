@@ -22,7 +22,7 @@ KINDS = {
     "twist": ("꼬임 단계", [40], 0.5),
     # U4
     "pump": ("펌핑 박자", [20], 0.35),
-    "bite": ("물어뜯기", [60], 0.9),
+    "bite_tear": ("물어뜯기", [60], 0.9),
     "double_perfect": ("더블 퍼펙트", [40, 50, 40, 50, 120], 1.0),
     # 신호 사전 6계열 (31장 C3): 같은 대응 = 같은 진동
     "sig_release": ("풀기 (길게 한 번)", [140], 0.6),
@@ -41,12 +41,27 @@ class Haptics:
         self.settings = settings
         self.enabled = PREVIEW or IS_ANDROID
         self.log: list[tuple[str, int]] = []  # 미리보기 표시용 (이름, 시각 ms)
+        self.queue: list[list] = []  # [남은 초, 종류, 세기] — 소리 어택에 맞춰 늦게 울릴 진동 (32장 S5)
+
+    def update(self, dt: float) -> None:
+        if not self.queue:
+            return
+        for q in self.queue:
+            q[0] -= dt
+        due = [q for q in self.queue if q[0] <= 0]
+        self.queue = [q for q in self.queue if q[0] > 0]
+        for _, kind, strength in due:
+            self.vibrate(kind, strength)
 
     def level(self) -> float:
         return LEVELS[self.settings.get("vibration")] if self.settings else 1.0
 
-    def vibrate(self, kind: str, strength: float = 1.0) -> None:
+    def vibrate(self, kind: str, strength: float = 1.0, delay: float = 0.0) -> None:
+        """delay초 뒤에 진동 (Sfx.play(haptic=)가 출력 지연 + 소리 어택 시각만큼 늦춘다)."""
         if not self.enabled or kind not in KINDS:
+            return
+        if delay > 0.005:
+            self.queue.append([delay, kind, strength])
             return
         level = self.level()
         if level <= 0:

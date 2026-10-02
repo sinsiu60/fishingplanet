@@ -52,6 +52,7 @@ class Game:
                 from src.platform import android
                 android.keep_screen_on()
         self.sfx = Sfx()
+        self.sfx.haptics = self.haptics  # play(..., haptic=종류) → 소리 어택 순간에 진동
         self.apply_audio_settings()
         self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
         self.save = None            # 현재 SaveGame (메뉴에선 None)
@@ -111,6 +112,7 @@ class Game:
         s = self.settings
         self.sfx.set_volumes(s.get("volume"), s.get("vol_music"), s.get("vol_sfx"), s.get("vol_amb"),
                              bool(s.get("signal_boost")))
+        self.sfx.offset_s = s.get("audio_offset_ms") / 1000  # 진동·신호 소리 시각 보정 (S5)
 
     def slowmo(self, real_sec: float, scale: float) -> None:
         self.slow_timer = real_sec
@@ -170,6 +172,7 @@ class Game:
                 accumulator -= self.tick_dt
             self.music.update()
             self.sfx.update(frame_time, slow=self.time_scale < 0.99)  # 믹서: 덕킹·리미터·버스 볼륨
+            self.haptics.update(frame_time)  # 소리 어택에 맞춘 진동 (32장 S5)
 
             if self.scenes.current:
                 self.scenes.current.draw(self.screen.canvas)
