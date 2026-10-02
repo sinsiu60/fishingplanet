@@ -98,6 +98,7 @@ class FishingScene(Scene):
         self.reeds = world.Reeds(self.cam)
         self.cast = CastController()
         self.bite = BiteController()
+        self.training = None  # 훈련 수조 (src/scene/training.py, 31장 C5)
         self.sfx = game.sfx
         self.toasts = hud.Toasts()
         self.ripples = Ripples()
@@ -143,6 +144,8 @@ class FishingScene(Scene):
         self.ink_t = 0.0
         self.fake_bubble_t = 0.0
         self.fight: Fight | None = None
+        self.missed_signals: list[str] = []   # 결과 화면: 놓친 신호 (31장 C5)
+        self.mastery_ups: list[str] = []      # 결과 화면: 숙련도가 오른 패턴
         self.landing: LandingCinematic | None = None   # 뜰채 성공 → 획득 컷 사이 연출
         self.end_t = 0.0             # 결과 화면 경과 시간
         self.net_anim = 0.0
@@ -357,6 +360,14 @@ class FishingScene(Scene):
     def _open_card(self, key: str, focus: str | None) -> None:
         self.card = {"key": key, "focus": focus, "t": 0.0}
 
+    def _open_signal_card(self, key: str) -> None:
+        """신호 첫 만남: 예고 순간 완전히 멈추고 카드 → 닫으면 바로 재개, 그 첫 예고는 시간 2배 (31장 C5)."""
+        self._open_card(key, None)
+        b = self.fight.brain if self.fight is not None else None
+        if b is not None and b.state == "telegraph":
+            b.timer += b.cur_telegraph
+            b.cur_telegraph *= 2
+
     def _card_focus(self):
         focus = self.card["focus"]
         if focus == "gauge":
@@ -386,6 +397,8 @@ class FishingScene(Scene):
         if self.card is not None:
             if a.any_press and self.card["t"] > 0.35:
                 self.card = None
+            return
+        if self.training is not None and self.training.handle(a):
             return
         n = a.name
         if n == "item":
@@ -552,7 +565,8 @@ class FishingScene(Scene):
         # 변이 (U5): 챔질 순간 굴림 (테스트: F10 강제 지정)
         from src.fishing import mutation
         force = getattr(self, "force_mut", None)
-        muts = mutation.roll(self.save, fish, self.weather, force=force if force else None,
+        train = self.training is not None
+        muts = [] if train else mutation.roll(self.save, fish, self.weather, force=force if force else None,
                              chance_mult=self.bite.sign_mods.get("mutation_mult", 1.0) if self.bite.sign_mods else 1.0)
         if muts:
             fish = mutation.apply(fish, muts)
@@ -560,11 +574,16 @@ class FishingScene(Scene):
                 size = round(size * mutation.cfg()["kinds"]["giant"]["size_mult"], 1)
         angle = math.atan2(c.bx, c.bz)
         self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(self.clock.period()[0]),
-                           hazards=self.spot["hazards"], gimmick=self.current_gimmick(),
+                           hazards=[] if train else self.spot["hazards"], gimmick=None if train else self.current_gimmick(),
                            float_need=self.save.float_need(fish, self.spot), float_tier=self.save.float_tier(),
                            touch_lead=load_json("mobile_config.json")["touch_lead_sec"] if self.touch else 0.0)
         self.toasts.items.clear()
         self.toasts.sink = self._say  # 파이팅 중 글자 슬롯 하나 (31장)
+        # 패턴 숙련도·연속 실패 보조 (31장 C5) — 세이브 값을 두뇌가 바로 쓴다
+        self.fight.brain.mastery = self.save.data.setdefault("pattern_mastery", {})
+        self.fight.brain.fail_streak = self.save.data.setdefault("pattern_fail_streak", {})
+        self.missed_signals: list[str] = []   # 결과 화면: 놓친 신호
+        self.mastery_ups: list[str] = []      # 결과 화면: 숙련도가 오른 패턴
         if self.touch:
             self.fight.input_latency = load_json("mobile_config.json")["pump_latency_sec"]
         self.fight.lure_info = {"bite": self.bite.lure_bite, "used": set(self.bite.lure_used),
@@ -583,7 +602,7 @@ class FishingScene(Scene):
                 self._open_card(key, "gauge")
         from src.fishing.fight import fish_gear_tier
         need_rod = fish_gear_tier(fish)
-        if self.save.gear_tier("rod") < need_rod and fish["rarity"] != "common":
+        if not train and self.save.gear_tier("rod") < need_rod and fish["rarity"] != "common":
             # 낚싯대가 약하면 울렁임이 커진다 — 왜 어려운지 알려 준다
             self.toasts.show("버겁다!", BAD, 2.6, 11)
         if fish["rarity"] == "legend":
@@ -946,6 +965,10 @@ class FishingScene(Scene):
             pygame.draw.lines(canvas, col, False, [(px - w, py - flap), (px, py), (px + w, py - flap)], 2)
 
     def _update_fight(self, dt: float, aim: float) -> None:
+        if self.training is not None:
+            self.training.update(dt)  # 끝나면 바로 다시, 게이지는 계속 채움
+            if self.training is None or self.fight is None:
+                return
         f = self.fight
         # 클릭(뜰채·우클릭)으로 생긴 이벤트는 틱 밖에서 발생하므로 먼저 처리
         for ev in f.events:
@@ -1312,7 +1335,7 @@ class FishingScene(Scene):
                 # 처음 보는 패턴: 예고 순간 멈추고 시범 그림이 있는 설명 카드
                 if pid not in seen:
                     seen.append(pid)
-                self._open_card(card, None)
+                self._open_signal_card(card)
             elif pid not in seen:
                 # 첫 만남(카드는 이미 봤음): 잠깐 느려지며 한 줄 안내 (이후 도감에 패턴 힌트)
                 seen.append(pid)
@@ -1421,9 +1444,48 @@ class FishingScene(Scene):
             self.sfx.play(fc["sound"], 0.8)
             self.game.haptics.vibrate(fc["haptic"])
 
+    def _mastery_event(self, ev: str) -> None:
+        """판정 이벤트 → 패턴별 성공/실패 (숙련도·연속 실패·결과 화면 아이콘)."""
+        f, b = self.fight, self.fight.brain
+        pid, ok = None, None
+        if ev.startswith("pattern_ok:"):
+            pid, ok = ev.split(":", 1)[1], True
+        elif ev.startswith("pattern_fail:"):
+            pid, ok = ev.split(":", 1)[1], False
+        elif ev in ("perfect", "good", "miss_early", "miss_late", "miss_none"):
+            pid = "thrash" if b.jump_kind == "thrash" else "leap" if f.last_judge_kind == "swipe" else "jump"
+            ok = ev in ("perfect", "good")
+        elif ev in ("flick_perfect", "flick_good", "flick_miss"):
+            pid, ok = "turn", ev != "flick_miss"
+        elif ev in ("combo_ok", "combo_fail"):
+            pid, ok = "chain", ev == "combo_ok"
+        elif ev == "dual_ok":
+            pid, ok = "dual", True
+        elif ev in ("rush_ok", "rush_fail"):
+            pid, ok = "rush", ev == "rush_ok"
+        if pid is None:
+            return
+        if self.training is not None:
+            self.training.count(pid, ok)  # 훈련은 성공률만, 세이브는 건드리지 않음
+            return
+        mastery = self.save.data.setdefault("pattern_mastery", {})
+        streak = self.save.data.setdefault("pattern_fail_streak", {})
+        if ok:
+            before = mastery.get(pid, 0)
+            mastery[pid] = before + 1
+            streak[pid] = 0
+            tiers = [n for n, _ in signal_slots.cfg()["mastery"]["tiers"] if n > 0]
+            if any(before < n <= before + 1 for n in tiers) and pid not in self.mastery_ups:
+                self.mastery_ups.append(pid)
+        else:
+            streak[pid] = streak.get(pid, 0) + 1
+            if pid not in self.missed_signals:
+                self.missed_signals.append(pid)
+
     def _on_fight_event(self, ev: str) -> None:
         f = self.fight
         x, z = f.fish_xz()
+        self._mastery_event(ev)
         self.sfx.boost = 2 if "clear" in f.mutations and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
         if ev.startswith("telegraph:"):
             self._signal_cue(ev.split(":", 1)[1])
@@ -1433,7 +1495,10 @@ class FishingScene(Scene):
         if qr is not None:
             qr.on_event(ev)
         if ev in tut.CARDS and self.card is None and self.tutorial.want(ev):
-            self._open_card(ev, None if ev == "net_start" else "fish")
+            if ev.startswith("telegraph:"):
+                self._open_signal_card(ev)
+            else:
+                self._open_card(ev, None if ev == "net_start" else "fish")
         elif ev == "hazard_enter":
             self.toasts.show("걸린다!", BAD, 1.5, 11)
         elif not f.brain.sound_only and "dark" not in f.gim.kinds(f.brain):
@@ -1810,6 +1875,8 @@ class FishingScene(Scene):
                 tut.draw_guide(canvas, "guide_cast", t)
             elif not self.tutorial.is_seen("guide_wait") and c.state == CastState.LANDED:
                 tut.draw_guide(canvas, "guide_wait", t)
+        if self.training is not None:
+            self.training.draw(canvas, self.mouse)
         if self.card is not None:
             tut.draw_card(canvas, self.card["key"], self._card_focus(), self.card["t"], self.touch)
         if self.help:
@@ -1951,9 +2018,15 @@ class FishingScene(Scene):
             fight_hud.draw_catch_info(canvas, f.result, self.end_t, self.catch_news)
             if qr is not None and qr.items and self.end_t > 1.0:
                 fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)  # 의뢰 상세는 결과 화면에
+            if self.end_t > 1.2:
+                signal_slots.draw_result_icons(canvas, self.missed_signals, self.mastery_ups,
+                                               (12 + (self.hud_inset if self.touch else 0), 214), self.t)
             return
         if f.phase == "lost":
             fight_hud.draw_lose_panel(canvas, f, LOSE_REASONS[f.lose_reason], self.end_t)
+            if self.missed_signals or self.mastery_ups:
+                signal_slots.draw_result_icons(canvas, self.missed_signals, self.mastery_ups,
+                                               (canvas.get_width() // 2 - 110, 194), self.t)
             if qr is not None and qr.items:
                 fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)
             return

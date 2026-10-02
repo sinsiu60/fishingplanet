@@ -496,7 +496,15 @@ class Fight:
 
     # ── 틱 ──
     def update(self, dt: float, reeling: bool, rod_aim: float, inp: PatternInput | None = None) -> None:
+        was_rush = self.brain.state == "rush"
+        if not was_rush:
+            self.rush_red = False
         self._update(dt, reeling, rod_aim, inp)
+        if self.brain.state == "rush" and self.zone() == "red":
+            self.rush_red = True
+        if was_rush and self.brain.state != "rush" and self.phase == "fight":
+            # 돌진을 장력 빨강 없이 버텼으면 성공 (숙련도·결과 화면·훈련 성공률용, 31장 C5)
+            self.events.append("rush_fail" if getattr(self, "rush_red", False) else "rush_ok")
         self.log.tick(self)
 
     def _update(self, dt: float, reeling: bool, rod_aim: float, inp: PatternInput | None = None) -> None:

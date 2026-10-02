@@ -179,6 +179,8 @@ def new_data() -> dict:
         "buffs": {"lucky_casts": 0, "lunch_until": 0.0},  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
         # ── 콘텐츠 업데이트 (DESIGN.md 27-8) ──
         "patterns_seen": [],                             # 만나 본 신규 패턴 (첫 만남 안내·도감 힌트)
+        "pattern_mastery": {},                           # 패턴별 성공 횟수 → 예고 배율 (31장 C5)
+        "pattern_fail_streak": {},                       # 패턴별 연속 실패 (3번이면 다음 1번 예고 보조)
         "mutation_dex": {},                              # 물고기 id → 잡아 본 변이 목록
         "cosmetics": {"titles": [], "float_skins": [], "rod_skins": []},
         "equipped_cosmetic": {"title": None, "float_skin": None, "rod_skin": None},

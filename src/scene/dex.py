@@ -54,9 +54,29 @@ class DexScene(Scene):
         self.close_btn = ui.Button((406, 250, 60, 15), "닫기 (Tab)", self._close)
         self.mut_mode = False  # 변이 도감 (U5): 물고기 × 변이 칸
         self.mut_btn = ui.Button((52, 9, 64, 15), "변이 도감", self._toggle_mut)
+        # 패턴 사전 (31장 C5): 본 신호 카드를 다시 보기
+        self.pat_mode = False
+        self.pat_btn = ui.Button((120, 9, 64, 15), "패턴 사전", self._toggle_pat)
+        self.pat_card = None  # 열어 둔 카드 {"key", "t"}
 
     def _toggle_mut(self) -> None:
         self.mut_mode = not self.mut_mode
+        self.pat_mode = False
+
+    def _toggle_pat(self) -> None:
+        self.pat_mode = not self.pat_mode
+        self.mut_mode = False
+
+    PAT_KEYS = ("telegraph:rush", "telegraph:jump", "telegraph:turn", "telegraph:leap", "pattern:shake", "pattern:dive",
+                "pattern:surface", "pattern:reverse", "pattern:twist", "pattern:chain", "pattern:hide", "pattern:pump",
+                "pattern:thrash", "pattern:bite", "pattern:dual")
+
+    def _pat_seen(self, key: str) -> bool:
+        pid = key.split(":", 1)[1]
+        return self.fishing.tutorial.is_seen(key) or pid in self.save.data.get("patterns_seen", [])
+
+    def _pat_rect(self, i: int) -> pygame.Rect:
+        return pygame.Rect(18 + (i % 5) * 90, 52 + (i // 5) * 62, 84, 56)
 
     def _make_tabs(self) -> None:
         tabs = CONT_TABS[self.cont]
@@ -82,6 +102,21 @@ class DexScene(Scene):
             self._close()
         elif a.name == "primary":
             m = a.pos
+            if self.pat_card is not None:
+                if self.pat_card["t"] > 0.3:
+                    self.pat_card = None
+                return
+            if self.pat_btn.click(m):
+                self.game.sfx.play("click")
+                return
+            if self.pat_mode:
+                for i, key in enumerate(self.PAT_KEYS):
+                    if self._pat_rect(i).collidepoint(m) and self._pat_seen(key):
+                        self.pat_card = {"key": key, "t": 0.0}
+                        self.game.sfx.play("click")
+                if self.close_btn.click(m):
+                    return
+                return
             if self.tabs.click(m):
                 self.sel = 0
                 self.game.sfx.play("click")
@@ -102,6 +137,8 @@ class DexScene(Scene):
     def update(self, dt: float) -> None:
         self.age += dt
         self.t += dt
+        if self.pat_card is not None:
+            self.pat_card["t"] += dt
         self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
@@ -123,6 +160,16 @@ class DexScene(Scene):
         if mutation.unlocked(self.save):
             self.mut_btn.label = "기본 도감" if self.mut_mode else "변이 도감"
             self.mut_btn.draw(canvas, self.mouse)
+        self.pat_btn.label = "기본 도감" if self.pat_mode else "패턴 사전"
+        self.pat_btn.draw(canvas, self.mouse)
+        if self.pat_mode:
+            self._draw_patterns(canvas)
+            self.close_btn.draw(canvas, self.mouse)
+            if self.pat_card is not None:
+                from src.ui import tutorial as tut
+                tut.draw_card(canvas, self.pat_card["key"], None, self.pat_card["t"], self.fishing.touch)
+            draw_cursor(canvas, self.mouse)
+            return
         self.tabs.draw(canvas, self.mouse)
         if "eldrasion" in self.save.data["unlocked_continents"]:
             self.cont_btn.label = "엘드라시온 >" if self.cont == "sharmion" else "< 샤르미온"
@@ -139,6 +186,31 @@ class DexScene(Scene):
             self._draw_detail(canvas, fishes[self.sel])
         self.close_btn.draw(canvas, self.mouse)
         draw_cursor(canvas, self.mouse)
+
+    def _draw_patterns(self, canvas) -> None:
+        """패턴 사전: 신호 아이콘 + 이름. 본 것만 눌러서 첫 만남 카드를 다시 본다 (모르는 것은 ???)."""
+        from src.ui import signal_slots as ss
+        from src.ui import tutorial as tut
+        text(canvas, "본 신호를 누르면 그때 카드를 다시 볼 수 있어요", (466, 36), (170, 180, 200), 11, "midright")
+        for i, key in enumerate(self.PAT_KEYS):
+            r = self._pat_rect(i)
+            seen = self._pat_seen(key)
+            hover = r.collidepoint(self.mouse) and seen
+            canvas.fill((30, 36, 58) if hover else (20, 24, 40), r)
+            pid = key.split(":", 1)[1]
+            fam = ss.family_of(pid)
+            col = ss.color_of(fam) if seen and fam in ss.cfg()["families"] else (90, 96, 120)
+            pygame.draw.rect(canvas, col, r, 1, border_radius=6)
+            if seen:
+                if fam in ss.cfg()["families"]:
+                    dirv = (0, -1) if pid == "dive" else (0, 1) if pid == "surface" else (1, 0)
+                    ss.family_icon(canvas, fam, r.centerx, r.y + 20, col, self.t, dir=dirv)
+                else:
+                    from src.ui import icons
+                    icons.pips(canvas, r.centerx, r.y + 20, 3 if pid == "chain" else 2, (255, 214, 90), 7)
+                text(canvas, tut.CARDS[key][0].rstrip("!"), (r.centerx, r.bottom - 11), (232, 236, 245), 11, "center")
+            else:
+                text(canvas, "???", (r.centerx, r.centery), (110, 116, 140), 16, "center")
 
     def _mut_total(self) -> int:
         return sum(len(mutation.ORDER) for f in self.fish if f["rarity"] != "legend")

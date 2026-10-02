@@ -117,6 +117,8 @@ class FishBrain:
         self.last_ep_end = -99.0
         self.last_ep_load = 0
         self.last_ep_action: str | None = None
+        self.mastery: dict | None = None      # 세이브 pattern_mastery (낚시 화면이 넣어 줌, 봇·테스트는 None = 배율 1)
+        self.fail_streak: dict | None = None  # 세이브 pattern_fail_streak
         self.first_rush = fish.get("first_rush")
         self.first_rush_on = False
         self.first_rush_done = not self.first_rush
@@ -398,6 +400,21 @@ class FishBrain:
         return (self.state in self.sig["rest_states"] and self.clock - self.last_ep_end >= self.rest_needed()
                 and self.fits(action))
 
+    def learn_mult(self, action: str) -> float:
+        """숙련도 배율 (처음 1.5 / 익숙함 1.2 / 숙련 1.0) + 연속 실패 보조(다음 1번 1.2) 중 큰 쪽."""
+        if self.mastery is None or action == "lure":
+            return 1.0
+        mc = self.sig["mastery"]
+        n = self.mastery.get(action, 0)
+        mult = 1.0
+        for need, m in mc["tiers"]:
+            if n >= need:
+                mult = m
+        if self.fail_streak is not None and self.fail_streak.get(action, 0) >= mc["assist_after_fails"]:
+            self.fail_streak[action] = 0  # 보조는 한 번만
+            mult = max(mult, mc["assist_mult"])
+        return mult
+
     def _record_start(self, action: str, penalty: bool = False) -> None:
         """penalty = 플레이어 실패의 결과로 바로 이어지는 행동(수면 질주 실패 → 점프, 뜰채 실패 → 돌진).
         3초 창 부하엔 넣지만(다음 패턴이 기다리게) 예산 위반 집계에선 뺀다."""
@@ -454,6 +471,12 @@ class FishBrain:
                 self.turn_dir = self.rnd.choice((-1, 1))
         self.cur_telegraph = duration if duration is not None else self.telegraph_sec
         self.cur_telegraph = max(self.cur_telegraph, self.min_telegraph(action))  # 계열별 최소 예고 (31장 C4)
+        self.cur_telegraph *= self.learn_mult(action)  # 패턴 숙련도 (31장 C5)
+        speed = getattr(self, "train_speed", None)  # 훈련 수조 예고 속도
+        if speed == "slow":
+            self.cur_telegraph = self.min_telegraph(action) * 2
+        elif speed == "norm":
+            self.cur_telegraph = self.min_telegraph(action)
         self._enter("telegraph", self.cur_telegraph)
         if not self.combo_on:
             self._record_start(action, penalty)  # 콤보 안의 단계는 콤보 부하(4)에 포함

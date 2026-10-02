@@ -17,89 +17,52 @@ GOLD = (255, 214, 90)
 RED = (255, 110, 95)
 DEMO_BG = (14, 18, 34)
 
-# 카드: (제목, PC 문구) — tutorial.CARDS 로 합쳐진다.  터치 문구는 TOUCH_LINES.
+# 첫 만남 정지 카드 (31장 C5): 신호 아이콘(칸 그대로) + 손동작 애니메이션 + 한 줄.
+# (제목, [PC 한 줄]) — tutorial.CARDS 로 합쳐진다. 터치 한 줄은 TOUCH_LINES. 기존 행동(돌진·점프·방향 전환·몸털기) 카드도 같은 모양으로.
 CARDS = {
-    "pattern:shake": ("줄이 파르르 떨린다 → 머리 흔들기!", [
-        "물고기가 바늘을 털어내려고 머리를 흔들어요.",
-        "흔드는 동안 감기를 멈추고 마우스를 가만히 두세요. 움직이면 바늘이 빠지기 쉬워요.",
-    ]),
-    "pattern:dive": ("그림자가 작아지며 가라앉는다 → 잠수!", [
-        "바닥으로 파고듭니다. 마우스를 위로 올려 낚싯대를 세우고 버티세요.",
-        "세우고 있는 동안은 줄이 풀리지 않아요. 놓치면 바닥에 쓸려 줄이 상해요.",
-    ]),
-    "pattern:surface": ("수면에 V자 물살 → 수면 질주!", [
-        "수면을 따라 달리다 뛰어오르려 해요. 마우스를 아래로 내려 낚싯대를 눕히세요.",
-        "눌러 두면 거리가 확 줄어요. 놓치면 바로 점프하니 우클릭을 준비하세요.",
-    ]),
-    "pattern:reverse": ("정면으로 달려온다 → 역주행!", [
-        "물고기가 내 쪽으로 달려와서 줄이 처집니다.",
-        "좌클릭을 빠르게 연타해서 막대(회수 게이지)를 눈금 위로 유지하세요.",
-    ]),
-    "pattern:twist": ("몸을 빙글 → 줄 비틀기!", [
-        "물고기가 몸을 돌려 줄을 꼬아요. 꼬임 게이지가 가득 차면 줄이 끊어져요.",
-        "마우스로 원을 그리면 꼬임이 풀립니다. 행동이 끝난 뒤 남은 꼬임도 원으로 풀 수 있어요.",
-    ]),
-    "pattern:chain": ("콤보 예고!", [
-        "위에 보이는 순서대로 행동 세 개가 짧은 간격으로 이어져요.",
-        "하나씩 원래 방법으로 대응하세요. 세 개 모두 성공하면 물고기가 크게 지칩니다.",
-    ]),
-    "pattern:hide": ("바위 틈으로 → 숨기!", [
-        "감기를 멈추고 줄을 풀어 주세요. 장력을 가운데 막대의 금색 칸에 맞추고 기다리면,",
-        "물고기가 고개를 내밀어요(금색 번쩍). 그 순간 좌클릭으로 감으세요! 억지로 당기면 줄이 쓸려요.",
-    ]),
-    "pattern:pump": ("둥 둥 북소리 → 펌핑 리듬!", [
-        "물고기가 박자에 맞춰 당깁니다. 박(빨간 칸)에는 감지 말고,",
-        "박과 박 사이(초록 칸)에만 좌클릭으로 감으세요. 연속으로 맞히면 감기가 빨라져요.",
-    ]),
-    "pattern:thrash": ("크게 뛰어오른다 → 공중 몸부림!", [
-        "보통 점프보다 높이 뛰고 공중에서 두 번 몸부림쳐요.",
-        "정점에서 한 번, 떨어지기 직전에 한 번 더 — 우클릭(숙이기)을 두 번 하세요.",
-    ]),
-    "pattern:bite": ("이빨이 번쩍 → 줄 물어뜯기!", [
-        "물고기가 줄을 물어뜯으려 해요. 막대가 끝까지 차는 순간 이빨이 번쩍입니다.",
-        "바로 그때 Shift를 누르세요(드랙 순간 최저). 너무 일찍 누르고 있으면 안 돼요 — '새로' 눌러야 해요.",
-    ]),
-    "pattern:dual": ("두 가지를 동시에!", [
-        "패널 두 줄에 나온 두 가지를 함께 하세요. 예: 낚싯대 세우기(마우스 위) + 원 그리기.",
-        "PC는 마우스 위치와 클릭을 나눠서, 모바일은 패드와 버튼을 두 손가락으로 따로.",
-    ]),
+    "telegraph:rush": ("돌진!", ["▼▼ 풀기 — Q로 드랙을 낮추고, 빨강이면 감기를 멈춘다"]),
+    "telegraph:jump": ("점프!", ["링이 겹치는 순간 우클릭 (낚싯대 숙이기)"]),
+    "telegraph:turn": ("방향 전환!", ["막대가 가운데에 올 때 화살표 쪽으로 마우스를 확"]),
+    "telegraph:leap": ("몸털기 점프!", ["링이 겹치는 순간 화살표 쪽으로 마우스를 확"]),
+    "pattern:shake": ("머리 흔들기!", ["흔드는 동안 감기를 멈추고 마우스를 가만히"]),
+    "pattern:dive": ("잠수!", ["마우스를 위로 — 낚싯대를 세워 버틴다"]),
+    "pattern:surface": ("수면 질주!", ["마우스를 아래로 — 낚싯대를 눕혀 누른다"]),
+    "pattern:reverse": ("역주행!", ["좌클릭 연타로 막대를 눈금 위로"]),
+    "pattern:twist": ("줄 비틀기!", ["마우스로 원을 그려 꼬임을 푼다"]),
+    "pattern:chain": ("콤보!", ["위에 뜬 아이콘 순서대로 하나씩 대응"]),
+    "pattern:hide": ("숨기!", ["감기를 멈추고 금색 칸까지 풀었다가, 번쩍이면 감기"]),
+    "pattern:pump": ("펌핑 리듬!", ["빨간 박엔 멈추고, 박 사이에만 좌클릭"]),
+    "pattern:thrash": ("공중 몸부림!", ["정점에 한 번, 떨어지기 직전에 한 번 더 우클릭"]),
+    "pattern:bite": ("줄 물어뜯기!", ["막대가 다 차는 순간 Shift (드랙 순간 최저)"]),
+    "pattern:dual": ("두 가지 동시에!", ["왼쪽 칸 하나 + 오른쪽 칸 하나를 함께"]),
     "lure_intro": ("루어 액션!", [
         "찌가 떠 있는 동안: 짧게 클릭 = 저킹 · 누르고 있기 = 리트리브 · 가만히 = 멈춤",
         "물고기마다 좋아하는 리듬이 달라요. 그림자 위: ? 관심  ! 다가옴  ♥ 곧 문다  … 떠남",
-        "안 해도 입질은 와요. 같은 물고기를 5번 잡으면 도감에 좋아하는 리듬이 나와요.",
     ]),
 }
 
 TOUCH_LINES = {
-    "pattern:shake": ["물고기가 바늘을 털어내려고 머리를 흔들어요.",
-                      "흔드는 동안 릴 패드에서 손을 떼고 가만히 두세요."],
-    "pattern:dive": ["바닥으로 파고듭니다. 릴 패드를 위로 밀어 낚싯대를 세우고 버티세요.",
-                     "세우고 있는 동안은 줄이 풀리지 않아요. 놓치면 바닥에 쓸려 줄이 상해요."],
-    "pattern:surface": ["수면을 따라 달리다 뛰어오르려 해요. 릴 패드를 아래로 밀어 낚싯대를 눕히세요.",
-                        "눌러 두면 거리가 확 줄어요. 놓치면 바로 점프하니 숙이기를 준비하세요."],
-    "pattern:reverse": ["물고기가 내 쪽으로 달려와서 줄이 처집니다.",
-                        "릴 패드를 빠르게 연타해서 막대(회수 게이지)를 눈금 위로 유지하세요."],
-    "pattern:twist": ["물고기가 몸을 돌려 줄을 꼬아요. 꼬임 게이지가 가득 차면 줄이 끊어져요.",
-                      "릴 패드 위에서 손가락으로 원을 그리면 꼬임이 풀립니다."],
-    "pattern:chain": ["위에 보이는 순서대로 행동 세 개가 짧은 간격으로 이어져요.",
-                      "하나씩 원래 방법으로 대응하세요. 세 개 모두 성공하면 물고기가 크게 지칩니다."],
-    "pattern:hide": ["릴 패드에서 손을 떼고 줄을 풀어 주세요. 장력을 금색 칸에 맞추고 기다리면,",
-                     "물고기가 고개를 내밀어요(금색 번쩍). 그 순간 패드를 눌러 감으세요!"],
-    "pattern:pump": ["물고기가 박자에 맞춰 당깁니다. 박(빨간 칸)에는 감지 말고,",
-                     "박과 박 사이(초록 칸)에만 릴 패드를 누르세요. 연속으로 맞히면 감기가 빨라져요."],
-    "pattern:thrash": ["보통 점프보다 높이 뛰고 공중에서 두 번 몸부림쳐요.",
-                       "정점에서 한 번, 떨어지기 직전에 한 번 더 — 숙이기 버튼을 두 번 누르세요."],
-    "pattern:bite": ["물고기가 줄을 물어뜯으려 해요. 막대가 끝까지 차는 순간 이빨이 번쩍입니다.",
-                     "바로 그때 ▼ 버튼을 길게 누르세요(드랙 순간 최저). 미리 누르고 있으면 안 돼요."],
-    "pattern:dual": ["패널 두 줄에 나온 두 가지를 함께 하세요.",
-                     "한 손가락은 릴 패드, 다른 손가락은 버튼 — 따로따로 대응하세요."],
+    "telegraph:rush": ["▼▼ 풀기 — ▼로 드랙을 낮추고, 빨강이면 패드에서 손을 뗀다"],
+    "telegraph:jump": ["링이 겹치는 순간 숙이기 버튼"],
+    "telegraph:turn": ["막대가 가운데에 올 때 화살표 쪽으로 패드를 확"],
+    "telegraph:leap": ["링이 겹치는 순간 화살표 쪽으로 패드를 확"],
+    "pattern:shake": ["흔드는 동안 패드에서 손을 떼고 가만히"],
+    "pattern:dive": ["패드를 위로 밀어 낚싯대를 세운다"],
+    "pattern:surface": ["패드를 아래로 밀어 낚싯대를 눕힌다"],
+    "pattern:reverse": ["패드 연타로 막대를 눈금 위로"],
+    "pattern:twist": ["패드 위에서 원을 그려 꼬임을 푼다"],
+    "pattern:chain": ["위에 뜬 아이콘 순서대로 하나씩 대응"],
+    "pattern:hide": ["패드에서 손을 떼고 기다렸다가, 번쩍이면 패드"],
+    "pattern:pump": ["빨간 박엔 멈추고, 박 사이에만 패드"],
+    "pattern:thrash": ["정점에 한 번, 떨어지기 직전에 한 번 더 숙이기"],
+    "pattern:bite": ["막대가 다 차는 순간 ▼ 길게 (드랙 순간 최저)"],
+    "pattern:dual": ["한 손가락은 왼쪽 칸, 다른 손가락은 오른쪽 칸"],
     "lure_intro": ["찌가 떠 있는 동안: 물 위 짧게 탭 = 저킹 · 리트리브 패드 누르기 · 가만히 = 멈춤",
-                   "물고기마다 좋아하는 리듬이 달라요. 그림자 위: ? 관심  ! 다가옴  ♥ 곧 문다  … 떠남",
-                   "안 해도 입질은 와요. 같은 물고기를 5번 잡으면 도감에 좋아하는 리듬이 나와요."],
+                   "물고기마다 좋아하는 리듬이 달라요. 그림자 위: ? 관심  ! 다가옴  ♥ 곧 문다  … 떠남"],
 }
 
 # 카드 키 → 시범 그림 종류
-DEMO = {k: k.split(":", 1)[1] for k in CARDS if k.startswith("pattern:")}
+DEMO = {k: k.split(":", 1)[1] for k in CARDS if k.startswith(("pattern:", "telegraph:"))}
 DEMO["lure_intro"] = "lure"
 
 
@@ -261,19 +224,63 @@ def draw_demo(canvas, kind: str, rect: pygame.Rect, t: float, touch: bool) -> No
         _key(canvas, cx + 52, cy, "▼" if touch else "Shift", lit)
         text(canvas, "번쩍이는 순간!", (cx, rect.bottom - 7), DIM, 11, "center")
     elif kind == "chain":
-        labels = ["돌진", "잠수", "점프"]
-        cur = int(t * 1.2) % 3
-        x = cx - 70
-        for i, lb in enumerate(labels):
-            r = text(canvas, lb, (x, cy), GOLD if i == cur else (DIM if i < cur else WHITE), 11, "midleft")
-            x = r.right + 6
-            if i < 2:
-                text(canvas, "→", (x + 4, cy), DIM, 11, "center")
-                x += 14
+        # 콤보: 칸 위 미리보기와 같은 아이콘 줄 — 하나씩 꺼진다
+        from src.ui import signal_slots as ss
+        seq = [("release", (1, 0)), ("direction", (0, -1)), ("timing", (1, 0))]
+        cur = int(t * 1.2) % 4
+        for i, (fam, dirv) in enumerate(seq):
+            px = cx - 40 + i * 40
+            if i < cur:
+                pygame.draw.circle(canvas, (60, 66, 90), (px, cy), 4)
+                continue
+            if i == cur:
+                pygame.draw.circle(canvas, WHITE, (px, cy), 13, 1)
+            ss.family_icon(canvas, fam, px, cy, ss.color_of(fam), t, dir=dirv)
     elif kind == "dual":
         _chevrons(canvas, cx - 30, cy, -1, t, GOOD, 10)
         text(canvas, "+", (cx, cy), WHITE, 16, "center")
         _ring_arrow(canvas, cx + 34, cy, 12, t, GOOD, 2)
+    elif kind == "rush":
+        on = loop > 0.5
+        _key(canvas, dev_x, cy, "▼" if touch else "Q", on)
+        # 장력이 빨강에서 초록으로 내려온다
+        bx, bw = cx - 10, 90
+        canvas.fill((52, 64, 86), (bx, cy - 3, 30, 6))
+        canvas.fill((40, 100, 52), (bx + 30, cy - 3, 35, 6))
+        canvas.fill((120, 38, 36), (bx + 65, cy - 3, 25, 6))
+        k = min(1.0, max(0.0, (loop - 0.5) / 0.8))
+        canvas.fill(WHITE, (bx + int(bw * (0.9 - 0.4 * k)), cy - 6, 2, 12))
+    elif kind in ("jump", "leap"):
+        from src.ui import fight_fx
+        tta = 1.0 - (t % 1.6)
+        if kind == "jump":
+            fight_fx.draw_jump_ring(canvas, (cx + 20, cy), tta, 1.0, 0.08, 0.16, t, spread=24)
+        else:
+            fight_fx.draw_swipe_ring(canvas, (cx + 20, cy), tta, 1.0, 0.08, 0.16, 1, t, spread=24)
+        hit = abs(tta) < 0.1
+        if touch:
+            _pad(canvas, dev_x, cy, 14, GOLD if hit else WHITE, (0.8 if (hit and kind == "leap") else 0, 0))
+        elif kind == "jump":
+            r = pygame.Rect(dev_x - 7, cy - 10, 14, 20)
+            pygame.draw.rect(canvas, WHITE, r, 1, border_radius=6)
+            canvas.fill(WHITE, (dev_x, cy - 10, 1, 8))
+            if hit:
+                canvas.fill(GOLD, (dev_x + 1, cy - 9, 6, 7))  # 우클릭
+        else:
+            _mouse(canvas, dev_x + (8 if hit else 0), cy, WHITE)
+    elif kind == "turn":
+        ph = (t % 1.6) / 1.6
+        mx = dev_x + (10 if 0.45 < ph < 0.7 else 0)
+        if touch:
+            _pad(canvas, dev_x, cy, 14, WHITE, (0.8 if 0.45 < ph < 0.7 else 0, 0))
+        else:
+            _mouse(canvas, mx, cy, WHITE)
+        bx, bw = cx - 4, 70
+        canvas.fill((40, 44, 62), (bx, cy + 8, bw, 3))
+        canvas.fill(GOLD, (bx + bw // 2 - 4, cy + 8, 8, 3))
+        canvas.fill(WHITE, (bx + int(bw * ph), cy + 5, 2, 9))
+        pygame.draw.line(canvas, WHITE, (bx + 20, cy - 6), (bx + 46, cy - 6), 3)
+        pygame.draw.polygon(canvas, WHITE, [(bx + 52, cy - 6), (bx + 44, cy - 11), (bx + 44, cy - 1)])
     elif kind == "lure":
         _lure_demo(canvas, rect, t, touch)
 
@@ -324,8 +331,24 @@ def draw_card(canvas, key: str, title: str, lines_pc: list, focus, t: float, tou
     canvas.fill(tut.PANEL, (x, y, pw, ph))
     pygame.draw.rect(canvas, tut.BORDER, (x, y, pw, ph), 1)
     text(canvas, title, (w // 2, y + 14), tut.BORDER, 16, "center")
-    demo = pygame.Rect(x + 60, y + 28, pw - 120, demo_h)
+    demo = pygame.Rect(x + 96, y + 28, pw - 156, demo_h)
     draw_demo(canvas, DEMO.get(key, ""), demo, t, touch)
+    # 왼쪽: 파이팅 중 칸에 뜨는 신호 아이콘 그대로 (31장 C5)
+    kind = DEMO.get(key, "")
+    if kind and kind != "lure":
+        from src.ui import signal_slots as ss
+        fam = ss.family_of(kind)
+        if fam in ss.cfg()["families"]:
+            col = ss.color_of(fam)
+            box = pygame.Rect(0, 0, 44, 44)
+            box.center = (x + 60, demo.centery)
+            canvas.fill((12, 16, 30), box)
+            pygame.draw.rect(canvas, col, box, 2, border_radius=8)
+            dirv = (0, -1) if kind == "dive" else (0, 1) if kind == "surface" else (1, 0)
+            ss.family_icon(canvas, fam, box.centerx, box.centery, col, t, dir=dirv)
+        elif kind in ("chain", "dual"):
+            from src.ui import icons
+            icons.pips(canvas, x + 60, demo.centery, 3 if kind == "chain" else 2, GOLD, 8)
     ty = demo.bottom + 10
     for i, ln in enumerate(lines):
         text(canvas, ln, (w // 2, ty + i * 15), (232, 236, 245), 11, "center")

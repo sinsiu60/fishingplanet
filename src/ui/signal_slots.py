@@ -357,3 +357,42 @@ def _combo_preview(canvas, fight, center, t: float) -> None:
             pygame.draw.circle(canvas, BAD if failed else (255, 255, 255), (cx, y), 8, 1)
         dirv = (0, -1) if a == "dive" else (0, 1) if a == "surface" else (1, 0)
         family_icon(canvas, fam, cx, y, col, t, small=True, dir=dirv)
+
+
+# ───────────────────────── 결과 화면 (31장 C5) ─────────────────────────
+
+def _mini_box(canvas, action: str, x: int, y: int, t: float) -> None:
+    fam = family_of(action) or "direction"
+    if fam not in cfg()["families"]:
+        fam = "direction"
+    col = color_of(fam)
+    r = pygame.Rect(0, 0, 24, 24)
+    r.center = (x, y)
+    canvas.fill((12, 16, 30), r)
+    pygame.draw.rect(canvas, col, r, 2, border_radius=5)
+    dirv = (0, -1) if action == "dive" else (0, 1) if action == "surface" else (1, 0)
+    family_icon(canvas, fam, x, y, col, t, small=True, dir=dirv)
+
+
+def draw_result_icons(canvas, missed: list, ups: list, pos, t: float) -> int:
+    """놓친 신호(빨간 X) · 숙련도 상승(초록 ▲)을 아이콘으로. 그린 너비를 돌려준다."""
+    from src.ui.hud import text
+    x, y = pos
+    x0 = x
+    if missed:
+        text(canvas, "놓친 신호", (x, y), (255, 150, 130), 11, "midleft")
+        x += 52
+        for a in missed[:6]:
+            _mini_box(canvas, a, x + 12, y, t)
+            pygame.draw.line(canvas, BAD, (x + 18, y + 4), (x + 26, y + 12), 2)
+            pygame.draw.line(canvas, BAD, (x + 26, y + 4), (x + 18, y + 12), 2)
+            x += 28
+        x += 10
+    if ups:
+        text(canvas, "숙련", (x, y), GOOD, 11, "midleft")
+        x += 28
+        for a in ups[:6]:
+            _mini_box(canvas, a, x + 12, y, t)
+            _tri(canvas, x + 22, y - 9, -1, 4, GOOD)
+            x += 28
+    return x - x0

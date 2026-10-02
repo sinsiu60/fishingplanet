@@ -109,6 +109,7 @@ class MapScene(Scene):
         self.close_btn = ui.Button((404, 250, 64, 15), "닫기 (M)", self._close)
         self.go_btn = ui.Button((300, 214, 164, 17), "", self._go)
         self.rest_btn = ui.Button((300, 56, 164, 16), "텐트에서 쉬기", self._rest)
+        self.train_btn = ui.Button((330, 250, 70, 15), "훈련 수조", self._train)
 
     @property
     def spots(self) -> list:
@@ -170,12 +171,22 @@ class MapScene(Scene):
         self.game.sfx.play("click")
         self._say(f"텐트에서 쉬었다 → {label}", ui.GOOD)
 
+    def _train(self) -> None:
+        """훈련 수조 (31장 C5): 해금 패턴 무한 반복, 보상·패널티 없음."""
+        if self.fishing.fight is not None:
+            return
+        from src.scene.training import TrainingTank
+        self.game.sfx.play("click")
+        self.game.scenes.pop()
+        self.fishing.training = TrainingTank(self.fishing)
+        self.fishing.training.start()
+
     def handle_action(self, a) -> None:
         if a.name == "back" or a.is_("menu", "map"):
             self._close()
         elif a.name == "primary":
             m = a.pos
-            for b in (self.close_btn, self.go_btn, self.rest_btn) + tuple(self.cont_btns if self._multi() else ()):
+            for b in (self.close_btn, self.go_btn, self.rest_btn, self.train_btn) + tuple(self.cont_btns if self._multi() else ()):
                 if b.click(m):
                     return
             for i, sp in enumerate(self.spots):
@@ -216,6 +227,8 @@ class MapScene(Scene):
         if self.msg_t > 0:
             text(canvas, self.msg, (14, 256), self.msg_col, 11, "midleft")
         self.close_btn.draw(canvas, self.mouse)
+        self.train_btn.enabled = self.fishing.fight is None
+        self.train_btn.draw(canvas, self.mouse)
         draw_cursor(canvas, self.mouse)
 
     def _draw_map(self, canvas) -> None:
