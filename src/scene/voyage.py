@@ -35,8 +35,8 @@ class VoyageScene(Scene):
         game.sfx.stop_all()
         game.sfx.loop("amb_waves", True, 0.5)
 
-    def handle_event(self, event) -> None:
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.t > 0.8:
+    def handle_action(self, a) -> None:
+        if a.name == "primary" and self.t > 0.8:
             # 다음 장면으로 건너뛰기
             for at in (T_SAIL, T_ARRIVE, T_END):
                 if self.t < at:
@@ -47,7 +47,7 @@ class VoyageScene(Scene):
     def update(self, dt: float) -> None:
         prev = self.t
         self.t += dt
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
         if prev < T_SAIL <= self.t:
             self.game.sfx.play("whoosh" if "whoosh" in self.game.sfx.sounds else "splash", 0.6)
         if prev < T_ARRIVE <= self.t:

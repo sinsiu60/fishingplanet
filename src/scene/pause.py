@@ -47,11 +47,11 @@ class PauseScene(Scene):
         self.game.scenes.push(TitleScene(self.game))
         self.game.fade_in(0.6)
 
-    def handle_event(self, event) -> None:
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+    def handle_action(self, a) -> None:
+        if a.name == "back":
             self._resume()
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            m = self.game.to_canvas(event.pos)
+        elif a.name == "primary":
+            m = a.pos
             for b in self.buttons:
                 if b.click(m):
                     self.game.sfx.play("click")
@@ -59,7 +59,7 @@ class PauseScene(Scene):
 
     def update(self, dt: float) -> None:
         self.age += dt
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
 
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)

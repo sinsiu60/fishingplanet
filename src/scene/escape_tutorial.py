@@ -44,19 +44,18 @@ class EscapeTutorialScene(Scene):
     def _close(self) -> None:
         self._finish()
 
-    def handle_event(self, event) -> None:
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.age > 0.4:
-            m = self.game.to_canvas(event.pos)
+    def handle_action(self, a) -> None:
+        if a.name == "primary" and self.age > 0.4:
             for b in self.buttons:
-                if b.click(m):
+                if b.click(a.pos):
                     self.game.sfx.play("click")
                     return
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and self.age > 0.4:
+        elif a.name == "back" and self.age > 0.4:
             self._close()
 
     def update(self, dt: float) -> None:
         self.age += dt
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
 
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)

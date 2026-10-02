@@ -224,10 +224,9 @@ class ChestScene(Scene):
         return []
 
     # ── 입력 ──
-    def handle_event(self, event) -> None:
+    def handle_action(self, act) -> None:
         if self.anim:
-            if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1) or \
-                    (event.type == pygame.KEYDOWN and event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE)):
+            if act.name in ("primary", "confirm", "back"):
                 a = self.anim
                 if a["t"] < CARD_AT[a["grade"]]:
                     a["t"] = CARD_AT[a["grade"]]  # 건너뛰기
@@ -237,13 +236,13 @@ class ChestScene(Scene):
                 elif a["t"] > CARD_AT[a["grade"]] + 0.3:
                     self.anim = None
             return
-        if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_c):
+        if act.name == "back" or act.is_("menu", "chest"):
             self._close()
-        elif event.type == pygame.MOUSEWHEEL:
+        elif act.name == "scroll":
             n = len(self._list())
-            self.scroll = max(0, min(max(0, n - LIST.h // ROW_H), self.scroll - event.y))
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            m = self.game.to_canvas(event.pos)
+            self.scroll = max(0, min(max(0, n - LIST.h // ROW_H), self.scroll - act.value))
+        elif act.name == "primary":
+            m = act.pos
             if self.tabs.click(m):
                 self.sel, self.scroll = 0, 0
                 self.chooser, self.choice_btns = None, []
@@ -275,7 +274,7 @@ class ChestScene(Scene):
     def update(self, dt: float) -> None:
         self.age += dt
         self.t += dt
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
         self.msg_t = max(0.0, self.msg_t - dt)
         for p in self.particles:
             p[0] += p[2] * dt

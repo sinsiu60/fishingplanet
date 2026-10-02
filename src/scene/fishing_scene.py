@@ -233,23 +233,23 @@ class FishingScene(Scene):
                 self.sfx.play("great", 0.7)
                 return
 
-    def _cycle_debug(self, key: int) -> None:
+    def _cycle_debug(self, key: str) -> None:
         """F3 물고기 고정 / F4 낚시터 / F5 날씨 / F6 상자 지급 (테스트용)."""
-        if key == pygame.K_F3:
+        if key == "F3":
             self.force_i = self.force_i + 1 if self.force_i + 1 < len(self.all_fish) else -1
             name = self.all_fish[self.force_i]["name"] if self.force_i >= 0 else "없음 (자연 출현)"
             self.toasts.show(f"[테스트] 물고기 고정: {name}", INFO, 1.5, 11)
-        elif key == pygame.K_F4:
+        elif key == "F4":
             i = (self.spot_ids.index(self.spot_id) + 1) % len(self.spot_ids)
             self._set_spot(self.spot_ids[i])
             self.toasts.show(f"[테스트] 낚시터: {self.spot['name']} (해금 무시)", INFO, 1.5, 11)
-        elif key == pygame.K_F6:
+        elif key == "F6":
             from src.save import treasure
             self.debug_chest = (getattr(self, "debug_chest", -1) + 1) % len(treasure.GRADES)
             grade = treasure.GRADES[self.debug_chest]
             treasure.give_chest(self.save, grade)
             self.toasts.show(f"[테스트] {treasure.grade_info(grade)['name']} 상자 지급 (C: 열기)", INFO, 1.5, 11)
-        elif key == pygame.K_F5:
+        elif key == "F5":
             w = self.weather_sys
             w.current = WEATHERS[(WEATHERS.index(w.current) + 1) % len(WEATHERS)]
             self.toasts.show(f"[테스트] 날씨: {WEATHER_KO[w.current]}", INFO, 1.5, 11)
@@ -266,60 +266,60 @@ class FishingScene(Scene):
         return None
 
     # ───────────────────────── 입력 ─────────────────────────
-    def handle_event(self, event: pygame.event.Event) -> None:
+    def handle_action(self, a) -> None:
+        """입력 행동 (src/platform/input.py). PC: 좌클릭=primary, 우클릭=secondary, 휠=scroll, Q/E=drag 등."""
         f = self.fight
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+        if a.name == "primary_up":
             self.cast.release(self.cam.yaw)
             return
         if self.help:
-            if event.type == pygame.MOUSEBUTTONDOWN or (event.type == pygame.KEYDOWN and event.key == pygame.K_h):
+            if a.any_press or a.name == "help":
                 self.help = False
             return
         if self.card is not None:
-            if event.type == pygame.MOUSEBUTTONDOWN and self.card["t"] > 0.35:
+            if a.any_press and self.card["t"] > 0.35:
                 self.card = None
             return
-        if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_1, pygame.K_2) and f is not None and f.phase == "fight":
-                self._use_fight_item("repair_spool" if event.key == pygame.K_1 else "calm_charm")
-                return
-            if event.key == pygame.K_h:
-                self.help = True
-            elif event.key == pygame.K_ESCAPE and self.landing is None:
+        n = a.name
+        if n == "item":
+            if f is not None and f.phase == "fight":
+                self._use_fight_item("repair_spool" if a.value == 1 else "calm_charm")
+        elif n == "help":
+            self.help = True
+        elif n == "back":
+            if self.landing is None:
                 self.sfx.play("click")
                 from src.scene.pause import PauseScene
                 self.game.scenes.push(PauseScene(self.game, self))
-            elif event.key == pygame.K_b and self.can_open_menus():
-                self.open_menu("shop")
-            elif event.key == pygame.K_TAB and self.fight is None:
-                self.open_menu("dex")
-            elif event.key == pygame.K_m and self.can_open_menus():
-                self.open_menu("map")
-            elif event.key == pygame.K_c and self.can_open_menus():
-                self.open_menu("chest")
-            elif event.key in (pygame.K_F3, pygame.K_F4, pygame.K_F5, pygame.K_F6) and f is None \
-                    and self.fish_cfg.get("debug_keys"):
-                self._cycle_debug(event.key)
-            elif event.key == pygame.K_t:
-                self.clock.fast = not self.clock.fast
-            elif event.key == pygame.K_F1:
+        elif n == "menu":
+            if a.value == "dex":
+                if self.fight is None:
+                    self.open_menu("dex")
+            elif self.can_open_menus():
+                self.open_menu(a.value)
+        elif n == "debug":
+            if a.value in ("F3", "F4", "F5", "F6"):
+                if f is None and self.fish_cfg.get("debug_keys"):
+                    self._cycle_debug(a.value)
+            elif a.value == "F1":
                 self.debug = not self.debug
-            elif event.key == pygame.K_F2:
+            elif a.value == "F2":
                 self.shake_on = not self.shake_on
                 self.screen_fx.enabled = self.shake_on
                 self.settings.set("screen_shake", self.shake_on)
                 self.toasts.show("화면 연출(흔들림·줌) " + ("켬" if self.shake_on else "끔"), INFO, 1.2, 11)
-            elif f and event.key == pygame.K_q:
-                f.change_drag(-1)
-            elif f and event.key == pygame.K_e:
-                f.change_drag(+1)
-        elif event.type == pygame.MOUSEWHEEL and f:
-            f.change_drag(1 if event.y > 0 else -1)
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                self._left_click()
-            elif event.button == 3:
-                self._right_click()
+        elif n == "time_fast":
+            self.clock.fast = not self.clock.fast
+        elif n == "drag":
+            if f:
+                f.change_drag(a.value)
+        elif n == "scroll":
+            if f:
+                f.change_drag(1 if a.value > 0 else -1)
+        elif n == "primary":
+            self._left_click()
+        elif n == "secondary":
+            self._right_click()
 
     # ───────────────────────── 메뉴 · 저장 ─────────────────────────
     def can_open_menus(self) -> bool:
@@ -466,7 +466,7 @@ class FishingScene(Scene):
             # 튜토리얼 카드·도움말: 게임 정지 (예고 시간도 흐르지 않음)
             if self.card is not None:
                 self.card["t"] += dt
-            mx, my = self.game.screen.to_canvas(pygame.mouse.get_pos())
+            mx, my = self.game.input.pointer_raw
             self.mouse = (int(clamp(mx, 0, self.cam.width - 1)), int(clamp(my, 0, self.cam.height - 1)))
             if self.reel_loop:
                 self.sfx.loop(self.reel_loop, False)
@@ -489,7 +489,7 @@ class FishingScene(Scene):
                 self.captions = None
         self.net_anim = max(0.0, self.net_anim - dt)
 
-        mx, my = self.game.screen.to_canvas(pygame.mouse.get_pos())
+        mx, my = self.game.input.pointer_raw
         w = self.cam.width
         self.mouse = (int(clamp(mx, 0, w - 1)), int(clamp(my, 0, self.cam.height - 1)))
 
@@ -665,7 +665,7 @@ class FishingScene(Scene):
                 if f.result["rank"] == "S":
                     self.sfx.play("perfect", 0.6)
             return
-        reeling = pygame.mouse.get_pressed()[0] and f.phase == "fight"
+        reeling = self.game.input.held("reel") and f.phase == "fight"
         if f.phase == "fight":
             self._detect_flick(dt)
         f.update(dt, reeling, aim)

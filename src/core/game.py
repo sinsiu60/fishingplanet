@@ -4,6 +4,7 @@ import pygame
 from src.audio.music import Music
 from src.audio.sfx import Sfx
 from src.core.config import game_config
+from src.platform.input import create_input
 from src.render.screen import PixelScreen
 from src.save.settings import Settings
 from src.scene.base import SceneManager
@@ -24,6 +25,7 @@ class Game:
         self.screen = PixelScreen(cfg["width"], cfg["height"], self.settings.get("scale") or cfg.get("scale"),
                                   cfg["title"])
         pygame.mouse.set_visible(False)  # 커서는 캔버스에 직접 그린다
+        self.input = create_input(self)  # 마우스·키보드·터치 → 행동 (src/platform/input.py)
         self.clock = pygame.time.Clock()
         self.sfx = Sfx()
         self.sfx.volume = self.settings.get("volume")

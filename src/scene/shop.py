@@ -205,15 +205,15 @@ class ShopScene(Scene):
             self.sel = 0
 
     # ── 입력 ──
-    def handle_event(self, event) -> None:
-        if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_b):
+    def handle_action(self, a) -> None:
+        if a.name == "back" or a.is_("menu", "shop"):
             self._close()
-        elif event.type == pygame.MOUSEWHEEL:
+        elif a.name == "scroll":
             n = len(self.items())
             visible = LIST.h // ROW_H
-            self.scroll = max(0, min(max(0, n - visible), self.scroll - event.y))
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            m = self.game.to_canvas(event.pos)
+            self.scroll = max(0, min(max(0, n - visible), self.scroll - a.value))
+        elif a.name == "primary":
+            m = a.pos
             if self.tabs.click(m):
                 self.sel, self.scroll = 0, 0
                 self.game.sfx.play("click")
@@ -231,7 +231,7 @@ class ShopScene(Scene):
 
     def update(self, dt: float) -> None:
         self.age += dt
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
         self.msg_t = max(0.0, self.msg_t - dt)
 
     # ── 그리기 ──

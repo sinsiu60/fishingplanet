@@ -45,8 +45,8 @@ class EndingScene(Scene):
         else:
             game.sfx.loop("bgm_ending", True, 0.6)
 
-    def handle_event(self, event) -> None:
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+    def handle_action(self, a) -> None:
+        if a.name == "primary":
             if self.t < STATS_T and self.t > 1.0:
                 self.t = STATS_T  # 건너뛰기
             elif self.t > STATS_T + 1.5:
@@ -62,7 +62,7 @@ class EndingScene(Scene):
         self.t += dt
         if self.game.music.has(self.track):
             self.game.music.play(self.track)
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
 
     # ── 그리기 ──
     def draw(self, canvas) -> None:

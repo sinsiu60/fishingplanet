@@ -64,11 +64,11 @@ class DexScene(Scene):
     def _close(self) -> None:
         self.game.scenes.pop()
 
-    def handle_event(self, event) -> None:
-        if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_TAB):
+    def handle_action(self, a) -> None:
+        if a.name == "back" or a.is_("menu", "dex"):
             self._close()
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            m = self.game.to_canvas(event.pos)
+        elif a.name == "primary":
+            m = a.pos
             if self.tabs.click(m):
                 self.sel = 0
                 self.game.sfx.play("click")
@@ -86,7 +86,7 @@ class DexScene(Scene):
     def update(self, dt: float) -> None:
         self.age += dt
         self.t += dt
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
 
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)

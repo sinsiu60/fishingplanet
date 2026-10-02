@@ -168,11 +168,11 @@ class MapScene(Scene):
         self.game.sfx.play("click")
         self._say(f"텐트에서 쉬었다 → {label}", ui.GOOD)
 
-    def handle_event(self, event) -> None:
-        if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_m):
+    def handle_action(self, a) -> None:
+        if a.name == "back" or a.is_("menu", "map"):
             self._close()
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            m = self.game.to_canvas(event.pos)
+        elif a.name == "primary":
+            m = a.pos
             for b in (self.close_btn, self.go_btn, self.rest_btn) + tuple(self.cont_btns if self._multi() else ()):
                 if b.click(m):
                     return
@@ -189,7 +189,7 @@ class MapScene(Scene):
         self.age += dt
         self.t += dt
         self.msg_t = max(0.0, self.msg_t - dt)
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
 
     def _node(self, sp) -> tuple[int, int]:
         x, y = sp["map_pos"]

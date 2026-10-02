@@ -1171,3 +1171,17 @@ src/platform/
 준비할 수 있다 (WSL 설치 없이 가능).
 
 M3·M4는 서로 기대므로 실제로는 **M4(미리보기)의 뼈대를 M3 시작할 때 같이** 만들어 터치 UI를 바로 확인하며 진행한다.
+
+## 26-9. Phase M2 구현 (입력 추상화)
+- `src/platform/`: `detect.py`(PC/안드로이드/`--mobile-preview`), `paths.py`(세이브 폴더 — PC는 기존 내 문서/FishingPlanet 그대로),
+  `input.py`(행동 변환). `core/paths.save_dir()`는 `platform.paths.user_dir()`를 쓰고 `FISHING_SAVE_DIR` 덮어쓰기는 그대로.
+- 흐름: `Game.run` → `Scene.handle_event(원시 이벤트)` → `game.input.translate()` → `Action` → 각 씬의 `handle_action(a)`.
+  씬 코드에 `pygame.mouse`·`pygame.K_*`·`MOUSEBUTTON*`이 하나도 남지 않음 (`game.py`의 커서 숨김만 예외).
+- 행동 이름: `primary`/`primary_up`/`secondary`/`click_other`/`scroll`/`drag`/`item`/`menu`/`back`/`confirm`/`help`/`time_fast`/`debug`,
+  상태: `input.pointer`(캔버스 좌표, 가장자리로 자름)·`input.pointer_raw`·`input.held("reel")`. 표는 `input.py` 맨 위 설명.
+- PC 매핑은 키·버튼 하나하나 예전과 같다 (ESC=back, B/Tab/M/C=menu, 휠=scroll(낚시 중엔 드랙), 가운데·휠 버튼=click_other 로 카드·도움말 닫기 등).
+  `TouchInput`은 아직 PC와 같은 껍데기 (M3에서 터치 구현).
+- **검증**: 결정적 리플레이 `tools/pc_replay.py` (고정 시계 60fps, 난수·시각 고정, 마우스·키보드 스크립트)로 타이틀 → 이어하기 → 도움말·둘러보기·시간 빨리·F1/F2
+  → 캐스팅·챔질·파이팅(릴·숙이기·드랙 Q/E/휠·꺾기·소모품)·뜰채 → 상점 전 탭·도감·지도·상자 열기·일시정지·설정 → 타이틀 → 불러오기 → 새 게임까지
+  샤르미온 세이브 18,777프레임 · 엘드라시온 세이브 13,639프레임을 돌려 **매 프레임 화면 해시가 M2 전 코드와 완전히 같음**(다른 프레임 0)을 확인.
+  M3 이후에도 PC 화면이 바뀌면 안 되는 작업마다 같은 방법으로 확인한다.

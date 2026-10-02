@@ -88,16 +88,16 @@ class TitleScene(Scene):
         self.latest = SaveGame.latest_slot()
         self.buttons[0].enabled = self.buttons[2].enabled = self.latest is not None
 
-    def handle_event(self, event) -> None:
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+    def handle_action(self, a) -> None:
+        if a.name == "primary":
             for b in self.buttons:
-                if b.click(self.game.to_canvas(event.pos)):
+                if b.click(a.pos):
                     self.game.sfx.play("click")
                     break
 
     def update(self, dt: float) -> None:
         self.bg.update(dt)
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
         self.game.music.play("title")
 
     def draw(self, canvas) -> None:
@@ -142,11 +142,11 @@ class SlotScene(Scene):
             return
         start_game(self.game, SaveGame(slot))
 
-    def handle_event(self, event) -> None:
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+    def handle_action(self, a) -> None:
+        if a.name == "back":
             self._back()
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            m = self.game.to_canvas(event.pos)
+        elif a.name == "primary":
+            m = a.pos
             if self.back.click(m):
                 self.game.sfx.play("click")
                 return
@@ -158,7 +158,7 @@ class SlotScene(Scene):
             self.confirm = None
 
     def update(self, dt: float) -> None:
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
         under = self.game.scenes.stack[0]
         if hasattr(under, "bg"):
             under.bg.update(dt)

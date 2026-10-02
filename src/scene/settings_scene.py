@@ -66,18 +66,18 @@ class SettingsScene(Scene):
     def _back(self) -> None:
         self.game.scenes.pop()
 
-    def handle_event(self, event) -> None:
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+    def handle_action(self, a) -> None:
+        if a.name == "back":
             self._back()
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            m = self.game.to_canvas(event.pos)
+        elif a.name == "primary":
+            m = a.pos
             for b in self.buttons:
                 if b.click(m):
                     self.game.sfx.play("click")
                     break
 
     def update(self, dt: float) -> None:
-        self.mouse = self.game.to_canvas(pygame.mouse.get_pos())
+        self.mouse = self.game.input.pointer
         self.msg_t = max(0.0, self.msg_t - dt)
         under = self.game.scenes.stack[0]
         if hasattr(under, "bg"):
