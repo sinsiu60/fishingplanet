@@ -69,62 +69,73 @@ def draw_jump_ring(canvas, center, time_to_apex: float, total: float, perfect_w:
 # ───────────────────────── 판정 텍스트 ─────────────────────────
 
 class JudgePopups:
-    # 파이팅 중 글자 예산 (31장): 화면 전체 동시 1개, 6글자 이하 → 판정 글자도 짧게, 한 번에 하나만
+    # 판정 글자는 원래 연출 그대로 (PERFECT! / GREAT! / ×N 연속) — 사용자 요청으로 31장 글자 예산에서 제외.
+    # 그 밖의 파이팅 중 한 단어(say)는 따로 한 칸, 6글자 이하.
     STYLE = {
-        "perfect": ("퍼펙트!", GOLD, 2.0),
-        "good": ("좋아!", GREAT_COL, 1.6),
+        "perfect": ("PERFECT!", GOLD, 2.0),
+        "good": ("GREAT!", GREAT_COL, 1.6),
         "miss_early": ("빠름!", MISS_COL, 1.0),
         "miss_late": ("늦음!", MISS_COL, 1.0),
         "miss_none": ("놓침!", MISS_COL, 1.0),
-        "flick_perfect": ("퍼펙트!", GOLD, 2.0),
+        "flick_perfect": ("PERFECT 꺾기!", GOLD, 2.0),
         "flick_good": ("꺾기!", SWIPE, 1.6),
-        "flick_miss": ("헛꺾기!", MISS_COL, 1.2),
-        "swipe_perfect": ("퍼펙트!", SWIPE, 2.0),
-        "swipe_good": ("좋아!", SWIPE, 1.6),
-        # 신규 패턴 (U3)
-        "ok_shake": ("버텼다!", GREAT_COL, 1.6),
-        "ok_dive": ("버텼다!", GREAT_COL, 1.6),
-        "ok_surface": ("막았다!", GREAT_COL, 1.6),
-        "ok_reverse": ("따라잡음!", GREAT_COL, 1.6),
-        "ok_twist": ("풀었다!", GREAT_COL, 1.6),
-        "fail_shake": ("흔들림!", MISS_COL, 1.2),
-        "fail_dive": ("쓸렸다!", MISS_COL, 1.2),
-        "fail_surface": ("뛴다!", MISS_COL, 1.2),
-        "fail_reverse": ("처졌다!", MISS_COL, 1.2),
-        "fail_twist": ("꼬임!", MISS_COL, 1.2),
-        "combo_ok": ("콤보!", GOLD, 2.0),
-        # U4
-        "ok_hide": ("끌어냄!", GREAT_COL, 1.6),
-        "ok_pump": ("박자!", GREAT_COL, 1.6),
-        "fail_pump": ("엇박!", MISS_COL, 1.2),
-        "ok_bite": ("헛물!", GREAT_COL, 1.6),
-        "fail_bite": ("물렸다!", MISS_COL, 1.2),
-        "ok_fake": ("간파!", GREAT_COL, 1.6),
+        "flick_miss": ("꺾기 실패!", MISS_COL, 1.2),
+        "swipe_perfect": ("PERFECT!", SWIPE, 2.0),
+        "swipe_good": ("GREAT!", SWIPE, 1.6),
+        # 신규 패턴: 성공은 PERFECT!/GREAT! + 아래 작은 패턴 글자 (pattern()), 실패는 빨간 글자
+        "fail_shake": ("흔들렸다!", MISS_COL, 1.2),
+        "fail_dive": ("바닥에 쓸렸다!", MISS_COL, 1.2),
+        "fail_surface": ("튀어 오른다!", MISS_COL, 1.2),
+        "fail_reverse": ("줄이 처졌다!", MISS_COL, 1.2),
+        "fail_twist": ("줄이 꼬였다!", MISS_COL, 1.2),
+        "fail_pump": ("박자가 어긋났다!", MISS_COL, 1.2),
+        "fail_bite": ("줄을 물어뜯겼다!", MISS_COL, 1.2),
         "fail_fake": ("속았다!", MISS_COL, 1.2),
-        "hide_peek": ("지금!", GOLD, 1.6),
-        "double_perfect": ("더블!", GOLD, 2.4),
-        "dual_ok": ("이중!", GOLD, 2.0),
+        "combo_ok": ("COMBO PERFECT!", GOLD, 2.0),
+        "combo_fail": ("콤보 실패!", MISS_COL, 1.2),
+        "hide_peek": ("지금 감아!", GOLD, 1.6),
+        "double_perfect": ("DOUBLE PERFECT!!", GOLD, 2.4),
+        "dual_ok": ("DUAL PERFECT!", GOLD, 2.0),
     }
+    # 패턴 성공 아래 작은 글자 (원래 U3 문구)
+    SUB = {"shake": "버텼다!", "dive": "끌어올렸다!", "surface": "눌러 막았다!", "reverse": "따라잡았다!",
+           "twist": "꼬임 풀림!", "hide": "끌어냈다!", "pump": "박자 완벽!", "bite": "헛물었다!", "fake": "속지 않았다!",
+           "thrash": "몸부림 제압!"}
+    OUTLINE = {"perfect", "good", "flick_perfect", "flick_good", "swipe_perfect", "swipe_good", "pattern_perfect",
+               "pattern_good", "combo_ok", "double_perfect", "dual_ok"}
 
     def __init__(self):
-        self.items: list[dict] = []
+        self.items: list[dict] = []   # 판정 글자
+        self.word: list[dict] = []    # 파이팅 중 한 단어 (say)
 
     def add(self, kind: str, pos, streak: int = 0) -> None:
         s, c, scale = self.STYLE[kind]
-        self.say(s, c, pos, scale, streak, kind)
+        self._push(s, c, pos, scale, streak, kind)
+
+    def pattern(self, pid: str, perfect: bool, pos, sub_col=None) -> None:
+        """패턴 성공: PERFECT!(금) / GREAT!(초록) + 아래 작은 패턴 글자."""
+        s, c = ("PERFECT!", GOLD) if perfect else ("GREAT!", GREAT_COL)
+        self._push(s, c, pos, 2.0 if perfect else 1.6, 0, "pattern_perfect" if perfect else "pattern_good",
+                   sub=self.SUB.get(pid), sub_col=sub_col or c)
+
+    def _push(self, s, c, pos, scale, streak, kind, sub=None, sub_col=None) -> None:
+        self.items = [it for it in self.items if it["t"] > 0.25][-1:]  # 겹치면 이전 것 정리
+        self.items.append({"text": s, "color": c, "scale": scale, "x": pos[0], "y": pos[1] - 26, "t": 0.0,
+                           "streak": streak, "kind": kind, "sub": sub, "sub_col": sub_col})
 
     def say(self, s: str, color, pos, scale: float = 1.4, streak: int = 0, kind: str = "say") -> None:
-        """글자 슬롯은 하나뿐: 새 글자가 오면 이전 것은 바로 사라진다 (6글자 넘으면 잘라 냄)."""
-        self.items = [{"text": s[:6], "color": color, "scale": scale, "x": pos[0], "y": pos[1] - 26, "t": 0.0,
-                       "streak": streak, "kind": kind}]
+        """파이팅 중 한 단어: 한 칸뿐 — 새 글자가 오면 이전 것은 바로 사라진다 (6글자 넘으면 잘라 냄)."""
+        self.word = [{"text": s[:6], "color": color, "scale": scale, "x": pos[0], "y": pos[1] - 26, "t": 0.0,
+                      "streak": streak, "kind": kind, "sub": None, "sub_col": None}]
 
     def update(self, dt: float) -> None:
-        for it in self.items:
+        for it in self.items + self.word:
             it["t"] += dt
         self.items = [it for it in self.items if it["t"] < 1.1]
+        self.word = [it for it in self.word if it["t"] < 1.1]
 
     def draw(self, canvas, mapper=lambda p: p) -> None:
-        for it in self.items:
+        for it in self.word + self.items:
             age = it["t"]
             # 튀어나오며 커졌다가 자리잡음
             pop = 1.0 + 0.6 * math.exp(-age * 14) * math.cos(age * 30)
@@ -134,12 +145,26 @@ class JudgePopups:
             x = clamp(x, 60, canvas.get_width() - 60)
             if age > 0.85 and int(age * 20) % 2 == 0:
                 continue
-            big_text(canvas, it["text"], (x, y), it["color"], scale,
-                     outline=it["kind"] in ("perfect", "good", "flick_perfect", "flick_good", "swipe_perfect",
-                                            "swipe_good"))
+            gold = it["kind"] in ("perfect", "flick_perfect", "swipe_perfect", "pattern_perfect", "combo_ok",
+                                  "double_perfect", "dual_ok")
+            if gold and age < 0.5:
+                # 퍼펙트 글자 뒤 반짝 띠 (0.5초)
+                k = age / 0.5
+                w = int(90 * scale / 2 * (0.6 + k))
+                band = pygame.Surface((w * 2, 6), pygame.SRCALPHA)
+                band.fill((255, 240, 170, int(110 * (1 - k))))
+                canvas.blit(band, (int(x) - w, int(y) - 3))
+            big_text(canvas, it["text"], (x, y), it["color"], scale, outline=it["kind"] in self.OUTLINE)
+            yy = y + 14 * scale * 0.6 + 6
+            if it.get("sub"):
+                big_text(canvas, it["sub"], (x, yy), it["sub_col"], 1.0, outline=True)
+                yy += 13
             if it["streak"] >= 2:
-                from src.ui import icons
-                icons.pips(canvas, int(x), int(y + 14 * scale * 0.6 + 6), min(it["streak"], 8), GOLD)  # 연속: 숫자 대신 점
+                big_text(canvas, f"×{it['streak']} 연속", (x, yy), GOLD, 1.0, outline=True)
+
+
+# 판정 글자 (글자 예산 점검에서 제외 — tools/fight_text_check.py)
+JUDGE_WORDS = {v[0] for v in JudgePopups.STYLE.values()} | set(JudgePopups.SUB.values())
 
 
 def big_text(canvas, s: str, center, color, scale: float, outline: bool = False) -> None:

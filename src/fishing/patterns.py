@@ -104,6 +104,12 @@ class Judge:
     def passed(self) -> bool:
         return self.ratio >= self.need
 
+    PERFECT_RATIO = 0.95
+
+    def perfect(self) -> bool:
+        """성공 중에서도 깔끔했나 (연출 등급 PERFECT / GREAT — 판정·보상엔 영향 없음)."""
+        return self.ratio >= self.PERFECT_RATIO
+
     def finish(self) -> str:
         f = self.fight
         if self.passed():
@@ -236,6 +242,9 @@ class Twist(Judge):
     def passed(self) -> bool:
         return not self.snapped and self.fight.twist.value < self.c["ok_below"]
 
+    def perfect(self) -> bool:
+        return self.fight.twist.value <= 5
+
     @property
     def ratio(self) -> float:
         return clamp(1 - self.fight.twist.value / 100, 0, 1)
@@ -305,6 +314,9 @@ class Hide(Judge):
     def peeking(self) -> bool:
         return self.peek_t > 0
 
+    def perfect(self) -> bool:
+        return getattr(self, "react_left", 0.0) >= 0.5
+
     def update(self, dt, inp, reeling, aim_rate):
         self.reeling = reeling
         super().update(dt, inp, reeling, aim_rate)
@@ -317,6 +329,7 @@ class Hide(Judge):
             self.peek_t -= dt
             if self.reeling:
                 self.success = True
+                self.react_left = self.peek_t / c["peek_sec"]  # 고개 내밀자마자 감았나 (연출 등급)
                 f.brain.end_pattern("hide")
             elif self.peek_t <= 0:
                 self.hold_t = 0.0  # 놓쳤다 → 다시 숨는다
@@ -434,8 +447,12 @@ class Pump(Judge):
             f.reel_bonus = min(c["reel_bonus_max"], c["reel_bonus_per"] * self.best)
             f.reel_bonus_t = c["bonus_sec"]
         self.result = "ok" if good >= n * c["ok_frac"] else "fail"
+        self.all_hit = good >= n
         f.pattern_result(self.id, self.result)
         return self.result
+
+    def perfect(self) -> bool:
+        return getattr(self, "all_hit", False)
 
 
 class Bite(Judge):
@@ -464,6 +481,10 @@ class Bite(Judge):
     @property
     def ratio(self) -> float:
         return 1.0 if self.passed() else 0.0
+
+    def perfect(self) -> bool:
+        w = self.c["window"] * 0.5
+        return self.t0 is not None and any(abs(e - self.t0) <= w for e in self.edges)
 
     def _success(self, f):
         b = f.brain

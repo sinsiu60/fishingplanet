@@ -105,6 +105,8 @@ class FishingScene(Scene):
         self.droplets = Droplets()
         self.bubbles = Bubbles()
         self.sparkles = Sparkles()
+        from src.ui.pattern_vfx import PatternVFX
+        self.pvfx = PatternVFX()  # 패턴 판정 연출 (색 입자·고리·나선)
         import time as _time
         from src.fishing.lure import SurfaceSigns
         # 수면 징후 (U7): 전용 난수 (씨앗 = 시계, 다른 난수 흐름을 건드리지 않게)
@@ -677,6 +679,7 @@ class FishingScene(Scene):
         self.droplets.update(dt)
         self.bubbles.update(dt)
         self.sparkles.update(dt)
+        self.pvfx.update(dt)
         self.popups.update(dt)
         self.toasts.update(dt)
         self.toasts.sink = self._say if self._fight_text_mode() else None
@@ -1355,14 +1358,20 @@ class FishingScene(Scene):
             elif pid == "dive":
                 self.sfx.play("bubbles", 0.5)
         elif kind == "pattern_ok":
-            self.sfx.play("good", 0.8)
-            self.popups.add(f"ok_{pid}", pos)
-            self.game.haptics.vibrate("perfect", 0.5)
+            # 퍼펙트·그레잇과 같은 급: 공통 섬광·충격파·반짝임 + 패턴마다 다른 연출 (깔끔하면 PERFECT)
+            perfect = getattr(f, "last_grade", "good") == "perfect"
+            col = self._pattern_col(pid)
+            self._judge_burst(pos, perfect, col)
+            self.pvfx.success(pid, pos[0], pos[1], perfect, col)
+            self.popups.pattern(pid, perfect, pos, col)
         elif kind == "pattern_fail":
             self.sfx.play("miss")
+            self.sfx.play("impact", 0.5)
             self.popups.add(f"fail_{pid}", pos)
             self.screen_fx.miss(self.screen_fx.map(pos))
-            self.shake_kick = max(self.shake_kick, 2.0)
+            self.pvfx.fail(pid, pos[0], pos[1])
+            self.shake_kick = max(self.shake_kick, 2.5)
+            self.game.haptics.vibrate("tension", 0.8)
             if pid == "dive":
                 self.toasts.show("바닥에 쓸렸다! 줄 손상 · 거리 +3m", BAD, 1.6, 11)
             elif pid == "surface":
@@ -1378,10 +1387,17 @@ class FishingScene(Scene):
             self.game.haptics.vibrate("lose", 0.4)
         elif ev == "twist_turn":
             self.sfx.play("twist_click", 0.8)
+            self.pvfx.tick(pos[0], pos[1], self._pattern_col("twist"))
         elif ev == "combo_break":
             self.toasts.show("콤보가 끊겼다! 남은 행동이 더 거세진다", BAD, 1.8, 11)
+            self.pvfx.fail("chain", pos[0], pos[1])
+            self.screen_fx.miss(self.screen_fx.map(pos))
+            self.sfx.play("miss", 0.8)
+            self.shake_kick = max(self.shake_kick, 2.0)
         elif ev == "combo_ok":
-            self.sfx.play("perfect", 0.7)
+            self._judge_burst(pos, True, (255, 214, 90))
+            seq = list(getattr(f.combo, "seq", []) or []) if f.combo else []
+            self.pvfx.combo(pos[0], pos[1], [self._pattern_col(a) for a in seq])
             self.popups.add("combo_ok", pos)
         elif kind == "pump_beat":
             # 북 박자: 소리 = 판정 박자 (같은 틱에 낸다)
@@ -1390,18 +1406,23 @@ class FishingScene(Scene):
             self.pump_flash = 0.15
         elif ev == "pump_hit":
             self.sfx.play("reel1", 0.35)
+            self.pvfx.tick(pos[0], pos[1], (255, 214, 90))
         elif ev == "pump_miss":
             self.sfx.play("click", 0.5)
+            self.pvfx.tick(pos[0], pos[1], (255, 90, 80))
         elif ev == "hide_peek":
             self.sfx.play("bubbles", 0.8)
             self.popups.add("hide_peek", pos)
             self.bubbles.spawn(pos[0], pos[1], 4.0)
+            self.pvfx.ring(pos[0], pos[1], (255, 214, 90), 40, 0.4, 2)
+            self.pvfx.star(pos[0], pos[1] - 6, (255, 240, 170), 12, 0.35)
         elif ev == "double_perfect":
             self.sfx.play("double_perfect", 1.0)
             self.sfx.play("great", 0.8)
             self.popups.add("double_perfect", pos)
-            self.screen_fx.great(self.screen_fx.map(pos))
+            self.screen_fx.perfect(self.screen_fx.map(pos))
             self.sparkles.burst(*pos, count=36, speed=1.6)
+            self.pvfx.combo(pos[0], pos[1], [(255, 214, 90), (255, 255, 255), (255, 214, 90)])
             self.game.slowmo(0.9, 0.25)  # 강한 슬로우
             self.shake_kick = 3.0
             self.game.haptics.vibrate("double_perfect")
@@ -1413,7 +1434,9 @@ class FishingScene(Scene):
             self.toasts.show("헛물었다! 잠깐 굳었다 — 지금 크게 감으세요", GOOD, 1.8, 11)
             self.game.haptics.vibrate("bite", 0.6)
         elif ev == "dual_ok":
-            self.sfx.play("perfect", 0.7)
+            self._judge_burst(pos, True, (255, 214, 90))
+            pair = list(f.brain.dual_pair or ())
+            self.pvfx.combo(pos[0], pos[1], [self._pattern_col(a) for a in pair])
             self.popups.add("dual_ok", pos)
         if kind == "pattern_fail" and pid == "bite":
             self.sfx.play("snap", 0.6)
@@ -1422,6 +1445,32 @@ class FishingScene(Scene):
         elif kind == "pattern_fail" and pid == "fake":
             self.toasts.show("가짜 지침에 속았다! 이어지는 돌진이 거세다 — 꼬리가 까딱이면 가짜", BAD, 2.2, 11)
             self.game.haptics.vibrate("perfect")
+
+    def _pattern_col(self, pid: str):
+        fam = signal_slots.family_of(pid)
+        return signal_slots.color_of(fam) if fam in signal_slots.cfg()["families"] else (255, 214, 90)
+
+    def _judge_burst(self, pos, perfect: bool, col) -> None:
+        """판정 성공 공통 연출: 원래 PERFECT / GREAT 와 같은 급 (섬광·충격파·빛줄기·줌 펀치·반짝임·소리·진동)."""
+        mp = self.screen_fx.map(pos)
+        if perfect:
+            self.game.haptics.vibrate("perfect")
+            self.sfx.play("perfect")
+            self.sfx.play("impact", 0.8)
+            self.sparkles.burst(*pos, count=40, speed=1.7)
+            self.sparkles.burst(*pos, count=16, speed=0.6, ring=False)
+            self.screen_fx.perfect(mp)
+            self.screen_fx.shockwaves.append([mp[0], mp[1], -0.1, col, 0.5, 2])
+            self.shake_kick = max(self.shake_kick, 2.5)
+            fc = self.fish_cfg["fight"]
+            self.game.slowmo(fc["slowmo_real_sec"] * 0.6, fc["slowmo_scale"])
+        else:
+            self.game.haptics.vibrate("perfect", 0.5)
+            self.sfx.play("great")
+            self.sparkles.burst(*pos, count=16, speed=1.0)
+            self.screen_fx.great(mp)
+            self.screen_fx.shockwaves.append([mp[0], mp[1], -0.06, col, 0.4, 1])
+            self.shake_kick = max(self.shake_kick, 1.2)
 
     def _tip(self, key: str) -> None:
         n = self.tip_counts.get(key, 0)
@@ -1494,6 +1543,9 @@ class FishingScene(Scene):
         x, z = f.fish_xz()
         self._mastery_event(ev)
         self.sfx.boost = 2 if "clear" in f.mutations and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
+        if ev == "rush_ok":
+            p = self._fish_screen()
+            self.pvfx.success("rush", p[0], p[1], False, (255, 170, 90))  # 돌진을 버텼다: 작은 반짝
         if ev.startswith("telegraph:"):
             self._signal_cue(ev.split(":", 1)[1])
             self.sig_dim_t = 0.9  # 신호가 뜨는 순간: 하위 HUD 잠깐 더 흐리게
@@ -1833,6 +1885,7 @@ class FishingScene(Scene):
             if f.brain.state in ("tired", "fake_tired", "exhausted"):
                 fight_fx.draw_tired_ring(canvas, pos, sc, t)
         self.sparkles.draw(canvas)
+        self.pvfx.draw(canvas)
         self.embers.draw(canvas)
         self._draw_gimmick_world(canvas, pal)
         # 가짜 FOV (줌·패닝·기울기)
@@ -2340,7 +2393,7 @@ class FishingScene(Scene):
         lay = getattr(self, "_fade_layer", None)
         if lay is None or lay.get_size() != canvas.get_size():
             lay = self._fade_layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
-        lay.set_alpha(None)
+        lay.set_alpha(255)  # None 이면 픽셀 알파 섞기가 꺼져 투명 칸이 검게 덮인다
         lay.fill((0, 0, 0, 0))
         return lay
 

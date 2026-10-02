@@ -480,6 +480,9 @@ class Fight:
             if self.combo:
                 self.combo.fail()
         self.last_judge = f"pattern_{result}"
+        j = self._judge(pid)
+        # 연출 등급 (PERFECT / GREAT): 판정·랭크엔 영향 없음
+        self.last_grade = "perfect" if result == "ok" and j is not None and j.perfect() else "good"
         self.events.append(f"pattern_{result}:{pid}")
 
     def _miss(self, kind: str) -> None:

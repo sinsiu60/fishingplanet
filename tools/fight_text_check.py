@@ -1,4 +1,4 @@
-"""파이팅 중 글자 예산 점검 (DESIGN.md 31장): 화면 전체 동시 1개, 6글자 이하.
+"""파이팅 중 글자 예산 점검 (DESIGN.md 31장): 화면 전체 동시 1개, 6글자 이하 (판정 글자는 제외 — 31-10).
 
 실제 낚시 화면(FishingScene)으로 기존 행동 + 신규 패턴 12종 + 전설을 파이팅시키며 매 3프레임 그려서
 hud.text / big_text 호출을 모두 센다. 디버그(F1)·멈춤 카드·도움말·결과 화면은 제외.
@@ -7,6 +7,7 @@ hud.text / big_text 호출을 모두 센다. 디버그(F1)·멈춤 카드·도�
 위반이 있으면 목록을 출력하고 종료 코드 1.
 """
 import collections
+import re
 import os
 import shutil
 import sys
@@ -71,7 +72,9 @@ def rtext(canvas, s, pos, color, size=11, anchor="topleft"):
 
 
 def rbig(canvas, s, center, color, scale, outline=False):
-    rec.append(("big_text", str(s)))
+    # 판정 글자(PERFECT!·GREAT!·×N 연속·패턴 성공/실패 문구)는 원래 연출 그대로 — 예산에서 제외 (사용자 요청)
+    if str(s) not in fight_fx.JUDGE_WORDS and not re.fullmatch(r"×\d+ 연속", str(s)):
+        rec.append(("big_text", str(s)))
     return orig_big(canvas, s, center, color, scale, outline)
 
 
