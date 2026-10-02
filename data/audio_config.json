@@ -1,7 +1,8 @@
 {
  "_설명": "믹서 (DESIGN.md 32-6, Phase S3). 버스 sig(신호)/sfx(파이팅 핵심)/reward(보상 연출)/mus(음악)/amb(환경음)/ui. 우선순위 숫자가 작을수록 중요 — 채널이 모자라면 큰 숫자·오래된 것부터 끊는다.",
- "channels": 32,
+ "channels": 40,
  "reserved_sig": 4,
+ "reserved_mus": 11,
  "buffer_pc": 512,
  "buffer_mobile": 1024,
  "priority": {"sig": 1, "sfx": 2, "reward": 3, "mus": 4, "amb": 5, "ui": 6},

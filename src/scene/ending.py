@@ -41,6 +41,7 @@ class EndingScene(Scene):
         self.stars = [(random.uniform(0, 480), random.uniform(0, 200), random.random()) for _ in range(120)]
         game.sfx.stop_all()
         game.music.stop()
+        game.adaptive.stop()
         self.track = "ending_final" if kind == "final" and game.music.has("ending_final") else "ending"
         if game.music.has(self.track):
             game.music.play(self.track)

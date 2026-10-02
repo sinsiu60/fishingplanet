@@ -171,7 +171,6 @@ class FishingScene(Scene):
         self.signal_audio = SignalAudio(self.sfx, lambda: self.settings.get("signal_sound"))  # 신호 6계열 소리 (S5)
         self.cast_far = self.fish_cfg["cast"]["max_distance"]  # 소리 거리 감쇠 기준
         self.cast_loops: dict[str, str | None] = {"charge": None, "line": None}
-        self.legend_builtin = False
         self.captions = None     # [글자, 남은 시간] 소리 자막
         self.t = 0.0
         self.mouse = (canvas.get_width() // 2, canvas.get_height() // 2)
@@ -838,13 +837,32 @@ class FishingScene(Scene):
             music.play(f"fight_{self.spot_id}")
         else:
             music.play(f"spot_{self.spot_id}")
-        use_builtin = on and not music.has(legend_id)  # 전설 테마 파일이 없으면 코드로 만든 BGM
-        if on != self.legend_on or use_builtin != self.legend_builtin:
-            self.legend_on = on
-            self.legend_builtin = use_builtin
-            self.sfx.loop("bgm_legend", use_builtin, 0.55)
+        self.legend_on = on
+        self._update_music(on)
         self.screen_fx.legend = on
         self.legend_k += ((1.0 if on else 0.0) - self.legend_k) * min(1.0, dt / 0.8)
+
+    def _update_music(self, legend: bool) -> None:
+        """적응형 음악 층 (src/audio/adaptive_music.py, 32장 S6): 대기 → 진짜 입질 긴장 → 파이팅 타악(장력만큼) → 지침 상승 멜로디
+        → 포획 스팅 / 실패 페이드. 전설은 보스 층이 페이즈마다 하나씩. 낮 밝기만큼 높은 반짝임."""
+        am = self.game.adaptive
+        f = self.fight
+        am.set_context(self.spot.get("continent", "sharmion"), self.spot_id, legend)
+        intensity, phase = 0.0, 0
+        if f is not None and f.phase in ("fight", "net"):
+            tired = f.phase == "net" or f.brain.state in ("tired", "exhausted")
+            state = ("legend_tired" if tired else "legend") if legend else ("tired" if tired else "fight")
+            intensity = (f.tension - 30) / max(1.0, f.green_high - 30)
+            phase = f.brain.phase
+        elif f is not None and f.phase == "caught":
+            state = "win"
+        elif f is not None and f.phase == "lost":
+            state = "fail"
+        elif self.bite.state == BiteState.BITE or (legend and f is None):
+            state = "bite"
+        else:
+            state = "idle"
+        am.set(state, intensity, phase, am.daylight_of(self.clock.hour, tuple(am.cfg["night_hours"])))
 
     def _update_weather(self, dt: float) -> None:
         w = self.weather_sys

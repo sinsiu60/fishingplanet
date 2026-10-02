@@ -50,6 +50,8 @@ class VoyageScene(Scene):
         prev = self.t
         self.t += dt
         self.mouse = self.ui_pointer()
+        self.game.adaptive.set_context("eldrasion", None)  # 새 대륙 테마
+        self.game.adaptive.set("menu")
         if prev < T_SAIL <= self.t:
             self.game.sfx.play("whoosh" if "whoosh" in self.game.sfx.sounds else "splash", 0.6)
         if prev < T_ARRIVE <= self.t:

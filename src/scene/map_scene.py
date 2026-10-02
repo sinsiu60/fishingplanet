@@ -203,6 +203,8 @@ class MapScene(Scene):
         self.t += dt
         self.msg_t = max(0.0, self.msg_t - dt)
         self.mouse = self.ui_pointer()
+        self.game.adaptive.set_context(self.cont, None)  # 지도: 보고 있는 대륙 테마 (32장 S6)
+        self.game.adaptive.set("menu")
 
     def _node(self, sp) -> tuple[int, int]:
         x, y = sp["map_pos"]

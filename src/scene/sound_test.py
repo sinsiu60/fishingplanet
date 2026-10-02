@@ -3,6 +3,7 @@
 - 왼쪽: 모든 소리 목록 (버스 탭으로 거르기, 휠·▲▼로 넘김). 누르면 재생, '×5'는 0.35초 간격 5번(변주 확인).
 - 오른쪽 위: 지금 믹서 상태 (버스별 재생 중 수, 리미터, 덕킹).
 - 오른쪽 아래: 상태 연동 소리 (src/audio/fight_audio.py) — 슬라이더로 값을 바꾸며 연속음 듣기.
+- 맨 아래: 적응형 음악 상황 바꿔 듣기 (S6) — 장력 슬라이더 = 파이팅 타악 세기.
 설정 → 소리 → 사운드 테스트 룸.
 """
 from src.scene.base import Scene
@@ -11,6 +12,7 @@ from src.ui.hud import draw_cursor, text
 
 BUSES = ("전체", "sig", "sfx", "reward", "mus", "amb", "ui")
 ROWS = 12
+MUS_STATES = ("끔", "idle", "bite", "fight", "tired", "legend", "legend_tired", "win", "fail", "menu")
 
 
 class SoundTestScene(Scene):
@@ -36,6 +38,8 @@ class SoundTestScene(Scene):
         self.btn_up = ui.Button((212, 54, 18, 14), "▲", lambda: self._scroll(-ROWS))
         self.btn_dn = ui.Button((212, 236, 18, 14), "▼", lambda: self._scroll(ROWS))
         self.btn_fa = ui.Button((246, 120, 222, 15), "", self._toggle_fa)
+        self.mus_i = 0
+        self.btn_mus = ui.Button((246, 250, 150, 15), "", self._next_mus)
 
     def names(self) -> list[str]:
         bus = BUSES[self.tabs.index]
@@ -52,6 +56,21 @@ class SoundTestScene(Scene):
             self.fa.stop()
         self.game.scenes.pop()
 
+    def _next_mus(self) -> None:
+        self.mus_i = (self.mus_i + 1) % len(MUS_STATES)
+        self.phase = 0
+
+    def _mus(self) -> None:
+        """음악 상황 강제 (끔이면 원래 장면이 정한 대로)."""
+        if self.mus_i == 0:
+            return
+        am = self.game.adaptive
+        st = MUS_STATES[self.mus_i]
+        cont, spot = (am.ctx or am.ctx_next or ("sharmion", "reservoir", False))[:2]
+        am.set_context(cont, None if st == "menu" else (spot or "reservoir"), st.startswith("legend"))
+        ten = next((v["v"] for v in self.sliders if v["key"] == "tension"), 50.0)
+        am.set(st, (ten - 30) / 45, 2, 1.0)
+
     def _toggle_fa(self) -> None:
         self.fa_on = not self.fa_on
         if not self.fa_on and self.fa is not None:
@@ -67,7 +86,7 @@ class SoundTestScene(Scene):
             if self.tabs.click(m):
                 self.top = 0
                 return
-            for b in (self.btn_back, self.btn_up, self.btn_dn, self.btn_fa):
+            for b in (self.btn_back, self.btn_up, self.btn_dn, self.btn_fa, self.btn_mus):
                 if b.click(m):
                     return
             names = self.names()
@@ -99,6 +118,7 @@ class SoundTestScene(Scene):
             self.sfx.play(n)
         if self.fa is not None and self.fa_on:
             self.fa.update(dt, {s["key"]: s["v"] for s in self.sliders})
+        self._mus()
 
     def draw(self, canvas) -> None:
         under = self.scene_below()
@@ -125,7 +145,8 @@ class SoundTestScene(Scene):
             text(canvas, "×5", (197, y), ui.GOOD, 11, "center")
         text(canvas, f"{self.top + 1}-{min(len(names), self.top + ROWS)} / {len(names)}", (120, 248), ui.DIM, 11,
              "center")
-        for b in (self.btn_back, self.btn_up, self.btn_dn):
+        self.btn_mus.label = f"음악: {MUS_STATES[self.mus_i]}"
+        for b in (self.btn_back, self.btn_up, self.btn_dn, self.btn_mus):
             b.draw(canvas, self.mouse)
         # 믹서 상태
         if self.sfx.enabled:

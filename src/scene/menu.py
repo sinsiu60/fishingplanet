@@ -109,6 +109,8 @@ class TitleScene(Scene):
         self.bg.update(dt)
         self.mouse = self.ui_pointer()
         self.game.music.play("title")
+        self.game.adaptive.set_context("sharmion", None)  # 대륙 테마 (32장 S6)
+        self.game.adaptive.set("menu")
 
     def draw(self, canvas) -> None:
         self.bg.draw(canvas)

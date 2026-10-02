@@ -55,6 +55,8 @@ class Game:
         self.sfx.haptics = self.haptics  # play(..., haptic=종류) → 소리 어택 순간에 진동
         self.apply_audio_settings()
         self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
+        from src.audio.adaptive_music import AdaptiveMusic
+        self.adaptive = AdaptiveMusic(self.sfx)  # 적응형 음악 층 (32장 S6)
         self.save = None            # 현재 SaveGame (메뉴에선 None)
         self.autosave_t = 0.0
         self.scenes = SceneManager()
@@ -171,6 +173,7 @@ class Game:
                     self.scenes.current.update(self.tick_dt)
                 accumulator -= self.tick_dt
             self.music.update()
+            self.adaptive.update(frame_time, quiet=self.music.target is not None or self.music.current is not None)
             self.sfx.update(frame_time, slow=self.time_scale < 0.99)  # 믹서: 덕킹·리미터·버스 볼륨
             self.haptics.update(frame_time)  # 소리 어택에 맞춘 진동 (32장 S5)
 

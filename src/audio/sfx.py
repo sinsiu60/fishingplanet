@@ -400,36 +400,6 @@ def _tone(freq: float, sec: float, kind: str = "sine", attack: float = 0.005, de
     return w * _env(len(t), attack, decay)
 
 
-def make_bgm_legend(rng) -> np.ndarray:
-    """전설 BGM: D단조, 120BPM 4마디 루프 (8초). 북 + 베이스 오스티나토 + 긴장감 있는 아르페지오."""
-    beat = 0.5
-    sec = beat * 16
-    buf = np.zeros(int(RATE * sec))
-    bass_line = ["D2", "D2", "A1", "A1", "A#1", "A#1", "C2", "A1"]
-    for i, note in enumerate(bass_line):
-        _place(buf, _tone(_note_freq(note), beat * 2, "saw", 0.01, 0.5) * 0.5, int(i * beat * 2 * RATE))
-    # 북: 정박 쿵, 엇박 딱
-    for b in range(16):
-        kick = _sweep(110, 45, 0.25) * _env(int(RATE * 0.25), 0.001, 0.08) * (0.9 if b % 4 == 0 else 0.55)
-        _place(buf, kick, int(b * beat * RATE))
-        if b % 2 == 1:
-            tom = _sweep(220, 140, 0.15) * _env(int(RATE * 0.15), 0.001, 0.05) * 0.3
-            _place(buf, tom, int((b * beat + beat * 0.5) * RATE))
-    # 아르페지오 (8분음표)
-    chords = [["D4", "F4", "A4", "D5"], ["A3", "C#4", "E4", "A4"], ["A#3", "D4", "F4", "A#4"], ["C4", "E4", "G4", "C5"]]
-    for bar, chord in enumerate(chords):
-        for k in range(8):
-            n = chord[[0, 1, 2, 3, 2, 1, 2, 3][k]]
-            _place(buf, _tone(_note_freq(n), beat * 0.5, "square", 0.003, 0.12) * 0.16,
-                   int((bar * 4 + k * 0.5) * beat * RATE))
-    # 긴 현악 패드
-    for bar, chord in enumerate(chords):
-        for n in chord[:3]:
-            pad = _tone(_note_freq(n) / 2, beat * 4, "sine", 0.4, 1.4) * 0.07
-            _place(buf, pad, int(bar * 4 * beat * RATE))
-    return buf / (np.max(np.abs(buf)) + 1e-9) * 0.8
-
-
 def make_bgm_ending(rng) -> np.ndarray:
     """엔딩: C장조, 느리고 따뜻한 아르페지오 + 패드 (16초 루프)."""
     beat = 0.75
@@ -781,7 +751,6 @@ class Sfx:
             "amb_ice": make_amb_ice(rng),
             "amb_rain": make_amb_rain(rng),
             "thunder": make_thunder(rng),
-            "bgm_legend": make_bgm_legend(rng),
             "bgm_ending": make_bgm_ending(rng),
             "roar": make_roar(rng),
             "coin": make_coin(rng),
@@ -908,7 +877,8 @@ class Sfx:
         c = self.cfg
         pygame.mixer.set_num_channels(c["channels"])
         self.n_sig = c["reserved_sig"]
-        pygame.mixer.set_reserved(self.n_sig)        # 0~3번 채널은 신호 전용
+        self.n_mus = c.get("reserved_mus", 0)
+        pygame.mixer.set_reserved(self.n_sig + self.n_mus)  # 0~3번 신호 전용, 그 뒤 음악 층 전용 (adaptive_music)
         self.bus_vol = {"master": self.volume, "mus": 1.0, "sfx": 1.0, "amb": 1.0}
         self.sig_boost = False
         self.duck_db = {b: 0.0 for b in c["priority"]}  # 지금 낮춘 양 (dB, 음수)

@@ -31,31 +31,34 @@ def recipe_hash(name: str, recipe: dict) -> str:
     return hashlib.sha1(src + json.dumps(recipe, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
 
 
-def bake(name: str, recipe: dict, ffmpeg: str | None) -> str:
-    wav = synth.render(recipe, seed=int(hashlib.sha1(name.encode()).hexdigest()[:6], 16))
+def bake(name: str, recipe: dict, ffmpeg: str | None, out: str = OUT, quality: str = "6", render=None) -> str:
+    wav = (render or synth.render)(recipe, seed=int(hashlib.sha1(name.encode()).hexdigest()[:6], 16))
     fname = name.replace("#", "__")  # 단계 소리 이름의 #은 파일 이름에선 __
     for ext in (".ogg", ".wav"):
-        old = os.path.join(OUT, fname + ext)
+        old = os.path.join(out, fname + ext)
         if os.path.exists(old):
             os.remove(old)
     if ffmpeg:
         with tempfile.TemporaryDirectory() as tmp:
             src = os.path.join(tmp, "x.wav")
             synth.write_wav(src, wav)
-            dst = os.path.join(OUT, fname + ".ogg")
-            subprocess.run([ffmpeg, "-loglevel", "error", "-y", "-i", src, "-c:a", "libvorbis", "-q:a", "6", dst],
+            dst = os.path.join(out, fname + ".ogg")
+            subprocess.run([ffmpeg, "-loglevel", "error", "-y", "-i", src, "-c:a", "libvorbis", "-q:a", quality,
+                            "-fflags", "+bitexact", "-flags:a", "+bitexact", dst],  # 같은 소리 = 같은 파일 (git 변경 최소)
                            check=True)
             return dst
-    dst = os.path.join(OUT, fname + ".wav")
+    dst = os.path.join(out, fname + ".wav")
     synth.write_wav(dst, wav)
     return dst
 
 
-def main(argv: list[str]) -> int:
-    os.makedirs(OUT, exist_ok=True)
-    man_path = os.path.join(OUT, "manifest.json")
+def main(argv: list[str], rec: dict | None = None, out_dir: str = OUT, quality: str = "6", hash_fn=recipe_hash,
+         render=None) -> int:
+    """rec/out_dir/quality/hash_fn/render 는 tools/bake_music.py 가 음악 층을 구울 때 바꿔 넣는다."""
+    os.makedirs(out_dir, exist_ok=True)
+    man_path = os.path.join(out_dir, "manifest.json")
     manifest = json.load(open(man_path, encoding="utf-8")) if os.path.exists(man_path) else {}
-    rec = synth.recipes()
+    rec = synth.recipes() if rec is None else rec
     names = [a for a in argv if not a.startswith("--")] or list(rec)
     force = "--all" in argv or any(not a.startswith("--") for a in argv)
     ffmpeg = shutil.which("ffmpeg")
@@ -66,17 +69,17 @@ def main(argv: list[str]) -> int:
         if name not in rec:
             print(f"레시피 없음: {name}")
             continue
-        h = recipe_hash(name, rec[name])
+        h = hash_fn(name, rec[name])
         if not force and manifest.get(name) == h and any(
-                os.path.exists(os.path.join(OUT, name.replace("#", "__") + e)) for e in (".ogg", ".wav")):
+                os.path.exists(os.path.join(out_dir, name.replace("#", "__") + e)) for e in (".ogg", ".wav")):
             continue
-        path = bake(name, rec[name], ffmpeg)
+        path = bake(name, rec[name], ffmpeg, out_dir, quality, render)
         manifest[name] = h
         done += 1
         print(f"굽기: {os.path.relpath(path, ROOT)} ({os.path.getsize(path) // 1024}KB)")
     for gone in [k for k in manifest if k not in rec]:  # 레시피에서 지운 소리 정리
         for e in (".ogg", ".wav"):
-            p = os.path.join(OUT, gone.replace("#", "__") + e)
+            p = os.path.join(out_dir, gone.replace("#", "__") + e)
             if os.path.exists(p):
                 os.remove(p)
         manifest.pop(gone)

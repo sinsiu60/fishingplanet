@@ -12,6 +12,7 @@
 레시피 전체: len(전체 길이), reverb {"mix", "time"} 간단한 잔향, echo {"delay", "fb", "mix"} 메아리,
             pan, peak_db (정규화 목표, 기본 -1dBFS), gain_db (정규화 뒤 더할 음량)
             loop: true → 끝과 처음을 겹쳐(크로스페이드) 이음매 없는 반복음
+            wrap: 초 → 정확히 그 길이로 자르고 넘친 꼬리를 앞에 더함 (음악 층, 길이가 같아야 맞물림)
             steps {"n", "pitch": [시작, 끝], "gain_db": [시작, 끝]} → <이름>#0 … #n-1 단계 소리로 펼쳐짐 (상태 연동용)
 결과는 float32 스테레오 [-1, 1] 배열 (RATE 44100).
 """
@@ -188,7 +189,18 @@ def render(recipe: dict, seed: int = 1) -> np.ndarray:
     if "reverb" in recipe:
         r = recipe["reverb"]
         out = reverb(out, r.get("mix", 0.2), r.get("time", 0.6), rng)
-    if recipe.get("loop"):
+    if recipe.get("wrap"):
+        # 음악 층: 정확히 wrap초 길이로, 넘친 꼬리(울림·잔향)는 앞머리에 더해 이음매 없이 반복 (S6)
+        n_loop = int(round(RATE * recipe["wrap"]))
+        if len(out) < n_loop:
+            out = np.vstack([out, np.zeros((n_loop - len(out), 2))])
+        tail = out[n_loop:]
+        out = out[:n_loop].copy()
+        while len(tail):
+            k = min(len(tail), n_loop)
+            out[:k] += tail[:k]
+            tail = tail[k:]
+    elif recipe.get("loop"):
         # 반복음: 꼬리를 앞머리에 겹쳐 이음매를 없앤다
         xf = min(len(out) // 3, int(RATE * recipe.get("xfade", 0.08)))
         a = np.linspace(0, 1, xf)[:, None]
