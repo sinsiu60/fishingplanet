@@ -1288,7 +1288,7 @@ M3·M4는 서로 기대므로 실제로는 **M4(미리보기)의 뼈대를 M3 �
 
 | 파일 | 내용 |
 |---|---|
-| `buildozer.spec` | buildozer 1.6.0 / p4a 2026.5.9 기준. 이름 '낚시 게임', `com.sinsiu.fishingplanet` 1.0.0, requirements `python3,pygame,numpy,pyjnius,android` (p4a에 pygame-ce 레시피가 없어 pygame 2.1 레시피 — pygame 2.1.3으로 코드 검증), sdl2 부트스트랩, 가로 고정(뒤집기 허용), 전체 화면, 권한 VIBRATE·WAKE_LOCK, api 35 / minapi 24 / NDK 28c, arm64-v8a·armeabi-v7a, 포함 확장자 py·json·ttf·txt·png·ogg·wav·mp3, tools·build·dist 등 제외 |
+| `buildozer.spec` | buildozer 1.6.0 / p4a 2026.5.9 기준. 이름 '낚시 게임', `com.sinsiu.fishingplanet` 1.0.0, requirements `python3,pygame,numpy,pyjnius,android` (p4a에 pygame-ce 레시피가 없어 pygame. p4a 기본 레시피 2.1.0은 p4a의 Python 3.14에서 미리 생성된 Cython C가 컴파일되지 않아 `android/recipes/pygame` 로컬 레시피로 **2.6.1** + 최신 Cython(3.1~3.2)으로 다시 생성. 게임은 pygame 2.1.3·2.6.1 둘 다에서 테스트 통과), sdl2 부트스트랩, 가로 고정(뒤집기 허용), 전체 화면, 권한 VIBRATE·WAKE_LOCK, api 35 / minapi 24 / NDK 28c, arm64-v8a·armeabi-v7a, 포함 확장자 py·json·ttf·txt·png·ogg·wav·mp3, tools·build·dist 등 제외 |
 | `tools/make_android_assets.py` | `android/icon.png`(512, PC 아이콘과 같은 그림) · `android/presplash.png`(1280×720) 생성 |
 | `build_android.sh` | WSL용. `./build_android.sh deps` = 우분투 패키지 설치(sudo), `./build_android.sh` = 전용 venv(~/.fishing-buildozer)에 buildozer → 아이콘 → `buildozer android debug` → `dist/android/`에 복사. /mnt/c 아래에서 돌리면 느리다고 경고 |
 | `.github/workflows/build.yml` | push(claude/**, main)·수동 실행 때 **윈도우 exe**(build.bat과 같은 PyInstaller 옵션 + 화면 없이 120프레임 실행)와 **디버그 APK**를 빌드해 Artifacts로 올림 (WSL 없이 받기) |

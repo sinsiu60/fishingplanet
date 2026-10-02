@@ -12,7 +12,7 @@ source.exclude_dirs = tools, build, dist, bin, .venv, .github, .buildozer, andro
 source.exclude_patterns = *.bat,*.md,requirements*.txt,dist_readme.txt
 version = 1.0.0
 
-# pygame-ce는 p4a 레시피가 없어서 p4a의 pygame(2.1.0) 레시피를 쓴다 — 코드는 pygame 2.1.x로 호환 확인 (DESIGN.md 26장)
+# pygame-ce는 p4a 레시피가 없어서 pygame을 쓴다 — 로컬 레시피(android/recipes/pygame)로 2.6.1, 코드는 pygame 2.1.3·2.6.1 호환 확인 (DESIGN.md 26장)
 # numpy = 효과음 합성, pyjnius·android = 진동·화면 켜짐·공유 (src/platform/android.py)
 requirements = python3,pygame,numpy,pyjnius,android
 
@@ -34,6 +34,8 @@ android.accept_sdk_license = True
 android.archs = arm64-v8a, armeabi-v7a
 android.allow_backup = True
 p4a.bootstrap = sdl2
+# pygame 2.6.1 로컬 레시피 (기본 2.1.0은 Python 3.14에서 빌드 실패)
+p4a.local_recipes = ./android/recipes
 
 [buildozer]
 log_level = 2
