@@ -4,3 +4,9 @@ __pycache__/
 build/
 dist/
 *.spec
+!buildozer.spec
+.buildozer/
+bin/
+# 안드로이드 릴리스 서명 키 — 절대 올리지 않는다
+*.keystore
+*.jks

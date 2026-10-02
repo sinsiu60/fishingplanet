@@ -1,0 +1,78 @@
+# PC exe(윈도우) + 안드로이드 APK 빌드 확인 (U8 / MOBILE.md M6).
+# 결과물은 실행 화면의 Artifacts 에서 받는다: FishingGame-windows (폴더 압축), FishingGame-android (debug APK).
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/**", "main"]
+    paths-ignore: ["**.md"]
+
+jobs:
+  windows-exe:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 의존성
+        run: python -m pip install -r requirements.txt -r requirements-build.txt
+      - name: 아이콘
+        run: python tools/make_icon.py build/icon.ico
+      - name: PyInstaller (build.bat 과 같은 옵션)
+        shell: bash
+        run: |
+          python -m PyInstaller --noconfirm --clean --onedir --windowed \
+            --name FishingGame --icon "$PWD/build/icon.ico" \
+            --add-data "$PWD/data;data" --exclude-module tkinter \
+            --specpath build main.py
+          cp dist_readme.txt dist/FishingGame/README.txt
+      - name: 실행 확인 (화면 없이 120프레임)
+        shell: bash
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          ./dist/FishingGame/FishingGame.exe --frames 120
+          echo "exit $?"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FishingGame-windows
+          path: dist/FishingGame
+
+  android-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: 우분투 패키지 (buildozer 문서 기준)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses-dev cmake \
+            libffi-dev libssl-dev automake lld
+      - name: buildozer
+        run: python -m pip install "buildozer==1.6.0" "cython<3.1" setuptools pygame-ce==2.5.8 numpy
+      - name: 아이콘·스플래시
+        run: python tools/make_android_assets.py
+      - name: SDK·NDK 캐시
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            .buildozer
+          key: buildozer-${{ hashFiles('buildozer.spec') }}-v1
+      - name: APK 빌드 (debug)
+        run: yes | buildozer android debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FishingGame-android
+          path: bin/*.apk

@@ -56,7 +56,18 @@ def gear_for_tier(tier: int) -> dict:
 
 # ───────────────────────── 1단계: 헤드리스 봇 ─────────────────────────
 
-def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Random) -> dict:
+def _responses(f) -> tuple[int, int]:
+    """(패턴 칸 = 진행 중 패턴 + 꼬임 잔여, 전체 = 패턴 칸 + 기존 행동 대응(돌진·점프·방향 전환·몸털기))."""
+    b = f.brain
+    slots = len(f.pats) + (1 if f.twist.value > 0 else 0)
+    classic = 0
+    if b.state in ("rush", "jump", "turn") or (b.state == "telegraph" and b.pending in ("rush", "jump", "leap", "turn", "thrash")):
+        classic = 1
+    return slots, slots + classic
+
+
+def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Random, probe: dict | None = None) -> dict:
+    """probe가 있으면 동시 대응 수·행동 횟수를 모은다 (U8 점검)."""
     cast = rnd.uniform(24, 34)
     size = round(fish["size_cm"][0] + (fish["size_cm"][1] - fish["size_cm"][0]) * rnd.betavariate(2, 2.4), 1)
     g = spot.get("gimmick")
@@ -193,6 +204,24 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
                 if turn_acc >= 1:
                     inp.turns, turn_acc = 1, turn_acc - 1
         f.update(DT, reeling, aim, inp)
+        if probe is not None:
+            a, b2 = _responses(f)
+            probe["max_slots"] = max(probe.get("max_slots", 0), a)
+            probe["max_all"] = max(probe.get("max_all", 0), b2)
+            probe["ticks"] = probe.get("ticks", 0) + 1
+            if a > 2:
+                probe["over_slots"] = probe.get("over_slots", 0) + 1
+            if b2 > 2:
+                probe["over_all"] = probe.get("over_all", 0) + 1
+                probe.setdefault("over_all_examples", set()).add(
+                    (fish["id"], tuple(sorted(p.id for p in f.pats)), round(f.twist.value) > 0, f.brain.state,
+                     f.brain.pending))
+    if probe is not None:
+        acts = probe.setdefault("actions", {})
+        for ev in f.events:
+            if ev.startswith("action:"):
+                acts[ev[7:]] = acts.get(ev[7:], 0) + 1
+        probe["sec"] = probe.get("sec", 0.0) + f.elapsed
     res = {"ok": f.phase == "caught", "t": round(f.elapsed, 1), "reason": f.lose_reason}
     if f.result:
         res.update(rank=f.result["rank"], size=f.result["size"], perfects=f.result["perfects"])
