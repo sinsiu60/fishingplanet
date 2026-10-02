@@ -25,14 +25,14 @@ def unlocked(save) -> bool:
     return cfg()["unlock_spot"] in save.data.get("unlocked_spots", [])
 
 
-def roll(save, fish: dict, weather: str, rnd=_RNG, force: list | None = None) -> list[str]:
-    """이번 물고기의 변이 (없으면 빈 목록). force = 테스트용 강제 지정."""
+def roll(save, fish: dict, weather: str, rnd=_RNG, force: list | None = None, chance_mult: float = 1.0) -> list[str]:
+    """이번 물고기의 변이 (없으면 빈 목록). force = 테스트용 강제 지정, chance_mult = 반짝이는 물결(수면 징후)."""
     if force is not None:
         return [m for m in force if m in ORDER]
     c = cfg()
     if fish.get("rarity") == "legend" or not unlocked(save):
         return []
-    k = c["storm_mult"] if weather == "storm" else 1.0
+    k = (c["storm_mult"] if weather == "storm" else 1.0) * chance_mult
     r = rnd.random()
     n = 2 if r < c["chance_two"] * k else 1 if r < (c["chance_two"] + c["chance_one"]) * k else 0
     names = list(c["kinds"])

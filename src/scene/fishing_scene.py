@@ -38,7 +38,7 @@ HINTS = {
     CastState.CHARGING: "놓으면 던지기   우클릭: 취소",
     CastState.SWING: "",
     CastState.FLIGHT: "",
-    CastState.LANDED: "좌클릭: 챔질 (찌가 쑥 잠길 때!)   우클릭: 줄 회수   화면 끝: 둘러보기",
+    CastState.LANDED: "좌클릭: 챔질(쑥!)·저킹   누르고 있기: 감기   우클릭: 회수   화면 끝: 둘러보기",
     CastState.RETRIEVE: "줄 감는 중...",
     CastState.HOOKED: "좌클릭 유지: 감기   우클릭: 숙이기   Q/E·휠: 드랙   마우스: 버티기   H: 도움말",
 }
@@ -108,6 +108,12 @@ class FishingScene(Scene):
         self.droplets = Droplets()
         self.bubbles = Bubbles()
         self.sparkles = Sparkles()
+        import time as _time
+        from src.fishing.lure import SurfaceSigns
+        # 수면 징후 (U7): 전용 난수 (씨앗 = 시계, 다른 난수 흐름을 건드리지 않게)
+        self.signs = SurfaceSigns(random.Random(int(_time.time() * 1000) + 7))
+        self.sign_fx_t = 0.0
+        self.recast_told = False
         self.popups = fight_fx.JudgePopups()
         self.gather = fight_fx.GatherFX()
         self.screen_fx = ScreenFX(canvas.get_width(), canvas.get_height())
@@ -268,6 +274,7 @@ class FishingScene(Scene):
                 "can_look": free and f is None and c.state in LOOK_STATES,
                 "show_pause": free and not ending, "show_bag": free and self.can_open_menus(),
                 "can_retrieve": free and f is None and c.state == CastState.LANDED,
+                "lure": free and f is None and c.state == CastState.LANDED and self.bite.state == BiteState.WAIT,
                 "items": items, "drag": (f.drag, f.drag_steps) if fighting else None,
                 "safe_x": self.game.screen.safe_x}
 
@@ -544,7 +551,8 @@ class FishingScene(Scene):
         # 변이 (U5): 챔질 순간 굴림 (테스트: F10 강제 지정)
         from src.fishing import mutation
         force = getattr(self, "force_mut", None)
-        muts = mutation.roll(self.save, fish, self.weather, force=force if force else None)
+        muts = mutation.roll(self.save, fish, self.weather, force=force if force else None,
+                             chance_mult=self.bite.sign_mods.get("mutation_mult", 1.0) if self.bite.sign_mods else 1.0)
         if muts:
             fish = mutation.apply(fish, muts)
             if "giant" in muts:
@@ -556,6 +564,8 @@ class FishingScene(Scene):
                            touch_lead=load_json("mobile_config.json")["touch_lead_sec"] if self.touch else 0.0)
         if self.touch:
             self.fight.input_latency = load_json("mobile_config.json")["pump_latency_sec"]
+        self.fight.lure_info = {"bite": self.bite.lure_bite, "used": set(self.bite.lure_used),
+                                "profile": getattr(self.bite, "lure_profile", None)}
         from src.save.quests import QuestRun
         self.quest_run = QuestRun(self.save, self.fight, fish["id"], self.spot_id, self.weather, self.clock.period()[0])
         if muts:
@@ -677,6 +687,7 @@ class FishingScene(Scene):
         for ev in self.cast.events:
             if ev == "splash":
                 self._splash()
+                self.recast_told = False
             elif ev == "launch":
                 self.sfx.play("cast")
                 self.line_ch = self.sfx.play("line_out", 0.45 + 0.45 * self.cast.power)
@@ -771,6 +782,8 @@ class FishingScene(Scene):
                    "fog": "짙은 안개가 내려앉았다 (그림자가 안 보여요)"}[ev.split(":")[1]]
             self.toasts.show(msg, INFO, 2.6, 11)
         w.events.clear()
+        self._update_signs(dt)
+        self.lure_hop = max(0.0, getattr(self, "lure_hop", 0.0) - dt)
         self.rain.update(dt, self.weather, self.ripples, self.cam)
         self.fog.update(dt, self.weather)
         self.lightning.update(dt, self.weather, self.cam.horizon, self.cam.width)
@@ -798,15 +811,27 @@ class FishingScene(Scene):
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
         self.bite.bait = self.save.equipped("bait")
         self.bite.force_fish = self.all_fish[self.force_i] if self.force_i >= 0 else None
+        landed = self.cast.state == CastState.LANDED
+        if landed and self.bite.state == BiteState.WAIT:
+            # 루어 (U7): 짧은 클릭·탭 = 저킹, 누르고 있기 = 리트리브, 가만히 = 멈춤
+            self.ctl.update_lure(dt, self.t, self.game.input.held("press"))
+            jerk = "lure_jerk" in self.ctl.events
+            retrieving = self.ctl.lure == "retrieve"
+            if retrieving:
+                retrieving = self._retrieve_lure(dt)
+            self.bite.lure_in = (jerk, retrieving)
+            if jerk:
+                self._jerk_fx()
+            if self.bite.lure.engaged and self.tutorial.want("lure_intro"):
+                self.toasts.show("루어! 물고기마다 좋아하는 리듬이 있어요 — 그림자가 다가오면 맞는 리듬", (150, 220, 255), 3.0, 11)
+                self.tutorial.mark("lure_intro")
+        else:
+            self.ctl.reset()
+        self.bite.sign_mods = self.signs.mods(self.cast.bx, self.cast.bz) if landed else {}
         self.bite.update(dt)
         for ev in self.bite.events:
             self._on_bite_event(ev)
         self.bite.events.clear()
-
-        if self.cast.state == CastState.LANDED and self.bite.state != BiteState.BITE:
-            self.ctl.update_lure(dt, self.t, self.game.input.held("press"))  # 루어 조작 (효과는 U7)
-        else:
-            self.ctl.reset()
         if self.cast.state == CastState.LANDED and self.bite.state != BiteState.BITE:
             self.idle_ripple_t += dt
             if self.idle_ripple_t > 2.2:
@@ -817,6 +842,98 @@ class FishingScene(Scene):
             if self.wake_t > 0.12:
                 self.wake_t = 0.0
                 self.ripples.spawn(self.cast.bx, self.cast.bz, size=0.35, life=0.9)
+
+    def _retrieve_lure(self, dt: float) -> bool:
+        """리트리브: 찌가 일정 속도로 다가온다. 너무 가까우면 멈추고 다시 던지라고 안내."""
+        lc = self.bite.lcfg
+        c = self.cast
+        d = math.hypot(c.bx, c.bz)
+        if d <= lc["recast_distance"]:
+            if not self.recast_told:
+                self.recast_told = True
+                hint = "회수 버튼" if self.touch else "우클릭"
+                self.toasts.show(f"찌가 너무 가까워요 — {hint}으로 걷고 다시 던지세요", INFO, 2.4, 11)
+            return False
+        k = max(0.0, d - lc["retrieve_speed"] * dt) / d
+        c.bx, c.bz = c.bx * k, c.bz * k
+        self.bite.bobber = (c.bx, c.bz)
+        self.wake_t = getattr(self, "wake_t", 0.0) + dt
+        if self.wake_t > 0.25:
+            self.wake_t = 0.0
+            self.ripples.spawn(c.bx, c.bz, size=0.3, life=0.8)
+        return True
+
+    def _jerk_fx(self) -> None:
+        """저킹: 찌가 톡 튀며 작은 물결."""
+        c = self.cast
+        self.ripples.spawn(c.bx, c.bz, size=0.4, life=0.7)
+        p = self.cam.project(c.bx, c.bz)
+        if p:
+            self.droplets.burst(p[0], p[1], max(0.4, p[2] / 30), count=2)
+        self.lure_hop = 0.18
+
+    def _update_signs(self, dt: float) -> None:
+        """수면 징후: 생기고 사라짐 + 물 위 연출 (새 떼·물거품·점프·반짝임)."""
+        waiting = self.fight is None and self.cast.state in LOOK_STATES and self.landing is None
+        kind = self.signs.update(dt, waiting, self.cam.yaw)
+        if kind == "sparkle":
+            self.sfx.play("chord_rare", 0.25)
+        s = self.signs.sign
+        if s is None:
+            return
+        self.sign_fx_t += dt
+        r = self.signs.radius
+        fade = min(1.0, s["t"] / 1.0, (s["life"] - s["t"]) / 1.0)
+        rx = lambda: s["x"] + random.uniform(-r, r) * 0.7
+        rz = lambda: s["z"] + random.uniform(-r, r) * 0.7
+        kind = s["kind"]
+        if kind == "bubbles" and self.sign_fx_t > 0.07:
+            # 물거품: 보글보글 큰 거품이 계속 올라옴
+            self.sign_fx_t = 0.0
+            for _ in range(2):
+                p = self.cam.project(rx(), rz())
+                if p:
+                    self.bubbles.spawn(p[0], p[1], max(3.0, p[2] * 0.6 * fade))
+            if random.random() < 0.3:
+                self.ripples.spawn(rx(), rz(), size=0.35, life=0.8)
+        elif kind == "jump" and self.sign_fx_t > 1.3:
+            # 물고기 점프: 은빛이 튀어 오르고 물보라
+            self.sign_fx_t = 0.0
+            x, z = rx(), rz()
+            self._splash_at(x, z, 0.9)
+            p = self.cam.project(x, z, 0.5)
+            if p:
+                self.sparkles.burst(p[0], p[1], count=3, speed=0.5, ring=False)
+            self.sfx.play("splash_small", 0.3)
+        elif kind == "sparkle" and self.sign_fx_t > 0.08:
+            # 반짝이는 물결: 넓게 반짝임
+            self.sign_fx_t = 0.0
+            p = self.cam.project(rx(), rz())
+            if p:
+                self.sparkles.burst(p[0], p[1], count=2, speed=0.25, ring=False)
+        elif kind == "birds" and self.sign_fx_t > 0.9:
+            self.sign_fx_t = 0.0
+            self._splash_at(rx(), rz(), 0.4)  # 새가 물을 찍는다
+
+    def _draw_birds(self, canvas) -> None:
+        s = self.signs.sign
+        if s is None or s["kind"] != "birds":
+            return
+        fade = min(1.0, s["t"] / 1.0, (s["life"] - s["t"]) / 1.0)
+        if fade <= 0:
+            return
+        col = (30, 32, 40)
+        for i in range(7):
+            a = self.t * (0.8 + i * 0.07) + i * 1.05
+            x = s["x"] + math.cos(a) * (1.2 + i * 0.25)
+            z = s["z"] + math.sin(a) * (1.2 + i * 0.25)
+            p = self.cam.project(x, z, 2.5 + 0.4 * math.sin(a * 2))
+            if p is None or fade < 0.2:
+                continue
+            w = max(4, int(p[2] * 0.3))
+            flap = int(w * 0.6 * math.sin(self.t * 12 + i))
+            px, py = int(p[0]), int(p[1])
+            pygame.draw.lines(canvas, col, False, [(px - w, py - flap), (px, py), (px + w, py - flap)], 2)
 
     def _update_fight(self, dt: float, aim: float) -> None:
         f = self.fight
@@ -1563,6 +1680,7 @@ class FishingScene(Scene):
                     # 쌍둥이: 쉬는 녀석의 그림자 (조금 흐리게)
                     draw_fish_shadow(canvas, pal, cam, dict(sh, x=tx[0], z=tx[1], alpha=sh["alpha"] * 0.6, wag=6.0), t)
         self.ripples.draw(canvas, pal, cam)
+        self._draw_birds(canvas)
         self.bubbles.draw(canvas, pal)
         self.hazard_decor.draw(canvas, pal, cam, t, f.in_hazard if f is not None and f.phase == "fight" else None)
         self.ambient.draw(canvas, pal, self.clock.period()[0], weather, theme.get("sea", False), t)
@@ -2118,8 +2236,11 @@ class FishingScene(Scene):
         bob = 0.0
         dip = self.bite.dip if c.state in (CastState.LANDED, CastState.HOOKED) else 0.0
         if c.state == CastState.LANDED:
-            # 살랑살랑: 위아래 + 좌우로 아주 조금
+            # 살랑살랑: 위아래 + 좌우로 아주 조금 (저킹이면 톡 튐)
             bob = math.sin(self.t * 2.0) * max(0.5, s * 0.012)
+            hop = getattr(self, "lure_hop", 0.0)
+            if hop > 0:
+                bob -= math.sin(math.pi * hop / 0.18) * max(1.5, s * 0.05)
             sx += math.sin(self.t * 1.3) * max(0.3, s * 0.006)
         if c.state == CastState.RETRIEVE or dip > 0.5:
             sag = 3  # 팽팽

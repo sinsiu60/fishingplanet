@@ -1,22 +1,107 @@
 {
-  "_설명": "챌린지 의뢰 (DESIGN.md 27-5, Phase U6). 게시판은 대륙마다: 일일 daily_count개(기기 시간 자정 갱신, 새로고침 하루 refresh_per_day번) + 주간 1개(월요일 0시). 의뢰는 해금된 낚시터·잡아 본 물고기·만나 본 패턴·잡아 본 변이로만 만든다. 난이도 ⭐ = 템플릿 기본 + 대상 희귀도(rarity_star) + 조건 2개면 +combo_star (1~5). 주간은 ⭐5 + 조건 2개.",
+  "_설명": "챌린지 의뢰 (DESIGN.md 27-5, Phase U6). 게시판은 대륙마다: 일일 daily_count개(기기 시간 자정 갱신, 새로고침 하루 refresh_per_day번) + 주간 1개(월요일 0시). 의뢰는 해금된 낚시터·잡아 본 물고기·만나 본 패턴·잡아 본 변이로만 만든다. 난이도 ⭐ = 템플릿 기본 + 대상 희귀도(rarity_star) + 조건 2개면 +combo_star (1~5). 주간은 ⭐5 + 조건 2개. lure 템플릿(U7): 루어로 꾄 입질(관심도로 온 물고기)만 셈 — 저킹 = 리트리브 없이 저킹만, 리트리브 = 저킹 없이 감기만, 멈춤 = 멈춤을 좋아하는 물고기를 꾐.",
   "daily_count": 3,
   "refresh_per_day": 1,
-  "rarity_star": {"common": 0, "uncommon": 1, "rare": 1, "legend": 2},
+  "rarity_star": {
+    "common": 0,
+    "uncommon": 1,
+    "rare": 1,
+    "legend": 2
+  },
   "combo_star": 2,
   "combo_chance": 0.3,
   "_templates": "kind: single = 특정 물고기 한 마리를 조건대로 / multi = 여러 번 쌓는 의뢰. text의 {}는 채움. 수치 범위는 각 항목.",
   "templates": {
-    "gear_limit": {"kind": "single", "star": 2, "text": "T{n} 이하 낚싯대로"},
-    "drag_fixed": {"kind": "single", "star": 2, "text": "드랙 {k}단계 고정으로"},
-    "perfects": {"kind": "single", "star": 2, "text": "퍼펙트 {k}회 이상으로", "k": [2, 4]},
-    "double_perfect": {"kind": "single", "star": 3, "text": "더블 퍼펙트로", "needs_pattern": "thrash"},
-    "line_keep": {"kind": "single", "star": 2, "text": "줄 내구도 {p}% 이상 지키며", "p": [70, 90]},
-    "time": {"kind": "single", "star": 2, "text": "{t}초 안에", "time_mult": 0.8, "min_sec": 15},
-    "size": {"kind": "single", "star": 1, "text": "{s}cm 이상", "top_frac": 0.25},
-    "pattern": {"kind": "multi", "star": 2, "text": "{pattern} {k}번 버텨 내기", "k": [3, 5]},
-    "mutation": {"kind": "multi", "star": 3, "text": "{mutation} 변이 물고기 {k}마리", "k_kind": 1, "k_any": [2, 3], "kinds": ["giant", "frenzy", "cunning", "awake"]},
-    "env": {"kind": "multi", "star": 1, "text": "{weather} {period}에 {spot} 물고기 {k}마리", "k": [3, 5]}
+    "gear_limit": {
+      "kind": "single",
+      "star": 2,
+      "text": "T{n} 이하 낚싯대로"
+    },
+    "drag_fixed": {
+      "kind": "single",
+      "star": 2,
+      "text": "드랙 {k}단계 고정으로"
+    },
+    "perfects": {
+      "kind": "single",
+      "star": 2,
+      "text": "퍼펙트 {k}회 이상으로",
+      "k": [
+        2,
+        4
+      ]
+    },
+    "double_perfect": {
+      "kind": "single",
+      "star": 3,
+      "text": "더블 퍼펙트로",
+      "needs_pattern": "thrash"
+    },
+    "line_keep": {
+      "kind": "single",
+      "star": 2,
+      "text": "줄 내구도 {p}% 이상 지키며",
+      "p": [
+        70,
+        90
+      ]
+    },
+    "time": {
+      "kind": "single",
+      "star": 2,
+      "text": "{t}초 안에",
+      "time_mult": 0.8,
+      "min_sec": 15
+    },
+    "size": {
+      "kind": "single",
+      "star": 1,
+      "text": "{s}cm 이상",
+      "top_frac": 0.25
+    },
+    "pattern": {
+      "kind": "multi",
+      "star": 2,
+      "text": "{pattern} {k}번 버텨 내기",
+      "k": [
+        3,
+        5
+      ]
+    },
+    "mutation": {
+      "kind": "multi",
+      "star": 3,
+      "text": "{mutation} 변이 물고기 {k}마리",
+      "k_kind": 1,
+      "k_any": [
+        2,
+        3
+      ],
+      "kinds": [
+        "giant",
+        "frenzy",
+        "cunning",
+        "awake"
+      ]
+    },
+    "env": {
+      "kind": "multi",
+      "star": 1,
+      "text": "{weather} {period}에 {spot} 물고기 {k}마리",
+      "k": [
+        3,
+        5
+      ]
+    },
+    "lure": {
+      "kind": "multi",
+      "star": 2,
+      "text": "{lure}로 꾀어 {k}마리 잡기",
+      "k": [
+        1,
+        2
+      ]
+    }
   },
   "_avg_fight_sec": "시간 의뢰 기준 = 파이팅 시간 추정(체력 × fight_sec_per_stamina + 8초, 봇 측정보다 조금 넉넉) × time_mult, 최소 min_sec. 변이 의뢰는 잘 나오는 변이(kinds) 하나 k_kind마리 또는 아무 변이 k_any마리.",
   "fight_sec_per_stamina": 0.28,
@@ -26,33 +111,315 @@
     "gold_per_star": 0.6,
     "materials_per_star": 2,
     "points_per_star": 10,
-    "chest_by_star": {"4": ["common", "rare"], "5": ["rare"]},
+    "chest_by_star": {
+      "4": [
+        "common",
+        "rare"
+      ],
+      "5": [
+        "rare"
+      ]
+    },
     "weekly_chest": "special",
     "weekly_points": 60,
     "weekly_title": "weekly_master"
   },
   "_shop": "의뢰 포인트 상점 (성능 없음). kind: title / float_skin / rod_skin. 찌 외형 colors = 찌 위·아래 색, 낚싯대 외형 = 대·하이라이트·릴 색.",
   "shop": [
-    {"id": "angler", "kind": "title", "name": "견습 낚시꾼", "price": 30},
-    {"id": "patient", "kind": "title", "name": "인내의 낚시꾼", "price": 50},
-    {"id": "rhythm", "kind": "title", "name": "박자의 달인", "price": 80},
-    {"id": "untangler", "kind": "title", "name": "꼬임 풀기 장인", "price": 80},
-    {"id": "storm_rider", "kind": "title", "name": "폭풍을 타는 자", "price": 110},
-    {"id": "perfectionist", "kind": "title", "name": "완벽주의자", "price": 140},
-    {"id": "sea_legend", "kind": "title", "name": "바다의 전설", "price": 170},
-    {"id": "fish_whisperer", "kind": "title", "name": "물고기와 대화하는 자", "price": 200},
-    {"id": "mint", "kind": "float_skin", "name": "민트 찌", "price": 60, "colors": [[110, 230, 190], [240, 250, 245]]},
-    {"id": "night", "kind": "float_skin", "name": "밤하늘 찌", "price": 80, "colors": [[60, 70, 150], [230, 220, 120]]},
-    {"id": "cherry", "kind": "float_skin", "name": "벚꽃 찌", "price": 90, "colors": [[255, 160, 190], [255, 245, 250]]},
-    {"id": "lava", "kind": "float_skin", "name": "용암 찌", "price": 110, "colors": [[255, 110, 40], [60, 40, 40]]},
-    {"id": "ice", "kind": "float_skin", "name": "얼음 찌", "price": 130, "colors": [[170, 230, 255], [255, 255, 255]]},
-    {"id": "royal", "kind": "float_skin", "name": "왕실 찌", "price": 150, "colors": [[150, 60, 200], [255, 214, 90]]},
-    {"id": "bamboo", "kind": "rod_skin", "name": "대나무 낚싯대", "price": 80, "colors": [[150, 170, 80], [200, 220, 120], [120, 100, 60]]},
-    {"id": "carbon_black", "kind": "rod_skin", "name": "흑탄 낚싯대", "price": 100, "colors": [[40, 40, 48], [110, 110, 130], [70, 70, 80]]},
-    {"id": "coral", "kind": "rod_skin", "name": "산호 낚싯대", "price": 120, "colors": [[230, 110, 100], [255, 190, 170], [200, 200, 210]]},
-    {"id": "frost", "kind": "rod_skin", "name": "서리 낚싯대", "price": 140, "colors": [[150, 200, 235], [235, 250, 255], [180, 200, 220]]},
-    {"id": "gold_rod", "kind": "rod_skin", "name": "황금 낚싯대", "price": 170, "colors": [[210, 160, 50], [255, 230, 140], [180, 140, 60]]},
-    {"id": "abyss", "kind": "rod_skin", "name": "심연 낚싯대", "price": 200, "colors": [[50, 30, 80], [140, 90, 200], [90, 60, 130]]}
+    {
+      "id": "angler",
+      "kind": "title",
+      "name": "견습 낚시꾼",
+      "price": 30
+    },
+    {
+      "id": "patient",
+      "kind": "title",
+      "name": "인내의 낚시꾼",
+      "price": 50
+    },
+    {
+      "id": "rhythm",
+      "kind": "title",
+      "name": "박자의 달인",
+      "price": 80
+    },
+    {
+      "id": "untangler",
+      "kind": "title",
+      "name": "꼬임 풀기 장인",
+      "price": 80
+    },
+    {
+      "id": "storm_rider",
+      "kind": "title",
+      "name": "폭풍을 타는 자",
+      "price": 110
+    },
+    {
+      "id": "perfectionist",
+      "kind": "title",
+      "name": "완벽주의자",
+      "price": 140
+    },
+    {
+      "id": "sea_legend",
+      "kind": "title",
+      "name": "바다의 전설",
+      "price": 170
+    },
+    {
+      "id": "fish_whisperer",
+      "kind": "title",
+      "name": "물고기와 대화하는 자",
+      "price": 200
+    },
+    {
+      "id": "mint",
+      "kind": "float_skin",
+      "name": "민트 찌",
+      "price": 60,
+      "colors": [
+        [
+          110,
+          230,
+          190
+        ],
+        [
+          240,
+          250,
+          245
+        ]
+      ]
+    },
+    {
+      "id": "night",
+      "kind": "float_skin",
+      "name": "밤하늘 찌",
+      "price": 80,
+      "colors": [
+        [
+          60,
+          70,
+          150
+        ],
+        [
+          230,
+          220,
+          120
+        ]
+      ]
+    },
+    {
+      "id": "cherry",
+      "kind": "float_skin",
+      "name": "벚꽃 찌",
+      "price": 90,
+      "colors": [
+        [
+          255,
+          160,
+          190
+        ],
+        [
+          255,
+          245,
+          250
+        ]
+      ]
+    },
+    {
+      "id": "lava",
+      "kind": "float_skin",
+      "name": "용암 찌",
+      "price": 110,
+      "colors": [
+        [
+          255,
+          110,
+          40
+        ],
+        [
+          60,
+          40,
+          40
+        ]
+      ]
+    },
+    {
+      "id": "ice",
+      "kind": "float_skin",
+      "name": "얼음 찌",
+      "price": 130,
+      "colors": [
+        [
+          170,
+          230,
+          255
+        ],
+        [
+          255,
+          255,
+          255
+        ]
+      ]
+    },
+    {
+      "id": "royal",
+      "kind": "float_skin",
+      "name": "왕실 찌",
+      "price": 150,
+      "colors": [
+        [
+          150,
+          60,
+          200
+        ],
+        [
+          255,
+          214,
+          90
+        ]
+      ]
+    },
+    {
+      "id": "bamboo",
+      "kind": "rod_skin",
+      "name": "대나무 낚싯대",
+      "price": 80,
+      "colors": [
+        [
+          150,
+          170,
+          80
+        ],
+        [
+          200,
+          220,
+          120
+        ],
+        [
+          120,
+          100,
+          60
+        ]
+      ]
+    },
+    {
+      "id": "carbon_black",
+      "kind": "rod_skin",
+      "name": "흑탄 낚싯대",
+      "price": 100,
+      "colors": [
+        [
+          40,
+          40,
+          48
+        ],
+        [
+          110,
+          110,
+          130
+        ],
+        [
+          70,
+          70,
+          80
+        ]
+      ]
+    },
+    {
+      "id": "coral",
+      "kind": "rod_skin",
+      "name": "산호 낚싯대",
+      "price": 120,
+      "colors": [
+        [
+          230,
+          110,
+          100
+        ],
+        [
+          255,
+          190,
+          170
+        ],
+        [
+          200,
+          200,
+          210
+        ]
+      ]
+    },
+    {
+      "id": "frost",
+      "kind": "rod_skin",
+      "name": "서리 낚싯대",
+      "price": 140,
+      "colors": [
+        [
+          150,
+          200,
+          235
+        ],
+        [
+          235,
+          250,
+          255
+        ],
+        [
+          180,
+          200,
+          220
+        ]
+      ]
+    },
+    {
+      "id": "gold_rod",
+      "kind": "rod_skin",
+      "name": "황금 낚싯대",
+      "price": 170,
+      "colors": [
+        [
+          210,
+          160,
+          50
+        ],
+        [
+          255,
+          230,
+          140
+        ],
+        [
+          180,
+          140,
+          60
+        ]
+      ]
+    },
+    {
+      "id": "abyss",
+      "kind": "rod_skin",
+      "name": "심연 낚싯대",
+      "price": 200,
+      "colors": [
+        [
+          50,
+          30,
+          80
+        ],
+        [
+          140,
+          90,
+          200
+        ],
+        [
+          90,
+          60,
+          130
+        ]
+      ]
+    }
   ],
   "_titles_extra": "의뢰 상점 밖에서 얻는 칭호 (변이 도감 보상, 주간 의뢰). 이름표.",
   "titles_extra": {
@@ -61,6 +428,21 @@
     "weekly_master": "주간 의뢰 정복자"
   },
   "skins_extra": {
-    "aurora": {"kind": "float_skin", "name": "오로라 찌", "colors": [[120, 255, 200], [190, 140, 255]]}
+    "aurora": {
+      "kind": "float_skin",
+      "name": "오로라 찌",
+      "colors": [
+        [
+          120,
+          255,
+          200
+        ],
+        [
+          190,
+          140,
+          255
+        ]
+      ]
+    }
   }
 }

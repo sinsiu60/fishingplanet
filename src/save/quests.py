@@ -15,6 +15,7 @@ from src.core.config import load_json
 
 RARITY_KO = {"common": "일반", "uncommon": "고급", "rare": "희귀", "legend": "전설"}
 WEATHER_KO = {"clear": "맑은 날", "rain": "비 오는 날", "storm": "폭풍 치는 날"}
+LURE_KO = {"jerk": "저킹만으", "retrieve": "리트리브만으", "pause": "멈춤으"}
 PERIOD_KO = {"morning": "아침", "day": "낮", "evening": "저녁", "night": "밤"}
 
 
@@ -154,7 +155,7 @@ def generate(save, cont: str, rnd, weekly: bool = False) -> dict | None:
         return None  # 아직 못 간 대륙
     singles = [t for t, v in c["templates"].items() if v["kind"] == "single"]
     for _ in range(40):
-        multi_ok = ["env"] + (["pattern"] if ctx["patterns"] else []) + (["mutation"] if ctx["mutations"] else [])
+        multi_ok = ["env", "lure"] + (["pattern"] if ctx["patterns"] else []) + (["mutation"] if ctx["mutations"] else [])
         use_single = bool(ctx["caught"]) and (weekly or rnd.random() < 0.65)
         if use_single:
             pool = ctx["caught"]
@@ -187,6 +188,9 @@ def generate(save, cont: str, rnd, weekly: bool = False) -> dict | None:
                 cond = {"t": t, "weather": rnd.choice(["clear", "rain"]), "period": rnd.choice(list(PERIOD_KO)), "spot": spot}
             elif t == "pattern":
                 cond = {"t": t, "pattern": rnd.choice(ctx["patterns"])}
+                spot = None
+            elif t == "lure":
+                cond = {"t": t, "lure": rnd.choice(["jerk", "retrieve", "pause"])}
                 spot = None
             else:
                 # 잘 나오는 변이 하나 1마리, 또는 아무 변이 2~3마리
@@ -239,6 +243,8 @@ def cond_text(cond: dict) -> str:
     if t == "mutation":
         name = "아무" if cond["mutation"] == "any" else mcfg()["kinds"][cond["mutation"]]["name"]
         return tmpl.format(mutation=name, k="{k}")
+    if t == "lure":
+        return tmpl.format(lure=LURE_KO[cond["lure"]], k="{k}")
     if t == "env":
         return tmpl.format(weather=WEATHER_KO.get(cond["weather"], cond["weather"]), period=PERIOD_KO[cond["period"]],
                            spot=_spots()[cond["spot"]]["name"], k="{k}")
@@ -386,7 +392,14 @@ class QuestRun:
                 continue
             c = q["conds"][0]
             muts = result.get("mutations") or []
-            if c["t"] == "env" or (c["t"] == "mutation" and muts and (c["mutation"] == "any" or c["mutation"] in muts)):
+            lure = getattr(fight, "lure_info", None) or {}
+            lure_ok = False
+            if c["t"] == "lure" and lure.get("bite"):
+                used = lure.get("used", set())
+                lure_ok = {"jerk": "jerk" in used and "retrieve" not in used,
+                           "retrieve": "retrieve" in used and "jerk" not in used,
+                           "pause": lure.get("profile") == "pause"}[c["lure"]]
+            if c["t"] == "env" or lure_ok or (c["t"] == "mutation" and muts and (c["mutation"] == "any" or c["mutation"] in muts)):
                 q["have"] = min(q["need"], q["have"] + 1)
                 self.events.append("quest_progress")
                 if q["have"] >= q["need"]:

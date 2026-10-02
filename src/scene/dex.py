@@ -9,6 +9,7 @@ from src.render.fish_draw import RANK_COLORS, draw_fish_side, fish_colors
 from src.save.save_game import baits
 from src.fishing.patterns import TIP_SHORT, fish_patterns
 from src.fishing import mutation
+from src.fishing.lure import profile_of
 from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
@@ -286,6 +287,16 @@ class DexScene(Scene):
                 for ln in wrap_text(f"· 힌트 잠김: {need}회 포획 시 해금 ({entry['count']}/{need})", d.w - 12):
                     text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
                     yy += 12
+        lc = load_json("lure.json")
+        if entry["count"] >= lc["dex_hint_catches"]:
+            prof = lc["profiles"][profile_of(f)]
+            for ln in wrap_text(f"· 선호 리듬: {prof['name']} — {prof['hint']}", d.w - 12)[:2]:
+                text(canvas, ln, (x, yy), (170, 255, 200), 11, "midleft")
+                yy += 12
+        else:
+            text(canvas, f"· 선호 리듬: {lc['dex_hint_catches']}회 포획 시 ({entry['count']}/{lc['dex_hint_catches']})",
+                 (x, yy), ui.DIM, 11, "midleft")
+            yy += 12
         pats = fish_patterns(f)
         if pats:
             # 신규 패턴 힌트: 만나 본 패턴만 이름과 대응, 아직이면 ???
