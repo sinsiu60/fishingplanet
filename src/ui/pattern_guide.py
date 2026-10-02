@@ -17,7 +17,7 @@ GOLD = (255, 214, 90)
 RED = (255, 110, 95)
 DEMO_BG = (14, 18, 34)
 
-# 첫 만남 정지 카드 (31장 C5): 신호 아이콘(칸 그대로) + 손동작 애니메이션 + 한 줄.
+# 첫 만남 정지 카드 (31장 C5): 신호 아이콘(물고기 자리 배지와 같은 그림) + 손동작 애니메이션 + 한 줄.
 # (제목, [PC 한 줄]) — tutorial.CARDS 로 합쳐진다. 터치 한 줄은 TOUCH_LINES. 기존 행동(돌진·점프·방향 전환·몸털기) 카드도 같은 모양으로.
 CARDS = {
     "telegraph:rush": ("돌진!", ["▼▼ 풀기 — Q로 드랙을 낮추고, 빨강이면 감기를 멈춘다"]),
@@ -30,11 +30,11 @@ CARDS = {
     "pattern:reverse": ("역주행!", ["좌클릭 연타로 막대를 눈금 위로"]),
     "pattern:twist": ("줄 비틀기!", ["마우스로 원을 그려 꼬임을 푼다"]),
     "pattern:chain": ("콤보!", ["위에 뜬 아이콘 순서대로 하나씩 대응"]),
-    "pattern:hide": ("숨기!", ["감기를 멈추고 금색 칸까지 풀었다가, 번쩍이면 감기"]),
+    "pattern:hide": ("숨기!", ["감기를 멈추고 장력 줄 금색 칸까지 풀었다가, 번쩍이면 감기"]),
     "pattern:pump": ("펌핑 리듬!", ["빨간 박엔 멈추고, 박 사이에만 좌클릭"]),
     "pattern:thrash": ("공중 몸부림!", ["정점에 한 번, 떨어지기 직전에 한 번 더 우클릭"]),
     "pattern:bite": ("줄 물어뜯기!", ["막대가 다 차는 순간 Shift (드랙 순간 최저)"]),
-    "pattern:dual": ("두 가지 동시에!", ["왼쪽 칸 하나 + 오른쪽 칸 하나를 함께"]),
+    "pattern:dual": ("두 가지 동시에!", ["물고기 옆에 나란히 뜬 두 신호를 각각 함께"]),
     "lure_intro": ("루어 액션!", [
         "찌가 떠 있는 동안: 짧게 클릭 = 저킹 · 누르고 있기 = 리트리브 · 가만히 = 멈춤",
         "물고기마다 좋아하는 리듬이 달라요. 그림자 위: ? 관심  ! 다가옴  ♥ 곧 문다  … 떠남",
@@ -56,7 +56,7 @@ TOUCH_LINES = {
     "pattern:pump": ["빨간 박엔 멈추고, 박 사이에만 패드"],
     "pattern:thrash": ["정점에 한 번, 떨어지기 직전에 한 번 더 숙이기"],
     "pattern:bite": ["막대가 다 차는 순간 ▼ 길게 (드랙 순간 최저)"],
-    "pattern:dual": ["한 손가락은 왼쪽 칸, 다른 손가락은 오른쪽 칸"],
+    "pattern:dual": ["나란히 뜬 두 신호를 손가락 둘로 각각"],
     "lure_intro": ["찌가 떠 있는 동안: 물 위 짧게 탭 = 저킹 · 리트리브 패드 누르기 · 가만히 = 멈춤",
                    "물고기마다 좋아하는 리듬이 달라요. 그림자 위: ? 관심  ! 다가옴  ♥ 곧 문다  … 떠남"],
 }
@@ -224,7 +224,7 @@ def draw_demo(canvas, kind: str, rect: pygame.Rect, t: float, touch: bool) -> No
         _key(canvas, cx + 52, cy, "▼" if touch else "Shift", lit)
         text(canvas, "번쩍이는 순간!", (cx, rect.bottom - 7), DIM, 11, "center")
     elif kind == "chain":
-        # 콤보: 칸 위 미리보기와 같은 아이콘 줄 — 하나씩 꺼진다
+        # 콤보: 물고기 위 순서 줄과 같은 아이콘 줄 — 하나씩 꺼진다
         from src.ui import signal_slots as ss
         seq = [("release", (1, 0)), ("direction", (0, -1)), ("timing", (1, 0))]
         cur = int(t * 1.2) % 4
@@ -333,7 +333,7 @@ def draw_card(canvas, key: str, title: str, lines_pc: list, focus, t: float, tou
     text(canvas, title, (w // 2, y + 14), tut.BORDER, 16, "center")
     demo = pygame.Rect(x + 96, y + 28, pw - 156, demo_h)
     draw_demo(canvas, DEMO.get(key, ""), demo, t, touch)
-    # 왼쪽: 파이팅 중 칸에 뜨는 신호 아이콘 그대로 (31장 C5)
+    # 왼쪽: 파이팅 중 물고기 자리 배지에 뜨는 아이콘 그대로 (31장 C5)
     kind = DEMO.get(key, "")
     if kind and kind != "lure":
         from src.ui import signal_slots as ss

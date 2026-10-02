@@ -118,14 +118,20 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
         pygame.draw.rect(canvas, (150, 220, 255), (x - 3, y - 3, w + 6, h + 6), 1)  # 얼음에 쓸림: 장력 게이지 테두리 깜빡
 
 
+STATE_COLOR = {"지침": (130, 230, 255), "완전 지침": (130, 230, 255), "멈춤": (255, 240, 140),
+               "회복 중": (200, 200, 200)}
+
+
 def draw_boss_bar(canvas, pal, fight) -> None:
+    """체력 막대 + 왼쪽 물고기 이름(희귀도 색) + 오른쪽 지금 상태 (31-11: 상태 글자 복귀)."""
     w = canvas.get_width()
     bw, bh = 150, 6
     x = (w - bw) // 2
     y = 20
     fish = fight.fish
-    # 이름·상태 글자는 파이팅 중엔 안 보인다 (31장) — 희귀도 색 테두리로만
+    name = fish["name"] if not fight.brain.dragon else "용 '등용'"
     rc = RARITY_COLOR.get(fish["rarity"], (255, 255, 255))
+    text(canvas, name, (x - 6, y + 3), rc, 11, "midright")
     phases = fight.brain.phases
     if phases:
         # 페이즈 표시: ◆◆◇
@@ -139,6 +145,10 @@ def draw_boss_bar(canvas, pal, fight) -> None:
     canvas.fill((235, 90, 80), (x, y, int(bw * fight.stamina_frac), bh))
     canvas.fill((255, 170, 150), (x, y, int(bw * fight.stamina_frac), 1))
     pygame.draw.rect(canvas, rc, (x - 2, y - 2, bw + 4, bh + 4), 1)
+    st = fight.brain.display_name()
+    if fight.brain.state == "fake_tired":
+        st = "지침"
+    text(canvas, st, (x + bw + 6, y + 3), STATE_COLOR.get(st, (255, 200, 170)), 11, "midleft")
 
 
 def draw_drag(canvas, pal, fight, need: bool = False, t: float = 0.0) -> None:

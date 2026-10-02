@@ -1,7 +1,7 @@
 """설정.
 
 PC     : 탭 두 개 — [화면·소리] 음량, 화면 연출, 화면 배율, 튜토리얼 다시 보기, 소리 자막, 세이브 옮기기
-                    [접근성] 예고 시간 배율, 첫 만남 카드, 신호 칸 크기, 색약 모드, 소리 신호 (31장 C6)
+                    [접근성] 예고 시간 배율, 첫 만남 카드, 신호 크기, 색약 모드, 소리 신호 (31장 C6)
 모바일 : 탭 세 개 — [화면·소리] 음량, 화면 연출, 소리 자막, 튜토리얼
                     [터치·기기] 터치 버튼 크기·진하기, 왼손잡이, 진동(끔/약/중/강), 화면 갱신(30/60), 세이브 옮기기
                     [접근성] PC와 같음
@@ -69,7 +69,7 @@ class SettingsScene(Scene):
                 (lambda: self._step("tele_mult", -1, 2), lambda: self._step("tele_mult", 1, 2)))
         cards = ("첫 만남 신호 카드", "toggle", lambda: s.get("signal_cards"),
                  lambda: s.set("signal_cards", not s.get("signal_cards")))
-        slot = ("신호 칸 크기", "step", lambda: ("작게", "보통", "크게")[s.get("slot_size")],
+        slot = ("신호 크기", "step", lambda: ("작게", "보통", "크게")[s.get("slot_size")],
                 (lambda: self._step("slot_size", -1, 2), lambda: self._step("slot_size", 1, 2)))
         cb = ("색약 모드 (고대비 신호색)", "toggle", lambda: s.get("colorblind"),
               lambda: s.set("colorblind", not s.get("colorblind")))

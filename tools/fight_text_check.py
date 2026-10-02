@@ -1,4 +1,5 @@
-"""파이팅 중 글자 예산 점검 (DESIGN.md 31장): 화면 전체 동시 1개, 6글자 이하 (판정 글자는 제외 — 31-10).
+"""파이팅 중 글자 예산 점검 (DESIGN.md 31-11): 물고기 자리 행동 UI — 상태 글자·할 일 칩·한 단어·체력 막대 상태까지
+동시 5개 이하, 각 8글자 이하. 판정 글자(PERFECT! 등, 31-10)와 체력 막대의 물고기 이름은 제외.
 
 실제 낚시 화면(FishingScene)으로 기존 행동 + 신규 패턴 12종 + 전설을 파이팅시키며 매 3프레임 그려서
 hud.text / big_text 호출을 모두 센다. 디버그(F1)·멈춤 카드·도움말·결과 화면은 제외.
@@ -120,6 +121,7 @@ if ALL:
     for fish in all_fish():
         mine = [a for a in fish.get("actions", {}) if a in NEW]
         PLAN.append((fish["id"], random.choice(mine) if mine else None))
+MAX_N, MAX_LEN = 5, 8
 frames, bad = 0, collections.Counter()
 max_n, max_len = 0, 0
 for fid, pid in PLAN:
@@ -139,11 +141,13 @@ for fid, pid in PLAN:
         rec.clear()
         g.scenes.current.draw(g.screen.canvas)
         frames += 1
-        texts = [s for _, s in rec if s.strip()]
+        names = {f.fish["name"], "용 '등용'"}
+        texts = [s for fn, s in rec if s.strip() and not (fn == "draw_boss_bar" and s in names)]
         max_n = max(max_n, len(texts))
         for fn, s in rec:
-            max_len = max(max_len, len(s))
-        if len(texts) > 1 or any(len(s) > 6 for s in texts):
+            if s in texts:
+                max_len = max(max_len, len(s))
+        if len(texts) > MAX_N or any(len(s) > MAX_LEN for s in texts):
             bad[tuple(sorted(f"{fn}:{s}" for fn, s in rec))] += 1
 print(f"[{mode}] 프레임 {frames}, 동시 글자 최대 {max_n}, 최장 {max_len}글자, 위반 프레임 {sum(bad.values())}")
 for k, n in bad.most_common(12):

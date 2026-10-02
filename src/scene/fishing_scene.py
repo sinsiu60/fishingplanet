@@ -2122,7 +2122,7 @@ class FishingScene(Scene):
             self._faded(canvas, 200 * dim, lambda c: fight_hud.draw_distance(c, pal, f))
             self._faded(canvas, 150 * dim, lambda c: self._draw_fight_items(c, pal, f))
         if f.phase == "fight":
-            self._draw_signal_slots(canvas)  # 가장 위 (가장 선명)
+            self._draw_fish_cues(canvas)  # 물고기 자리 행동 UI — 가장 위 (가장 선명)
         if self.debug:
             pad_side = self.touch and not self.settings.get("touch_left")
             fight_hud.draw_debug(canvas, f, self.ctl.debug_lines(self.t), 100 if pad_side else 4)
@@ -2374,20 +2374,24 @@ class FishingScene(Scene):
         """대응 신호는 신호 슬롯 두 칸에만 (31장 C3). 여기선 물고기 몸짓 쪽 연출(동굴 천장 반사광)만."""
         self._draw_ceiling_cues(canvas)
 
-    def _draw_signal_slots(self, canvas) -> None:
+    def _draw_fish_cues(self, canvas) -> None:
+        """물고기 자리 행동 UI (31-11): 예고 카운트다운 → 진행 장치 → 판정이 물고기에 붙어서 진행."""
+        from src.ui import fish_cues
         f, b = self.fight, self.fight.brain
         dark = "dark" in f.gim.kinds(b)
         inked = self.ink_t > 0 or b.dark
         sigs = signal_slots.collect(f, b.sound_only, inked, dark)
-        left = bool(self.touch and self.settings.get("touch_left"))
-        sx, sy = self.game.screen.shake
-        if (sx, sy) == (0, 0):
-            signal_slots.draw(canvas, f, sigs, self.touch, left, self.t)
-            return
-        # 화면 흔들림이 신호 칸을 흔들지 않게: 흔들림만큼 반대로 그려 칸은 제자리에 (31장 C6)
-        lay = self._layer(canvas)
-        signal_slots.draw(lay, f, sigs, self.touch, left, self.t)
-        canvas.blit(lay, (-sx, -sy))
+        x, z = f.fish_xz()
+        mp = self.screen_fx.map
+
+        def apex(hgt):
+            p = self.cam.project(x, z, hgt)
+            return mp((p[0], p[1])) if p else None
+
+        fish_cues.draw(canvas, {"fight": f, "sigs": sigs, "anchor": mp(self._fish_screen()), "apex": apex,
+                                "touch": self.touch, "t": self.t, "flick_cfg": self.flick_cfg,
+                                "fight_cfg": self.fish_cfg["fight"],
+                                "judge_busy": any(it["t"] < 0.8 for it in self.popups.items)})
 
     def _layer(self, canvas) -> pygame.Surface:
         lay = getattr(self, "_fade_layer", None)

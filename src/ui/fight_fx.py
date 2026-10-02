@@ -28,7 +28,7 @@ RING_SPREAD = 58     # 예고 시작 시 접근 원이 판정 원보다 얼마�
 # ───────────────────────── 점프 판정 원 ─────────────────────────
 
 def draw_jump_ring(canvas, center, time_to_apex: float, total: float, perfect_w: float, good_w: float,
-                   t: float, spread: float | None = None) -> None:
+                   t: float, spread: float | None = None, label: str | None = None) -> None:
     """바깥 원이 줄어들어 판정 원과 겹치는 순간 = 점프 정점 = 퍼펙트."""
     sp = spread or RING_SPREAD  # 신호 슬롯 안에선 작게 (31장 C3)
     if center is None or total <= 0:
@@ -62,6 +62,8 @@ def draw_jump_ring(canvas, center, time_to_apex: float, total: float, perfect_w:
         pygame.draw.circle(surf, (*SHADOW, alpha // 2), (o + 1, o + 1), int(r_approach), 2)
         pygame.draw.circle(surf, (*col, alpha), (o, o), int(r_approach), 2)
     canvas.blit(surf, (cx - o, cy - o))
+    if label and time_to_apex > 0.2:
+        big_text(canvas, label, (cx, cy + RING_R + 11), (230, 240, 255), 1.0, outline=True)
 
 
 # ───────────────────────── 행동 아이콘 ─────────────────────────
@@ -235,6 +237,51 @@ def _arrow(canvas, cx: float, cy: float, direction: int, length: float, color, w
         pygame.draw.line(canvas, color, (x1, cy), (x1 - direction * head, cy + sgn * head * 0.7), width)
 
 
+def draw_turn_chevrons(canvas, pos, direction: int, amount: float, t: float) -> None:
+    """방향 전환: 물고기 옆에 진행 방향으로 흐르는 화살표 (>>>)."""
+    if pos is None or not direction:
+        return
+    x0, y0 = pos
+    for i in range(3):
+        off = (t * 2.5 + i / 3) % 1.0
+        x = x0 + direction * (14 + off * 34)
+        a = amount * (1 - abs(off - 0.5) * 1.4)
+        if a <= 0.05:
+            continue
+        col = lerp_color((60, 50, 20), ICON_COL["turn"], a)
+        pts = [(x - direction * 4, y0 - 6), (x + direction * 2, y0), (x - direction * 4, y0 + 6)]
+        pygame.draw.lines(canvas, SHADOW, False, [(p[0] + 1, p[1] + 1) for p in pts], 2)
+        pygame.draw.lines(canvas, col, False, pts, 2)
+
+
+def draw_turn_prompt(canvas, pos, need: int, offset: float, before: float, after: float, perfect: float,
+                     t: float) -> None:
+    """방향 전환 꺾기: 물고기 옆 큰 화살표 + 타이밍 막대 (가운데 = 전환 순간 = PERFECT)."""
+    if pos is None:
+        return
+    x, y = pos
+    in_perfect = abs(offset) <= perfect
+    in_window = -before <= offset <= after
+    col = GOLD if in_perfect else (SWIPE if in_window else (200, 210, 220))
+    pulse = 1.0 + (0.25 * math.sin(t * 30) if in_window else 0.0)
+    _arrow(canvas, x + need * 34, y - 10, need, 30 * pulse, col, 3)
+    big_text(canvas, "확 꺾기!", (x + need * 34, y - 26), col, 1.0, outline=True)
+    # 타이밍 막대
+    bw = 70
+    bx, by = x + need * 34 - bw // 2, y + 6
+    canvas.fill(SHADOW, (bx - 1, by - 1, bw + 2, 7))
+    canvas.fill((30, 36, 56), (bx, by, bw, 5))
+    span = before + after
+    zero = bx + bw * before / span
+    pz = bw * perfect / span
+    canvas.fill((70, 140, 150), (bx + int(bw * 0 / span), by, int(bw * (before + after) / span), 5))
+    canvas.fill((60, 70, 90), (bx, by, int(zero - bx - pz), 5))
+    canvas.fill(GOLD, (int(zero - pz), by, max(2, int(pz * 2)), 5))
+    k = clamp((offset + before) / span, -0.4, 1.0)
+    mx = bx + bw * k
+    canvas.fill((255, 255, 255), (int(mx) - 1, by - 3, 3, 11))
+
+
 def draw_swipe_ring(canvas, center, time_to_apex: float, total: float, perfect_w: float, good_w: float,
                     need: int, t: float, spread: float | None = None) -> None:
     """몸털기 점프: 하늘색 판정 원 + 안쪽 화살표. 원이 겹치는 순간 화살표 방향으로 슬라이드."""
@@ -262,7 +309,7 @@ def draw_swipe_ring(canvas, center, time_to_apex: float, total: float, perfect_w
     canvas.blit(surf, (cx - o, cy - o))
     _arrow(canvas, cx, cy, need, 16, (255, 255, 255) if not in_good else GOLD, 2)
     if time_to_apex > 0.15:
-        _flick_arrow(canvas, cx + need * 6, cy + RING_R + 12, need, SWIPE)
+        big_text(canvas, "슬라이드", (cx + need * 6, cy + RING_R + 12), SWIPE, 1.0, outline=True)
         _arrow(canvas, cx - need * 26, cy + RING_R + 12, need, 12, SWIPE, 2)
 
 
