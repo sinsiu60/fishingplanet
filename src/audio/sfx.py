@@ -195,30 +195,39 @@ class Sfx:
                 out = np.stack([np.convolve(out[:, c], k, mode="same") for c in range(out.shape[1])], axis=1)
         return pygame.sndarray.make_sound(np.ascontiguousarray(np.clip(out, -32768, 32767).astype(np.int16)))
 
-    def _channel(self, bus: str):
-        """빈 채널. 신호는 예약 채널(0~3). 없으면 우선순위가 같거나 낮은 것 중 가장 덜 중요하고 오래된 소리를 끊는다."""
+    def _free(self) -> tuple[int, pygame.mixer.Channel] | None:
+        """예약(신호·음악 층) 뒤의 빈 채널. pygame(안드로이드 2.6)·pygame-ce 둘 다 되게 번호로 직접 찾는다."""
+        for i in range(self.n_sig + self.n_mus, pygame.mixer.get_num_channels()):
+            ch = pygame.mixer.Channel(i)
+            if not ch.get_busy():
+                return i, ch
+        return None
+
+    def _channel(self, bus: str) -> tuple[int, pygame.mixer.Channel] | None:
+        """(채널 번호, 채널). 신호는 예약 채널(0~3). 없으면 우선순위가 같거나 낮은 것 중 가장 덜 중요하고 오래된 소리를 끊는다.
+        Channel 객체는 부를 때마다 새로 만들어지고 pygame 2.6 에는 Channel.id 가 없다 → 번호(idx)를 같이 들고 다닌다."""
         prio = self.cfg["priority"][bus]
         if bus == "sig":
             for i in range(self.n_sig):
                 ch = pygame.mixer.Channel(i)
                 if not ch.get_busy():
-                    return ch
+                    return i, ch
             olds = [e for e in self.active if e["bus"] == "sig" and not e["loop"]]
             if olds:
                 e = min(olds, key=lambda e: e["t0"])
                 e["ch"].stop()
-                return e["ch"]
-            return pygame.mixer.Channel(0)
-        ch = pygame.mixer.find_channel(False)
-        if ch is not None:
-            return ch
+                return e["idx"], e["ch"]
+            return 0, pygame.mixer.Channel(0)
+        got = self._free()
+        if got is not None:
+            return got
         cands = [e for e in self.active if not e["loop"] and e["bus"] != "sig" and e["prio"] >= prio
                  and e["ch"].get_busy()]
         if not cands:
             return None
         e = max(cands, key=lambda e: (e["prio"], -e["t0"]))
         e["ch"].stop()
-        return e["ch"]
+        return e["idx"], e["ch"]
 
     def play(self, name: str, volume: float = 1.0, pan: float | None = None, haptic: str | None = None,
              strength: float = 1.0) -> pygame.mixer.Channel | None:
@@ -258,9 +267,10 @@ class Sfx:
             oldest = min(same, key=lambda e: e["t0"])
             oldest["ch"].stop()
         bus = self.bus_of(name)
-        ch = self._channel(bus)
-        if ch is None:
+        got = self._channel(bus)
+        if got is None:
             return None
+        idx, ch = got
         snd = self._variant(name)
         snd.set_volume(1.0)
         if name in c["variation"]["names"]:
@@ -269,9 +279,9 @@ class Sfx:
         if getattr(self, "boost", 1) >= 2 and bus == "sig":
             volume *= 2.0  # 투명 변이: 예고 소리 +6dB
         ch.play(snd)
-        e = {"ch": ch, "name": name, "bus": bus, "prio": c["priority"][bus], "t0": self.clock, "vol": volume,
-             "pan": pan, "loop": False}
-        self.active = [a for a in self.active if a["ch"].id != ch.id]  # Channel 객체는 매번 새로 만들어진다 → id로 비교
+        e = {"ch": ch, "idx": idx, "name": name, "bus": bus, "prio": c["priority"][bus], "t0": self.clock,
+             "vol": volume, "pan": pan, "loop": False}
+        self.active = [a for a in self.active if a["idx"] != idx]  # 같은 채널의 예전 기록은 버림
         self.active.append(e)
         self.last_play[name] = self.clock
         self._apply(e)
@@ -335,14 +345,15 @@ class Sfx:
                 return
             if e is not None:
                 e["ch"].stop()
-            ch = self._channel(bus) if bus == "sig" else pygame.mixer.find_channel(False) or self._channel(bus)
-            if ch is None:
+            got = self._channel(bus) if bus == "sig" else self._free() or self._channel(bus)
+            if got is None:
                 return
+            idx, ch = got
             snd.set_volume(1.0)
             ch.play(snd, loops=-1)
-            e = {"ch": ch, "name": name, "bus": bus, "prio": self.cfg["priority"][bus], "t0": self.clock, "vol": volume,
-                 "pan": None, "loop": True}
-            self.active = [a for a in self.active if a["ch"].id != ch.id]  # Channel 객체는 매번 새로 만들어진다 → id로 비교
+            e = {"ch": ch, "idx": idx, "name": name, "bus": bus, "prio": self.cfg["priority"][bus], "t0": self.clock,
+                 "vol": volume, "pan": None, "loop": True}
+            self.active = [a for a in self.active if a["idx"] != idx]
             self.active.append(e)
             self.loops[name] = e
             self._apply(e)

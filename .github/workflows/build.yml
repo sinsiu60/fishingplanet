@@ -81,6 +81,14 @@ jobs:
         run: |
           python tools/bake_sfx.py --check
           python tools/bake_music.py --check
+      - name: 폰과 같은 pygame 2.6 에서 소리·장면 확인 (pygame-ce 전용 API 쓰면 여기서 실패)
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          python -m venv /tmp/pg26
+          /tmp/pg26/bin/pip install -q pygame==2.6.1 numpy
+          /tmp/pg26/bin/python tools/compat_smoke.py
       - name: SDK·NDK 캐시
         uses: actions/cache@v4
         with:

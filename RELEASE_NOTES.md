@@ -1,10 +1,14 @@
-# 낚시 게임 v0.8.0
+# 낚시 게임 v0.8.1
+
+> **v0.8.0 APK가 켜자마자 꺼지던 문제를 고친 버전입니다.** 폰용 pygame(2.6)에 없는 기능(Channel.id)을 새 사운드 믹서가 써서
+> 첫 소리를 내는 순간 종료됐습니다. 이제 두 pygame 모두에서 같은 방식으로 동작하고, 빌드 때 폰과 같은 pygame으로 자동 확인합니다.
+
 
 ## 받기
 | 파일 | 대상 |
 |---|---|
-| `FishingGame-v0.8.0-windows.zip` | 윈도 PC — 압축을 풀고 `FishingGame.exe` 실행 (폴더째로 두세요, `_internal` 지우면 안 됨) |
-| `FishingGame-v0.8.0-android.apk` | 안드로이드 — 폰에서 열어 설치 ('출처를 알 수 없는 앱' 허용 필요, 테스트용 debug 서명) |
+| `FishingGame-v0.8.1-windows.zip` | 윈도 PC — 압축을 풀고 `FishingGame.exe` 실행 (폴더째로 두세요, `_internal` 지우면 안 됨) |
+| `FishingGame-v0.8.1-android.apk` | 안드로이드 — 폰에서 열어 설치 ('출처를 알 수 없는 앱' 허용 필요, 테스트용 debug 서명) |
 
 "Windows의 PC 보호" 창이 뜨면 [추가 정보] → [실행] (서명 안 된 개인 제작 exe의 정상 경고). 세이브는 예전 버전과 호환됩니다.
 
