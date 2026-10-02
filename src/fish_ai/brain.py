@@ -119,6 +119,7 @@ class FishBrain:
         self.last_ep_action: str | None = None
         self.mastery: dict | None = None      # 세이브 pattern_mastery (낚시 화면이 넣어 줌, 봇·테스트는 None = 배율 1)
         self.fail_streak: dict | None = None  # 세이브 pattern_fail_streak
+        self.access_mult = 1.0                 # 접근성 설정 예고 시간 배율 1.0/1.25/1.5 (랭크 판정엔 영향 없음)
         self.first_rush = fish.get("first_rush")
         self.first_rush_on = False
         self.first_rush_done = not self.first_rush
@@ -471,7 +472,7 @@ class FishBrain:
                 self.turn_dir = self.rnd.choice((-1, 1))
         self.cur_telegraph = duration if duration is not None else self.telegraph_sec
         self.cur_telegraph = max(self.cur_telegraph, self.min_telegraph(action))  # 계열별 최소 예고 (31장 C4)
-        self.cur_telegraph *= self.learn_mult(action)  # 패턴 숙련도 (31장 C5)
+        self.cur_telegraph *= self.learn_mult(action) * self.access_mult  # 패턴 숙련도 (C5) × 접근성 배율 (C6)
         speed = getattr(self, "train_speed", None)  # 훈련 수조 예고 속도
         if speed == "slow":
             self.cur_telegraph = self.min_telegraph(action) * 2

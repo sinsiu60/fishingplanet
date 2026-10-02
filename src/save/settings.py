@@ -7,7 +7,11 @@ DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": N
             # 모바일 터치 버튼: 크기·투명도 0~2단계, 왼손잡이(좌우 반전)
             "touch_size": 1, "touch_alpha": 1, "touch_left": False,
             # 모바일: 진동 0=끔 1=약 2=중 3=강, 화면 갱신 30/60 (메뉴 화면은 늘 30)
-            "vibration": 2, "fps": 60}
+            "vibration": 2, "fps": 60,
+            # 접근성 (31장 C6): 예고 시간 배율 0=1.0 1=1.25 2=1.5, 첫 만남 카드, 신호 슬롯 크기 0~2, 색약 팔레트, 소리 신호
+            "tele_mult": 0, "signal_cards": True, "slot_size": 1, "colorblind": False, "signal_sound": True}
+
+TELE_MULTS = (1.0, 1.25, 1.5)
 
 
 class Settings:

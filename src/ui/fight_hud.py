@@ -28,6 +28,11 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
     def ty(v):
         return y + h - clamp(v, 0, 100) / 100 * h
 
+    # 장력·줄·바늘을 한 묶음으로 (31장 C6): 옅은 받침 하나 — 걸림·기믹 게이지는 그 오른쪽에 따로
+    back = pygame.Surface((72, h + 30), pygame.SRCALPHA)
+    pygame.draw.rect(back, (10, 14, 28, 90), back.get_rect(), border_radius=6)
+    canvas.blit(back, (x - 6, y - 6))
+
     gl, gh = fight.green_low, fight.green_high
     canvas.fill(SHADOW, (x - 1, y - 1, w + 2, h + 2))
     canvas.fill(lerp_color(SLACK, (0, 0, 0), 0.35), (x, ty(gl), w, ty(0) - ty(gl)))
@@ -136,15 +141,18 @@ def draw_boss_bar(canvas, pal, fight) -> None:
     pygame.draw.rect(canvas, rc, (x - 2, y - 2, bw + 4, bh + 4), 1)
 
 
-def draw_drag(canvas, pal, fight) -> None:
+def draw_drag(canvas, pal, fight, need: bool = False, t: float = 0.0) -> None:
+    """드랙 5칸. need = 지금 드랙이 중요할 때(돌진·힘 모으기·장력 빨강·방금 바꿈) — 금색 테두리로 강조 (31장 C6)."""
     x, y = 8, 226
-    icons.reel(canvas, x + 6, y, pal["text"])
+    icons.reel(canvas, x + 6, y, (255, 220, 120) if need else pal["text"])
     bx = x + 18
     for i in range(fight.drag_steps):
         filled = i < fight.drag
         rect = (bx + i * 7, y - 3, 5, 7)
         canvas.fill(SHADOW, (rect[0] - 1, rect[1] - 1, 7, 9))
         canvas.fill((255, 220, 120) if filled else (60, 64, 80), rect)
+    if need and int(t * 4) % 2 == 0:
+        pygame.draw.rect(canvas, (255, 220, 120), (x - 2, y - 7, 18 + fight.drag_steps * 7 + 4, 15), 1, border_radius=3)
 
 
 def draw_distance(canvas, pal, fight, inset: int = 0) -> None:

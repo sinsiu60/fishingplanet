@@ -11,7 +11,12 @@
    "icon": "release",
    "sound": "sig_release",
    "haptic": "sig_release",
-   "hand": "L"
+   "hand": "L",
+   "cb_color": [
+    86,
+    180,
+    233
+   ]
   },
   "reel": {
    "name": "감기",
@@ -23,7 +28,12 @@
    "icon": "reel",
    "sound": "sig_reel",
    "haptic": "sig_reel",
-   "hand": "R"
+   "hand": "R",
+   "cb_color": [
+    240,
+    150,
+    30
+   ]
   },
   "timing": {
    "name": "타이밍",
@@ -35,7 +45,12 @@
    "icon": "ring",
    "sound": "sig_timing",
    "haptic": "sig_timing",
-   "hand": "L"
+   "hand": "L",
+   "cb_color": [
+    245,
+    232,
+    66
+   ]
   },
   "direction": {
    "name": "방향",
@@ -47,7 +62,12 @@
    "icon": "arrow",
    "sound": "sig_direction",
    "haptic": "sig_direction",
-   "hand": "R"
+   "hand": "R",
+   "cb_color": [
+    250,
+    250,
+    250
+   ]
   },
   "endure": {
    "name": "참기",
@@ -59,7 +79,12 @@
    "icon": "hand",
    "sound": "sig_endure",
    "haptic": "sig_endure",
-   "hand": "R"
+   "hand": "R",
+   "cb_color": [
+    160,
+    160,
+    160
+   ]
   },
   "gesture": {
    "name": "제스처",
@@ -71,7 +96,12 @@
    "icon": "spin",
    "sound": "sig_gesture",
    "haptic": "sig_gesture",
-   "hand": "R"
+   "hand": "R",
+   "cb_color": [
+    214,
+    110,
+    170
+   ]
   }
  },
  "actions": {
@@ -185,7 +215,12 @@
   ],
   "touch_y": 0.6,
   "size": 40,
-  "ring_spread": 30
+  "ring_spread": 30,
+  "size_mult": [
+   0.8,
+   1.0,
+   1.25
+  ]
  },
  "dual_stagger_sec": 0.5,
  "legend_last_phase": 5,

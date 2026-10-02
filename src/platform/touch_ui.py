@@ -126,8 +126,9 @@ def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0
     layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
     for c in controls:
         on = c.id in pressed
-        fill = (60, 80, 120, min(255, a + 40)) if on else (16, 22, 40, a)
-        edge = (255, 220, 120, 230) if on else (220, 228, 245, min(255, a + 60))
+        ca = a // 2 if c.id == "item" and not on else a  # 소모품(우선순위 5)은 더 옅게 (31장 C6)
+        fill = (60, 80, 120, min(255, ca + 40)) if on else (16, 22, 40, ca)
+        edge = (255, 220, 120, 230) if on else (220, 228, 245, min(255, ca + 60))
         if c.shape == "circle":
             pygame.draw.circle(layer, fill, c.center, c.r)
             pygame.draw.circle(layer, edge, c.center, c.r, 1)

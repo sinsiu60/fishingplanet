@@ -271,7 +271,8 @@ class FishingScene(Scene):
         ending = f is not None and f.phase in ("caught", "lost")  # 결과 화면: 탭하면 넘어가니 버튼은 숨김
         return {"fight": fighting, "overlay": overlay, "horizon": self.cam.horizon,
                 "can_look": free and f is None and c.state in LOOK_STATES,
-                "show_pause": free and not ending, "show_bag": free and self.can_open_menus(),
+                "show_pause": free and not ending and not fighting,  # 파이팅 중 메뉴 숨김 (뒤로 가기로 멈춤, 31장 C6)
+                "show_bag": free and self.can_open_menus(),
                 "can_retrieve": free and f is None and c.state == CastState.LANDED,
                 "lure": free and f is None and c.state == CastState.LANDED and self.bite.state == BiteState.WAIT,
                 "items": items, "drag": (f.drag, f.drag_steps) if fighting else None,
@@ -582,6 +583,8 @@ class FishingScene(Scene):
         # 패턴 숙련도·연속 실패 보조 (31장 C5) — 세이브 값을 두뇌가 바로 쓴다
         self.fight.brain.mastery = self.save.data.setdefault("pattern_mastery", {})
         self.fight.brain.fail_streak = self.save.data.setdefault("pattern_fail_streak", {})
+        from src.save.settings import TELE_MULTS
+        self.fight.brain.access_mult = TELE_MULTS[self.settings.get("tele_mult")]  # 접근성 예고 배율 (31장 C6)
         self.missed_signals: list[str] = []   # 결과 화면: 놓친 신호
         self.mastery_ups: list[str] = []      # 결과 화면: 숙련도가 오른 패턴
         if self.touch:
@@ -677,6 +680,9 @@ class FishingScene(Scene):
         self.popups.update(dt)
         self.toasts.update(dt)
         self.toasts.sink = self._say if self._fight_text_mode() else None
+        self.sig_dim_t = max(0.0, getattr(self, "sig_dim_t", 0.0) - dt)
+        self.drag_seen_t = max(0.0, getattr(self, "drag_seen_t", 0.0) - dt)
+        signal_slots.configure(self.settings)
         if self.captions:
             self.captions[1] -= dt
             if self.captions[1] <= 0:
@@ -1331,7 +1337,7 @@ class FishingScene(Scene):
                 self.sparkles.burst(*pos, count=6, speed=0.5, ring=False)  # 이빨 반짝
             seen = self.save.data.setdefault("patterns_seen", [])
             card = f"pattern:{pid}"
-            if card in tut.CARDS and self.card is None and self.tutorial.want(card):
+            if card in tut.CARDS and self.card is None and self.tutorial.want(card) and self.settings.get("signal_cards"):
                 # 처음 보는 패턴: 예고 순간 멈추고 시범 그림이 있는 설명 카드
                 if pid not in seen:
                     seen.append(pid)
@@ -1441,7 +1447,8 @@ class FishingScene(Scene):
             if fam not in sig["families"]:
                 continue
             fc = sig["families"][fam]
-            self.sfx.play(fc["sound"], 0.8)
+            if self.settings.get("signal_sound"):  # 접근성: 소리 신호 끄기 → 칸 그림 강조 (31장 C6)
+                self.sfx.play(fc["sound"], 0.8)
             self.game.haptics.vibrate(fc["haptic"])
 
     def _mastery_event(self, ev: str) -> None:
@@ -1489,6 +1496,7 @@ class FishingScene(Scene):
         self.sfx.boost = 2 if "clear" in f.mutations and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
         if ev.startswith("telegraph:"):
             self._signal_cue(ev.split(":", 1)[1])
+            self.sig_dim_t = 0.9  # 신호가 뜨는 순간: 하위 HUD 잠깐 더 흐리게
         elif ev in ("action:charge", "tired", "hide_peek"):
             self._signal_cue("charge")  # 감기 계열 (빈틈·고개 내밂)
         qr = getattr(self, "quest_run", None)
@@ -1496,7 +1504,8 @@ class FishingScene(Scene):
             qr.on_event(ev)
         if ev in tut.CARDS and self.card is None and self.tutorial.want(ev):
             if ev.startswith("telegraph:"):
-                self._open_signal_card(ev)
+                if self.settings.get("signal_cards"):  # 접근성: 첫 만남 카드 끄기 (31장 C6)
+                    self._open_signal_card(ev)
             else:
                 self._open_card(ev, None if ev == "net_start" else "fish")
         elif ev == "hazard_enter":
@@ -2021,6 +2030,7 @@ class FishingScene(Scene):
             if self.end_t > 1.2:
                 signal_slots.draw_result_icons(canvas, self.missed_signals, self.mastery_ups,
                                                (12 + (self.hud_inset if self.touch else 0), 214), self.t)
+            self._draw_access_mark(canvas)
             return
         if f.phase == "lost":
             fight_hud.draw_lose_panel(canvas, f, LOSE_REASONS[f.lose_reason], self.end_t)
@@ -2029,6 +2039,7 @@ class FishingScene(Scene):
                                                (canvas.get_width() // 2 - 110, 194), self.t)
             if qr is not None and qr.items:
                 fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)
+            self._draw_access_mark(canvas)
             return
         if self.dragon_fx is not None:
             self.dragon_fx.draw(canvas)
@@ -2040,20 +2051,25 @@ class FishingScene(Scene):
         self._draw_behavior_ui(canvas)
         self.popups.draw(canvas, self.screen_fx.map)
         self.screen_fx.draw_edges(canvas)
+        # HUD 우선순위 (31장 C6): 1 신호 칸 / 2 장력·내구도 / 3 드랙(필요할 때만 진하게) / 4 거리(작게) / 5 의뢰·소모품(반투명).
+        # 신호가 막 뜨면 3 이하는 잠깐 더 흐려진다.
         fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
         fight_hud.draw_boss_bar(canvas, pal, f)
-        if f.phase == "fight":
-            self._draw_signal_slots(canvas)
+        dim = 1.0 - 0.55 * min(1.0, self.sig_dim_t / 0.3)
         qr = getattr(self, "quest_run", None)
         if qr is not None and qr.items:
-            fight_hud.draw_quest_icon(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)
+            self._faded(canvas, 150 * dim, lambda c: fight_hud.draw_quest_icon(c, qr.hud_lines(),
+                                                                                  self.hud_inset if self.touch else 0))
         if self.touch:
             # 드랙·소모품·조작 안내는 터치 버튼이 대신한다
-            fight_hud.draw_distance(canvas, pal, f, self.hud_inset)
+            self._faded(canvas, 200 * dim, lambda c: fight_hud.draw_distance(c, pal, f, self.hud_inset))
         else:
-            fight_hud.draw_drag(canvas, pal, f)
-            fight_hud.draw_distance(canvas, pal, f)
-            self._draw_fight_items(canvas, pal, f)
+            need = self._drag_needed(f)
+            self._faded(canvas, 255 if need else 120 * dim, lambda c: fight_hud.draw_drag(c, pal, f, need, t))
+            self._faded(canvas, 200 * dim, lambda c: fight_hud.draw_distance(c, pal, f))
+            self._faded(canvas, 150 * dim, lambda c: self._draw_fight_items(c, pal, f))
+        if f.phase == "fight":
+            self._draw_signal_slots(canvas)  # 가장 위 (가장 선명)
         if self.debug:
             pad_side = self.touch and not self.settings.get("touch_left")
             fight_hud.draw_debug(canvas, f, self.ctl.debug_lines(self.t), 100 if pad_side else 4)
@@ -2310,7 +2326,48 @@ class FishingScene(Scene):
         dark = "dark" in f.gim.kinds(b)
         inked = self.ink_t > 0 or b.dark
         sigs = signal_slots.collect(f, b.sound_only, inked, dark)
-        signal_slots.draw(canvas, f, sigs, self.touch, bool(self.touch and self.settings.get("touch_left")), self.t)
+        left = bool(self.touch and self.settings.get("touch_left"))
+        sx, sy = self.game.screen.shake
+        if (sx, sy) == (0, 0):
+            signal_slots.draw(canvas, f, sigs, self.touch, left, self.t)
+            return
+        # 화면 흔들림이 신호 칸을 흔들지 않게: 흔들림만큼 반대로 그려 칸은 제자리에 (31장 C6)
+        lay = self._layer(canvas)
+        signal_slots.draw(lay, f, sigs, self.touch, left, self.t)
+        canvas.blit(lay, (-sx, -sy))
+
+    def _layer(self, canvas) -> pygame.Surface:
+        lay = getattr(self, "_fade_layer", None)
+        if lay is None or lay.get_size() != canvas.get_size():
+            lay = self._fade_layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+        lay.set_alpha(None)
+        lay.fill((0, 0, 0, 0))
+        return lay
+
+    def _faded(self, canvas, alpha: float, fn) -> None:
+        """우선순위 낮은 HUD를 반투명으로 (31장 C6)."""
+        if alpha >= 250:
+            fn(canvas)
+            return
+        lay = self._layer(canvas)
+        fn(lay)
+        lay.set_alpha(int(max(0, alpha)))
+        canvas.blit(lay, (0, 0))
+
+    def _drag_needed(self, f) -> bool:
+        """드랙 칸을 진하게: 돌진·힘 모으기·장력 빨강, 또는 방금 드랙을 바꿨을 때."""
+        if f.drag != getattr(self, "_drag_last", f.drag):
+            self.drag_seen_t = 1.2
+        self._drag_last = f.drag
+        return f.brain.state in ("rush", "charge") or f.zone() == "red" or getattr(self, "drag_seen_t", 0.0) > 0
+
+    def _draw_access_mark(self, canvas) -> None:
+        """접근성 예고 배율을 썼으면 결과 화면 오른쪽 아래에 작게 (랭크 판정은 그대로)."""
+        m = getattr(self.fight.brain, "access_mult", 1.0)
+        if m != 1.0 and self.end_t > 1.0:
+            inset = self.hud_inset if self.touch else 0
+            hud.text(canvas, f"예고 ×{m:g}", (canvas.get_width() - 8 - inset, canvas.get_height() - 8), (150, 158, 180),
+                     11, "bottomright")
 
     def _draw_line_and_bobber(self, canvas, pal, tip) -> None:
         c, cam = self.cast, self.cam

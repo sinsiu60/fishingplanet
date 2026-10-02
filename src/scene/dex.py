@@ -43,6 +43,8 @@ class DexScene(Scene):
         super().__init__(game)
         self.fishing = fishing
         self.save = game.save
+        from src.ui import signal_slots
+        signal_slots.configure(game.settings)  # 색약 모드 신호색 (31장 C6)
         self.mouse = (0, 0)
         self.age = 0.0  # 열림 애니메이션
         self.fish = load_json("fish.json")["fish"]

@@ -1,11 +1,14 @@
 """설정.
 
-PC     : 음량, 화면 연출, 화면 배율, 튜토리얼 다시 보기, 소리 자막, 세이브 옮기기
-모바일 : 탭 두 개 — [화면·소리] 음량, 화면 연출, 소리 자막, 튜토리얼
+PC     : 탭 두 개 — [화면·소리] 음량, 화면 연출, 화면 배율, 튜토리얼 다시 보기, 소리 자막, 세이브 옮기기
+                    [접근성] 예고 시간 배율, 첫 만남 카드, 신호 칸 크기, 색약 모드, 소리 신호 (31장 C6)
+모바일 : 탭 세 개 — [화면·소리] 음량, 화면 연출, 소리 자막, 튜토리얼
                     [터치·기기] 터치 버튼 크기·진하기, 왼손잡이, 진동(끔/약/중/강), 화면 갱신(30/60), 세이브 옮기기
+                    [접근성] PC와 같음
 """
 from src.platform.detect import IS_MOBILE
 from src.platform.haptics import LEVEL_NAMES
+from src.save.settings import TELE_MULTS
 from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text
@@ -23,7 +26,10 @@ class SettingsScene(Scene):
         self.msg_t = 0.0
         self.w = game.screen.ui_rect.w
         self.x0 = self.w // 2 - 140
-        self.tabs = ui.Tabs(self.w // 2 - 102, 56, ["화면·소리", "터치·기기"], width=100) if IS_MOBILE else None
+        if IS_MOBILE:
+            self.tabs = ui.Tabs(self.w // 2 - 137, 56, ["화면·소리", "터치·기기", "접근성"], width=90)
+        else:
+            self.tabs = ui.Tabs(self.w // 2 - 102, 56, ["화면·소리", "접근성"], width=100)
         self._build()
 
     # ── 줄 정의: (이름, 종류, 값 글자 함수, 동작들) ──
@@ -36,6 +42,8 @@ class SettingsScene(Scene):
         tutorial = ("튜토리얼", "button", lambda: "처음부터 다시 보기", self._reset_tutorial)
         captions = ("소리 자막 (예고음 글자로)", "toggle", lambda: s.get("sound_captions"), self._toggle_captions)
         transfer = ("세이브 옮기기 (PC·모바일)", "button", lambda: "열기", self._open_transfer)
+        if self.tabs.labels[self.tabs.index] == "접근성":
+            return self._access_rows()
         if not IS_MOBILE:
             scale = ("화면 배율", "step", lambda: f"{self.game.screen.scale}배 (최대 {self._max_scale()})",
                      (lambda: self._scale(-1), lambda: self._scale(1)))
@@ -54,12 +62,24 @@ class SettingsScene(Scene):
                lambda: s.set("fps", 30 if s.get("fps") == 60 else 60))
         return [size, alpha, left, vib, fps, transfer]
 
+    def _access_rows(self) -> list[tuple]:
+        """접근성 (31장 C6). 예고 배율은 랭크 판정에 영향 없음 — 결과 화면에 작게 표시."""
+        s = self.s
+        tele = ("예고 시간 배율", "step", lambda: f"{TELE_MULTS[s.get('tele_mult')]}배",
+                (lambda: self._step("tele_mult", -1, 2), lambda: self._step("tele_mult", 1, 2)))
+        cards = ("첫 만남 신호 카드", "toggle", lambda: s.get("signal_cards"),
+                 lambda: s.set("signal_cards", not s.get("signal_cards")))
+        slot = ("신호 칸 크기", "step", lambda: ("작게", "보통", "크게")[s.get("slot_size")],
+                (lambda: self._step("slot_size", -1, 2), lambda: self._step("slot_size", 1, 2)))
+        cb = ("색약 모드 (고대비 신호색)", "toggle", lambda: s.get("colorblind"),
+              lambda: s.set("colorblind", not s.get("colorblind")))
+        snd = ("소리 신호 (끄면 그림 강조)", "toggle", lambda: s.get("signal_sound"),
+               lambda: s.set("signal_sound", not s.get("signal_sound")))
+        return [tele, cards, slot, cb, snd]
+
     def _build(self) -> None:
         x = self.x0 + ROW_X
-        if IS_MOBILE:
-            y0, step, back_y = 86, 24, 226
-        else:
-            y0, step, back_y = 66, 26, 212
+        y0, step, back_y = 86, 24, 226
         self.rows = self._rows()
         self.rows_y = [y0 + i * step for i in range(len(self.rows))]
         self.buttons = []
@@ -126,7 +146,7 @@ class SettingsScene(Scene):
             self._back()
         elif a.name == "primary":
             m = a.pos
-            if self.tabs is not None and self.tabs.click(m):
+            if self.tabs.click(m):
                 self.game.sfx.play("click")
                 self._build()
                 return
@@ -149,10 +169,9 @@ class SettingsScene(Scene):
         ui.dim(canvas, 170)
         canvas = self.ui_canvas(canvas)
         w = canvas.get_width()
-        ui.panel(canvas, (self.x0 - 10, 30, 300, 218 if IS_MOBILE else 210))
+        ui.panel(canvas, (self.x0 - 10, 30, 300, 218))
         text(canvas, "설정", (w // 2, 44), ui.ACCENT, 16, "center")
-        if self.tabs is not None:
-            self.tabs.draw(canvas, self.mouse)
+        self.tabs.draw(canvas, self.mouse)
         x = self.x0 + ROW_X
         bi = 0
         for (label, kind, value, act), y in zip(self.rows, self.rows_y):
@@ -170,5 +189,5 @@ class SettingsScene(Scene):
         for b in self.buttons:
             b.draw(canvas, self.mouse)
         if self.msg_t > 0:
-            text(canvas, self.msg, (w // 2, 236 if not IS_MOBILE else 240), ui.GOOD, 11, "center")
+            text(canvas, self.msg, (w // 2, 240), ui.GOOD, 11, "center")
         draw_cursor(canvas, self.mouse)

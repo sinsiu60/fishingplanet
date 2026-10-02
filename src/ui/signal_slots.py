@@ -22,6 +22,16 @@ DIM = (120, 128, 150)
 BAD = (255, 110, 95)
 
 
+# 접근성 (31장 C6): 낚시 화면이 설정을 넣어 준다 — 색약 팔레트, 칸 크기 배율, 소리 신호 끔 → 그림 강조
+OPTS = {"colorblind": False, "scale": 1.0, "strong": False}
+
+
+def configure(settings) -> None:
+    OPTS["colorblind"] = bool(settings.get("colorblind"))
+    OPTS["scale"] = cfg()["slots"]["size_mult"][settings.get("slot_size")]
+    OPTS["strong"] = not settings.get("signal_sound")
+
+
 def cfg() -> dict:
     return load_json("signals.json")
 
@@ -38,7 +48,8 @@ def hand_of(action: str, family: str | None = None) -> str:
 
 
 def color_of(family: str):
-    return tuple(cfg()["families"][family]["color"])
+    f = cfg()["families"][family]
+    return tuple(f["cb_color"] if OPTS["colorblind"] else f["color"])
 
 
 def slot_positions(w: int, h: int, touch: bool, left_handed: bool) -> tuple:
@@ -114,7 +125,8 @@ def _box(canvas, pos, col, lit: bool, ok: bool, size: int) -> pygame.Rect:
     back = pygame.Surface((size, size), pygame.SRCALPHA)
     pygame.draw.rect(back, (12, 16, 30, 175), back.get_rect(), border_radius=8)
     canvas.blit(back, r.topleft)
-    pygame.draw.rect(canvas, col if lit else tuple(int(c * 0.55) for c in col), r, 2, border_radius=8)
+    pygame.draw.rect(canvas, col if lit else tuple(int(c * 0.55) for c in col), r, 3 if OPTS["strong"] else 2,
+                     border_radius=8)
     if ok:
         pygame.draw.rect(canvas, GOOD, r.inflate(-6, -6), 1, border_radius=6)
     return r
@@ -186,6 +198,8 @@ def draw(canvas, fight, signals: list[dict], touch: bool, left_handed: bool, t: 
     L, R = slot_positions(w, h, touch, left_handed)
     size = cfg()["slots"]["size"]
     spread = cfg()["slots"]["ring_spread"]
+    k = OPTS["scale"]
+    ks = int(size * k)
     fc = load_json("fishing_config.json")["fight"]
     used = {"L": 0, "R": 0}
     for s in signals:
@@ -193,11 +207,25 @@ def draw(canvas, fight, signals: list[dict], touch: bool, left_handed: bool, t: 
         n = used[s["hand"]]
         used[s["hand"]] += 1
         out = -1 if (base[0] < w // 2) else 1   # 같은 손 두 번째 신호는 바깥쪽으로 비켜서
-        pos = (base[0] + out * n * (size + 6), base[1])
-        _draw_one(canvas, fight, s, pos, size, spread, fc, t)
+        pos = (base[0] + out * n * (ks + 6), base[1])
+        if k == 1.0:
+            _draw_one(canvas, fight, s, pos, size, spread, fc, t)
+        else:
+            # 칸 크기 설정: 기본 크기로 그린 칸(링 포함)을 통째로 키우거나 줄인다
+            side = size + 2 * spread + 28
+            tmp = pygame.Surface((side, side), pygame.SRCALPHA)
+            _draw_one(tmp, fight, s, (side // 2, side // 2), size, spread, fc, t)
+            img = pygame.transform.smoothscale(tmp, (int(side * k), int(side * k)))
+            canvas.blit(img, img.get_rect(center=pos))
+        if OPTS["strong"] and s["kind"] == "tele" and int(t * 6) % 2 == 0:
+            # 소리 신호 끔: 예고 동안 바깥 테두리를 하나 더 (그림 강조)
+            col = color_of(s["family"]) if s["family"] in cfg()["families"] else DIM
+            pygame.draw.rect(canvas, col, pygame.Rect(0, 0, ks + 10, ks + 10).move(pos[0] - ks // 2 - 5,
+                                                                                   pos[1] - ks // 2 - 5), 2,
+                             border_radius=11)
     if signals:
-        _tension_strip(canvas, fight, (w // 2, L[1] + size // 2 + 12), t)
-    _combo_preview(canvas, fight, (w // 2, L[1] - size // 2 - 16), t)
+        _tension_strip(canvas, fight, (w // 2, L[1] + ks // 2 + 12), t)
+    _combo_preview(canvas, fight, (w // 2, L[1] - ks // 2 - 16), t)
 
 
 def _draw_one(canvas, fight, s: dict, pos, size: int, spread: float, fc: dict, t: float) -> None:
