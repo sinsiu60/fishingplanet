@@ -133,7 +133,8 @@ class FishingScene(Scene):
         self.fog = Fog(canvas.get_width(), canvas.get_height())
         self.lightning = Lightning()
         self.ambient = Ambient(canvas.get_width(), canvas.get_height(), self.cam.horizon)
-        self.amb_loops: set[str] = set()
+        from src.audio.ambience import Ambience
+        self.ambience = Ambience(self.sfx)  # 환경음: 바탕 + 무작위 조각 + 날씨 + 천둥 시간차 (32장 S7)
         self.legend_on = False   # 전설 등장 중 (BGM·색감·금빛 테두리)
         self.legend_k = 0.0
         self.dragon_k = 0.0      # '등용' 3페이즈: 진홍빛 하늘
@@ -308,7 +309,7 @@ class FishingScene(Scene):
         """의뢰 진행 알림: 실패는 작게, 완료는 보상과 함께."""
         for ev in qr.events:
             if ev == "quest_fail":
-                self.sfx.play("click", 0.6)
+                self.sfx.play("ui_error", 0.6)
             elif ev == "quest_done":
                 it = next((x for x in qr.items if x[1] == "done" and len(x) > 3 and not x[3].get("_shown")), None)
                 if it is not None:
@@ -316,7 +317,7 @@ class FishingScene(Scene):
                     got["_shown"] = True
                     from src.save.quests import reward_text
                     self.toasts.show(f"의뢰 완료! {reward_text(it[0]['reward'])}", (255, 214, 90), 3.0, 11)
-                    self.sfx.play("chord_rare", 0.7)
+                    self.sfx.play("ui_quest_done", 0.9)
         qr.events.clear()
 
     def _record_mutation(self, f, muts: list) -> None:
@@ -415,14 +416,14 @@ class FishingScene(Scene):
             self.help_page = 0
         elif n == "back":
             if self.landing is None:
-                self.sfx.play("click")
+                self.sfx.play("ui_click")
                 from src.scene.pause import PauseScene
                 self.game.scenes.push(PauseScene(self.game, self))
         elif n == "menu":
             if a.value == "bag":
                 if self.can_open_menus():
                     from src.scene.quick_menu import QuickMenuScene
-                    self.sfx.play("click")
+                    self.sfx.play("ui_click")
                     self.game.scenes.push(QuickMenuScene(self.game, self))
             elif a.value in ("dex", "quests"):
                 if self.fight is None:
@@ -494,11 +495,11 @@ class FishingScene(Scene):
         if k is None:
             return False
         if k == "help":
-            self.sfx.play("click")
+            self.sfx.play("ui_click")
             self.help = True
             self.help_page = 0
         elif k == "settings":
-            self.sfx.play("click")
+            self.sfx.play("ui_click")
             from src.scene.settings_scene import SettingsScene
             self.game.scenes.push(SettingsScene(self.game))
         else:
@@ -509,7 +510,7 @@ class FishingScene(Scene):
         return self.fight is None and self.cast.state in (CastState.READY, CastState.LANDED, CastState.RETRIEVE)
 
     def open_menu(self, which: str, tab: str | None = None) -> None:
-        self.sfx.play("click")
+        self.sfx.play("ui_click")
         if which == "shop":
             if not self.can_open_menus():
                 return
@@ -807,7 +808,7 @@ class FishingScene(Scene):
                     self.sfx.play("rise", 1.0)
                     self.shake_kick = 2.0
                 elif ev.startswith("bolt"):
-                    self.sfx.play("thunder", 0.9)
+                    self.sfx.play("amb_thunder_near", 0.9)
                     self.shake_kick = 3.0
                 elif ev == "flash":
                     self.sfx.play("impact", 1.0)
@@ -879,24 +880,14 @@ class FishingScene(Scene):
         self.fog.update(dt, self.weather)
         self.lightning.update(dt, self.weather, self.cam.horizon, self.cam.width)
         for ev in self.lightning.events:
-            if ev == "thunder":
-                self.sfx.play("thunder", 0.9)
-            elif ev == "strike":
+            if ev == "strike":
+                self.ambience.strike()  # 천둥은 번개 뒤 거리만큼 늦게 (가까우면 쩍, 멀면 우르릉)
                 self.shake_kick = max(self.shake_kick, 1.0)
         self.lightning.events.clear()
         self.ambient.update(dt, self.clock.period()[0], self.weather, self.theme.get("sea", False))
-        # 환경음: 낚시터 + 비
-        want = {self.theme["ambient"]}
-        if self.weather in ("rain", "storm"):
-            want.add("amb_rain")
-        for name in self.amb_loops - want:
-            self.sfx.loop(name, False)
-        for name in want:
-            vol = 0.35 if name != "amb_rain" else (0.4 if self.weather == "rain" else 0.65)
-            if self.legend_on:
-                vol *= 0.4  # 전설 BGM이 들리게
-            self.sfx.loop(name, True, vol)
-        self.amb_loops = want
+        f = self.fight
+        self.ambience.update(dt, self.spot_id, self.clock.period()[0], self.weather,
+                             fighting=f is not None and f.phase in ("fight", "net"), legend=self.legend_on)
 
     def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
@@ -1052,8 +1043,11 @@ class FishingScene(Scene):
                 self.sfx.play(f"sfx_rank_{f.result['rank'].lower()}", 0.9)
                 self.shake_kick = 2.5
             news = getattr(self, "catch_news", None) or {}
-            if f.phase == "caught" and prev < 1.0 <= self.end_t and news.get("record"):
-                self.sfx.play("sfx_record", 0.85)  # 최대 크기 경신 배지와 함께
+            if f.phase == "caught" and prev < 1.0 <= self.end_t:
+                if news.get("new"):
+                    self.sfx.play("ui_dex_new", 0.9)  # NEW! 도감 등록 배지와 함께
+                elif news.get("record"):
+                    self.sfx.play("sfx_record", 0.85)  # 최대 크기 경신 배지와 함께
             return
         reeling = self.game.input.held("reel") and f.phase == "fight"
         if f.phase == "fight" and f.zone() == "red":

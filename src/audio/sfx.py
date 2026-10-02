@@ -251,129 +251,6 @@ def _loop_noise(rng, lo: float, hi: float, tilt: float = 0.0, sec: float = LOOP_
     return out / (np.max(np.abs(out)) + 1e-9)
 
 
-def _loop_t(sec: float = LOOP_SEC) -> np.ndarray:
-    return np.arange(int(RATE * sec)) / RATE
-
-
-def make_amb_lake(rng) -> np.ndarray:
-    """저수지: 잔잔한 바람 + 풀벌레."""
-    t = _loop_t()
-    wind = _loop_noise(rng, 80, 700, 1.0) * (0.6 + 0.4 * np.sin(2 * np.pi * t / LOOP_SEC)) * 0.25
-    bugs = np.zeros_like(t)
-    for start in np.arange(0.2, LOOP_SEC - 0.3, 0.75):
-        for k in range(3):
-            s0 = int((start + k * 0.06) * RATE)
-            seg = np.sin(2 * np.pi * 4300 * _t(0.035)) * _env(int(RATE * 0.035), 0.004, 0.012)
-            bugs[s0:s0 + len(seg)] += seg * 0.08
-    return wind + bugs
-
-
-def make_amb_stream(rng) -> np.ndarray:
-    """계곡: 졸졸 흐르는 물."""
-    t = _loop_t()
-    water = _loop_noise(rng, 300, 3500, 0.5) * 0.22
-    mod = 0.7 + 0.3 * np.sin(2 * np.pi * 3 * t / LOOP_SEC)
-    bubbles = np.zeros_like(t)
-    for _ in range(40):
-        s0 = rng.integers(0, len(t) - int(RATE * 0.04))
-        b = _sweep(rng.uniform(500, 900), rng.uniform(1000, 1600), 0.04) * _env(int(RATE * 0.04), 0.003, 0.012)
-        bubbles[s0:s0 + len(b)] += b * 0.05
-    return water * mod + bubbles
-
-
-def make_amb_cave(rng) -> np.ndarray:
-    """수정 동굴: 낮은 울림 + 똑똑 떨어지는 물방울 (메아리)."""
-    t = _loop_t()
-    drone = _loop_noise(rng, 40, 220, 1.5) * 0.18
-    drops = np.zeros_like(t)
-    for start in rng.uniform(0.1, LOOP_SEC - 0.6, 9):
-        for k, g in enumerate((1.0, 0.35, 0.15)):  # 메아리
-            s0 = int((start + k * 0.18) * RATE)
-            f = rng.uniform(1100, 1700)
-            d = _sweep(f, f * 1.6, 0.05) * _env(int(RATE * 0.05), 0.001, 0.02)
-            drops[s0:s0 + len(d)] += d[: len(drops) - s0] * 0.12 * g
-    return drone + drops
-
-
-def make_amb_wind(rng) -> np.ndarray:
-    """부유섬: 높은 곳의 바람 (휘이잉)."""
-    t = _loop_t()
-    gust = 0.55 + 0.45 * np.sin(2 * np.pi * 2 * t / LOOP_SEC) ** 2
-    return _loop_noise(rng, 200, 1800, 0.8) * gust * 0.28
-
-
-def make_amb_vent(rng) -> np.ndarray:
-    """화산 열수: 부글부글 끓는 소리 + 낮은 울림."""
-    t = _loop_t()
-    rumble = _loop_noise(rng, 30, 160, 1.5) * 0.25
-    boil = np.zeros_like(t)
-    for _ in range(70):
-        s0 = rng.integers(0, len(t) - int(RATE * 0.05))
-        b = _sweep(rng.uniform(180, 320), rng.uniform(350, 600), 0.05) * _env(int(RATE * 0.05), 0.004, 0.015)
-        boil[s0:s0 + len(b)] += b * 0.06
-    return rumble + boil
-
-
-def make_amb_ice(rng) -> np.ndarray:
-    """빙해: 차가운 바람 + 가끔 얼음 갈라지는 소리."""
-    t = _loop_t()
-    wind = _loop_noise(rng, 300, 3000, 0.6) * (0.6 + 0.4 * np.sin(2 * np.pi * t / LOOP_SEC)) * 0.16
-    crack = np.zeros_like(t)
-    for start in (1.3, 4.1):
-        s0 = int(start * RATE)
-        c = _lowpass(_noise(0.12, rng), 2) * _env(int(RATE * 0.12), 0.001, 0.03)
-        crack[s0:s0 + len(c)] += c * 0.25
-    return wind + crack
-
-
-def make_amb_waves(rng) -> np.ndarray:
-    """바다: 철썩이는 파도 (루프 길이에 맞춘 두 번의 너울)."""
-    t = _loop_t()
-    surf = _loop_noise(rng, 60, 2500, 1.2)
-    swell = (0.5 + 0.5 * np.sin(2 * np.pi * 2 * t / LOOP_SEC - 1.2)) ** 2
-    return surf * (0.08 + 0.32 * swell)
-
-
-def make_amb_boat(rng) -> np.ndarray:
-    """먼바다: 낮은 엔진음 + 파도."""
-    t = _loop_t()
-    base = 42.0  # 루프 길이(6초)에 정수 주기로 맞아떨어지는 주파수
-    hum = sum(np.sin(2 * np.pi * base * h * t) / h for h in (1, 2, 3, 5)) * 0.12
-    hum *= 0.85 + 0.15 * np.sin(2 * np.pi * 6 * t / LOOP_SEC)
-    return hum + make_amb_waves(rng) * 0.6
-
-
-def make_amb_deep(rng) -> np.ndarray:
-    """심해: 깊게 울리는 저음 + 먼 파도."""
-    t = _loop_t()
-    drone = (np.sin(2 * np.pi * 55 * t) + 0.7 * np.sin(2 * np.pi * (82.5 + 1 / LOOP_SEC) * t)) * 0.12
-    drone *= 0.7 + 0.3 * np.sin(2 * np.pi * t / LOOP_SEC)
-    return drone + _loop_noise(rng, 40, 400, 1.0) * 0.12
-
-
-def make_amb_rain(rng) -> np.ndarray:
-    """빗소리: 사락사락."""
-    hiss = _loop_noise(rng, 900, 9000, 0.3) * 0.18
-    t = _loop_t()
-    patter = np.zeros_like(t)
-    for _ in range(260):
-        s0 = rng.integers(0, len(t) - 200)
-        patter[s0:s0 + 120] += _lowpass(rng.uniform(-1, 1, 120), 2) * np.exp(-np.arange(120) / 25) * 0.15
-    return hiss + patter
-
-
-def make_thunder(rng) -> np.ndarray:
-    """천둥: 우르릉."""
-    sec = 2.6
-    n = int(RATE * sec)
-    crack = _lowpass(_noise(sec, rng), 3) * _env(n, 0.002, 0.08) * 0.6
-    rumble = _lowpass(_noise(sec, rng), 60) * 6
-    rumble *= _env(n, 0.05, 0.9) * (0.7 + 0.3 * np.sin(np.linspace(0, 20, n)))
-    return crack + rumble
-
-
-# ───────────────────────── 음악 (코드 생성) ─────────────────────────
-
 def _note_freq(name: str) -> float:
     names = {"C": -9, "C#": -8, "D": -7, "D#": -6, "E": -5, "F": -4, "F#": -3, "G": -2, "G#": -1, "A": 0,
              "A#": 1, "B": 2}
@@ -740,17 +617,6 @@ class Sfx:
             "whip": make_whip(rng),
             "rise": make_rise(rng),
             "click": make_click(rng),
-            "amb_lake": make_amb_lake(rng),
-            "amb_stream": make_amb_stream(rng),
-            "amb_waves": make_amb_waves(rng),
-            "amb_boat": make_amb_boat(rng),
-            "amb_deep": make_amb_deep(rng),
-            "amb_cave": make_amb_cave(rng),
-            "amb_wind": make_amb_wind(rng),
-            "amb_vent": make_amb_vent(rng),
-            "amb_ice": make_amb_ice(rng),
-            "amb_rain": make_amb_rain(rng),
-            "thunder": make_thunder(rng),
             "bgm_ending": make_bgm_ending(rng),
             "roar": make_roar(rng),
             "coin": make_coin(rng),
@@ -890,6 +756,8 @@ class Sfx:
         self.last_play: dict[str, float] = {}
         self.variants: dict[str, list] = {}
         self.slowed: dict[str, pygame.mixer.Sound] = {}
+        self.muffle = False      # 안개: 효과음·환경음 고음을 깎은 '먹먹한' 변형으로 (32장 S7)
+        self.muffled: dict[str, pygame.mixer.Sound] = {}
         self._bus_cache: dict[str, str] = {}
         self.clock = 0.0
         from src.platform.detect import IS_ANDROID
@@ -956,12 +824,19 @@ class Sfx:
             if name not in self.slowed:
                 self.slowed[name] = self._resampled(snd, self.cfg["slowmo"]["pitch"], self.cfg["slowmo"]["lowpass"])
             return self.slowed[name]
+        if self.muffle and self.bus_of(name) in ("sfx", "reward", "amb"):
+            return self._muffled(name)
         if name not in self.cfg["variation"]["names"]:
             return snd
         if name not in self.variants:
             self.variants[name] = [snd] + [self._resampled(snd, 1 + p / 100) for p in self.cfg["variation"]["pitch_pct"]]
         import random
         return random.choice(self.variants[name])
+
+    def _muffled(self, name: str) -> pygame.mixer.Sound:
+        if name not in self.muffled:
+            self.muffled[name] = self._resampled(self.sounds[name], 1.0, self.cfg["fog_lowpass"])
+        return self.muffled[name]
 
     def _resampled(self, snd: pygame.mixer.Sound, ratio: float, lowpass: int = 0) -> pygame.mixer.Sound:
         a = pygame.sndarray.array(snd).astype(np.float32)
@@ -1095,8 +970,11 @@ class Sfx:
         pygame.mixer.music.set_volume(min(1.0, self.bus_gain("mus") * getattr(self, "music_gain", 0.6)))
 
     def stop_all(self) -> None:
+        """효과음·환경음 전부 멈춤 (음악 층 예약 채널은 그대로 — adaptive_music이 따로 관리)."""
         if self.enabled:
-            pygame.mixer.stop()
+            for i in range(pygame.mixer.get_num_channels()):
+                if not (self.n_sig <= i < self.n_sig + self.n_mus):
+                    pygame.mixer.Channel(i).stop()
             self.active.clear()
         self.loops.clear()
 
@@ -1106,15 +984,17 @@ class Sfx:
             return
         e = self.loops.get(name)
         if on:
-            if e is not None and e["ch"].get_busy() and e["ch"].get_sound() is self.sounds[name]:
+            bus = self.bus_of(name)
+            snd = self._muffled(name) if self.muffle and bus == "amb" else self.sounds[name]  # 안개면 먹먹한 바탕
+            if e is not None and e["ch"].get_busy() and e["ch"].get_sound() is snd:
                 e["vol"] = volume
                 self._apply(e)
                 return
-            bus = self.bus_of(name)
+            if e is not None:
+                e["ch"].stop()
             ch = self._channel(bus) if bus == "sig" else pygame.mixer.find_channel(False) or self._channel(bus)
             if ch is None:
                 return
-            snd = self.sounds[name]
             snd.set_volume(1.0)
             ch.play(snd, loops=-1)
             e = {"ch": ch, "name": name, "bus": bus, "prio": self.cfg["priority"][bus], "t0": self.clock, "vol": volume,

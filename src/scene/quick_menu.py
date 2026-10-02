@@ -40,7 +40,7 @@ class QuickMenuScene(Scene):
         elif a.name == "primary":
             for b in self.buttons:
                 if b.click(a.pos):
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
                     return
             self._close()  # 바깥을 누르면 닫기
 

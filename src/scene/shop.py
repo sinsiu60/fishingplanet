@@ -127,6 +127,8 @@ class ShopScene(Scene):
 
     def _say(self, msg: str, col=ui.TEXT) -> None:
         self.msg, self.msg_col, self.msg_t = msg, col, 2.0
+        if col == ui.BAD:
+            self.game.sfx.play("ui_error")  # 안 됨 (돈·소재 부족 등)
 
     # ── 동작 ──
     def _close(self) -> None:
@@ -142,14 +144,14 @@ class ShopScene(Scene):
             fl = self.save.data["float"]
             if item["id"] in fl["owned"]:
                 fl["equipped"] = item["id"]
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_equip")
                 self._say(f"{item['name']} 장착", ui.GOOD)
                 return
             res = self.save.buy_float(item)
             msg = {"ok": (f"{item['name']} 구매 · 장착!", ui.GOOD), "money": ("돈이 부족해요", ui.BAD),
                    "scales": ("전설 비늘이 부족해요", ui.BAD), "locked": ("엘드라시온 대륙에서 판매", ui.BAD)}.get(res)
             if res == "ok":
-                self.game.sfx.play("coin")
+                self.game.sfx.play("ui_buy")
             if msg:
                 self._say(*msg)
             return
@@ -157,7 +159,7 @@ class ShopScene(Scene):
             kind, gear = item
             res = self.save.enhance(kind, gear)
             if res == "ok":
-                self.game.sfx.play("great")
+                self.game.sfx.play("ui_enhance")
                 self._say(f"{gear['name']} +{self.save.enhance_level(gear['id'])} 강화 성공!", ui.GOOD)
             elif res == "money":
                 self._say("돈이 부족해요", ui.BAD)
@@ -172,7 +174,7 @@ class ShopScene(Scene):
             return
         if self.save.owns(self.kind, item["id"]):
             self.save.equip(self.kind, item["id"])
-            self.game.sfx.play("click")
+            self.game.sfx.play("ui_equip")
             self._say(f"{item['name']} 장착", ui.GOOD)
             return
         need = self.save.scale_warning(item)
@@ -185,7 +187,7 @@ class ShopScene(Scene):
         self.confirm = None
         result = self.save.buy(self.kind, item)
         if result == "ok":
-            self.game.sfx.play("coin")
+            self.game.sfx.play("ui_buy")
             self._say(f"{item['name']} 구매 · 장착!", ui.GOOD)
         elif result == "money":
             self._say("돈이 부족해요", ui.BAD)
@@ -199,7 +201,7 @@ class ShopScene(Scene):
         if got is None:
             self._say("전설은 분해할 수 없어요", ui.BAD)
             return
-        self.game.sfx.play("click")
+        self.game.sfx.play("ui_click")
         self._say("분해: " + ", ".join(f"{MAT_KO[k]} +{v}" for k, v in got.items()), ui.GOOD)
         self.sel = max(0, min(self.sel, len(self.items()) - 1))
 
@@ -222,7 +224,7 @@ class ShopScene(Scene):
             m = a.pos
             if self.tabs.click(m):
                 self.sel, self.scroll = 0, 0
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_tab")
                 return
             buttons = (self.close_btn, self.sell_btn, self.dis_btn, self.sell_all_btn) if self.kind == "sell" \
                 else (self.close_btn, self.action_btn)
@@ -233,7 +235,7 @@ class ShopScene(Scene):
                 i = (m[1] - LIST.y) // ROW_H + self.scroll
                 if 0 <= i < len(self.items()):
                     self.sel = i
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
 
     def update(self, dt: float) -> None:
         self.age += dt

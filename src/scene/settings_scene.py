@@ -178,12 +178,12 @@ class SettingsScene(Scene):
         elif a.name == "primary":
             m = a.pos
             if self.tabs.click(m):
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_tab")
                 self._build()
                 return
             for b in self.buttons:
                 if b.click(m):
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
                     break
 
     def update(self, dt: float) -> None:

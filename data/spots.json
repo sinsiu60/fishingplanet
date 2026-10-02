@@ -22,7 +22,6 @@
     ],
     "tint_k": 0.0,
     "dark": 0.0,
-    "ambient": "amb_lake",
     "sway": 0,
     "sea": false
    },
@@ -70,7 +69,6 @@
     ],
     "tint_k": 0.3,
     "dark": 0.0,
-    "ambient": "amb_stream",
     "sway": 0,
     "sea": false
    },
@@ -132,7 +130,6 @@
     ],
     "tint_k": 0.35,
     "dark": 0.0,
-    "ambient": "amb_waves",
     "sway": 0,
     "sea": true
    },
@@ -182,7 +179,6 @@
     ],
     "tint_k": 0.45,
     "dark": 0.0,
-    "ambient": "amb_boat",
     "sway": 1,
     "sea": true
    },
@@ -220,7 +216,6 @@
     ],
     "tint_k": 0.55,
     "dark": 0.45,
-    "ambient": "amb_deep",
     "sway": 1,
     "sea": true,
     "lamp": true
@@ -270,7 +265,6 @@
     ],
     "tint_k": 0.25,
     "dark": 0.15,
-    "ambient": "amb_stream",
     "sway": 0,
     "sea": false
    },
@@ -330,7 +324,6 @@
     ],
     "tint_k": 0.3,
     "dark": 0.05,
-    "ambient": "amb_lake",
     "sway": 0,
     "sea": false,
     "sky_tint": [
@@ -402,7 +395,6 @@
     ],
     "tint_k": 0.55,
     "dark": 0.6,
-    "ambient": "amb_cave",
     "sway": 0,
     "sea": false,
     "sky_tint": [
@@ -459,7 +451,6 @@
     ],
     "tint_k": 0.35,
     "dark": 0.0,
-    "ambient": "amb_wind",
     "sway": 0,
     "sea": false,
     "sky_tint": [
@@ -517,7 +508,6 @@
     ],
     "tint_k": 0.4,
     "dark": 0.1,
-    "ambient": "amb_vent",
     "sway": 1,
     "sea": true,
     "sky_tint": [
@@ -580,7 +570,6 @@
     ],
     "tint_k": 0.45,
     "dark": 0.2,
-    "ambient": "amb_ice",
     "sway": 0,
     "sea": true,
     "sky_tint": [
@@ -633,7 +622,6 @@
     ],
     "tint_k": 0.35,
     "dark": 0.15,
-    "ambient": "amb_stream",
     "sway": 0,
     "sea": false,
     "sky_tint": [

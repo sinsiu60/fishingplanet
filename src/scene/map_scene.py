@@ -126,7 +126,7 @@ class MapScene(Scene):
         self.cont = opened[(opened.index(self.cont) + d) % len(opened)]
         here = [i for i, s in enumerate(self.spots) if s["id"] == self.fishing.spot_id]
         self.sel = here[0] if here else 0
-        self.game.sfx.play("click")
+        self.game.sfx.play("ui_click")
 
     @property
     def spot(self) -> dict:
@@ -137,6 +137,8 @@ class MapScene(Scene):
 
     def _say(self, s: str, col=ui.TEXT) -> None:
         self.msg, self.msg_t, self.msg_col = s, 2.2, col
+        if col == ui.BAD:
+            self.game.sfx.play("ui_error")
 
     def _close(self) -> None:
         self.game.scenes.pop()
@@ -155,7 +157,7 @@ class MapScene(Scene):
         if ok:
             self.save.data["money"] -= sp["unlock"].get("cost", 0)
             self.save.data["unlocked_spots"].append(sp["id"])
-            self.game.sfx.play("coin")
+            self.game.sfx.play("ui_buy")
             self.game.sfx.play("catch", 0.7)
             self._say(f"{sp['name']} 해금!", ui.GOOD)
             reward = {"secret": ("dragon_pearl", "여의주"), "world_tree": ("world_fruit", "세계수 열매")}.get(sp["id"])
@@ -168,7 +170,7 @@ class MapScene(Scene):
 
     def _rest(self) -> None:
         label = self.fishing.rest()
-        self.game.sfx.play("click")
+        self.game.sfx.play("ui_click")
         self._say(f"텐트에서 쉬었다 → {label}", ui.GOOD)
 
     def _train(self) -> None:
@@ -176,7 +178,7 @@ class MapScene(Scene):
         if self.fishing.fight is not None:
             return
         from src.scene.training import TrainingTank
-        self.game.sfx.play("click")
+        self.game.sfx.play("ui_click")
         self.game.scenes.pop()
         self.fishing.training = TrainingTank(self.fishing)
         self.fishing.training.start()
@@ -193,7 +195,7 @@ class MapScene(Scene):
                 x, y = self._node(sp)
                 if math.hypot(m[0] - x, m[1] - y) < 13:
                     self.sel = i
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
 
     def _multi(self) -> bool:
         return len(self.save.data["unlocked_continents"]) > 1

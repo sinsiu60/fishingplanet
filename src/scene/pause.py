@@ -57,7 +57,7 @@ class PauseScene(Scene):
             m = a.pos
             for b in self.buttons:
                 if b.click(m):
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
                     break
 
     def update(self, dt: float) -> None:

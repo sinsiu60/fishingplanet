@@ -109,32 +109,32 @@ class DexScene(Scene):
                     self.pat_card = None
                 return
             if self.pat_btn.click(m):
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_click")
                 return
             if self.pat_mode:
                 for i, key in enumerate(self.PAT_KEYS):
                     if self._pat_rect(i).collidepoint(m) and self._pat_seen(key):
                         self.pat_card = {"key": key, "t": 0.0}
-                        self.game.sfx.play("click")
+                        self.game.sfx.play("ui_click")
                 if self.close_btn.click(m):
                     return
                 return
             if self.tabs.click(m):
                 self.sel = 0
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_tab")
                 return
             if self.close_btn.click(m):
                 return
             if mutation.unlocked(self.save) and self.mut_btn.click(m):
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_click")
                 return
             if "eldrasion" in self.save.data["unlocked_continents"] and self.cont_btn.click(m):
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_click")
                 return
             for i in range(len(self.spot_fish())):
                 if self.card_rect(i).collidepoint(m):
                     self.sel = i
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
 
     def update(self, dt: float) -> None:
         self.age += dt

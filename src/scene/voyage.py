@@ -35,7 +35,7 @@ class VoyageScene(Scene):
         self.gulls = [(rnd.uniform(0, 480), rnd.uniform(30, 90), rnd.uniform(0, 6)) for _ in range(5)]
         self.stars = [(rnd.uniform(0, 480), rnd.uniform(0, 120)) for _ in range(60)]
         game.sfx.stop_all()
-        game.sfx.loop("amb_waves", True, 0.5)
+        game.sfx.loop("amb_bed_ocean", True, 0.5)
 
     def handle_action(self, a) -> None:
         if a.name == "primary" and self.t > 0.8:
@@ -53,7 +53,8 @@ class VoyageScene(Scene):
         self.game.adaptive.set_context("eldrasion", None)  # 새 대륙 테마
         self.game.adaptive.set("menu")
         if prev < T_SAIL <= self.t:
-            self.game.sfx.play("whoosh" if "whoosh" in self.game.sfx.sounds else "splash", 0.6)
+            self.game.sfx.play("sfx_cast_swing", 0.8)  # 돛이 바람을 받는 휙 (예전 'whoosh'는 없는 소리였음)
+            self.game.sfx.play("amb_wave_crash", 0.6)
         if prev < T_ARRIVE <= self.t:
             self.game.sfx.play("chord_legend", 0.8)
         if self.t >= T_END + 3.0:
@@ -65,7 +66,7 @@ class VoyageScene(Scene):
         self.done = True
         save = self.game.save
         save.unlock_continent("eldrasion")
-        self.game.sfx.loop("amb_waves", False)
+        self.game.sfx.loop("amb_bed_ocean", False)
         self.game.scenes.pop()
         self.fishing.travel("marsh")
         self.fishing.toasts.show(f"{self.cont}에 도착했다! (부적 칸 +1, 새 상점 장비)", (220, 200, 255), 4.0, 11)

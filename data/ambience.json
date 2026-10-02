@@ -1,0 +1,28 @@
+{
+ "_설명": "환경음 (DESIGN.md 32-13, Phase S7). 낚시터마다 바탕(반복) 하나 + 조각 소리들을 무작위 간격·무작위 좌우로 얹어 반복 티를 없앤다. 조각 = [소리, 최소 초, 최대 초, 음량, 때(any/day/night)]. 소리 이름 끝 #이면 단계 중 하나를 고름. 날씨: 비·폭풍은 바탕을 더하고 빗방울 조각, 안개는 전체 먹먹 + 조각 드물게. 파이팅 중에는 조각 간격 fight_interval_mult 배 (바탕은 믹서가 −4dB).",
+ "fight_interval_mult": 2.5,
+ "fog_interval_mult": 1.6,
+ "fog_bed_mult": 0.8,
+ "legend_mult": 0.4,
+ "pan": 0.8,
+ "spots": {
+  "reservoir": {"bed": ["amb_bed_lake", 0.5], "frags": [["amb_bird#", 3, 8, 0.35, "day"], ["amb_cricket", 2, 5, 0.3, "night"], ["amb_owl", 12, 24, 0.25, "night"], ["amb_bubble", 7, 15, 0.2, "any"]]},
+  "valley": {"bed": ["amb_bed_stream", 0.55], "frags": [["amb_bird#", 4, 9, 0.3, "day"], ["amb_gust", 8, 16, 0.3, "any"], ["amb_cricket", 4, 9, 0.2, "night"]]},
+  "breakwater": {"bed": ["amb_bed_sea", 0.55], "frags": [["amb_gull", 5, 12, 0.35, "day"], ["amb_wave_crash", 7, 14, 0.45, "any"]]},
+  "offshore": {"bed": ["amb_bed_ocean", 0.55], "frags": [["amb_boat_creak", 4, 9, 0.4, "any"], ["amb_wave_crash", 6, 12, 0.4, "any"], ["amb_gull", 10, 20, 0.2, "day"]]},
+  "deep": {"bed": ["amb_bed_deep", 0.55], "frags": [["amb_bubble", 3, 7, 0.35, "any"], ["amb_drop", 6, 12, 0.2, "any"], ["amb_rumble", 12, 25, 0.35, "any"]]},
+  "secret": {"bed": ["amb_bed_mist", 0.45], "frags": [["amb_gust", 7, 14, 0.3, "any"], ["amb_crystal", 14, 26, 0.15, "any"]]},
+  "marsh": {"bed": ["amb_bed_reeds", 0.5], "frags": [["amb_frog", 3, 8, 0.35, "any"], ["amb_reed_rustle", 4, 9, 0.3, "any"], ["amb_cricket", 2, 6, 0.25, "night"]]},
+  "crystal_cave": {"bed": ["amb_bed_cave", 0.5], "frags": [["amb_drop", 2, 6, 0.4, "any"], ["amb_crystal", 5, 10, 0.3, "any"]]},
+  "sky_falls": {"bed": ["amb_bed_falls", 0.55], "frags": [["amb_gust", 5, 10, 0.35, "any"], ["amb_bird#", 8, 16, 0.2, "day"]]},
+  "volcano": {"bed": ["amb_bed_vent", 0.55], "frags": [["amb_lava_blub", 2, 6, 0.4, "any"], ["amb_rumble", 8, 16, 0.45, "any"]]},
+  "ice_sea": {"bed": ["amb_bed_ice", 0.5], "frags": [["amb_ice_crack", 5, 12, 0.4, "any"], ["amb_gust", 6, 12, 0.3, "any"]]},
+  "world_tree": {"bed": ["amb_bed_grove", 0.5], "frags": [["amb_leaves", 4, 9, 0.35, "any"], ["amb_life_hum", 8, 16, 0.3, "any"], ["amb_bird#", 5, 10, 0.25, "day"]]}
+ },
+ "weather": {
+  "rain": {"bed": ["amb_rain_bed", 0.45], "frags": [["amb_rain_drop", 0.2, 0.9, 0.25, "any"]]},
+  "storm": {"bed": ["amb_storm_bed", 0.6], "frags": [["amb_rain_drop", 0.15, 0.6, 0.3, "any"], ["amb_gust", 3, 7, 0.5, "any"]]},
+  "fog": {"bed": null, "frags": []}
+ },
+ "thunder": {"_설명": "번개 → 천둥 시간차 (거리): 가까우면 빨리·크게·쩍, 멀면 늦게·작게·우르릉", "delay": [0.3, 2.2], "near_below": 0.8}
+}

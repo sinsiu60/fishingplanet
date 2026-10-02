@@ -28,7 +28,7 @@ class ConfirmScene(Scene):
         elif a.name == "primary":
             for b in self.buttons:
                 if b.click(a.pos):
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
                     return
 
     def update(self, dt: float) -> None:

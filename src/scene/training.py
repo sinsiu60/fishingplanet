@@ -160,7 +160,7 @@ class TrainingTank:
             return False
         for b in (self.btn_prev, self.btn_next, self.btn_speed, self.btn_exit):
             if b.click(a.pos):
-                self.scene.sfx.play("click")
+                self.scene.sfx.play("ui_click")
                 return True
         return False
 

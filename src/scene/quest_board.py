@@ -72,7 +72,7 @@ class QuestBoardScene(Scene):
         res = quests.buy(self.save, it["id"])
         if res == "ok":
             quests.toggle_equip(self.save, it["id"])
-            self.game.sfx.play("coin")
+            self.game.sfx.play("ui_buy")
             self._say(f"{it['name']} 구매 · 장착!")
         elif res == "points":
             self._say("의뢰 포인트가 모자라요")
@@ -88,21 +88,21 @@ class QuestBoardScene(Scene):
         elif a.name == "primary":
             m = a.pos
             if self.tabs.click(m):
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_tab")
                 return
             if self.close_btn.click(m):
                 return
             if self.tabs.index == 0:
                 if self.refresh_btn.click(m):
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
                 return
             if self.buy_btn.click(m):
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_click")
                 return
             for i in range(self.scroll, min(len(self._items()), self.scroll + self._visible())):
                 if self._shop_rect(i).collidepoint(m):
                     self.sel = i
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
 
     def update(self, dt: float) -> None:
         self.age += dt

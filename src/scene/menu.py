@@ -102,7 +102,7 @@ class TitleScene(Scene):
         if a.name == "primary":
             for b in self.buttons:
                 if b.click(a.pos):
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
                     break
 
     def update(self, dt: float) -> None:
@@ -165,11 +165,11 @@ class SlotScene(Scene):
         elif a.name == "primary":
             m = a.pos
             if self.back.click(m):
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_click")
                 return
             for s, r in self.cards.items():
                 if r.collidepoint(m):
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
                     self._pick(s)
                     return
             self.confirm = None

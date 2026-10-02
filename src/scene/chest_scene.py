@@ -54,6 +54,8 @@ class ChestScene(Scene):
 
     def _say(self, msg: str, col=ui.TEXT) -> None:
         self.msg, self.msg_col, self.msg_t = msg, col, 2.2
+        if col == ui.BAD:
+            self.game.sfx.play("ui_error")
 
     def _close(self) -> None:
         if self.anim:
@@ -162,7 +164,7 @@ class ChestScene(Scene):
         elif iid == "storm_conch":
             self._open_chooser(iid, [(WEATHER_KO[w], w) for w in ("clear", "rain", "storm")])
             return
-        sfx.play("great", 0.6)
+        sfx.play("ui_enhance", 0.8)  # 아이템 사용
         self.game.save_now()
 
     def _open_chooser(self, iid: str, options: list) -> None:
@@ -185,7 +187,7 @@ class ChestScene(Scene):
             self._say(f"날씨가 바뀌었다: {WEATHER_KO[value]}", ui.GOOD)
         self.chooser = None
         self.choice_btns = []
-        self.game.sfx.play("great", 0.6)
+        self.game.sfx.play("ui_enhance", 0.8)
         self.game.save_now()
 
     # ── 교환소 ──
@@ -201,7 +203,7 @@ class ChestScene(Scene):
             self._say(reason, ui.BAD)
             return
         tr.exchange(self.save, it["id"])
-        self.game.sfx.play("coin")
+        self.game.sfx.play("ui_buy")
         self._say(f"{it['name']} 교환!", ui.GOOD)
         self.game.save_now()
 
@@ -239,7 +241,7 @@ class ChestScene(Scene):
             if self.tabs.click(m):
                 self.sel, self.scroll = 0, 0
                 self.chooser, self.choice_btns = None, []
-                self.game.sfx.play("click")
+                self.game.sfx.play("ui_tab")
                 return
             if self.close_btn.click(m):
                 return
@@ -262,7 +264,7 @@ class ChestScene(Scene):
                 if 0 <= i < len(self._list()):
                     self.sel = i
                     self.chooser, self.choice_btns = None, []
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
 
     def update(self, dt: float) -> None:
         self.age += dt

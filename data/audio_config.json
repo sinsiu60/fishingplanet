@@ -28,5 +28,6 @@
  "min_interval": {"default": 0.025, "sfx_reel_click": 0.01, "sfx_line_crack": 0.06, "click": 0.04, "ui_click": 0.04},
  "limiter": {"max_sum": 3.0, "release_sec": 0.4},
  "slowmo": {"pitch": 0.93, "lowpass": 7},
+ "fog_lowpass": 9,
  "audio_offset_range_ms": [-100, 200]
 }

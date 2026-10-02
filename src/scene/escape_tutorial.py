@@ -50,7 +50,7 @@ class EscapeTutorialScene(Scene):
         if a.name == "primary" and self.age > 0.4:
             for b in self.buttons:
                 if b.click(a.pos):
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
                     return
         elif a.name == "back" and self.age > 0.4:
             self._close()

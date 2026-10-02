@@ -98,12 +98,12 @@ class SaveTransferScene(Scene):
         elif a.name == "primary":
             for b in self.buttons:
                 if b.click(a.pos):
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
                     return
             for s, r in self.rows.items():
                 if r.collidepoint(a.pos):
                     self.sel, self.confirm = s, False
-                    self.game.sfx.play("click")
+                    self.game.sfx.play("ui_click")
 
     def update(self, dt: float) -> None:
         self.mouse = self.ui_pointer()
