@@ -651,6 +651,10 @@ class FishingScene(Scene):
         self.sparkles.update(dt)
         self.popups.update(dt)
         self.toasts.update(dt)
+        # 파이팅 중 알림이 뜨면 오른쪽 위 의뢰 줄은 잠깐 흐려진다 (겹침 방지)
+        want = 0.0 if (self.toasts.items and self._fighting_hud()) else 1.0
+        self.quest_hud_a = getattr(self, "quest_hud_a", 1.0)
+        self.quest_hud_a += max(-dt * 6, min(dt * 4, want - self.quest_hud_a))
         if self.captions:
             self.captions[1] -= dt
             if self.captions[1] <= 0:
@@ -1770,7 +1774,7 @@ class FishingScene(Scene):
             if hint:
                 hud.draw_hint(canvas, pal, hint, center=self.touch)
             hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
-        self.toasts.draw(canvas)
+        self.toasts.draw(canvas, self._toast_width(canvas) if self._fighting_hud() else None)
         if self.captions:
             cap, left = self.captions
             w = get_font(11).size(cap)[0] + 12
@@ -1939,7 +1943,8 @@ class FishingScene(Scene):
         pattern_fx.draw_pattern_panel(canvas, f, self.touch, t)
         qr = getattr(self, "quest_run", None)
         if qr is not None and qr.items:
-            fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)
+            fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0,
+                                  getattr(self, "quest_hud_a", 1.0))
         if self.touch:
             # 드랙·소모품·조작 안내는 터치 버튼이 대신한다
             fight_hud.draw_distance(canvas, pal, f, self.hud_inset)
@@ -1999,6 +2004,19 @@ class FishingScene(Scene):
         if (self.save.charm_on("pinwheel_float") and self.bite.state == BiteState.NIBBLE and self.bite.dip > 0.03):
             out = dict(out, bobber=(90, 220, 255))
         return out
+
+    def _fighting_hud(self) -> bool:
+        return self.fight is not None and self.fight.phase == "fight"
+
+    def _toast_width(self, canvas) -> int:
+        """파이팅 중 알림 폭: 왼쪽 게이지 묶음(줄·바늘·걸림·기믹 막대)과 겹치지 않는 가운데 칸."""
+        f = self.fight
+        side = 104 + (28 if f.hazards else 0)
+        gim = getattr(f, "gim", None)
+        if gim is not None:
+            side += 28 * len([k for k in gim.kinds(f.brain) if k in ("tangle", "heat")])
+        side += self.game.screen.safe_x + (self.hud_inset if self.touch else 0)
+        return max(200, canvas.get_width() - 2 * side)
 
     GAUGE_W = 170  # 파이팅 게이지 묶음 폭 (fight_hud.draw_gauges 가 왼쪽 0~170px에 그림, 물살 표시 포함)
 

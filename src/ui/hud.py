@@ -102,14 +102,23 @@ class Toasts:
             it["life"] -= dt
         self.items = [it for it in self.items if it["life"] > 0]
 
-    def draw(self, canvas) -> None:
+    def draw(self, canvas, max_w: int | None = None) -> None:
+        """max_w: 이 폭을 넘으면 여러 줄로 (파이팅 중엔 왼쪽 게이지·오른쪽 의뢰 사이 가운데 칸에 맞춘다)."""
         for it in self.items:
             age = it["dur"] - it["life"]
             # 처음 0.15초 위에서 툭 떨어지며 등장
             dy = -6 * max(0.0, 1 - age / 0.15)
             if it["life"] < 0.4 and int(it["life"] * 20) % 2 == 0:
                 continue
-            text(canvas, it["text"], (canvas.get_width() // 2, 58 + dy), it["color"], it["size"], "center")
+            lines = [it["text"]]
+            if max_w and get_font(it["size"]).size(localize(it["text"]))[0] > max_w:
+                lines = wrap_text(it["text"], max_w, it["size"])
+            lh = it["size"] + 2
+            # 여러 줄이면 위로 쌓는다 (아래 패턴 안내 패널(69~)을 가리지 않게, 마지막 줄 62)
+            y = 58 + dy if len(lines) == 1 else 62 + dy - (len(lines) - 1) * lh
+            for ln in lines:
+                text(canvas, ln, (canvas.get_width() // 2, int(y)), it["color"], it["size"], "center")
+                y += lh
 
 
 def draw_catch_card(canvas, pal, fish_name: str, size_cm: float, rarity: str, t: float) -> None:

@@ -1,5 +1,5 @@
 {
- "_설명": "물고기 89종: 샤르미온 47 (DESIGN.md 3·18장) + 엘드라시온 42 (23장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. hint3/hint10은 도감 힌트. spawn_weight = 출현 가중치 덮어쓰기 (없으면 희귀도 기본값). 조건이 까다로운 가물치·숭어·어름치·만새기는 희귀로 올리되 출현 빈도는 고급 그대로(25). 신규 패턴(U3, data/patterns.json): actions에 shake·dive·surface·reverse·twist·chain 가중치, chain_seq = 연쇄 콤보 3행동 (DESIGN.md 27-3 배치표). U4: hide·pump·thrash·bite·dual 가중치, dual_pairs = 이중 패턴 짝, fake_tired = 가짜 지침 확률(⑪).",
+ "_설명": "물고기 89종: 샤르미온 47 (DESIGN.md 3·18장) + 엘드라시온 42 (23장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. hint3/hint10은 도감 힌트. spawn_weight = 출현 가중치 덮어쓰기 (없으면 희귀도 기본값). 조건이 까다로운 가물치·숭어·어름치·만새기는 희귀로 올리되 출현 빈도는 고급 그대로(25). 신규 패턴(U3, data/patterns.json): actions에 shake·dive·surface·reverse·twist·chain 가중치, chain_seq = 연쇄 콤보 3행동 (DESIGN.md 27-3 배치표). U4: hide·pump·thrash·bite·dual 가중치, dual_pairs = 이중 패턴 짝, fake_tired = 가짜 지침 확률(⑪). drag_floor = 드랙을 다 풀어도 남는 무게(드랙 한계에 더함) — 참치·청새치처럼 '드랙 조절 시험'인 물고기는 돌진 때 감기 멈춤·낚싯대 방향까지 같이 해야 버틴다.",
  "fish": [
   {
    "id": "crucian",
@@ -2139,7 +2139,8 @@
    "desc": "바다의 탄환. 예고는 짧고 질주는 길다.",
    "hint3": "꼬리 물보라 0.6초 뒤 2초 질주. 드랙 관리가 전부.",
    "hint10": "돌진 70%. 질주 중 드랙 1~2단계 유지.",
-   "rush_sec": 2.0
+   "rush_sec": 2.0,
+   "drag_floor": 15.5
   },
   {
    "id": "spanish_mackerel",
@@ -2396,7 +2397,8 @@
       "reverse": 25
      }
     }
-   ]
+   ],
+   "drag_floor": 18
   },
   {
    "id": "blackthroat",

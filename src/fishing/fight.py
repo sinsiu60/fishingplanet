@@ -657,7 +657,8 @@ class Fight:
                 reel_t *= cfg["reel_tension_mult_when_calm"]
         target = cfg["base_line_tension"] + pull + reel_t
         self.drag_limit = lerp(cfg["drag_limit_min"], cfg["drag_limit_max"], drag_frac) + \
-            max(0.0, self.fish.get("power", 1.0) - 1.0) * cfg["drag_floor_per_power"]  # 힘센 물고기는 드랙을 풀어도 무겁다
+            max(0.0, self.fish.get("power", 1.0) - 1.0) * cfg["drag_floor_per_power"] + \
+            self.fish.get("drag_floor", 0.0)  # 힘센 물고기는 드랙을 풀어도 무겁다 (참치·청새치: 종별 값)
         payout = 0.0
         if target > self.drag_limit:
             over = target - self.drag_limit

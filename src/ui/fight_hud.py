@@ -266,8 +266,16 @@ def _wrap(s: str, width: int) -> list[str]:
     return lines
 
 
-def draw_quests(canvas, lines: list, inset: int = 0) -> None:
-    """파이팅 중 의뢰 진행 (오른쪽 위 작게): 지키는 중 / 실패 / 완료."""
+def draw_quests(canvas, lines: list, inset: int = 0, alpha: float = 1.0) -> None:
+    """파이팅 중 의뢰 진행 (오른쪽 위 작게): 지키는 중 / 실패 / 완료. alpha: 알림이 뜬 동안 흐려짐."""
+    if alpha <= 0.02:
+        return
+    if alpha < 0.98:
+        layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+        draw_quests(layer, lines, inset)
+        layer.set_alpha(int(255 * alpha))
+        canvas.blit(layer, (0, 0))
+        return
     w = canvas.get_width()
     y = 44  # 물고기 이름·체력 바(20~36) 아래, 패턴 안내(69~) 위
     font = get_font(11)
