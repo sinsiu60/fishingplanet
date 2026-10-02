@@ -306,7 +306,7 @@ def scenario():
     key(pygame.K_c); yield from step(10); log('key(pygame.K_c')
     key(pygame.K_ESCAPE); yield from step(15); log('key(pygame.K_E')
     click(btn("설정")); yield from step(10)
-    for b in list(getattr(scene(), "buttons", []))[:-1]:
+    for b in [b for b in getattr(scene(), "buttons", [])[:-1] if b.label != "열기"]:  # 세이브 옮기기는 따로
         click(b.rect.center); yield from step(4)
         click(b.rect.center); yield from step(4)
     key(pygame.K_ESCAPE); yield from step(10)

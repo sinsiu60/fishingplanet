@@ -31,7 +31,9 @@ class Game:
             from src.ui import hud
             hud.SHOW_CURSOR = False
         from src.platform.haptics import Haptics
-        self.haptics = Haptics()  # 진동 (PC는 아무것도 안 함)
+        self.haptics = Haptics(self.settings)  # 진동 (PC는 아무것도 안 함)
+        from src.platform.lifecycle import Lifecycle
+        self.lifecycle = Lifecycle(self)  # 모바일: 백그라운드 → 일시정지·저장
         self.preview = None
         from src.platform.detect import PREVIEW
         if PREVIEW:
@@ -40,6 +42,12 @@ class Game:
             self.screen.overlay = self.preview.draw
             pygame.display.set_caption(self.preview.caption())
         self.clock = pygame.time.Clock()
+        if self.screen.mobile:
+            self._loading_frame()
+            from src.platform.detect import IS_ANDROID
+            if IS_ANDROID:
+                from src.platform import android
+                android.keep_screen_on()
         self.sfx = Sfx()
         self.sfx.volume = self.settings.get("volume")
         self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
@@ -57,6 +65,23 @@ class Game:
             from src.scene.menu import TitleScene
             start_scene = TitleScene
         self.scenes.push(start_scene(self))
+
+    def _loading_frame(self) -> None:
+        """모바일 첫 실행은 효과음을 만드느라 몇 초 걸려서 안내 화면을 먼저 보여 준다."""
+        from src.ui.hud import text
+        c = self.screen.canvas
+        c.fill((12, 16, 30))
+        text(c, "준비 중...", (c.get_width() // 2, c.get_height() // 2), (220, 226, 240), 16, "center")
+        self.screen.present()
+
+    def frame_cap(self) -> int:
+        """PC = 설정 파일 값 그대로. 모바일 = 설정 30/60, 메뉴 화면은 늘 30 (배터리). 로직은 언제나 초당 60틱."""
+        if not self.screen.mobile:
+            return self.fps_cap
+        from src.scene.fishing_scene import FishingScene
+        if not isinstance(self.scenes.current, FishingScene):
+            return 30
+        return self.settings.get("fps")
 
     def switch_preset(self, name: str) -> None:
         """미리보기: 화면 프리셋을 바꾸고 지금 화면을 새 크기로 다시 연다 (낚시 중이면 낚시터 처음 상태로)."""
@@ -108,7 +133,7 @@ class Game:
         accumulator = 0.0
         frames = 0
         while self.running:
-            frame_time = min(self.clock.tick(self.fps_cap) / 1000.0, MAX_FRAME_TIME)
+            frame_time = min(self.clock.tick(self.frame_cap()) / 1000.0, MAX_FRAME_TIME)
             if self.slow_timer > 0:
                 self.slow_timer -= frame_time
                 if self.slow_timer <= 0:
@@ -124,6 +149,8 @@ class Game:
                 if event.type == pygame.QUIT:
                     self.quit()
                 elif self.preview is not None and self.preview.handle_event(event):
+                    pass
+                elif self.lifecycle.handle_event(event):
                     pass
                 elif self.scenes.current:
                     self.scenes.current.handle_event(event)

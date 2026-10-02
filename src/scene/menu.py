@@ -91,6 +91,12 @@ class TitleScene(Scene):
         self.buttons[0].enabled = self.buttons[2].enabled = self.latest is not None
 
     def handle_action(self, a) -> None:
+        from src.platform.detect import IS_MOBILE
+        if a.name == "back" and IS_MOBILE:
+            # 안드로이드 뒤로 가기: 타이틀에선 바로 끄지 않고 물어본다
+            from src.scene.confirm import ConfirmScene
+            self.game.scenes.push(ConfirmScene(self.game, "게임을 종료할까요?", self.game.quit, "종료", "계속하기"))
+            return
         if a.name == "primary":
             for b in self.buttons:
                 if b.click(a.pos):

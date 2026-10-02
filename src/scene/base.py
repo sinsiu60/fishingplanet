@@ -22,6 +22,14 @@ class Scene:
                 action.pos = (action.pos[0] - r.x, action.pos[1] - r.y)
             self.handle_action(action)
 
+    def scene_below(self):
+        """씬 스택에서 바로 아래 씬 (그 위에 겹쳐 그릴 때). 없으면 None."""
+        stack = self.game.scenes.stack
+        if self in stack:
+            i = stack.index(self)
+            return stack[i - 1] if i > 0 else None
+        return stack[-1] if stack else None
+
     def ui_canvas(self, canvas: pygame.Surface) -> pygame.Surface:
         """UI 상자 영역 (PC에선 캔버스 그대로)."""
         r = self.game.screen.ui_rect

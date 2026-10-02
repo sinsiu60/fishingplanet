@@ -632,6 +632,18 @@ def make_flee(rng) -> np.ndarray:
     return out
 
 
+def _cache_path(rate: int, channels: int, seed: int):
+    """소리 캐시 파일: 이 파일(합성 코드) 내용이 바뀌면 이름이 바뀌어 새로 만든다."""
+    import hashlib
+    from src.core.paths import save_dir
+    try:
+        with open(__file__, "rb") as f:
+            key = hashlib.sha1(f.read() + f"{rate}/{channels}/{seed}".encode()).hexdigest()[:12]
+    except OSError:
+        return None
+    return save_dir() / "cache" / f"sfx_{key}.npz"
+
+
 class Sfx:
     def __init__(self, seed: int = 1):
         self.enabled = False
@@ -648,6 +660,10 @@ class Sfx:
             self.enabled = True
         except pygame.error:
             return
+        from src.platform.detect import IS_MOBILE
+        cache = _cache_path(self.rate, self.channels, seed) if IS_MOBILE else None
+        if cache is not None and self._load_cache(cache):
+            return  # 모바일: 처음 한 번 만든 소리를 저장해 두고 다음부터 불러옴 (폰에서 합성은 몇 초 걸림)
         rng = np.random.default_rng(seed)
         bank = {
             "splash": make_splash(rng, 1.0),
@@ -704,17 +720,40 @@ class Sfx:
             "bell": make_bell(rng),
             "chest_legend": make_chest_legend(rng),
         }
+        pcms = {}
         for name, wave in bank.items():
-            self.sounds[name] = self._to_sound(wave)
+            pcms[name] = self._to_pcm(wave)
+            self.sounds[name] = self._pcm_sound(pcms[name])
+        if cache is not None:
+            try:
+                cache.parent.mkdir(parents=True, exist_ok=True)
+                np.savez(cache, **pcms)
+            except OSError:
+                pass
 
-    def _to_sound(self, wave: np.ndarray) -> pygame.mixer.Sound:
+    def _to_pcm(self, wave: np.ndarray) -> np.ndarray:
         if self.rate != RATE:
             idx = np.linspace(0, len(wave) - 1, int(len(wave) * self.rate / RATE))
             wave = np.interp(idx, np.arange(len(wave)), wave)
-        data = (np.clip(wave, -1, 1) * 32000).astype(np.int16)
+        return (np.clip(wave, -1, 1) * 32000).astype(np.int16)
+
+    def _pcm_sound(self, data: np.ndarray) -> pygame.mixer.Sound:
         if self.channels == 2:
             data = np.column_stack((data, data))
         return pygame.sndarray.make_sound(np.ascontiguousarray(data))
+
+    def _to_sound(self, wave: np.ndarray) -> pygame.mixer.Sound:
+        return self._pcm_sound(self._to_pcm(wave))
+
+    def _load_cache(self, path) -> bool:
+        try:
+            with np.load(path) as z:
+                for name in z.files:
+                    self.sounds[name] = self._pcm_sound(z[name])
+            return bool(self.sounds)
+        except Exception:
+            self.sounds.clear()
+            return False
 
     def play(self, name: str, volume: float = 1.0) -> pygame.mixer.Channel | None:
         if not self.enabled or name not in self.sounds:

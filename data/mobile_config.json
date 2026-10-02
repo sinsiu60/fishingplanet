@@ -1,5 +1,5 @@
 {
-  "_설명": "모바일 터치 조작 수치 (DESIGN.md 26-10). 좌표·거리는 캔버스 픽셀(폰 기준 1px ≈ 0.25mm), 시간은 ms. safe_x_px = 폰(캔버스 폭 540 이상)에서 좌우 HUD·버튼을 카메라 구멍·둥근 모서리만큼 안쪽으로 (Phase M5에서 기기 실제 값으로 바꿀 예정).",
+  "_설명": "모바일 터치 조작 수치 (DESIGN.md 26-10). 좌표·거리는 캔버스 픽셀(폰 기준 1px ≈ 0.25mm), 시간은 ms. safe_x_px = 폰(캔버스 폭 540 이상)에서 좌우 HUD·버튼을 카메라 구멍·둥근 모서리만큼 안쪽으로 (Phase M5에서 기기 실제 값으로 바꿀 예정). debug_build = true면 다섯 손가락 탭으로 수치 표시(F1) — 릴리스 APK에선 false.",
   "tap_slop_px": 6,
   "button_slop_px": 4,
   "long_press_ms": 450,
@@ -20,5 +20,6 @@
   ],
   "tablet_scale": 0.9,
   "hud_inset_px": 30,
-  "safe_x_px": 14
+  "safe_x_px": 14,
+  "debug_build": false
 }

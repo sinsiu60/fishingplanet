@@ -189,6 +189,11 @@ class TouchInput(PcInput):
         ctx = self._scene_ctx()
         f = {"start": pos, "pos": pos, "t0": now, "moved": False, "sy": pos[1], "role": "menu", "hist": [(now, pos[0])]}
         self.fingers[fid] = f
+        if len(self.fingers) >= 5 and cfg().get("debug_build"):
+            # 디버그 빌드만: 다섯 손가락 탭 = 수치 표시(F1). 릴리스 APK에선 꺼져 있다 (MOBILE.md 4번)
+            for g in self.fingers.values():
+                g["role"] = "ignored"
+            return Action("debug", "F1")
         if ctx is None:
             self._pointer = pos
             return None

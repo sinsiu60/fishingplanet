@@ -50,6 +50,14 @@ class PixelScreen:
         if self.mobile and width >= 540:
             from src.core.config import load_json
             self.safe_x = load_json("mobile_config.json")["safe_x_px"]
+        if self.mobile:
+            from src.platform.detect import IS_ANDROID
+            if IS_ANDROID:
+                # 실제 기기: 카메라 구멍 안전 여백을 물어본다 (기기 픽셀 → 캔버스 픽셀). 모를 땐 위 기본값
+                from src.platform import android
+                ins = android.cutout_insets()
+                if ins is not None:
+                    self.safe_x = max(6, -(-max(ins) // max(1, int(self.fscale))) + 2)
         if not self.mobile:
             self.scale = scale or self._best_scale()
             self.window = pygame.display.set_mode((width * self.scale, height * self.scale))
