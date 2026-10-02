@@ -6,12 +6,11 @@ import pygame
 from src.core.fonts import get_font
 from src.core.mathutil import clamp, lerp, lerp_color
 from src.render.fish_draw import RANK_COLORS
+from src.ui import icons
 from src.ui.hud import SHADOW, text
 
 RARITY_COLOR = {"common": (230, 230, 230), "uncommon": (130, 230, 150), "rare": (130, 190, 255),
                 "legend": (255, 214, 90)}
-STATE_COLOR = {"지침": (130, 230, 255), "완전 지침": (130, 230, 255), "멈춤": (255, 240, 140),
-               "회복 중": (200, 200, 200)}
 GREEN, RED, SLACK = (70, 180, 95), (205, 62, 58), (80, 98, 130)
 PANEL = (24, 30, 50)
 
@@ -46,7 +45,7 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
     mc = (255, 255, 255) if not blink else col
     canvas.fill(mc, (x - 3, int(top), w + 6, 2))
     pygame.draw.polygon(canvas, mc, [(x + w + 3, top), (x + w + 8, top - 4), (x + w + 8, top + 4)])
-    text(canvas, "장력", (x + w // 2, y + h + 12), pal["text"], 11, "center")
+    icons.tension(canvas, x + w // 2, y + h + 10, pal["text"])  # 파이팅 중엔 글자 대신 그림 (31장)
 
     # 줄 내구도
     lf = fight.line_frac
@@ -54,7 +53,7 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
     if lf < 0.25 and int(t * 6) % 2 == 0:
         lc = (255, 40, 40)
     _vbar(canvas, 36, y, 5, h, lf, lc)
-    text(canvas, "줄", (38, y + h + 12), pal["text"], 11, "center")
+    icons.line(canvas, 38, y + h + 10, pal["text"])
     # 바늘 빠짐
     hf = fight.hook / 100
     hc = (255, 170, 60) if hf < 0.6 or int(t * 6) % 2 else (255, 60, 40)
@@ -66,13 +65,13 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
         canvas.fill((150, 30, 40), (60, y + h - fh, 5, fh))
     for k in (1, 2):
         canvas.fill((14, 16, 26), (59, y + h - h * k // 3, 7, 1))
-    text(canvas, "바늘", (61, y + h + 12), pal["text"], 11, "center")
+    icons.hook(canvas, 62, y + h + 10, pal["text"])
     # 줄 걸림 (위협 구역이 있는 낚시터만)
     if fight.hazards:
         sf = fight.snag / 100
         sc = (200, 150, 255) if not fight.in_hazard or int(t * 6) % 2 else (255, 80, 200)
         _vbar(canvas, 88, y, 5, h, sf, sc)
-        text(canvas, "걸림", (90, y + h + 12), pal["text"], 11, "center")
+        icons.snag(canvas, 90, y + h + 10, pal["text"])
     # 엘드라시온 기믹
     gim = getattr(fight, "gim", None)
     if gim is None:
@@ -85,7 +84,7 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
         if gim.reel_lock_t > 0:
             tc = (255, 80, 80)
         _vbar(canvas, gx, y, 5, h, tf, tc)
-        text(canvas, "엉킴", (gx + 2, y + h + 12), pal["text"], 11, "center")
+        icons.tangle(canvas, gx + 2, y + h + 10, pal["text"])
         gx += 28
     if "heat" in kinds:
         # 열: 파이팅 시간이 45초에 가까워질수록 차오르고, 넘으면 붉게 맥동
@@ -94,9 +93,7 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
         hot = gim.heat_dmg > 0
         hc = (255, 150, 60) if not hot else lerp_color((255, 80, 40), (255, 220, 120), 0.5 + 0.5 * math.sin(t * 10))
         _vbar(canvas, gx, y, 5, h, hf, hc)
-        text(canvas, "열", (gx + 2, y + h + 12), pal["text"], 11, "center")
-        if hot:
-            text(canvas, f"-{gim.heat_dmg:.1f}%/s", (gx + 2, y - 8), (255, 140, 90), 11, "center")
+        icons.heat(canvas, gx + 2, y + h + 10, hc if hot else pal["text"])
         gx += 28
     if "current" in kinds:
         # 물살: 장력 게이지 바로 옆 작은 파도 + 다음 마루까지
@@ -107,10 +104,13 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
             yy = wy - math.sin(ph) * 4
             canvas.fill(SHADOW, (wx + i * 2 + 1, int(yy) + 1, 2, 2))
             canvas.fill((255, 240, 170) if i == 0 else (230, 245, 255), (wx + i * 2, int(yy), 2, 2))
+        # 다음 마루까지: 숫자 대신 줄어드는 막대
         col = (255, 220, 120) if left < 0.8 else (180, 220, 255)
-        text(canvas, f"물살 마루 {left:.1f}초", (wx, wy + 10), col, 11, "midleft")
+        k = max(0.0, min(1.0, left / gim.cfg["current_period"]))
+        canvas.fill(SHADOW, (wx - 1, wy + 7, 50, 4))
+        canvas.fill(col, (wx, wy + 8, int(48 * k), 2))
     if "ice" in kinds and gim.ice_out and int(t * 6) % 2 == 0:
-        text(canvas, "얼음에 쓸린다!", (x, y - 10), (150, 220, 255), 11, "midleft")
+        pygame.draw.rect(canvas, (150, 220, 255), (x - 3, y - 3, w + 6, h + 6), 1)  # 얼음에 쓸림: 장력 게이지 테두리 깜빡
 
 
 def draw_boss_bar(canvas, pal, fight) -> None:
@@ -119,10 +119,8 @@ def draw_boss_bar(canvas, pal, fight) -> None:
     x = (w - bw) // 2
     y = 20
     fish = fight.fish
-    name = fish["name"]
-    if fight.brain.dragon:
-        name = "용 '등용'"
-    text(canvas, name, (x - 6, y + 3), RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 11, "midright")
+    # 이름·상태 글자는 파이팅 중엔 안 보인다 (31장) — 희귀도 색 테두리로만
+    rc = RARITY_COLOR.get(fish["rarity"], (255, 255, 255))
     phases = fight.brain.phases
     if phases:
         # 페이즈 표시: ◆◆◇
@@ -135,24 +133,26 @@ def draw_boss_bar(canvas, pal, fight) -> None:
     canvas.fill((50, 30, 36), (x, y, bw, bh))
     canvas.fill((235, 90, 80), (x, y, int(bw * fight.stamina_frac), bh))
     canvas.fill((255, 170, 150), (x, y, int(bw * fight.stamina_frac), 1))
-    name = fight.brain.display_name()
-    text(canvas, name, (x + bw + 6, y + 3), STATE_COLOR.get(name, (255, 200, 170)), 11, "midleft")
+    pygame.draw.rect(canvas, rc, (x - 2, y - 2, bw + 4, bh + 4), 1)
 
 
 def draw_drag(canvas, pal, fight) -> None:
     x, y = 8, 226
-    r = text(canvas, "드랙", (x, y), pal["text"], 11, "midleft")
-    bx = r.right + 4
+    icons.reel(canvas, x + 6, y, pal["text"])
+    bx = x + 18
     for i in range(fight.drag_steps):
         filled = i < fight.drag
         rect = (bx + i * 7, y - 3, 5, 7)
         canvas.fill(SHADOW, (rect[0] - 1, rect[1] - 1, 7, 9))
         canvas.fill((255, 220, 120) if filled else (60, 64, 80), rect)
-    text(canvas, "Q- E+", (bx + fight.drag_steps * 7 + 4, y), (190, 195, 210), 11, "midleft")
 
 
 def draw_distance(canvas, pal, fight, inset: int = 0) -> None:
-    text(canvas, f"거리 {fight.distance:.1f}m", (canvas.get_width() - 6 - inset, 4), pal["text"], 11, "topright")
+    """거리: 숫자 대신 작은 막대 (왼쪽 끝 = 내 쪽, 점 = 물고기)."""
+    from src.core.config import load_json
+    far = load_json("fishing_config.json")["cast"]["max_distance"]
+    w = 46
+    icons.distance(canvas, canvas.get_width() - 10 - inset - w, 8, w, fight.distance / far, (150, 200, 255))
 
 
 STAMP_T = 0.6       # 랭크 도장이 찍히는 시각 (획득 컷 기준)
@@ -266,16 +266,14 @@ def _wrap(s: str, width: int) -> list[str]:
     return lines
 
 
-def draw_quests(canvas, lines: list, inset: int = 0, alpha: float = 1.0) -> None:
-    """파이팅 중 의뢰 진행 (오른쪽 위 작게): 지키는 중 / 실패 / 완료. alpha: 알림이 뜬 동안 흐려짐."""
-    if alpha <= 0.02:
-        return
-    if alpha < 0.98:
-        layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
-        draw_quests(layer, lines, inset)
-        layer.set_alpha(int(255 * alpha))
-        canvas.blit(layer, (0, 0))
-        return
+def draw_quest_icon(canvas, lines: list, inset: int = 0) -> None:
+    """파이팅 중 의뢰: 글자는 숨기고 조건이 깨졌을 때만 아이콘 1개 (31장). 상세는 결과 화면."""
+    if any(state == "fail" for _, state in lines):
+        icons.quest_fail(canvas, canvas.get_width() - 14 - inset, 22)
+
+
+def draw_quests(canvas, lines: list, inset: int = 0) -> None:
+    """결과 화면의 의뢰 진행 (오른쪽 위): 지키는 중 / 실패 / 완료. 파이팅 중엔 draw_quest_icon."""
     w = canvas.get_width()
     y = 44  # 물고기 이름·체력 바(20~36) 아래, 패턴 안내(69~) 위
     font = get_font(11)

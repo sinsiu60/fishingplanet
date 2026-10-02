@@ -372,29 +372,25 @@ def draw_cue(canvas, fight, pitch: float, anchor, t: float, touch: bool, bite_an
 
 
 def _cue_one(canvas, p, x: int, y: int, t: float, col, touch: bool) -> None:
+    """조작 방향 표시: 그림만 (파이팅 중 글자 금지, 31장)."""
     pid = p.id
-    back = pygame.Surface((46, 56), pygame.SRCALPHA)
+    back = pygame.Surface((40, 40), pygame.SRCALPHA)
     pygame.draw.rect(back, (10, 14, 28, 120), back.get_rect(), border_radius=8)
-    canvas.blit(back, (x - 23, y - 32))
+    canvas.blit(back, (x - 20, y - 26))
+    cy = y - 6
     if pid == "dive":
-        _chevrons(canvas, x, y - 6, -1, t, col, 12)
-        label = "위로"
+        _chevrons(canvas, x, cy, -1, t, col, 12)
     elif pid == "surface":
-        _chevrons(canvas, x, y - 6, 1, t, col, 12)
-        label = "아래로"
+        _chevrons(canvas, x, cy, 1, t, col, 12)
     elif pid == "twist":
-        _ring_arrow(canvas, x, y - 11, 10, t, col, 2)
-        label = "원"
+        _ring_arrow(canvas, x, cy, 11, t, col, 2)
     elif pid == "shake":
-        _hand_still(canvas, x - 6, y - 6, t, col)
-        label = "가만히"
+        _hand_still(canvas, x - 8, cy, t, col)
     elif pid == "reverse":
         on = int(t * 10) % 2 == 0
-        pygame.draw.circle(canvas, col, (x, y - 6), 9 if on else 6, 2)
-        label = "연타"
-    else:  # bite
+        pygame.draw.circle(canvas, col, (x, cy), 9 if on else 6, 2)
+    else:  # bite: 풀기(▼▼) — 예고 끝나는 순간 금색
+        from src.ui import icons
         b = p.fight.brain
         lit = b.state != "telegraph" or b.timer < 0.15
-        _key(canvas, x, y - 6, "▼" if touch else "Shift", lit)
-        label = "지금!" if lit else "준비"
-    text(canvas, label, (x, y + 16), col, 11, "center")
+        icons.release(canvas, x, cy, GOLD if lit else col, 6 if lit else 5)

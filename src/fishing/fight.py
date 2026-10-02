@@ -78,6 +78,8 @@ class Fight:
         # 신규 패턴 (U3): 진행 중 판정, 꼬임 게이지, 연쇄 콤보
         self.inp = PatternInput()
         self.pats: list = []        # 진행 중 패턴 판정 (이중 패턴이면 2개)
+        from src.fishing.fight_log import FightLog
+        self.log = FightLog(fish, fish.get("spot", ""))  # 파이팅 로그 (31장 C2, 메모리)
         self.dual_results: list[str] = []
         self.dual_ids: set = set()
         self.stiff_after_dual = 0.0  # 이중 패턴 중 물어뜯기 성공 → 끝나면 경직
@@ -494,6 +496,10 @@ class Fight:
 
     # ── 틱 ──
     def update(self, dt: float, reeling: bool, rod_aim: float, inp: PatternInput | None = None) -> None:
+        self._update(dt, reeling, rod_aim, inp)
+        self.log.tick(self)
+
+    def _update(self, dt: float, reeling: bool, rod_aim: float, inp: PatternInput | None = None) -> None:
         if inp is not None:
             self.inp = inp
         if dt > 0:

@@ -93,8 +93,13 @@ class Toasts:
 
     def __init__(self):
         self.items: list[dict] = []
+        self.sink = None  # 파이팅 중: 6글자 이하만 이 함수로(글자 슬롯 하나), 문장은 버린다 (31장)
 
     def show(self, s: str, color=(255, 255, 255), duration: float = 2.0, size: int = 16) -> None:
+        if self.sink is not None and not s.startswith("[테스트]"):
+            if len(s) <= 6:
+                self.sink(s, color)
+            return
         self.items = [{"text": s, "color": color, "life": duration, "dur": duration, "size": size}]
 
     def update(self, dt: float) -> None:

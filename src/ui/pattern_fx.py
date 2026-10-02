@@ -8,7 +8,8 @@ import math
 import pygame
 
 from src.core.config import load_json
-from src.ui.fight_fx import ICON_COL
+from src.ui import icons
+from src.ui.fight_fx import ICON_COL, draw_behavior_icon
 from src.ui.hud import SHADOW, text
 
 PANEL = (16, 20, 36)
@@ -65,54 +66,56 @@ def _draw_panel_rows(canvas, fight, touch: bool, t: float, y: int) -> int:
     elif fight.combo is not None:
         combo_seq, cur = fight.combo.seq, fight.combo.index
     if combo_seq:
-        parts = [action_name(a) for a in combo_seq]
-        label = "콤보! "
-        total = sum(_tw(p) for p in parts) + _tw(label) + 14 * (len(parts) - 1)
-        x = w // 2 - total // 2
-        bg = pygame.Rect(x - 6, y - 7, total + 12, 15)
+        # 콤보: 행동 아이콘을 한 줄로 (글자 없음, 31장) — 지난 것은 흐리게, 지금 것은 금색 고리
+        n = len(combo_seq)
+        step = 24
+        x0 = w // 2 - (n - 1) * step // 2
+        bg = pygame.Rect(x0 - 16, y - 9, (n - 1) * step + 32, 19)
         canvas.fill(PANEL, bg)
         pygame.draw.rect(canvas, ICON_COL["chain"], bg, 1)
-        r = text(canvas, label, (x, y), ICON_COL["chain"], 11, "midleft")
-        x = r.right
         failed = fight.combo is not None and fight.combo.failed
-        for i, p in enumerate(parts):
-            col = DIM if i < cur else (BAD if failed and i >= cur else (255, 240, 160) if i == cur else TEXT)
-            r = text(canvas, p, (x, y), col, 11, "midleft")
-            x = r.right
-            if i < len(parts) - 1:
-                text(canvas, "→", (x + 7, y), DIM, 11, "center")
-                x += 14
-        y += 17
-    # 패턴 대응 안내 (이중 패턴이면 두 줄)
+        for i, a in enumerate(combo_seq):
+            cx = x0 + i * step
+            kind = a if a in ICON_COL else "rush"
+            if i < cur:
+                pygame.draw.circle(canvas, (60, 66, 90), (cx, y), 6)
+                continue
+            draw_behavior_icon(canvas, (cx, y + 20), kind, 1.0, 1, t)
+            if i == cur:
+                pygame.draw.circle(canvas, BAD if failed else (255, 240, 160), (cx, y), 11, 1)
+            if i < n - 1:
+                canvas.fill(DIM, (cx + 11, y, 3, 1))
+        y += 22
+    # 패턴 대응 (이중 패턴이면 두 줄): 아이콘 + 막대, 글자 없음
     for pat in list(fight.pats):
         if b.sound_only and not pat.active:
             continue
         _judge_row(canvas, fight, pat, touch, t, w, y)
-        y += 27
-    # 공중 몸부림: 판정 객체 대신 점프 판정 원 — 안내 줄만
+        y += 20
+    # 공중 몸부림: 아이콘 + 숙이기 두 번 자리(점 2개)
     thrash = b.telegraphing("thrash") or (b.state == "jump" and b.jump_kind == "thrash" and not b.jump_judged)
     if thrash and not b.sound_only:
-        pw = 250
+        pw = 120
         x = w // 2 - pw // 2
         col = ICON_COL["thrash"]
-        bg = pygame.Rect(x, y - 7, pw, 15)
+        bg = pygame.Rect(x, y - 8, pw, 17)
         canvas.fill(PANEL, bg)
         pygame.draw.rect(canvas, col, bg, 1)
-        text(canvas, names()["thrash"] + "!", (x + 5, y), col, 11, "midleft")
+        draw_behavior_icon(canvas, (x + 12, y + 20), "thrash", 1.0, 1, t)
         n = 1 + (1 if b.state == "jump" and b.thrash_judged[0] else 0)
-        key = "우클릭" if not touch else "숙이기"
-        text(canvas, f"{key} 2번: 정점 · 착수 직전  ({n}/2)", (x + pw - 5, y), TEXT, 11, "midright")
-        y += 18
-    # 꼬임 게이지 (행동이 끝나도 남는다)
+        for i in range(2):
+            c = (x + 60 + i * 22, y)
+            pygame.draw.circle(canvas, col, c, 5, 0 if i < n - 1 else 1)
+        y += 20
+    # 꼬임 게이지 (행동이 끝나도 남는다): 나선 아이콘 + 막대
     tw = fight.twist.value
     if tw > 0.5:
         gw = 120
         x = w // 2 - gw // 2
         danger = tw >= 75 and int(t * 8) % 2 == 0
         col = (255, 90, 70) if tw >= 75 else (255, 200, 90) if tw >= 40 else ICON_COL["twist"]
-        text(canvas, "꼬임", (x - 4, y + 1), BAD if danger else TEXT, 11, "midright")
+        icons.twist(canvas, x - 10, y + 1, BAD if danger else col)
         _bar(canvas, x, y, gw, tw / 100, None, col)
-        text(canvas, f"{int(tw)}", (x + gw + 4, y + 1), col, 11, "midleft")
         y += 17
     return y
 
@@ -144,7 +147,7 @@ def draw_mini_tension(canvas, fight, t: float, y: int | None) -> None:
     surf = pygame.Surface((pw, ph + 4), pygame.SRCALPHA)
     surf.fill(PANEL, (0, 0, pw, ph))
     pygame.draw.rect(surf, (52, 60, 88), (0, 0, pw, ph), 1)
-    text(surf, "장력", (5, ph // 2), DIM, 11, "midleft")
+    icons.tension(surf, 14, ph // 2, DIM)
     bx, bw, by = 30, pw - 36, ph // 2 - 2
 
     def tx(v):
@@ -182,17 +185,13 @@ def _judge_row(canvas, fight, pat, touch: bool, t: float, w: int, y: int) -> Non
     col = ICON_COL[pid]
     pw = 250
     x = w // 2 - pw // 2
-    bg = pygame.Rect(x, y - 7, pw, 24)
+    bg = pygame.Rect(x, y - 8, pw, 17)
     canvas.fill(PANEL, bg)
     pygame.draw.rect(canvas, col, bg, 1)
-    title = names()[pid] + ("!" if pat.active else " 예고")
-    text(canvas, title, (x + 5, y), col, 11, "midleft")
-    prompt = PROMPT[pid][1 if touch else 0]
-    if pid == "hide" and pat.active and pat.peeking:
-        prompt = "고개를 내밀었다! 지금 감기!"
-    blink = pat.active or int(t * 6) % 2 == 0
-    text(canvas, prompt, (x + pw - 5, y), TEXT if blink else DIM, 11, "midright")
-    by, bx, bw = y + 9, x + 5, pw - 10
+    # 이름·대응 문장 대신 아이콘 (예고 중엔 깜빡, 31장 C2 — C3에서 신호 슬롯으로 옮김)
+    if pat.active or int(t * 6) % 2 == 0:
+        draw_behavior_icon(canvas, (x + 12, y + 20), pid, 1.0, 1, t)
+    by, bx, bw = y - 2, x + 26, pw - 32
     if pid == "pump":
         _pump_dots(canvas, fight, pat, bx, by, bw, t)
     elif pid == "bite":
@@ -235,11 +234,6 @@ def _pump_dots(canvas, fight, pat, x: int, y: int, w: int, t: float) -> None:
         k = pat.t / pat.interval
         mx = int(x + min(n, k) * cw)
         canvas.fill((255, 255, 255), (mx, y - 3, 1, 10))
-
-
-def _tw(s: str) -> int:
-    from src.core.fonts import get_font
-    return get_font(11).size(s)[0]
 
 
 def draw_line_twist(canvas, p0, p1, amount: float, t: float) -> None:

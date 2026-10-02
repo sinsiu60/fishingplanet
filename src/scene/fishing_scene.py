@@ -42,7 +42,6 @@ HINTS = {
     CastState.RETRIEVE: "줄 감는 중...",
     CastState.HOOKED: "좌클릭 유지: 감기   우클릭: 숙이기   Q/E·휠: 드랙   마우스: 버티기   H: 도움말",
 }
-NET_HINT = "몸부림이 멈춘 순간 좌클릭!"
 GOOD = (140, 240, 150)
 BAD = (255, 150, 130)
 INFO = (255, 235, 170)
@@ -567,6 +566,8 @@ class FishingScene(Scene):
                            hazards=self.spot["hazards"], gimmick=self.current_gimmick(),
                            float_need=self.save.float_need(fish, self.spot), float_tier=self.save.float_tier(),
                            touch_lead=load_json("mobile_config.json")["touch_lead_sec"] if self.touch else 0.0)
+        self.toasts.items.clear()
+        self.toasts.sink = self._say  # 파이팅 중 글자 슬롯 하나 (31장)
         if self.touch:
             self.fight.input_latency = load_json("mobile_config.json")["pump_latency_sec"]
         self.fight.lure_info = {"bite": self.bite.lure_bite, "used": set(self.bite.lure_used),
@@ -577,7 +578,7 @@ class FishingScene(Scene):
             kinds = mutation.cfg()["kinds"]
             col = tuple(kinds[muts[0]]["color"])
             desc = " · ".join(kinds[m]["short"] for m in muts)
-            self.toasts.show(f"변이! {fish['name']} — {desc}", col, 3.2, 11)
+            self.toasts.show(f"{kinds[muts[0]]['name']} 변이", col, 3.2, 11)
             self.sfx.play("chord_rare", 0.6)
             self.sparkles.burst(*self._fish_screen(), count=16, speed=0.9)
         for g in sorted(self.fight.gim.kinds(self.fight.brain)):
@@ -588,16 +589,15 @@ class FishingScene(Scene):
         need_rod = fish_gear_tier(fish)
         if self.save.gear_tier("rod") < need_rod and fish["rarity"] != "common":
             # 낚싯대가 약하면 울렁임이 커진다 — 왜 어려운지 알려 준다
-            self.toasts.show(f"낚싯대가 버거워한다! 이 물고기는 T{need_rod} 이상 권장", BAD, 2.6, 11)
+            self.toasts.show("버겁다!", BAD, 2.6, 11)
         if fish["rarity"] == "legend":
-            self.toasts.show(f"전설 등장! {fish['name']}", (255, 214, 90), 3.0)
+            self.toasts.show("전설!", (255, 214, 90), 3.0)
             self.game.haptics.vibrate("legend")
             self.sfx.play("impact", 1.0)
             self.sfx.play("chord_legend", 0.7)
             self.shake_kick = 2.5
         if self.fight.brain.sound_only:
-            hint = " (설정: 소리 자막)" if not self.settings.get("sound_captions") else ""
-            self.toasts.show(f"모습이 보이지 않는다... 소리로 읽어라!{hint}", (200, 220, 255), 3.0, 11)
+            self.toasts.show("소리로!", (200, 220, 255), 3.0, 11)
         self.ink_t = 0.0
         self.ctl.reset()
         self.bite.shadow = None
@@ -608,6 +608,11 @@ class FishingScene(Scene):
 
     def _end_fight(self) -> None:
         last = self.fight.result if self.fight is not None else None
+        if self.fight is not None and load_json("fishing_config.json").get("debug_keys"):
+            # 디버그 빌드: 파이팅 로그를 세이브 폴더/fight_logs/날짜.jsonl 에 (tools/fight_log.py read 로 분석)
+            from src.core.paths import save_dir
+            self.fight.log.spot = self.spot_id
+            self.fight.log.save(str(save_dir() / "fight_logs"))
         self.fight = None
         self.landing = None
         self.dragon_fx = None
@@ -656,10 +661,7 @@ class FishingScene(Scene):
         self.sparkles.update(dt)
         self.popups.update(dt)
         self.toasts.update(dt)
-        # 파이팅 중 알림이 뜨면 오른쪽 위 의뢰 줄은 잠깐 흐려진다 (겹침 방지)
-        want = 0.0 if (self.toasts.items and self._fighting_hud()) else 1.0
-        self.quest_hud_a = getattr(self, "quest_hud_a", 1.0)
-        self.quest_hud_a += max(-dt * 6, min(dt * 4, want - self.quest_hud_a))
+        self.toasts.sink = self._say if self._fight_text_mode() else None
         if self.captions:
             self.captions[1] -= dt
             if self.captions[1] <= 0:
@@ -1243,14 +1245,14 @@ class FishingScene(Scene):
         f = self.fight
         name = item_info(item_id)["name"]
         if self.save.consumable_count(item_id) <= 0:
-            self.toasts.show(f"{name}이(가) 없어요", BAD, 1.2, 11)
+            self.toasts.show("없음!", BAD, 1.2, 11)
         elif f.consumable_used:
-            self.toasts.show("소모품은 파이팅당 1개만 쓸 수 있어요", BAD, 1.4, 11)
+            self.toasts.show("1개만!", BAD, 1.4, 11)
         elif f.use_consumable(item_id):
             self.save.use_consumable(item_id)
             self.sfx.play("great", 0.6)
             msg = "줄 내구도 +20%" if item_id == "repair_spool" else "줄 걸림이 느려졌다 (이번 파이팅)"
-            self.toasts.show(f"{name}: {msg}", GOOD, 1.8, 11)
+            self.toasts.show("사용!", GOOD, 1.8, 11)
             self.sparkles.burst(*self._fish_screen(), count=10, speed=0.7, ring=False)
 
     def _splash(self) -> None:
@@ -1429,18 +1431,18 @@ class FishingScene(Scene):
         if ev in tut.CARDS and self.card is None and self.tutorial.want(ev):
             self._open_card(ev, None if ev == "net_start" else "fish")
         elif ev == "hazard_enter":
-            self.toasts.show(f"{f.in_hazard['name']}에 걸리려 해요! 반대로 당기세요", BAD, 1.5, 11)
+            self.toasts.show("걸린다!", BAD, 1.5, 11)
         elif not f.brain.sound_only and "dark" not in f.gim.kinds(f.brain):
             self._tip(ev)  # 소리 전용·동굴(어둠)에선 그림자 기준 팁을 띄우지 않는다
         sound_only = f.brain.sound_only
         if ev.startswith("telegraph:") and self.save.charm_on("ear_bell"):
             self.sfx.play("bell", 0.7)  # 소리귀 방울
         if ev == "scale_heal":
-            self.toasts.show("용린 낚싯대: 줄 +10%", (255, 214, 90), 0.9, 11)
+            self.toasts.show("회복!", (255, 214, 90), 0.9, 11)
         elif ev == "gimmick:tangle_full":
             self.sfx.play("scrape", 1.0)
             self.sfx.play("creak", 0.8)
-            self.toasts.show("갈대에 줄이 엉켰다! 잠깐 감을 수 없다 (줄 -15%)", BAD, 1.8, 11)
+            self.toasts.show("엉킴!", BAD, 1.8, 11)
             self.shake_kick = max(self.shake_kick, 2.0)
         elif ev == "gimmick:ice_scrape":
             self.sfx.play("scrape", 0.6)
@@ -1468,7 +1470,7 @@ class FishingScene(Scene):
         elif ev.startswith("phase:"):
             n = int(ev.split(":")[1])
             pos = self._fish_screen()
-            self.toasts.show(f"페이즈 {n}/{len(f.brain.phases)} — {f.brain.phase_desc}", (255, 214, 90), 3.2, 11)
+            self.toasts.show("거세짐!", (255, 214, 90), 3.2, 11)
             self.sfx.play("roar", 1.0)
             self.sfx.play("impact", 0.8)
             self.screen_fx.great(self.screen_fx.map(pos))
@@ -1505,7 +1507,7 @@ class FishingScene(Scene):
         elif ev.startswith("hook_floor:"):
             n = int(ev.split(":")[1])
             if n < 3:
-                self.toasts.show(f"바늘이 헐거워졌다 ({n}/3) — 신호를 놓칠 때마다 바늘 게이지가 줄지 않고 쌓여요", BAD, 2.2, 11)
+                self.toasts.show("헐거움!", BAD, 2.2, 11)
         elif ev == "flick_miss":
             pos = self._fish_screen()
             self.sfx.play("miss")
@@ -1520,9 +1522,9 @@ class FishingScene(Scene):
             self.ink_t = self.fish_cfg["fight"]["ink_sec"]
             self.sfx.play("splash_small", 0.5)
         elif ev == "bolt":
-            self.toasts.show("아직 힘이 남았다! 다시 도망친다", BAD, 1.8, 11)
+            self.toasts.show("또 도망!", BAD, 1.8, 11)
         elif ev == "exhausted":
-            self.toasts.show("완전히 지쳤다! 끝까지 감으세요", GOOD, 2.0, 11)
+            self.toasts.show("지쳤다!", GOOD, 2.0, 11)
         elif ev == "perfect" and f.last_judge_kind == "swipe":
             self._swipe_vfx(True)
             pos = self._fish_screen()
@@ -1562,11 +1564,11 @@ class FishingScene(Scene):
             self.sfx.play(random.choice(("creak", "creak2", "creak3")), random.uniform(0.45, 0.65))
         elif ev == "net_start":
             self.sfx.play("splash", 0.8)
-            self.toasts.show("뜰채! " + NET_HINT, INFO, 1.6, 11)
+            self.toasts.show("뜰채!", INFO, 1.6, 11)
         elif ev == "net_fail":
             self.sfx.play("flee")
             self.sfx.play("splash")
-            self.toasts.show("뜰채 실패! 물고기가 거리를 벌린다", BAD, 2.0, 11)
+            self.toasts.show("놓쳤다!", BAD, 2.0, 11)
             self._splash_at(x, z, 1.0)
         elif ev == "caught":
             pose, _ = f.net_pose()
@@ -1790,7 +1792,7 @@ class FishingScene(Scene):
                 hud.draw_hint(canvas, pal, hint, center=self.touch)
             self._draw_lure_status(canvas)
             hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
-        self.toasts.draw(canvas, self._toast_width(canvas) if self._fighting_hud() else None)
+        self.toasts.draw(canvas)
         if self.captions:
             cap, left = self.captions
             w = get_font(11).size(cap)[0] + 12
@@ -1938,14 +1940,19 @@ class FishingScene(Scene):
             pose, still = f.net_pose()
             draw_net_scene(canvas, pal, self._display_fish(f.fish), f.size_cm, pose, still, t, self.net_anim, self.mouse)
             fight_hud.draw_boss_bar(canvas, pal, f)
-            hud.draw_hint(canvas, pal, NET_HINT, center=self.touch)
+            self.popups.draw(canvas, self.screen_fx.map)  # 뜰채 중 한 단어 ("뜰채!")
             return
+        qr = getattr(self, "quest_run", None)
         if f.phase == "caught":
             draw_catch_cut(canvas, pal, f.result, self.end_t)
             fight_hud.draw_catch_info(canvas, f.result, self.end_t, self.catch_news)
+            if qr is not None and qr.items and self.end_t > 1.0:
+                fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)  # 의뢰 상세는 결과 화면에
             return
         if f.phase == "lost":
             fight_hud.draw_lose_panel(canvas, f, LOSE_REASONS[f.lose_reason], self.end_t)
+            if qr is not None and qr.items:
+                fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)
             return
         if self.dragon_fx is not None:
             self.dragon_fx.draw(canvas)
@@ -1969,8 +1976,7 @@ class FishingScene(Scene):
             pattern_guide.draw_cue(canvas, f, self.ctl.pitch, self._cue_anchor(canvas), t, self.touch, bite_at)
         qr = getattr(self, "quest_run", None)
         if qr is not None and qr.items:
-            fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0,
-                                  getattr(self, "quest_hud_a", 1.0))
+            fight_hud.draw_quest_icon(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)
         if self.touch:
             # 드랙·소모품·조작 안내는 터치 버튼이 대신한다
             fight_hud.draw_distance(canvas, pal, f, self.hud_inset)
@@ -1978,7 +1984,6 @@ class FishingScene(Scene):
             fight_hud.draw_drag(canvas, pal, f)
             fight_hud.draw_distance(canvas, pal, f)
             self._draw_fight_items(canvas, pal, f)
-            hud.draw_hint(canvas, pal, HINTS[CastState.HOOKED])
         if self.debug:
             pad_side = self.touch and not self.settings.get("touch_left")
             fight_hud.draw_debug(canvas, f, self.ctl.debug_lines(self.t), 100 if pad_side else 4)
@@ -2080,18 +2085,13 @@ class FishingScene(Scene):
         w, h = canvas.get_size()
         return int(max(40, min(w - 40, tip[0] - 46))), int(max(110, min(h - 60, tip[1] + 40)))
 
-    def _fighting_hud(self) -> bool:
-        return self.fight is not None and self.fight.phase == "fight"
+    def _fight_text_mode(self) -> bool:
+        """파이팅(뜰채 포함) 중: 글자 예산 1개·6글자 (31장)."""
+        return self.fight is not None and self.fight.phase in ("fight", "net")
 
-    def _toast_width(self, canvas) -> int:
-        """파이팅 중 알림 폭: 왼쪽 게이지 묶음(줄·바늘·걸림·기믹 막대)과 겹치지 않는 가운데 칸."""
-        f = self.fight
-        side = 104 + (28 if f.hazards else 0)
-        gim = getattr(f, "gim", None)
-        if gim is not None:
-            side += 28 * len([k for k in gim.kinds(f.brain) if k in ("tangle", "heat")])
-        side += self.game.screen.safe_x + (self.hud_inset if self.touch else 0)
-        return max(200, canvas.get_width() - 2 * side)
+    def _say(self, s: str, color) -> None:
+        """파이팅 중 한 단어: 판정 글자와 같은 슬롯 하나 (새 글자가 이전 글자를 바로 지운다)."""
+        self.popups.say(s, color, (self.cam.width // 2, 78), 1.2)
 
     GAUGE_W = 170  # 파이팅 게이지 묶음 폭 (fight_hud.draw_gauges 가 왼쪽 0~170px에 그림, 물살 표시 포함)
 
@@ -2123,16 +2123,17 @@ class FishingScene(Scene):
 
     def _draw_fight_items(self, canvas, pal, f) -> None:
         """파이팅 중 쓸 수 있는 소모품 표시 (왼쪽 아래, 드랙 밑)."""
-        parts = []
-        for key, iid, short in (("1", "repair_spool", "실타래"), ("2", "calm_charm", "잔잔한 물")):
+        # 글자 대신 그림 (31장): 실타래·부적 아이콘 + 개수는 점, 이번 파이팅에 썼으면 흐리게. 키(1·2)는 도움말에.
+        from src.ui import icons
+        col = pal["text"] if not f.consumable_used else (110, 116, 130)
+        x = 14
+        for iid, draw in (("repair_spool", icons.line), ("calm_charm", icons.tension)):
             n = self.save.consumable_count(iid)
-            if n:
-                parts.append(f"{key}: {short} ×{n}")
-        if not parts:
-            return
-        col = pal["text"] if not f.consumable_used else (130, 136, 150)
-        label = "  ".join(parts) + ("  (이번 파이팅 사용함)" if f.consumable_used else "")
-        hud.text(canvas, label, (8, 241), col, anchor="midleft")
+            if not n:
+                continue
+            draw(canvas, x, 242, col)
+            icons.pips(canvas, x + 14, 242, min(n, 3), col, 4)
+            x += 34
 
     def _draw_gimmick_world(self, canvas, pal) -> None:
         """기믹 연출 (월드): 동굴 어둠, 얼음 구멍 가장자리, 엉킨 갈대, 열수 김."""

@@ -1,0 +1,35 @@
+{
+  "_설명": "파이팅 가독성 (DESIGN.md 31장, FIGHT_CLARITY.md). 신호 사전 = 대응 6계열. actions: 행동/패턴 → 계열·부하. budget_3s: 3초 동안 부하 합계 예산 (낚시터별, 전설은 +legend_extra). rest: 패턴 사이 최소 휴식. C2에선 파이팅 로그·분석만 이 값을 쓰고, 색·아이콘·소리(C3)와 시간 규칙(C4)이 뒤에 붙는다.",
+  "families": {
+    "release": {"name": "풀기"},
+    "reel": {"name": "감기"},
+    "timing": {"name": "타이밍"},
+    "direction": {"name": "방향"},
+    "endure": {"name": "참기"},
+    "gesture": {"name": "제스처"}
+  },
+  "actions": {
+    "rush": {"family": "release", "load": 1},
+    "bite": {"family": "release", "load": 1},
+    "hide": {"family": "release", "load": 2},
+    "charge": {"family": "reel", "load": 1},
+    "reverse": {"family": "reel", "load": 2},
+    "jump": {"family": "timing", "load": 2},
+    "leap": {"family": "timing", "load": 2},
+    "thrash": {"family": "timing", "load": 3},
+    "pump": {"family": "timing", "load": 3},
+    "turn": {"family": "direction", "load": 1},
+    "dive": {"family": "direction", "load": 1},
+    "surface": {"family": "direction", "load": 1},
+    "shake": {"family": "endure", "load": 1},
+    "twist": {"family": "gesture", "load": 3},
+    "chain": {"family": "combo", "load": 4},
+    "fake_tired": {"family": "fake", "load": 1},
+    "lure": {"family": "fake", "load": 1}
+  },
+  "budget_3s": {"reservoir": 2, "valley": 2, "breakwater": 2, "offshore": 3, "deep": 3, "secret": 3,
+                "marsh": 4, "crystal_cave": 4, "sky_falls": 4, "volcano": 4, "ice_sea": 4, "world_tree": 5},
+  "legend_extra": 1,
+  "rest": {"min_sec": 1.5, "after_heavy_sec": 2.5, "heavy_load": 3},
+  "rest_states": ["idle", "recover", "tired", "exhausted", "stiff"]
+}

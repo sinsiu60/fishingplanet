@@ -61,8 +61,6 @@ def draw_jump_ring(canvas, center, time_to_apex: float, total: float, perfect_w:
         pygame.draw.circle(surf, (*SHADOW, alpha // 2), (o + 1, o + 1), int(r_approach), 2)
         pygame.draw.circle(surf, (*col, alpha), (o, o), int(r_approach), 2)
     canvas.blit(surf, (cx - o, cy - o))
-    if time_to_apex > 0.2:
-        text(canvas, "우클릭", (cx, cy + RING_R + 10), (230, 240, 255), 11, "center")
 
 
 # ───────────────────────── 행동 아이콘 ─────────────────────────
@@ -116,7 +114,8 @@ def draw_behavior_icon(canvas, pos, kind: str, progress: float, turn_dir: int, t
         pts = [(x + math.cos(a * 0.5) * a * 0.45, y + math.sin(a * 0.5) * a * 0.45) for a in range(0, 13)]
         pygame.draw.lines(canvas, col, False, pts, 1)
     elif kind == "chain":
-        text(canvas, "x3", (x, y), col, 11, "center")
+        from src.ui import icons
+        icons.pips(canvas, x, y, 3, col, 4)
     elif kind == "hide":  # 바위 + 아래로 파고듦
         pygame.draw.polygon(canvas, col, [(x - 5, y + 4), (x - 2, y - 3), (x + 3, y - 4), (x + 5, y + 4)], 1)
         canvas.fill(col, (x - 1, y, 2, 3))
@@ -130,51 +129,53 @@ def draw_behavior_icon(canvas, pos, kind: str, progress: float, turn_dir: int, t
         pygame.draw.polygon(canvas, col, [(x - 5, y - 4), (x - 1, y - 4), (x - 3, y + 1)])
         pygame.draw.polygon(canvas, col, [(x + 1, y + 4), (x + 5, y + 4), (x + 3, y - 1)])
     elif kind == "dual":
-        text(canvas, "x2", (x, y), col, 11, "center")
+        from src.ui import icons
+        icons.pips(canvas, x, y, 2, col, 5)
     elif kind == "tired":
         canvas.fill(col, (x - 1, y - 5, 3, 7))
         canvas.fill(col, (x - 1, y + 3, 3, 2))
         if int(t * 3) % 2 == 0:
-            text(canvas, "기회!", (x, y + r + 8), col, 11, "center")
+            pygame.draw.circle(canvas, col, (x, y), r + 3, 1)  # 기회: 글자 대신 깜빡이는 고리
 
 
 # ───────────────────────── 판정 텍스트 ─────────────────────────
 
 class JudgePopups:
+    # 파이팅 중 글자 예산 (31장): 화면 전체 동시 1개, 6글자 이하 → 판정 글자도 짧게, 한 번에 하나만
     STYLE = {
-        "perfect": ("PERFECT!", GOLD, 2.0),
-        "good": ("GREAT!", GREAT_COL, 1.6),
+        "perfect": ("퍼펙트!", GOLD, 2.0),
+        "good": ("좋아!", GREAT_COL, 1.6),
         "miss_early": ("빠름!", MISS_COL, 1.0),
         "miss_late": ("늦음!", MISS_COL, 1.0),
         "miss_none": ("놓침!", MISS_COL, 1.0),
-        "flick_perfect": ("PERFECT 꺾기!", GOLD, 2.0),
+        "flick_perfect": ("퍼펙트!", GOLD, 2.0),
         "flick_good": ("꺾기!", SWIPE, 1.6),
-        "flick_miss": ("꺾기 실패!", MISS_COL, 1.2),
-        "swipe_perfect": ("PERFECT!", SWIPE, 2.0),
-        "swipe_good": ("GREAT!", SWIPE, 1.6),
+        "flick_miss": ("헛꺾기!", MISS_COL, 1.2),
+        "swipe_perfect": ("퍼펙트!", SWIPE, 2.0),
+        "swipe_good": ("좋아!", SWIPE, 1.6),
         # 신규 패턴 (U3)
         "ok_shake": ("버텼다!", GREAT_COL, 1.6),
-        "ok_dive": ("끌어올렸다!", GREAT_COL, 1.6),
-        "ok_surface": ("눌러 막았다!", GREAT_COL, 1.6),
-        "ok_reverse": ("따라잡았다!", GREAT_COL, 1.6),
-        "ok_twist": ("꼬임 풀림!", GREAT_COL, 1.6),
-        "fail_shake": ("흔들렸다!", MISS_COL, 1.2),
-        "fail_dive": ("바닥에 쓸렸다!", MISS_COL, 1.2),
-        "fail_surface": ("튀어 오른다!", MISS_COL, 1.2),
-        "fail_reverse": ("줄이 처졌다!", MISS_COL, 1.2),
-        "fail_twist": ("줄이 꼬였다!", MISS_COL, 1.2),
-        "combo_ok": ("콤보 완파!", GOLD, 2.0),
+        "ok_dive": ("버텼다!", GREAT_COL, 1.6),
+        "ok_surface": ("막았다!", GREAT_COL, 1.6),
+        "ok_reverse": ("따라잡음!", GREAT_COL, 1.6),
+        "ok_twist": ("풀었다!", GREAT_COL, 1.6),
+        "fail_shake": ("흔들림!", MISS_COL, 1.2),
+        "fail_dive": ("쓸렸다!", MISS_COL, 1.2),
+        "fail_surface": ("뛴다!", MISS_COL, 1.2),
+        "fail_reverse": ("처졌다!", MISS_COL, 1.2),
+        "fail_twist": ("꼬임!", MISS_COL, 1.2),
+        "combo_ok": ("콤보!", GOLD, 2.0),
         # U4
-        "ok_hide": ("끌어냈다!", GREAT_COL, 1.6),
-        "ok_pump": ("박자 완벽!", GREAT_COL, 1.6),
-        "fail_pump": ("박자가 어긋났다!", MISS_COL, 1.2),
-        "ok_bite": ("헛물었다!", GREAT_COL, 1.6),
-        "fail_bite": ("줄을 물어뜯겼다!", MISS_COL, 1.2),
-        "ok_fake": ("속지 않았다!", GREAT_COL, 1.6),
+        "ok_hide": ("끌어냄!", GREAT_COL, 1.6),
+        "ok_pump": ("박자!", GREAT_COL, 1.6),
+        "fail_pump": ("엇박!", MISS_COL, 1.2),
+        "ok_bite": ("헛물!", GREAT_COL, 1.6),
+        "fail_bite": ("물렸다!", MISS_COL, 1.2),
+        "ok_fake": ("간파!", GREAT_COL, 1.6),
         "fail_fake": ("속았다!", MISS_COL, 1.2),
-        "hide_peek": ("지금 감아!", GOLD, 1.6),
-        "double_perfect": ("DOUBLE PERFECT!!", GOLD, 2.4),
-        "dual_ok": ("이중 완파!", GOLD, 2.0),
+        "hide_peek": ("지금!", GOLD, 1.6),
+        "double_perfect": ("더블!", GOLD, 2.4),
+        "dual_ok": ("이중!", GOLD, 2.0),
     }
 
     def __init__(self):
@@ -182,9 +183,12 @@ class JudgePopups:
 
     def add(self, kind: str, pos, streak: int = 0) -> None:
         s, c, scale = self.STYLE[kind]
-        self.items = [it for it in self.items if it["t"] > 0.25]  # 겹치면 이전 것 정리
-        self.items.append({"text": s, "color": c, "scale": scale, "x": pos[0], "y": pos[1] - 26, "t": 0.0,
-                           "streak": streak, "kind": kind})
+        self.say(s, c, pos, scale, streak, kind)
+
+    def say(self, s: str, color, pos, scale: float = 1.4, streak: int = 0, kind: str = "say") -> None:
+        """글자 슬롯은 하나뿐: 새 글자가 오면 이전 것은 바로 사라진다 (6글자 넘으면 잘라 냄)."""
+        self.items = [{"text": s[:6], "color": color, "scale": scale, "x": pos[0], "y": pos[1] - 26, "t": 0.0,
+                       "streak": streak, "kind": kind}]
 
     def update(self, dt: float) -> None:
         for it in self.items:
@@ -206,7 +210,8 @@ class JudgePopups:
                      outline=it["kind"] in ("perfect", "good", "flick_perfect", "flick_good", "swipe_perfect",
                                             "swipe_good"))
             if it["streak"] >= 2:
-                big_text(canvas, f"×{it['streak']} 연속", (x, y + 14 * scale * 0.6 + 6), GOLD, 1.0, outline=True)
+                from src.ui import icons
+                icons.pips(canvas, int(x), int(y + 14 * scale * 0.6 + 6), min(it["streak"], 8), GOLD)  # 연속: 숫자 대신 점
 
 
 def big_text(canvas, s: str, center, color, scale: float, outline: bool = False) -> None:
@@ -307,7 +312,6 @@ def draw_turn_prompt(canvas, pos, need: int, offset: float, before: float, after
     col = GOLD if in_perfect else (SWIPE if in_window else (200, 210, 220))
     pulse = 1.0 + (0.25 * math.sin(t * 30) if in_window else 0.0)
     _arrow(canvas, x + need * 34, y - 10, need, 30 * pulse, col, 3)
-    big_text(canvas, "확 꺾기!", (x + need * 34, y - 26), col, 1.0, outline=True)
     # 타이밍 막대
     bw = 70
     bx, by = x + need * 34 - bw // 2, y + 6
@@ -350,5 +354,15 @@ def draw_swipe_ring(canvas, center, time_to_apex: float, total: float, perfect_w
     canvas.blit(surf, (cx - o, cy - o))
     _arrow(canvas, cx, cy, need, 16, (255, 255, 255) if not in_good else GOLD, 2)
     if time_to_apex > 0.15:
-        big_text(canvas, "슬라이드", (cx + need * 6, cy + RING_R + 12), SWIPE, 1.0, outline=True)
+        _flick_arrow(canvas, cx + need * 6, cy + RING_R + 12, need, SWIPE)
         _arrow(canvas, cx - need * 26, cy + RING_R + 12, need, 12, SWIPE, 2)
+
+
+def _flick_arrow(canvas, x, y, d: int, col) -> None:
+    """'확 꺾기!'·'슬라이드' 글자 대신: 그쪽으로 튀는 굵은 화살표 두 개."""
+    d = d or 1
+    for k in (0, 6):
+        pts = [(x - 4 * d + k * d, y - 5), (x + 2 * d + k * d, y), (x - 4 * d + k * d, y + 5)]
+        pygame.draw.lines(canvas, SHADOW, False, [(px + 1, py + 1) for px, py in pts], 3)
+        pygame.draw.lines(canvas, col, False, pts, 3)
+

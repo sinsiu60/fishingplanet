@@ -105,6 +105,12 @@ def _icon(surf, c: Control, col) -> None:
     elif c.id == "bag":
         pygame.draw.rect(surf, col, (x - 6, y - 3, 12, 9), 1)
         pygame.draw.arc(surf, col, (x - 4, y - 8, 8, 9), 0, math.pi, 1)
+    elif c.id == "dip":  # 숙이기 (파이팅 중 글자 대신 그림, 31장)
+        from src.ui import icons
+        icons.dip(surf, x, y, col)
+    elif c.id == "item":
+        from src.ui import icons
+        icons.bag(surf, x, y, col)
     elif c.id in ("drag_up", "drag_down"):
         d = -1 if c.id == "drag_up" else 1
         k = max(4, c.rect.h // 4)
@@ -141,9 +147,16 @@ def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0
     for c in controls:
         col = (255, 228, 140) if c.id in pressed else TEXT
         if c.id == "pad":
-            text(canvas, c.label or "감기", (c.center[0], c.rect.bottom - 9), col, 11, "center")
             if c.label == "감기":
-                text(canvas, "◀ 방향 ▶", (c.center[0], c.rect.y + 9), (200, 208, 225), 11, "center")
+                # 파이팅: 글자 대신 릴 그림 + 좌우 삼각형 (방향)
+                from src.ui import icons
+                icons.reel(canvas, c.center[0], c.rect.bottom - 11, col)
+                for d in (-1, 1):
+                    tx = c.center[0] + d * (c.r - 10)
+                    pygame.draw.polygon(canvas, (200, 208, 225), [(tx + d * 4, c.center[1]), (tx - d * 2, c.center[1] - 5),
+                                                                  (tx - d * 2, c.center[1] + 5)])
+            else:
+                text(canvas, c.label, (c.center[0], c.rect.bottom - 9), col, 11, "center")
         else:
             _icon(canvas, c, col)
     if drag is not None:
@@ -160,4 +173,5 @@ def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0
                 canvas.fill(SHADOW, (x - 1, yy - 1, 8, int(ch) + 2))
                 canvas.fill((255, 220, 120) if i < cur else (60, 64, 80), (x, yy, 6, int(ch)))
             right = x > up.rect.x
-            text(canvas, "드랙", (x + 10 if right else x - 4, (y0 + y1) // 2), TEXT, 11, "midleft" if right else "midright")
+            from src.ui import icons
+            icons.reel(canvas, x + 15 if right else x - 9, (y0 + y1) // 2, TEXT)  # 드랙 = 릴 그림
