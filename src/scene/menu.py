@@ -56,10 +56,12 @@ def start_game(game, save: SaveGame) -> None:
 
 
 class TitleScene(Scene):
+    UI_FRAME = True
+
     def __init__(self, game):
         super().__init__(game)
-        w, h = game.screen.width, game.screen.height
-        self.bg = MenuBackdrop(w, h)
+        self.bg = MenuBackdrop(game.screen.width, game.screen.height)
+        w = game.screen.ui_rect.w
         self.mouse = (0, 0)
         self.latest = SaveGame.latest_slot()
         bx, bw = w // 2 - 60, 120
@@ -97,11 +99,12 @@ class TitleScene(Scene):
 
     def update(self, dt: float) -> None:
         self.bg.update(dt)
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
         self.game.music.play("title")
 
     def draw(self, canvas) -> None:
         self.bg.draw(canvas)
+        canvas = self.ui_canvas(canvas)
         w = canvas.get_width()
         big_text(canvas, game_config()["title"], (w // 2, 62), (255, 228, 150), 3.0, outline=True)
         text(canvas, "어렵지만 공정한 1인칭 낚시", (w // 2, 96), (235, 225, 240), 11, "center")
@@ -112,6 +115,8 @@ class TitleScene(Scene):
 
 class SlotScene(Scene):
     """mode='new': 새 게임을 시작할 슬롯 / mode='load': 불러올 슬롯."""
+    UI_FRAME = True
+
 
     def __init__(self, game, mode: str):
         super().__init__(game)
@@ -119,7 +124,7 @@ class SlotScene(Scene):
         self.mouse = (0, 0)
         self.confirm: int | None = None
         self.infos = {s: SaveGame.summary(s) for s in range(1, SLOTS + 1)}
-        w = game.screen.width
+        w = game.screen.ui_rect.w
         self.cards = {s: pygame.Rect(w // 2 - 150, 54 + (s - 1) * 58, 300, 52) for s in range(1, SLOTS + 1)}
         self.back = ui.Button((w // 2 - 40, 234, 80, 18), "뒤로", self._back)
 
@@ -158,7 +163,7 @@ class SlotScene(Scene):
             self.confirm = None
 
     def update(self, dt: float) -> None:
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
         under = self.game.scenes.stack[0]
         if hasattr(under, "bg"):
             under.bg.update(dt)
@@ -168,6 +173,7 @@ class SlotScene(Scene):
         if hasattr(under, "bg"):
             under.bg.draw(canvas)
         ui.dim(canvas, 120)
+        canvas = self.ui_canvas(canvas)
         w = canvas.get_width()
         title = "새 게임 — 슬롯 선택" if self.mode == "new" else "불러오기"
         text(canvas, title, (w // 2, 30), ui.ACCENT, 16, "center")

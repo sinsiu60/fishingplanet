@@ -2,6 +2,7 @@
 import pygame
 
 from src.core.mathutil import lerp_color
+from src.platform.detect import IS_MOBILE
 from src.ui.hud import SHADOW, text
 
 PANEL = (22, 28, 48)
@@ -12,6 +13,12 @@ TEXT = (232, 236, 245)
 DIM = (140, 148, 170)
 GOOD = (140, 240, 150)
 BAD = (255, 140, 120)
+# 모바일: 메뉴 버튼은 손가락보다 작아서(폰에서 높이 16px ≈ 4mm) 판정을 위아래·좌우 3px씩 넉넉하게
+TOUCH_SLOP = 3 if IS_MOBILE else 0
+
+
+def _hit(rect, pos) -> bool:
+    return (rect.inflate(TOUCH_SLOP * 2, TOUCH_SLOP * 2) if TOUCH_SLOP else rect).collidepoint(pos)
 
 
 def panel(canvas, rect, border=BORDER, fill=PANEL) -> None:
@@ -50,7 +57,7 @@ class Button:
         text(canvas, self.label, self.rect.center, col, self.size, "center")
 
     def click(self, mouse) -> bool:
-        if self.enabled and self.hovered(mouse) and self.action:
+        if self.enabled and _hit(self.rect, mouse) and self.action:
             self.action()
             return True
         return False
@@ -72,7 +79,7 @@ class Tabs:
 
     def click(self, mouse) -> bool:
         for i, r in enumerate(self.rects):
-            if r.collidepoint(mouse):
+            if _hit(r, mouse):
                 self.index = i
                 return True
         return False

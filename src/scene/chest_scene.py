@@ -27,6 +27,8 @@ CARD_AT = {"common": 0.65, "rare": 1.05, "special": 1.45, "legend": 2.15}
 
 
 class ChestScene(Scene):
+    UI_FRAME = True
+
     def __init__(self, game, fishing):
         super().__init__(game)
         self.fishing = fishing
@@ -274,7 +276,7 @@ class ChestScene(Scene):
     def update(self, dt: float) -> None:
         self.age += dt
         self.t += dt
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
         self.msg_t = max(0.0, self.msg_t - dt)
         for p in self.particles:
             p[0] += p[2] * dt
@@ -297,6 +299,7 @@ class ChestScene(Scene):
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)
         ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
+        canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (8, 6, 464, 258))
         text(canvas, "보물상자", (16, 16), ui.ACCENT, 16, "midleft")
         text(canvas, f"상자 조각 {self.save.data['shards']}", (464, 16), (200, 170, 255), 11, "midright")

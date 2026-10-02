@@ -74,6 +74,8 @@ def score(kind: str, item: dict) -> float:
 
 
 class ShopScene(Scene):
+    UI_FRAME = True
+
     def __init__(self, game, fishing, tab: str | None = None):
         super().__init__(game)
         self.fishing = fishing
@@ -231,13 +233,14 @@ class ShopScene(Scene):
 
     def update(self, dt: float) -> None:
         self.age += dt
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
         self.msg_t = max(0.0, self.msg_t - dt)
 
     # ── 그리기 ──
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)
         ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
+        canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (8, 6, 464, 258))
         text(canvas, "상점", (16, 16), ui.ACCENT, 16, "midleft")
         text(canvas, f"소지금 {ui.money_text(self.save.money)}", (464, 16), ui.ACCENT, 11, "midright")

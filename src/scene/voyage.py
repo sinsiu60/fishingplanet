@@ -22,6 +22,8 @@ T_LETTER, T_SAIL, T_ARRIVE, T_END = 0.0, 7.0, 13.0, 17.0
 
 
 class VoyageScene(Scene):
+    UI_FRAME = True
+
     def __init__(self, game, fishing):
         super().__init__(game)
         self.fishing = fishing
@@ -47,7 +49,7 @@ class VoyageScene(Scene):
     def update(self, dt: float) -> None:
         prev = self.t
         self.t += dt
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
         if prev < T_SAIL <= self.t:
             self.game.sfx.play("whoosh" if "whoosh" in self.game.sfx.sounds else "splash", 0.6)
         if prev < T_ARRIVE <= self.t:
@@ -70,6 +72,9 @@ class VoyageScene(Scene):
 
     # ── 그리기 ──
     def draw(self, canvas) -> None:
+        if self.game.screen.ui_rect.size != canvas.get_size():
+            canvas.fill((0, 0, 0))  # 모바일: 컷신은 가운데 16:9 (남는 곳은 검게)
+        canvas = self.ui_canvas(canvas)
         t = self.t
         if t < T_SAIL:
             self._draw_letter(canvas, t)

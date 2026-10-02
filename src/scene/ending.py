@@ -29,6 +29,8 @@ STATS_T = 9.5
 
 
 class EndingScene(Scene):
+    UI_FRAME = True
+
     def __init__(self, game, fishing, kind: str = "sharmion"):
         super().__init__(game)
         self.fishing = fishing
@@ -62,10 +64,13 @@ class EndingScene(Scene):
         self.t += dt
         if self.game.music.has(self.track):
             self.game.music.play(self.track)
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
 
     # ── 그리기 ──
     def draw(self, canvas) -> None:
+        if self.game.screen.ui_rect.size != canvas.get_size():
+            canvas.fill((0, 0, 0))  # 모바일: 컷신은 가운데 16:9 (남는 곳은 검게)
+        canvas = self.ui_canvas(canvas)
         w, h = canvas.get_size()
         t = self.t
         # 밤하늘

@@ -1,23 +1,52 @@
-"""저해상도 캔버스(480x270)에 그리고 정수 배율로 확대해 창에 출력한다.
+"""저해상도 캔버스에 그리고 확대해 창에 출력한다.
 
+PC     : 480x270 캔버스를 정수 배율로 확대 (기존 그대로).
+모바일 : 화면비에 맞춰 캔버스를 늘린다 — 짧은 쪽을 기준(270 또는 480)으로 고정하고 긴 쪽을 넓힌다.
+         폰(18:9~21:9) = 높이 270, 폭 540~630 / 태블릿(4:3~16:10) = 폭 480, 높이 300~360.
+         21:9보다 길거나 4:3보다 높으면 남는 부분만 검은 띠. 배율은 실수 (기기 해상도가 제각각이라).
+메뉴 창은 캔버스 가운데의 480x270 'UI 상자'(ui_rect)에 그린다. PC에선 ui_rect = 캔버스 전체.
 pygame.transform.scale은 최근접 보간이라 픽셀이 뭉개지지 않는다.
 """
 import pygame
 
+BASE_W, BASE_H = 480, 270
+MAX_W, MAX_H = 630, 360  # 21:9 / 4:3
+
+
+def canvas_size_for(window_w: int, window_h: int) -> tuple[int, int]:
+    """창(기기 화면) 크기 → 모바일 캔버스 크기."""
+    aspect = window_w / window_h
+    if aspect >= BASE_W / BASE_H:
+        return min(MAX_W, int(round(BASE_H * aspect / 2)) * 2), BASE_H
+    return BASE_W, min(MAX_H, int(round(BASE_W / aspect / 2)) * 2)
+
 
 class PixelScreen:
-    def __init__(self, width: int, height: int, scale: int | None, title: str):
-        self.width = width
-        self.height = height
-        self.canvas = pygame.Surface((width, height))
-        self.scale = scale or self._best_scale()
+    def __init__(self, width: int, height: int, scale: int | None, title: str, mobile_window=None):
+        """mobile_window: None = PC, (w, h) = 모바일 미리보기 창 크기, (0, 0) = 기기 전체 화면."""
+        self.mobile = mobile_window is not None
         self.shake = (0, 0)  # 화면 흔들림 (캔버스 픽셀)
         try:
             from src.render.icon import icon_surface
             pygame.display.set_icon(icon_surface(32))  # set_mode 전에 해야 작업표시줄에도 적용
         except pygame.error:
             pass
-        self.window = pygame.display.set_mode((width * self.scale, height * self.scale))
+        if self.mobile:
+            flags = pygame.FULLSCREEN if tuple(mobile_window) == (0, 0) else 0
+            self.window = pygame.display.set_mode(tuple(mobile_window), flags)
+            ww, wh = self.window.get_size()
+            width, height = canvas_size_for(ww, wh)
+            self.fscale = min(ww / width, wh / height)
+            self.scale = self.fscale
+            dw, dh = int(width * self.fscale), int(height * self.fscale)
+            self.dest = pygame.Rect((ww - dw) // 2, (wh - dh) // 2, dw, dh)
+        self.width = width
+        self.height = height
+        self.canvas = pygame.Surface((width, height))
+        self.ui_rect = pygame.Rect((width - BASE_W) // 2, (height - BASE_H) // 2, BASE_W, BASE_H)
+        if not self.mobile:
+            self.scale = scale or self._best_scale()
+            self.window = pygame.display.set_mode((width * self.scale, height * self.scale))
         pygame.display.set_caption(title)
 
     def _best_scale(self) -> int:
@@ -29,15 +58,24 @@ class PixelScreen:
         return max(1, min((dw - 80) // self.width, (dh - 120) // self.height))
 
     def set_scale(self, scale: int) -> None:
+        if self.mobile:
+            return
         self.scale = max(1, scale)
         self.window = pygame.display.set_mode((self.width * self.scale, self.height * self.scale))
 
     def to_canvas(self, pos: tuple[int, int]) -> tuple[int, int]:
-        """창 좌표(마우스) → 캔버스 좌표."""
+        """창 좌표(마우스·손가락) → 캔버스 좌표."""
+        if self.mobile:
+            return (int((pos[0] - self.dest.x) / self.fscale), int((pos[1] - self.dest.y) / self.fscale))
         return pos[0] // self.scale, pos[1] // self.scale
 
     def present(self) -> None:
-        if self.shake == (0, 0):
+        if self.mobile:
+            self.window.fill((0, 0, 0))
+            scaled = pygame.transform.scale(self.canvas, self.dest.size)
+            sx, sy = int(self.shake[0] * self.fscale), int(self.shake[1] * self.fscale)
+            self.window.blit(scaled, (self.dest.x + sx, self.dest.y + sy))
+        elif self.shake == (0, 0):
             pygame.transform.scale(self.canvas, self.window.get_size(), self.window)
         else:
             scaled = pygame.transform.scale(self.canvas, self.window.get_size())

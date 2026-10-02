@@ -7,12 +7,14 @@ from src.ui.hud import draw_cursor, text
 
 
 class PauseScene(Scene):
+    UI_FRAME = True
+
     def __init__(self, game, fishing):
         super().__init__(game)
         self.fishing = fishing
         self.mouse = (0, 0)
         self.age = 0.0  # 열림 애니메이션
-        w = game.screen.width
+        w = game.screen.ui_rect.w
         bx, bw = w // 2 - 70, 140
         can_shop = fishing.can_open_menus()
         items = [("계속하기", self._resume, True),
@@ -59,11 +61,12 @@ class PauseScene(Scene):
 
     def update(self, dt: float) -> None:
         self.age += dt
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)
         ui.dim(canvas, int(160 * min(1.0, self.age / 0.15)))
+        canvas = self.ui_canvas(canvas)
         w = canvas.get_width()
         ui.panel(canvas, (w // 2 - 90, 30, 180, 200))
         text(canvas, "일시정지", (w // 2, 50), ui.ACCENT, 16, "center")

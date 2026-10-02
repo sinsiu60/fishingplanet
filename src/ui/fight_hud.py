@@ -144,8 +144,8 @@ def draw_drag(canvas, pal, fight) -> None:
     text(canvas, "Q- E+", (bx + fight.drag_steps * 7 + 4, y), (190, 195, 210), 11, "midleft")
 
 
-def draw_distance(canvas, pal, fight) -> None:
-    text(canvas, f"거리 {fight.distance:.1f}m", (canvas.get_width() - 6, 4), pal["text"], 11, "topright")
+def draw_distance(canvas, pal, fight, inset: int = 0) -> None:
+    text(canvas, f"거리 {fight.distance:.1f}m", (canvas.get_width() - 6 - inset, 4), pal["text"], 11, "topright")
 
 
 STAMP_T = 0.6       # 랭크 도장이 찍히는 시각 (획득 컷 기준)

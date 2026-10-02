@@ -31,6 +31,8 @@ def _join(values, table, all_count) -> str:
 
 
 class DexScene(Scene):
+    UI_FRAME = True
+
     def __init__(self, game, fishing):
         super().__init__(game)
         self.fishing = fishing
@@ -86,11 +88,12 @@ class DexScene(Scene):
     def update(self, dt: float) -> None:
         self.age += dt
         self.t += dt
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)
         ui.dim(canvas, int(180 * min(1.0, self.age / 0.15)))
+        canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (6, 6, 468, 260))
         total = len(self.fish)
         got = self.save.dex_count()

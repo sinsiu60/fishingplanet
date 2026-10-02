@@ -3,11 +3,13 @@ import pygame
 
 from src.core.fonts import get_font
 from src.core.mathutil import lerp_color, scale_color
+from src.platform.hints import localize
 
 SHADOW = (10, 12, 24)
 
 
 def text(canvas, s: str, pos, color, size: int = 11, anchor: str = "topleft") -> pygame.Rect:
+    s = localize(s)  # 모바일이면 PC 조작 문구를 터치 문구로 (PC는 그대로)
     font = get_font(size)
     img = font.render(s, False, color)
     shadow = font.render(s, False, SHADOW)
@@ -19,6 +21,7 @@ def text(canvas, s: str, pos, color, size: int = 11, anchor: str = "topleft") ->
 
 def wrap_text(s: str, max_w: int, size: int = 11) -> list[str]:
     """픽셀 폭 기준 줄바꿈 (공백 단위)."""
+    s = localize(s)
     font = get_font(size)
     lines, cur = [], ""
     for word in s.split(" "):
@@ -33,18 +36,21 @@ def wrap_text(s: str, max_w: int, size: int = 11) -> list[str]:
     return lines
 
 
-def draw_clock(canvas, pal, label: str, fast: bool, mult: int) -> None:
-    r = text(canvas, label, (6, 4), pal["text"])
+def draw_clock(canvas, pal, label: str, fast: bool, mult: int, x: int = 6) -> None:
+    r = text(canvas, label, (x, 4), pal["text"])
     if fast:
         text(canvas, f"▶▶ ×{mult}", (r.right + 6, 4), (255, 220, 120))
 
 
-def draw_hint(canvas, pal, s: str) -> None:
+def draw_hint(canvas, pal, s: str, center: bool = False) -> None:
+    if center:  # 모바일: 왼쪽 아래는 터치 버튼 자리
+        text(canvas, s, (canvas.get_width() // 2, canvas.get_height() - 6), pal["text"], anchor="midbottom")
+        return
     text(canvas, s, (6, canvas.get_height() - 6), pal["text"], anchor="bottomleft")
 
 
 def draw_power_gauge(canvas, pal, power: float, distance: float) -> None:
-    x, y, w, h = 452, 132, 8, 72
+    x, y, w, h = canvas.get_width() - 28, 132, 8, 72  # 오른쪽 가장자리 기준 (PC 480 → 452)
     canvas.fill(SHADOW, (x - 1, y - 1, w + 2, h + 2))
     canvas.fill((40, 44, 60), (x, y, w, h))
     fill = int(h * power)
@@ -68,7 +74,12 @@ def draw_look_arrows(canvas, pal, left: bool, right: bool, t: float) -> None:
         pygame.draw.polygon(canvas, color, [(w - 5, cy), (w - 12, cy - 6), (w - 12, cy + 6)])
 
 
+SHOW_CURSOR = True  # 터치 기기에선 Game이 끈다 (손가락이 커서)
+
+
 def draw_cursor(canvas, pos) -> None:
+    if not SHOW_CURSOR:
+        return
     x, y = pos
     for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
         canvas.fill(SHADOW, (x - 3 + dx, y + dy, 7, 1))

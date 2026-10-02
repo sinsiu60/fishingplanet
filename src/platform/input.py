@@ -92,10 +92,200 @@ class PcInput:
             return bool(pygame.mouse.get_pressed()[0])
         return False
 
+    def aim_override(self, fighting: bool):
+        return None  # PC: 조준은 마우스 위치
+
+    def consume_look(self) -> float:
+        return 0.0  # PC: 둘러보기는 화면 끝에 마우스
+
 
 class TouchInput(PcInput):
-    """모바일 터치 (Phase M3에서 구현). 지금은 PC와 같은 마우스 흉내로 동작하는 껍데기."""
+    """모바일 터치 (DESIGN.md 26-10). 미리보기 모드에선 마우스 왼쪽 버튼이 손가락 하나.
+
+    메뉴 씬   : 손가락을 떼는 순간 primary (조금이라도 끌면 탭이 아니라 스크롤), 끌기 = scroll, 길게 누르기 = 툴팁 유지.
+    낚시 씬   : touch_ui 버튼 + 화면 영역.
+      수면 누르기  = primary (던지기 충전·챔질·뜰채·넘기기), 손가락 위치 = 조준, 떼기 = primary_up
+      하늘 끌기    = 둘러보기 (대기 중)
+      릴 패드      = 누르는 동안 감기, 노브 좌우 = 낚싯대 방향, 빠르게 튕기기 = 꺾기(flick)
+      숙이기/회수  = secondary, ▲▼ = drag, 도구 = item, 일시정지 = back, 가방 = menu(bag)
+    여러 손가락을 동시에 따로 추적한다 (릴 패드 누른 채 숙이기 등).
+    """
     kind = "touch"
+
+    def __init__(self, game):
+        super().__init__(game)
+        self.fingers: dict = {}
+        self._pointer = (-100, -100)
+        self.look_dx = 0.0
+        self.aim = 0.0
+        self.items_open = False
+        self.flick_ready_ms = 0
+        self.controls: list = []
+
+    # ── 원시 이벤트 → 손가락 ──
+    def translate(self, event):
+        et = event.type
+        if et == pygame.KEYDOWN:
+            if event.key == pygame.K_AC_BACK:
+                return Action("back")
+            return super().translate(event)  # 미리보기에서 키보드도 그대로
+        if et in (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP):
+            ww, wh = self.game.screen.window.get_size()
+            pos = self.game.screen.to_canvas((event.x * ww, event.y * wh))
+            fid = event.finger_id
+            kind = {pygame.FINGERDOWN: "down", pygame.FINGERMOTION: "move", pygame.FINGERUP: "up"}[et]
+        elif et in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+            if getattr(event, "touch", False):
+                return None  # 터치가 만든 가짜 마우스 이벤트 (손가락 이벤트로 이미 처리)
+            if et == pygame.MOUSEMOTION:
+                if not event.buttons[0]:
+                    return None
+                kind = "move"
+            elif event.button != 1:
+                return None
+            else:
+                kind = "down" if et == pygame.MOUSEBUTTONDOWN else "up"
+            pos, fid = self.game.screen.to_canvas(event.pos), "mouse"
+        elif et == pygame.MOUSEWHEEL and not getattr(event, "touch", False):
+            return Action("scroll", event.y)
+        else:
+            return None
+        w, h = self.game.screen.width, self.game.screen.height
+        pos = (max(0, min(w - 1, pos[0])), max(0, min(h - 1, pos[1])))
+        now = pygame.time.get_ticks()
+        if kind == "down":
+            if fid in self.fingers:
+                return None
+            return self._down(fid, pos, now)
+        if fid not in self.fingers:
+            return None
+        if kind == "move":
+            return self._move(fid, pos, now)
+        return self._up(fid, pos, now)
+
+    def _scene_ctx(self):
+        sc = self.game.scenes.current
+        return sc.touch_context() if hasattr(sc, "touch_context") else None
+
+    def _down(self, fid, pos, now):
+        ctx = self._scene_ctx()
+        f = {"start": pos, "pos": pos, "t0": now, "moved": False, "sy": pos[1], "role": "menu", "hist": [(now, pos[0])]}
+        self.fingers[fid] = f
+        if ctx is None:
+            self._pointer = pos
+            return None
+        from src.platform import touch_ui
+        self.controls = touch_ui.layout(self.game.screen.width, self.game.screen.height, ctx, self.game.settings,
+                                        self.items_open)
+        hit = next((c for c in self.controls if c.hit(pos)), None)
+        if hit is None:
+            self.items_open = False
+            if ctx.get("can_look") and pos[1] < ctx["horizon"]:
+                f["role"] = "look"
+                return None
+            f["role"] = "water"
+            self._pointer = pos
+            return Action("primary", 1, pos)
+        f["role"] = hit.id
+        if hit.id != "item" and not hit.id.startswith("item"):
+            self.items_open = False
+        if hit.id == "pad":
+            self._pad_aim(hit, pos)
+            return None
+        if hit.id == "item":
+            self.items_open = not self.items_open
+            return None
+        if hit.id.startswith("item"):
+            self.items_open = False
+            return Action("item", int(hit.id[4:]))
+        return {"pause": Action("back"), "bag": Action("menu", "bag"), "dip": Action("secondary", 3, pos),
+                "retrieve": Action("secondary", 3, pos), "drag_up": Action("drag", +1),
+                "drag_down": Action("drag", -1)}.get(hit.id)
+
+    def _move(self, fid, pos, now):
+        f = self.fingers[fid]
+        c = cfg()
+        prev = f["pos"]
+        f["pos"] = pos
+        if abs(pos[0] - f["start"][0]) + abs(pos[1] - f["start"][1]) > c["tap_slop_px"]:
+            f["moved"] = True
+        role = f["role"]
+        if role == "menu":
+            self._pointer = pos
+            out = []
+            dy = pos[1] - f["sy"]
+            step = c["scroll_step_px"]
+            while f["moved"] and abs(dy) >= step:
+                d = 1 if dy > 0 else -1
+                out.append(Action("scroll", d))
+                f["sy"] += d * step
+                dy = pos[1] - f["sy"]
+            return out or None
+        if role == "water":
+            self._pointer = pos
+        elif role == "look":
+            self.look_dx += pos[0] - prev[0]
+        elif role == "pad":
+            pad = next((ct for ct in self.controls if ct.id == "pad"), None)
+            if pad:
+                self._pad_aim(pad, pos)
+            f["hist"].append((now, pos[0]))
+            # 시간 창 안의 기록 + 그 직전 위치(손가락이 멈춰 있던 곳)를 시작점으로
+            old = [(t, x) for t, x in f["hist"] if now - t > c["flick_ms"]]
+            f["hist"] = ([(now - c["flick_ms"], old[-1][1])] if old else []) + \
+                [(t, x) for t, x in f["hist"] if now - t <= c["flick_ms"]]
+            dx = f["hist"][-1][1] - f["hist"][0][1]
+            if abs(dx) >= c["flick_px"] and now >= self.flick_ready_ms:
+                self.flick_ready_ms = now + c["flick_cooldown_ms"]
+                f["hist"] = [(now, pos[0])]
+                return Action("flick", 1 if dx > 0 else -1)
+        return None
+
+    def _up(self, fid, pos, now):
+        f = self.fingers.pop(fid)
+        role = f["role"]
+        if role == "menu":
+            long_press = now - f["t0"] >= cfg()["long_press_ms"]
+            # 길게 누르면 그 자리에 포인터를 남겨 툴팁이 계속 보이게, 탭이면 숨김 (버튼 강조가 남지 않게)
+            self._pointer = pos if long_press else (-100, -100)
+            if f["moved"]:
+                return None
+            return [Action("primary", 1, pos), Action("primary_up", 1, pos)]
+        if role == "water":
+            return Action("primary_up", 1, pos)
+        return None
+
+    def _pad_aim(self, pad, pos) -> None:
+        self.aim = max(-1.0, min(1.0, (pos[0] - pad.center[0]) / max(1, pad.r)))
+
+    # ── 상태 ──
+    @property
+    def pointer(self) -> tuple[int, int]:
+        return self._pointer
+
+    @property
+    def pointer_raw(self) -> tuple[int, int]:
+        return self._pointer
+
+    def held(self, name: str) -> bool:
+        if name == "reel":
+            return any(f["role"] == "pad" for f in self.fingers.values())
+        return False
+
+    def pressed_controls(self) -> set:
+        return {f["role"] for f in self.fingers.values()}
+
+    def aim_override(self, fighting: bool):
+        return self.aim if fighting else None
+
+    def consume_look(self) -> float:
+        d, self.look_dx = self.look_dx, 0.0
+        return d
+
+
+def cfg() -> dict:
+    from src.core.config import load_json
+    return load_json("mobile_config.json")
 
 
 def create_input(game):

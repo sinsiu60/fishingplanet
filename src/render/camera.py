@@ -12,7 +12,9 @@ class Camera:
         self.height = height
         self.cx = width / 2
         self.horizon = int(height * cfg["horizon_ratio"])
-        self.f = (width / 2) / math.tan(math.radians(cfg["fov_deg"]) / 2)
+        # 초점거리는 16:9 기준 폭으로: 폰(더 넓음)은 좌우가 더 보이고, 태블릿(더 높음)은 위아래가 더 보인다 (PC는 그대로)
+        ref_w = min(width, height * 16 / 9)
+        self.f = (ref_w / 2) / math.tan(math.radians(cfg["fov_deg"]) / 2)
         self.cam_h = cfg["cam_height"]
         self.max_yaw = math.radians(cfg["max_yaw_deg"])
         self.yaw = 0.0

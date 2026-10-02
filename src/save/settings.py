@@ -3,7 +3,9 @@ import json
 
 from src.core.paths import save_dir
 
-DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": None, "sound_captions": False}
+DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": None, "sound_captions": False,
+            # 모바일 터치 버튼: 크기·투명도 0~2단계, 왼손잡이(좌우 반전)
+            "touch_size": 1, "touch_alpha": 1, "touch_left": False}
 
 
 class Settings:

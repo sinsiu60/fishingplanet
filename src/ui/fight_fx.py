@@ -151,6 +151,8 @@ class JudgePopups:
 
 def big_text(canvas, s: str, center, color, scale: float, outline: bool = False) -> None:
     """픽셀 느낌 그대로 키운 큰 글씨 (테두리 포함)."""
+    from src.platform.hints import localize
+    s = localize(s)
     font = get_font(16 if scale >= 1.5 else 11)
     img = font.render(s, False, color)
     edge = font.render(s, False, (30, 18, 10) if outline else SHADOW)

@@ -1,0 +1,15 @@
+{
+  "_설명": "모바일 터치 조작 수치 (DESIGN.md 26-10). 좌표·거리는 캔버스 픽셀(폰 기준 1px ≈ 0.25mm), 시간은 ms.",
+  "tap_slop_px": 6,
+  "button_slop_px": 4,
+  "long_press_ms": 450,
+  "scroll_step_px": 14,
+  "look_rad_per_px": 0.0026,
+  "flick_px": 22,
+  "flick_ms": 140,
+  "flick_cooldown_ms": 220,
+  "button_sizes": [0.85, 1.0, 1.2],
+  "button_alpha": [90, 150, 210],
+  "tablet_scale": 0.9,
+  "hud_inset_px": 30
+}

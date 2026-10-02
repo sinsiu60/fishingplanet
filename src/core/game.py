@@ -22,10 +22,14 @@ class Game:
         self.tick_rate = cfg["tick_rate"]
         self.tick_dt = 1.0 / self.tick_rate
         self.fps_cap = cfg.get("fps_cap", 144)
+        from src.platform.detect import mobile_window
         self.screen = PixelScreen(cfg["width"], cfg["height"], self.settings.get("scale") or cfg.get("scale"),
-                                  cfg["title"])
+                                  cfg["title"], mobile_window())
         pygame.mouse.set_visible(False)  # 커서는 캔버스에 직접 그린다
         self.input = create_input(self)  # 마우스·키보드·터치 → 행동 (src/platform/input.py)
+        if self.input.kind == "touch":
+            from src.ui import hud
+            hud.SHOW_CURSOR = False
         self.clock = pygame.time.Clock()
         self.sfx = Sfx()
         self.sfx.volume = self.settings.get("volume")

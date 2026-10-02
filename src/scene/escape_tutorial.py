@@ -20,6 +20,8 @@ def _lines(continent: str, float_name: str) -> list[str]:
 
 
 class EscapeTutorialScene(Scene):
+    UI_FRAME = True
+
     def __init__(self, game, fishing):
         super().__init__(game)
         self.fishing = fishing
@@ -55,11 +57,12 @@ class EscapeTutorialScene(Scene):
 
     def update(self, dt: float) -> None:
         self.age += dt
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)
         ui.dim(canvas, int(170 * min(1.0, self.age / 0.2)))
+        canvas = self.ui_canvas(canvas)
         box = pygame.Rect(40, 36, 400, 204)
         ui.panel(canvas, box, border=(255, 214, 120))
         text(canvas, "특수 찌가 필요해요", (box.centerx, box.y + 14), (255, 214, 120), 16, "center")

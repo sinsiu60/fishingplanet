@@ -89,6 +89,8 @@ def can_unlock_soon(save, spot: dict) -> bool:
 
 
 class MapScene(Scene):
+    UI_FRAME = True
+
     def __init__(self, game, fishing):
         super().__init__(game)
         self.fishing = fishing
@@ -189,7 +191,7 @@ class MapScene(Scene):
         self.age += dt
         self.t += dt
         self.msg_t = max(0.0, self.msg_t - dt)
-        self.mouse = self.game.input.pointer
+        self.mouse = self.ui_pointer()
 
     def _node(self, sp) -> tuple[int, int]:
         x, y = sp["map_pos"]
@@ -199,6 +201,7 @@ class MapScene(Scene):
     def draw(self, canvas) -> None:
         self.fishing.draw(canvas)
         ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
+        canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (6, 6, 468, 260))
         text(canvas, "지도", (14, 16), ui.ACCENT, 16, "midleft")
         text(canvas, self.cont_info["name"], (195, 16), (220, 210, 255), 11, "center")

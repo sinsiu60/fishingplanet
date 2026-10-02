@@ -19,6 +19,13 @@ _cache: dict[int, pygame.font.Font] = {}
 
 
 def _resolve_font_file() -> str | None:
+    from src.platform.detect import IS_MOBILE
+    if IS_MOBILE:
+        # 안드로이드엔 맑은 고딕이 없다 → 앱에 넣은 Noto Sans KR (tools/make_mobile_font.py). 미리보기도 같은 폰트.
+        from src.core.paths import data_path
+        bundled = data_path("fonts", "NotoSansKR-Subset.ttf")
+        if bundled.exists():
+            return str(bundled)
     for path in _WINDOWS_FONTS:
         if os.path.exists(path):
             return path

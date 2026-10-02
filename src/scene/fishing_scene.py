@@ -233,6 +233,28 @@ class FishingScene(Scene):
                 self.sfx.play("great", 0.7)
                 return
 
+    @property
+    def touch(self) -> bool:
+        return self.game.input.kind == "touch"
+
+    def touch_context(self) -> dict:
+        """터치 버튼 배치에 필요한 지금 상황 (src/platform/touch_ui.py)."""
+        f, c = self.fight, self.cast
+        fighting = f is not None and f.phase == "fight"
+        overlay = self.card is not None or self.help
+        items = []
+        if fighting:
+            for slot, iid, name in ((1, "repair_spool", "실타래"), (2, "calm_charm", "잔잔한 물")):
+                n = self.save.consumable_count(iid)
+                if n and not f.consumable_used:
+                    items.append((slot, name, n))
+        free = not overlay and self.landing is None
+        return {"fight": fighting, "overlay": overlay, "horizon": self.cam.horizon,
+                "can_look": free and f is None and c.state in LOOK_STATES,
+                "show_pause": free, "show_bag": free and self.can_open_menus(),
+                "can_retrieve": free and f is None and c.state == CastState.LANDED,
+                "items": items, "drag": (f.drag, f.drag_steps) if fighting else None}
+
     def _cycle_debug(self, key: str) -> None:
         """F3 물고기 고정 / F4 낚시터 / F5 날씨 / F6 상자 지급 (테스트용)."""
         if key == "F3":
@@ -260,6 +282,8 @@ class FishingScene(Scene):
     def _card_focus(self):
         focus = self.card["focus"]
         if focus == "gauge":
+            if self.touch and self.settings.get("touch_left"):
+                return (self.cam.width - self.GAUGE_W + 14, 114)
             return (14, 114)
         if focus == "fish" and self.fight is not None:
             return self._fish_screen()
@@ -292,7 +316,12 @@ class FishingScene(Scene):
                 from src.scene.pause import PauseScene
                 self.game.scenes.push(PauseScene(self.game, self))
         elif n == "menu":
-            if a.value == "dex":
+            if a.value == "bag":
+                if self.can_open_menus():
+                    from src.scene.quick_menu import QuickMenuScene
+                    self.sfx.play("click")
+                    self.game.scenes.push(QuickMenuScene(self.game, self))
+            elif a.value == "dex":
                 if self.fight is None:
                     self.open_menu("dex")
             elif self.can_open_menus():
@@ -316,6 +345,10 @@ class FishingScene(Scene):
         elif n == "scroll":
             if f:
                 f.change_drag(1 if a.value > 0 else -1)
+        elif n == "flick":
+            if f is not None and f.phase == "fight":
+                self.sfx.play("cast", 0.3)  # 휘두르는 소리 (판정과 상관없이)
+                f.flick(a.value)
         elif n == "primary":
             self._left_click()
         elif n == "secondary":
@@ -493,18 +526,28 @@ class FishingScene(Scene):
         w = self.cam.width
         self.mouse = (int(clamp(mx, 0, w - 1)), int(clamp(my, 0, self.cam.height - 1)))
 
-        # 둘러보기: 대기 중에만, 화면 좌우 끝에 마우스
+        # 둘러보기: 대기 중에만. PC = 화면 좌우 끝에 마우스 / 터치 = 하늘을 좌우로 끌기
         edge = self.cam_cfg["edge_px"]
         can_look = self.cast.state in LOOK_STATES
-        self.look_left = can_look and mx < edge and self.cam.yaw > -self.cam.max_yaw
-        self.look_right = can_look and mx > w - edge and self.cam.yaw < self.cam.max_yaw
-        speed = math.radians(self.cam_cfg["look_speed_deg"]) * dt
-        if self.look_left:
-            self.cam.yaw = max(-self.cam.max_yaw, self.cam.yaw - speed)
-        if self.look_right:
-            self.cam.yaw = min(self.cam.max_yaw, self.cam.yaw + speed)
+        if self.touch:
+            self.look_left = self.look_right = False
+            d = self.game.input.consume_look()
+            if can_look and d:
+                k = load_json("mobile_config.json")["look_rad_per_px"]
+                self.cam.yaw = clamp(self.cam.yaw - d * k, -self.cam.max_yaw, self.cam.max_yaw)
+        else:
+            self.look_left = can_look and mx < edge and self.cam.yaw > -self.cam.max_yaw
+            self.look_right = can_look and mx > w - edge and self.cam.yaw < self.cam.max_yaw
+            speed = math.radians(self.cam_cfg["look_speed_deg"]) * dt
+            if self.look_left:
+                self.cam.yaw = max(-self.cam.max_yaw, self.cam.yaw - speed)
+            if self.look_right:
+                self.cam.yaw = min(self.cam.max_yaw, self.cam.yaw + speed)
 
         aim = clamp((mx - self.cam.cx) / (self.cam.cx - edge), -1.0, 1.0)
+        override = self.game.input.aim_override(self.fight is not None and self.fight.phase == "fight")
+        if override is not None:
+            aim = override  # 터치: 파이팅 중엔 릴 패드 노브가 방향
         self.cast.update(dt, aim)
         for ev in self.cast.events:
             if ev == "splash":
@@ -666,8 +709,8 @@ class FishingScene(Scene):
                     self.sfx.play("perfect", 0.6)
             return
         reeling = self.game.input.held("reel") and f.phase == "fight"
-        if f.phase == "fight":
-            self._detect_flick(dt)
+        if f.phase == "fight" and not self.touch:
+            self._detect_flick(dt)  # 터치는 릴 패드에서 튕기기 → "flick" 행동
         f.update(dt, reeling, aim)
         x, z = f.fish_xz()
         self.cast.bx, self.cast.bz = x, z
@@ -1236,34 +1279,35 @@ class FishingScene(Scene):
         # 가짜 FOV (줌·패닝·기울기)
         self.screen_fx.apply_camera(canvas)
 
+        inset = self.hud_inset
         if f is not None:
             self._draw_fight_overlay(canvas, pal)
         else:
             warn = self.float_warning()
             if warn:
                 blink = int(self.t * 3) % 2 == 0
-                hud.text(canvas, ("! " if blink else "  ") + warn, (6, 17), (255, 120, 110), anchor="topleft")
+                hud.text(canvas, ("! " if blink else "  ") + warn, (6 + inset, 17), (255, 120, 110), anchor="topleft")
             if self.save.data["flags"].get("float_highlight") and int(self.t * 4) % 2 == 0:
-                hud.text(canvas, "B: 상점에서 마비 찌!", (cam.width - 6, 43), (255, 230, 120), anchor="topright")
+                hud.text(canvas, "B: 상점에서 마비 찌!", (cam.width - 6 - inset, 43), (255, 230, 120), anchor="topright")
             label = f"{self.clock.label()} · {self.spot['name']} · {WEATHER_KO[weather]}"
             g = self.current_gimmick()
             if g:
                 from src.fishing.gimmick import KO
                 label += f" · {KO[g]}"
-            hud.draw_clock(canvas, pal, label, self.clock.fast, self.clock.fast_mult)
+            hud.draw_clock(canvas, pal, label, self.clock.fast, self.clock.fast_mult, 6 + inset)
             if c.state == CastState.CHARGING:
                 hud.draw_power_gauge(canvas, pal, c.power, c.distance_for_power(c.power))
             if c.state == CastState.LANDED:
-                hud.text(canvas, f"찌 거리 {c.current_distance():.0f}m", (cam.width - 6, 30), pal["text"],
+                hud.text(canvas, f"찌 거리 {c.current_distance():.0f}m", (cam.width - 6 - inset, 30), pal["text"],
                          anchor="topright")
             sv = self.save.data
-            hud.text(canvas, f"{sv['money']:,}원", (cam.width - 6, 4), (255, 228, 140), anchor="topright")
+            hud.text(canvas, f"{sv['money']:,}원", (cam.width - 6 - inset, 4), (255, 228, 140), anchor="topright")
             bait = self.save.equipped("bait")["name"]
-            hud.text(canvas, f"살림망 {len(sv['keepnet'])} · 미끼 {bait}", (cam.width - 6, 17), pal["text"],
+            hud.text(canvas, f"살림망 {len(sv['keepnet'])} · 미끼 {bait}", (cam.width - 6 - inset, 17), pal["text"],
                      anchor="topright")
             hint = HINTS[c.state]
             if hint:
-                hud.draw_hint(canvas, pal, hint)
+                hud.draw_hint(canvas, pal, hint, center=self.touch)
             hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
         self.toasts.draw(canvas)
         if self.captions:
@@ -1282,6 +1326,8 @@ class FishingScene(Scene):
             tut.draw_card(canvas, self.card["key"], self._card_focus(), self.card["t"])
         if self.help:
             tut.draw_help(canvas)
+        if self.touch:
+            self._draw_touch_controls(canvas)
         hud.draw_cursor(canvas, self.mouse)
 
     def _rod_geo(self) -> dict:
@@ -1349,7 +1395,7 @@ class FishingScene(Scene):
             pose, still = f.net_pose()
             draw_net_scene(canvas, pal, self._display_fish(f.fish), f.size_cm, pose, still, t, self.net_anim, self.mouse)
             fight_hud.draw_boss_bar(canvas, pal, f)
-            hud.draw_hint(canvas, pal, NET_HINT)
+            hud.draw_hint(canvas, pal, NET_HINT, center=self.touch)
             return
         if f.phase == "caught":
             draw_catch_cut(canvas, pal, f.result, self.end_t)
@@ -1363,17 +1409,21 @@ class FishingScene(Scene):
         if f.escape_t is not None:
             self._draw_escape(canvas, f)
             self.screen_fx.draw_edges(canvas)
-            fight_hud.draw_gauges(canvas, pal, f, t)
+            fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
             return
         self._draw_behavior_ui(canvas)
         self.popups.draw(canvas, self.screen_fx.map)
         self.screen_fx.draw_edges(canvas)
-        fight_hud.draw_gauges(canvas, pal, f, t)
+        fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
         fight_hud.draw_boss_bar(canvas, pal, f)
-        fight_hud.draw_drag(canvas, pal, f)
-        fight_hud.draw_distance(canvas, pal, f)
-        self._draw_fight_items(canvas, pal, f)
-        hud.draw_hint(canvas, pal, HINTS[CastState.HOOKED])
+        if self.touch:
+            # 드랙·소모품·조작 안내는 터치 버튼이 대신한다
+            fight_hud.draw_distance(canvas, pal, f, self.hud_inset)
+        else:
+            fight_hud.draw_drag(canvas, pal, f)
+            fight_hud.draw_distance(canvas, pal, f)
+            self._draw_fight_items(canvas, pal, f)
+            hud.draw_hint(canvas, pal, HINTS[CastState.HOOKED])
         if self.debug:
             fight_hud.draw_debug(canvas, f)
 
@@ -1420,6 +1470,28 @@ class FishingScene(Scene):
         if (self.save.charm_on("pinwheel_float") and self.bite.state == BiteState.NIBBLE and self.bite.dip > 0.03):
             out = dict(out, bobber=(90, 220, 255))
         return out
+
+    GAUGE_W = 104  # 파이팅 게이지 묶음 폭 (fight_hud.draw_gauges 가 왼쪽 0~104px에 그림)
+
+    def _gauge_canvas(self, canvas):
+        """왼손잡이 터치 모드면 게이지를 오른쪽 가장자리에 (왼쪽 아래는 릴 패드 자리)."""
+        if self.touch and self.settings.get("touch_left"):
+            w, h = canvas.get_size()
+            return canvas.subsurface((w - self.GAUGE_W, 0, self.GAUGE_W, h))
+        return canvas
+
+    @property
+    def hud_inset(self) -> int:
+        """모바일: 위쪽 HUD 글자를 일시정지·가방 버튼만큼 안쪽으로."""
+        return load_json("mobile_config.json")["hud_inset_px"] if self.touch else 0
+
+    def _draw_touch_controls(self, canvas) -> None:
+        from src.platform import touch_ui
+        inp = self.game.input
+        ctx = self.touch_context()
+        controls = touch_ui.layout(canvas.get_width(), canvas.get_height(), ctx, self.settings, inp.items_open)
+        inp.controls = controls
+        touch_ui.draw(canvas, controls, inp.pressed_controls(), self.settings, inp.aim, ctx["drag"])
 
     def _draw_fight_items(self, canvas, pal, f) -> None:
         """파이팅 중 쓸 수 있는 소모품 표시 (왼쪽 아래, 드랙 밑)."""
