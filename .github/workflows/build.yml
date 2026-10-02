@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: ["claude/**", "main"]
+    tags: ["v*"]          # v0.8.0 같은 태그를 올리면 두 빌드 뒤 GitHub 릴리즈까지 만든다
     paths-ignore: ["**.md"]
 
 jobs:
@@ -88,3 +89,28 @@ jobs:
         with:
           name: FishingGame-android
           path: bin/*.apk
+
+  release:
+    # 태그(v*)일 때만: 두 빌드 결과를 받아 릴리즈에 올림 (exe 폴더 zip + APK)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows-exe, android-apk]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: 파일 이름 정리
+        run: |
+          V="${GITHUB_REF_NAME}"
+          mkdir -p out
+          (cd art/FishingGame-windows && zip -qr "../../out/FishingGame-${V}-windows.zip" .)
+          cp art/FishingGame-android/*.apk "out/FishingGame-${V}-android.apk"
+          ls -la out
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: 낚시 게임 ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          files: out/*

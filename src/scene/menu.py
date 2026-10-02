@@ -12,6 +12,7 @@ from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.fight_fx import big_text
 from src.ui.hud import draw_cursor, text
+from src.version import VERSION
 
 SPOT_NAMES = {s["id"]: s["name"] for s in load_json("spots.json")["spots"]}
 
@@ -122,6 +123,7 @@ class TitleScene(Scene):
             text(canvas, f"「{self.latest_title}」", (w // 2, 114), (255, 214, 90), 11, "center")  # 장착한 칭호
         for b in self.buttons:
             b.draw(canvas, self.mouse)
+        text(canvas, f"v{VERSION}", (w - 6, canvas.get_height() - 8), (150, 150, 165), 11, "midright")
         draw_cursor(canvas, self.mouse)
 
 
