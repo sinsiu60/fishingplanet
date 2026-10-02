@@ -92,6 +92,10 @@ CARDS = {
     ]),
 }
 
+# 신규 패턴·루어 카드 (움직이는 시범 그림 포함, src/ui/pattern_guide.py)
+from src.ui import pattern_guide as _pg  # noqa: E402
+CARDS.update(_pg.CARDS)
+
 GUIDES = {
     "guide_cast": "좌클릭을 누르고 있으면 파워가 차요. 원하는 거리에서 놓으면 던집니다! (마우스: 방향)",
     "guide_wait": "찌를 지켜보세요. 톡톡 살짝 = 가짜 입질(무시!) / 찌가 쑥 잠기면 바로 좌클릭!",
@@ -156,8 +160,11 @@ def _dim(canvas, focus=None, radius: int = 0, alpha: int = 150) -> None:
     canvas.blit(shade, (0, 0))
 
 
-def draw_card(canvas, key: str, focus, t: float) -> None:
+def draw_card(canvas, key: str, focus, t: float, touch: bool = False) -> None:
     title, raw = CARDS[key]
+    if key in _pg.DEMO:
+        _pg.draw_card(canvas, key, title, raw, focus, t, touch)
+        return
     w, h = canvas.get_size()
     pw = 440
     lines = [ln for r in raw for ln in wrap_text(r, pw - 24)]
@@ -193,7 +200,7 @@ def draw_guide(canvas, key: str, t: float) -> None:
     text(canvas, s, (w // 2, y + ph // 2), (240, 240, 250), 11, "center")
 
 
-def draw_help(canvas) -> None:
+def draw_help(canvas, more: bool = False) -> None:
     w, h = canvas.get_size()
     _dim(canvas, alpha=190)
     pw, ph = 450, 266
@@ -220,4 +227,34 @@ def draw_help(canvas) -> None:
     yy += 3
     text(canvas, "장력은 초록 구간 유지! 빨강 = 줄 손상, 아래 = 바늘 빠짐", (w // 2, yy + 4), (140, 230, 150), 11,
          "center")
+    text(canvas, "H 또는 클릭: 다음 쪽 (신규 패턴)" if more else "H 또는 클릭: 닫기", (w // 2, y + ph - 9),
+         (160, 170, 195), 11, "center")
+
+
+def draw_help_patterns(canvas, seen: list, touch: bool) -> None:
+    """도움말 2쪽: 신규 패턴 — 본 것만 대응법, 못 본 것은 ???."""
+    from src.fishing.patterns import TIP_SHORT
+    w, h = canvas.get_size()
+    _dim(canvas, alpha=190)
+    pw, ph = 450, 266
+    x, y = (w - pw) // 2, (h - ph) // 2
+    canvas.fill(PANEL, (x, y, pw, ph))
+    pygame.draw.rect(canvas, BORDER, (x, y, pw, ph), 1)
+    text(canvas, "도움말 · 신규 패턴", (w // 2, y + 11), BORDER, 16, "center")
+    names = load_json("patterns.json")["names"]
+    guides = load_json("patterns.json")["guide"]
+    order = ("shake", "dive", "surface", "reverse", "twist", "chain", "hide", "pump", "thrash", "bite", "fake", "dual")
+    yy = y + 28
+    for pid in order:
+        if pid in seen:
+            sig = guides[pid].split("!")[0]
+            text(canvas, names[pid], (x + 14, yy), (255, 240, 200), 11)
+            r = text(canvas, sig, (x + 96, yy), (255, 170, 150), 11)
+            text(canvas, "→ " + TIP_SHORT[pid], (r.right + 6, yy), (230, 232, 240), 11)
+        else:
+            text(canvas, "???", (x + 14, yy), (120, 126, 150), 11)
+            text(canvas, "아직 만나지 못한 패턴", (x + 96, yy), (120, 126, 150), 11)
+        yy += 17
+    text(canvas, "패턴마다 처음 만날 때 시범 카드가 나와요. (설정 → 튜토리얼 다시 보기)", (w // 2, y + ph - 22),
+         (140, 230, 150), 11, "center")
     text(canvas, "H 또는 클릭: 닫기", (w // 2, y + ph - 9), (160, 170, 195), 11, "center")

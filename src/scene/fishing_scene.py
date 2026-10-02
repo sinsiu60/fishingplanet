@@ -25,7 +25,7 @@ from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
 from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
 from src.scene.base import Scene
-from src.ui import fight_fx, fight_hud, hud, pattern_fx
+from src.ui import fight_fx, fight_hud, hud, pattern_fx, pattern_guide
 from src.ui import tutorial as tut
 
 
@@ -381,7 +381,11 @@ class FishingScene(Scene):
             return
         if self.help:
             if a.any_press or a.name == "help":
-                self.help = False
+                # 1쪽(조작·기존 신호) → 2쪽(신규 패턴, 하나라도 봤으면) → 닫기
+                if getattr(self, "help_page", 0) == 0 and self.save.data.get("patterns_seen"):
+                    self.help_page = 1
+                else:
+                    self.help = False
             return
         if self.card is not None:
             if a.any_press and self.card["t"] > 0.35:
@@ -393,6 +397,7 @@ class FishingScene(Scene):
                 self._use_fight_item("repair_spool" if a.value == 1 else "calm_charm")
         elif n == "help":
             self.help = True
+            self.help_page = 0
         elif n == "back":
             if self.landing is None:
                 self.sfx.play("click")
@@ -826,9 +831,8 @@ class FishingScene(Scene):
             self.bite.lure_in = (jerk, retrieving)
             if jerk:
                 self._jerk_fx()
-            if self.bite.lure.engaged and self.tutorial.want("lure_intro"):
-                self.toasts.show("루어! 물고기마다 좋아하는 리듬이 있어요 — 그림자가 다가오면 맞는 리듬", (150, 220, 255), 3.0, 11)
-                self.tutorial.mark("lure_intro")
+            if self.bite.lure.engaged and self.card is None and self.tutorial.want("lure_intro"):
+                self._open_card("lure_intro", None)
         else:
             self.ctl.reset()
         self.bite.sign_mods = self.signs.mods(self.cast.bx, self.cast.bz) if landed else {}
@@ -868,7 +872,11 @@ class FishingScene(Scene):
         return True
 
     def _jerk_fx(self) -> None:
-        """저킹: 찌가 톡 튀며 작은 물결."""
+        """저킹: 찌가 톡 튀며 작은 물결 + 아래쪽에 '톡! 저킹 (간격)' (리듬을 맞추기 쉽게)."""
+        prev = getattr(self, "last_jerk_t", None)
+        self.last_jerk_t = self.t
+        gap = self.t - prev if prev is not None and self.t - prev < 4.0 else None
+        self.lure_fb = ("톡! 저킹" + (f"  · 간격 {gap:.1f}초" if gap else ""), self.t)
         c = self.cast
         self.ripples.spawn(c.bx, c.bz, size=0.4, life=0.7)
         p = self.cam.project(c.bx, c.bz)
@@ -1310,8 +1318,14 @@ class FishingScene(Scene):
             elif pid == "bite" and not f.brain.sound_only:
                 self.sparkles.burst(*pos, count=6, speed=0.5, ring=False)  # 이빨 반짝
             seen = self.save.data.setdefault("patterns_seen", [])
-            if pid not in seen:
-                # 첫 만남: 잠깐 느려지며 한 줄 안내 (이후 도감에 패턴 힌트)
+            card = f"pattern:{pid}"
+            if card in tut.CARDS and self.card is None and self.tutorial.want(card):
+                # 처음 보는 패턴: 예고 순간 멈추고 시범 그림이 있는 설명 카드
+                if pid not in seen:
+                    seen.append(pid)
+                self._open_card(card, None)
+            elif pid not in seen:
+                # 첫 만남(카드는 이미 봤음): 잠깐 느려지며 한 줄 안내 (이후 도감에 패턴 힌트)
                 seen.append(pid)
                 pc = load_json("patterns.json")
                 fm = pc["first_meet"]
@@ -1661,6 +1675,7 @@ class FishingScene(Scene):
             if sh is not None and self.bite.fish is not None:
                 sh = dict(sh, glow=GLOW.get(self.bite.fish["rarity"]))
             draw_fish_shadow(canvas, pal, cam, sh, t)
+            self._draw_lure_mark(canvas, sh, t)
             if sh is not None and self.bite.fish is not None and self.save.charm_on("abyss_eye"):
                 # 심연의 눈: 도감에 등록된 물고기면 이름이 보인다
                 p = cam.project(sh["x"], sh["z"])
@@ -1773,6 +1788,7 @@ class FishingScene(Scene):
             hint = HINTS[c.state]
             if hint:
                 hud.draw_hint(canvas, pal, hint, center=self.touch)
+            self._draw_lure_status(canvas)
             hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
         self.toasts.draw(canvas, self._toast_width(canvas) if self._fighting_hud() else None)
         if self.captions:
@@ -1790,9 +1806,12 @@ class FishingScene(Scene):
             elif not self.tutorial.is_seen("guide_wait") and c.state == CastState.LANDED:
                 tut.draw_guide(canvas, "guide_wait", t)
         if self.card is not None:
-            tut.draw_card(canvas, self.card["key"], self._card_focus(), self.card["t"])
+            tut.draw_card(canvas, self.card["key"], self._card_focus(), self.card["t"], self.touch)
         if self.help:
-            tut.draw_help(canvas)
+            if getattr(self, "help_page", 0) == 1:
+                tut.draw_help_patterns(canvas, self.save.data.get("patterns_seen", []), self.touch)
+            else:
+                tut.draw_help(canvas, more=bool(self.save.data.get("patterns_seen")))
         if self.touch:
             self._draw_touch_controls(canvas)
         hud.draw_cursor(canvas, self.mouse)
@@ -1941,6 +1960,13 @@ class FishingScene(Scene):
         fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
         fight_hud.draw_boss_bar(canvas, pal, f)
         pattern_fx.draw_pattern_panel(canvas, f, self.touch, t)
+        if f.phase == "fight":
+            bite_at = None
+            if self.touch:
+                dn = next((ct for ct in self.game.input.controls if ct.id == "drag_down"), None)
+                if dn is not None:
+                    bite_at = (dn.rect.right + 64, dn.rect.centery - 8)  # 드랙 칸·글자 오른쪽
+            pattern_guide.draw_cue(canvas, f, self.ctl.pitch, self._cue_anchor(canvas), t, self.touch, bite_at)
         qr = getattr(self, "quest_run", None)
         if qr is not None and qr.items:
             fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0,
@@ -2004,6 +2030,55 @@ class FishingScene(Scene):
         if (self.save.charm_on("pinwheel_float") and self.bite.state == BiteState.NIBBLE and self.bite.dip > 0.03):
             out = dict(out, bobber=(90, 220, 255))
         return out
+
+    def _draw_lure_mark(self, canvas, sh, t: float) -> None:
+        """루어로 꾀는 중인 그림자 위 반응: ? 관심 / ! 다가옴 / ♥ 곧 문다 / … 떠남 (관심도 숫자는 안 보인다)."""
+        if sh is None or not self.bite.lure.engaged or not (sh.get("lurk") or sh.get("leaving")):
+            return
+        p = self.cam.project(sh["x"], sh["z"])
+        if not p or sh.get("alpha", 1) < 0.2:
+            return
+        from src.fishing.lure import cfg as lure_cfg
+        lc = lure_cfg()
+        k = self.bite.interest()
+        if sh.get("leaving"):
+            mark, col = "…", (170, 180, 200)
+        elif k >= lc["circle_at"]:
+            mark, col = "♥", (255, 130, 160)
+        elif k >= lc["approach_at"]:
+            mark, col = "!", (255, 214, 90)
+        elif k >= lc["turn_at"]:
+            mark, col = "?", (220, 230, 245)
+        else:
+            return
+        bob = math.sin(t * 5) * 1.5
+        hud.text(canvas, mark, (p[0], int(p[1] - 12 + bob)), col, 16, "center")
+
+    def _draw_lure_status(self, canvas) -> None:
+        """찌가 떠 있는 동안 내 입력이 어떻게 읽혔는지: 톡! 저킹(간격) / 리트리브 중 / 멈춤…"""
+        if self.cast.state != CastState.LANDED or self.bite.state == BiteState.BITE or not self.bite.lure.engaged:
+            return
+        msg, col = None, (190, 220, 255)
+        fb = getattr(self, "lure_fb", None)
+        if self.ctl.lure == "retrieve":
+            msg = "리트리브 중 (천천히 감기)"
+        elif fb is not None and self.t - fb[1] < 1.2:
+            msg = fb[0]
+        elif self.ctl.lure == "pause":
+            msg, col = "멈춤…", (170, 180, 200)
+        if msg:
+            w, h = canvas.get_size()
+            hud.text(canvas, msg, (w // 2, h - 30), col, 11, "center")
+
+    def _cue_anchor(self, canvas) -> tuple[int, int]:
+        """조작 방향 표시 자리: 모바일 = 릴 패드 위, PC = 낚싯대 끝 왼쪽 아래 (손이 가는 곳 근처)."""
+        if self.touch:
+            pad = next((ct for ct in self.game.input.controls if ct.id == "pad"), None)
+            if pad is not None:
+                return pad.rect.centerx, pad.rect.top - 34
+        tip = self._rod_geo()["tip"]
+        w, h = canvas.get_size()
+        return int(max(40, min(w - 40, tip[0] - 46))), int(max(110, min(h - 60, tip[1] + 40)))
 
     def _fighting_hud(self) -> bool:
         return self.fight is not None and self.fight.phase == "fight"
