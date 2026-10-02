@@ -8,6 +8,7 @@ from src.core.weather import WEATHER_KO
 from src.render.fish_draw import RANK_COLORS, draw_fish_side, fish_colors
 from src.save.save_game import baits
 from src.fishing.patterns import TIP_SHORT, fish_patterns
+from src.fishing import mutation
 from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
@@ -31,6 +32,9 @@ def _join(values, table, all_count) -> str:
     return "전체" if len(values) >= all_count else "·".join(table[v] for v in values)
 
 
+MUT_COL = (255, 190, 120)
+
+
 class DexScene(Scene):
     UI_FRAME = True
 
@@ -47,6 +51,11 @@ class DexScene(Scene):
         self.sel = 0
         self.t = 0.0
         self.close_btn = ui.Button((406, 250, 60, 15), "닫기 (Tab)", self._close)
+        self.mut_mode = False  # 변이 도감 (U5): 물고기 × 변이 칸
+        self.mut_btn = ui.Button((52, 9, 64, 15), "변이 도감", self._toggle_mut)
+
+    def _toggle_mut(self) -> None:
+        self.mut_mode = not self.mut_mode
 
     def _make_tabs(self) -> None:
         tabs = CONT_TABS[self.cont]
@@ -78,6 +87,9 @@ class DexScene(Scene):
                 return
             if self.close_btn.click(m):
                 return
+            if mutation.unlocked(self.save) and self.mut_btn.click(m):
+                self.game.sfx.play("click")
+                return
             if "eldrasion" in self.save.data["unlocked_continents"] and self.cont_btn.click(m):
                 self.game.sfx.play("click")
                 return
@@ -100,7 +112,16 @@ class DexScene(Scene):
         got = self.save.dex_count()
         golds = sum(1 for e in self.save.data["dex"].values() if e.get("best_rank") == "S")
         text(canvas, "도감", (14, 16), ui.ACCENT, 16, "midleft")
-        text(canvas, f"{got}/{total}종 ({got * 100 // total}%)   금테 {golds}", (466, 16), ui.ACCENT, 11, "midright")
+        if self.mut_mode:
+            n, cap = mutation.dex_count(self.save), self._mut_total()
+            nxt = next((r for r in mutation.cfg()["dex_rewards"] if r["count"] > n), None)
+            tail = f" · 다음 보상 {nxt['count']}: {nxt['name']}" if nxt else " · 보상 모두 받음"
+            text(canvas, f"변이 {n}/{cap}{tail}", (466, 16), MUT_COL, 11, "midright")
+        else:
+            text(canvas, f"{got}/{total}종 ({got * 100 // total}%)   금테 {golds}", (466, 16), ui.ACCENT, 11, "midright")
+        if mutation.unlocked(self.save):
+            self.mut_btn.label = "기본 도감" if self.mut_mode else "변이 도감"
+            self.mut_btn.draw(canvas, self.mouse)
         self.tabs.draw(canvas, self.mouse)
         if "eldrasion" in self.save.data["unlocked_continents"]:
             self.cont_btn.label = "엘드라시온 >" if self.cont == "sharmion" else "< 샤르미온"
@@ -109,9 +130,61 @@ class DexScene(Scene):
         self.sel = min(self.sel, len(fishes) - 1)
         for i, f in enumerate(fishes):
             self._draw_card(canvas, i, f)
-        self._draw_detail(canvas, fishes[self.sel])
+            if self.mut_mode:
+                self._draw_mut_dots(canvas, i, f)
+        if self.mut_mode:
+            self._draw_mut_detail(canvas, fishes[self.sel])
+        else:
+            self._draw_detail(canvas, fishes[self.sel])
         self.close_btn.draw(canvas, self.mouse)
         draw_cursor(canvas, self.mouse)
+
+    def _mut_total(self) -> int:
+        return sum(len(mutation.ORDER) for f in self.fish if f["rarity"] != "legend")
+
+    def _draw_mut_dots(self, canvas, i: int, f: dict) -> None:
+        """카드 위쪽에 변이 7칸 (잡아 본 변이는 그 색으로)."""
+        r = self.card_rect(i)
+        if f["rarity"] == "legend":
+            return
+        got = self.save.data.get("mutation_dex", {}).get(f["id"], [])
+        kinds = mutation.cfg()["kinds"]
+        x0 = r.x + 4
+        for k, m in enumerate(mutation.ORDER):
+            box = pygame.Rect(x0 + k * 7, r.y + 3, 5, 5)
+            if m in got:
+                canvas.fill(tuple(kinds[m]["color"]), box)
+            else:
+                pygame.draw.rect(canvas, (60, 66, 90), box, 1)
+
+    def _draw_mut_detail(self, canvas, f: dict) -> None:
+        d = DETAIL
+        ui.panel(canvas, d, fill=(16, 20, 36))
+        x, y = d.x + 6, d.y + 10
+        name = f["name"] if self.save.dex_entry(f["id"]) else "???"
+        text(canvas, f"{name} · 변이", (d.centerx, y), MUT_COL, 11, "center")
+        y += 16
+        if f["rarity"] == "legend":
+            text(canvas, "전설은 변이하지 않는다", (d.centerx, y + 10), ui.DIM, 11, "center")
+        else:
+            got = self.save.data.get("mutation_dex", {}).get(f["id"], [])
+            kinds = mutation.cfg()["kinds"]
+            for m in mutation.ORDER:
+                have = m in got
+                col = tuple(kinds[m]["color"]) if have else ui.DIM
+                text(canvas, f"{'v' if have else '·'} {kinds[m]['name']}", (x, y), col, 11, "midleft")
+                if have:
+                    text(canvas, kinds[m]["desc"].split(" · ")[-1][:14], (x + 52, y), ui.DIM, 11, "midleft")
+                y += 13
+        y += 6
+        n = mutation.dex_count(self.save)
+        text(canvas, "수집 보상", (x, y), ui.ACCENT, 11, "midleft")
+        y += 13
+        for rw in mutation.cfg()["dex_rewards"]:
+            done = n >= rw["count"]
+            text(canvas, f"{'v' if done else '·'} {rw['count']}종: {rw['name']}", (x, y), ui.GOOD if done else ui.DIM, 11,
+                 "midleft")
+            y += 12
 
     def _draw_card(self, canvas, i: int, f: dict) -> None:
         r = self.card_rect(i)

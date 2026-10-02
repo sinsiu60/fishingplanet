@@ -46,6 +46,7 @@ KEY_ACTIONS = {
     pygame.K_F5: ("debug", "F5"),
     pygame.K_F6: ("debug", "F6"),
     pygame.K_F9: ("debug", "F9"),
+    pygame.K_F10: ("debug", "F10"),
 }
 
 

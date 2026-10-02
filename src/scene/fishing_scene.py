@@ -292,6 +292,39 @@ class FishingScene(Scene):
             w.current = WEATHERS[(WEATHERS.index(w.current) + 1) % len(WEATHERS)]
             self.toasts.show(f"[테스트] 날씨: {WEATHER_KO[w.current]}", INFO, 1.5, 11)
 
+    def _record_mutation(self, f, muts: list) -> None:
+        """변이 포획: 살림망 표시·쌍둥이 두 번째·각성 소재·변이 도감과 수집 보상."""
+        from src.fishing import mutation
+        from src.save.save_game import spot_continent
+        net = self.save.data["keepnet"]
+        net[-1]["mut"] = list(muts)
+        if f.result.get("twin"):
+            # 쌍둥이: 같은 종 한 마리 더 (크기는 조금 다르게, 도감 횟수도 +1)
+            twin = dict(net[-1], size=round(f.result["size"] * random.uniform(0.9, 1.05), 1))
+            net.append(twin)
+            self.save.data["dex"][f.fish["id"]]["count"] += 1
+            self.save.data["stats"]["catches"] += 1
+            self.toasts.show("쌍둥이! 두 마리를 함께 낚았다", (150, 255, 200), 2.4, 11)
+        if "awake" in muts:
+            mats = self.save.data["materials"]
+            cont = spot_continent(f.fish["spot"])
+            n = mutation.cfg()["kinds"]["awake"]["material_add"]
+            mats[cont] = mats.get(cont, 0) + n
+        st = self.save.data["stats"]
+        st["mutations_caught"] = st.get("mutations_caught", 0) + 1
+        for rw in mutation.record(self.save, f.fish["id"], muts):
+            self.toasts.show(f"변이 도감 {rw['count']}종 달성! 보상: {rw['name']}", (255, 214, 90), 3.4, 11)
+            self.sfx.play("chord_rare", 0.8)
+
+    def _cycle_mutation(self) -> None:
+        """[테스트] F10: 다음 물고기 변이 강제 지정 순환 (없음 → 7종 → 거대+교활)."""
+        from src.fishing import mutation
+        opts = [None] + [[m] for m in mutation.ORDER] + [["giant", "cunning"]]
+        self.force_mut_i = (getattr(self, "force_mut_i", 0) + 1) % len(opts)
+        self.force_mut = opts[self.force_mut_i]
+        name = mutation.label(self.force_mut) if self.force_mut else "없음 (자연 출현)"
+        self.toasts.show(f"[테스트] 다음 물고기 변이: {name}", INFO, 1.5, 11)
+
     def _force_pattern(self) -> None:
         """[테스트] F9: 신규 패턴을 차례로 지금 바로 발동 (파이팅 중)."""
         f = self.fight
@@ -358,6 +391,9 @@ class FishingScene(Scene):
             if a.value in ("F3", "F4", "F5", "F6"):
                 if f is None and self.fish_cfg.get("debug_keys"):
                     self._cycle_debug(a.value)
+            elif a.value == "F10":
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    self._cycle_mutation()
             elif a.value == "F9":
                 if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
                     self._force_pattern()
@@ -480,6 +516,14 @@ class FishingScene(Scene):
         c = self.cast
         fish = self.bite.fish
         size = roll_size(fish, self.bite.cast_distance)
+        # 변이 (U5): 챔질 순간 굴림 (테스트: F10 강제 지정)
+        from src.fishing import mutation
+        force = getattr(self, "force_mut", None)
+        muts = mutation.roll(self.save, fish, self.weather, force=force if force else None)
+        if muts:
+            fish = mutation.apply(fish, muts)
+            if "giant" in muts:
+                size = round(size * mutation.cfg()["kinds"]["giant"]["size_mult"], 1)
         angle = math.atan2(c.bx, c.bz)
         self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(self.clock.period()[0]),
                            hazards=self.spot["hazards"], gimmick=self.current_gimmick(),
@@ -487,6 +531,13 @@ class FishingScene(Scene):
                            touch_lead=load_json("mobile_config.json")["touch_lead_sec"] if self.touch else 0.0)
         if self.touch:
             self.fight.input_latency = load_json("mobile_config.json")["pump_latency_sec"]
+        if muts:
+            kinds = mutation.cfg()["kinds"]
+            col = tuple(kinds[muts[0]]["color"])
+            desc = " · ".join(kinds[m]["short"] for m in muts)
+            self.toasts.show(f"변이! {fish['name']} — {desc}", col, 3.2, 11)
+            self.sfx.play("chord_rare", 0.6)
+            self.sparkles.burst(*self._fish_screen(), count=16, speed=0.9)
         for g in sorted(self.fight.gim.kinds(self.fight.brain)):
             key = f"gimmick:{g}"
             if self.card is None and self.tutorial.want(key):
@@ -779,6 +830,7 @@ class FishingScene(Scene):
         for ev in f.events:
             self._on_fight_event(ev)
         f.events.clear()
+        self.sfx.boost = 1
         if f.phase != "fight":
             return
         # 처음으로 느슨/빨간 구간에 머물면 설명
@@ -1223,8 +1275,10 @@ class FishingScene(Scene):
             self.shake_kick = max(self.shake_kick, 2.0)
         elif ev == "gimmick:ice_scrape":
             self.sfx.play("scrape", 0.6)
-        if ev in CAPTIONS and self.settings.get("sound_captions"):
-            self.captions = [CAPTIONS[ev], 1.2]
+        clear = "clear" in f.mutations
+        if ev in CAPTIONS and (self.settings.get("sound_captions") or clear):
+            self.captions = [CAPTIONS[ev], 1.2]  # 투명 변이: 소리 자막 강제
+        self.sfx.boost = 2 if clear and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
         kind, _, pid = ev.partition(":")
         if pid in PATTERN_CUES or kind in ("pattern_ok", "pattern_fail", "pattern_neutral", "twist_step", "pump_beat") or \
                 ev in PATTERN_EVENTS:
@@ -1354,7 +1408,11 @@ class FishingScene(Scene):
                 # 황금 뜰채: 크기 +3% (판매가도 그만큼)
                 f.result["size"] = round(f.result["size"] * 1.03, 1)
                 f.result["price"] = int(round(f.result["price"] * 1.03))
-            self.chest_drop = treasure.roll_drop(self.save, f.fish, f.result["rank"])
+            muts = f.result.get("mutations") or []
+            from src.fishing import mutation
+            mk = mutation.cfg()["kinds"]
+            bonus = mk["frenzy"]["chest_bonus"] if "frenzy" in muts else 0.0  # 광폭: 상자 +2%p
+            self.chest_drop = treasure.roll_drop(self.save, f.fish, f.result["rank"], bonus=bonus)
             if f.fish["rarity"] == "legend" and self.spot.get("continent") == "eldrasion":
                 # 전설 비늘: 첫 포획 5개, 이후 2개 (T7·T8, 봉인 찌 재료)
                 n = 2 if self.save.caught(f.fish["id"]) else 5
@@ -1366,6 +1424,8 @@ class FishingScene(Scene):
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
             self.catch_news["chest"] = self.chest_drop
+            if muts:
+                self._record_mutation(f, muts)
             if (self.save.charm_on("twin_hook") and f.fish["rarity"] != "legend" and random.random() < 0.05):
                 # 쌍둥이 바늘: 같은 물고기 한 마리 더 (판매·소재용, 도감·랭크 기록 없음)
                 self.save.data["keepnet"].append(dict(self.save.data["keepnet"][-1], twin=True))
@@ -1456,7 +1516,12 @@ class FishingScene(Scene):
                 facing = 1 if f.fish_side() <= 0 else -1  # 화면 가운데 쪽을 향해 머리를 둔다
                 draw_dragon_shadow(canvas, pal, cam, sh["x"], sh["z"], sh["heading"], t, 1.0, sh["alpha"], facing)
             elif not f.brain.dark:
-                draw_fish_shadow(canvas, pal, cam, self._fight_shadow(), t)
+                sh = self._fight_shadow()
+                draw_fish_shadow(canvas, pal, cam, sh, t)
+                tx = f.twin_xz()
+                if tx is not None:
+                    # 쌍둥이: 쉬는 녀석의 그림자 (조금 흐리게)
+                    draw_fish_shadow(canvas, pal, cam, dict(sh, x=tx[0], z=tx[1], alpha=sh["alpha"] * 0.6, wag=6.0), t)
         self.ripples.draw(canvas, pal, cam)
         self.bubbles.draw(canvas, pal)
         self.hazard_decor.draw(canvas, pal, cam, t, f.in_hazard if f is not None and f.phase == "fight" else None)
@@ -1623,8 +1688,17 @@ class FishingScene(Scene):
             wag = 0.5
         if f.fish["rarity"] == "legend":
             scale *= self.fish_cfg["legend"]["shadow_scale"] * 0.55
+        alpha *= f.fish.get("shadow_alpha", 1.0)  # 투명 변이
+        glow = GLOW.get(f.fish["rarity"])
+        muts = f.mutations
+        if muts:
+            # 변이: 그림자 테두리가 변이 색으로 빛난다 (투명은 빼고)
+            from src.fishing.mutation import cfg as mcfg
+            shown = [m for m in muts if m != "clear"]
+            if shown:
+                glow = tuple(mcfg()["kinds"][shown[int(self.t * 1.5) % len(shown)]]["color"])
         return {"x": x, "z": z, "heading": heading, "alpha": alpha, "len": f.fish["shadow_len_m"],
-                "scale": scale, "wag": wag, "glow": GLOW.get(f.fish["rarity"])}
+                "scale": scale, "wag": wag, "glow": glow}
 
     @staticmethod
     def _pat_k(b, pid: str):

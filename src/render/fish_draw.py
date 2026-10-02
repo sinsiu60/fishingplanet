@@ -5,7 +5,7 @@ import pygame
 
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 
-DEFAULT_COLORS = {"body": [120, 130, 120], "belly": [220, 220, 210], "fin": [90, 100, 90], "stripe": None}
+DEFAULT_COLORS = {"body": [120, 130, 120], "belly": [220, 220, 210], "fin": [90, 100, 90], "stripe": None, "eye": None}
 RANK_COLORS = {"S": (255, 214, 90), "A": (150, 200, 255), "B": (140, 220, 150), "C": (190, 190, 190)}
 RARITY_GLOW = {"common": (255, 245, 210), "uncommon": (150, 255, 170), "rare": (140, 200, 255),
                "legend": (255, 210, 90)}
@@ -143,7 +143,8 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
     # 눈
     eye_r = max(1, int(L / (22 if shape.get("eye_big") else 40)))
     eye = _xf([(-L * 0.4, -H * 0.3)], cx, cy, angle, facing)[0]
-    pygame.draw.circle(canvas, (255, 220, 90) if shape.get("eye_big") else (250, 250, 240), eye, eye_r + 1)
+    ring = colors.get("eye") or ((255, 220, 90) if shape.get("eye_big") else (250, 250, 240))
+    pygame.draw.circle(canvas, ring, eye, eye_r + 1)  # 광폭 변이: 붉은 눈
     pygame.draw.circle(canvas, (20, 20, 20), eye, eye_r)
     mouth = _xf([(-L / 2 + L * 0.01, H * 0.05), (-L * 0.42, H * 0.25)], cx, cy, angle, facing)
     pygame.draw.line(canvas, scale_color(base, 0.55), mouth[0], mouth[1], 1)

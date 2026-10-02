@@ -28,9 +28,9 @@ def items_of(grade: str) -> list[dict]:
     return [i for i in cfg()["items"] if i["grade"] == grade]
 
 
-def drop_chance(fish: dict, rank: str) -> float:
+def drop_chance(fish: dict, rank: str, bonus: float = 0.0) -> float:
     c = cfg()
-    p = c["drop"].get(fish["rarity"], 0.0)
+    p = c["drop"].get(fish["rarity"], 0.0) + bonus
     if fish["rarity"] == "legend":
         return p
     if rank == "S":
@@ -58,9 +58,9 @@ def _roll_grade(save, rnd, legend_fish: bool) -> str:
     return grade
 
 
-def roll_drop(save, fish: dict, rank: str, rnd=random) -> str | None:
-    """포획 1회의 상자 드랍. 얻으면 등급을 돌려주고 인벤토리에 넣는다."""
-    if rnd.random() >= drop_chance(fish, rank):
+def roll_drop(save, fish: dict, rank: str, rnd=random, bonus: float = 0.0) -> str | None:
+    """포획 1회의 상자 드랍. 얻으면 등급을 돌려주고 인벤토리에 넣는다. bonus = 광폭 변이 +2%p."""
+    if rnd.random() >= drop_chance(fish, rank, bonus):
         return None
     grade = _roll_grade(save, rnd, fish["rarity"] == "legend")
     give_chest(save, grade)

@@ -1,0 +1,191 @@
+{
+  "_설명": "변이 물고기 (DESIGN.md 27-4, Phase U5). 등장: unlock_spot(방파제) 해금 후, 전설 제외. 챔질 순간 굴림: 1개 chance_one, 2개 중첩 chance_two (종류는 weight 가중치로, 서로 다르게), 폭풍이면 ×storm_mult. kinds = 종류별 이름·가중치·표시 색·효과·보상. 효과·보상 수치는 아래 각 항목. 시간당 수입 증가가 +20%를 넘지 않게 (예상 +7%). short = 변이 등장 알림에 붙는 짧은 설명.",
+  "unlock_spot": "breakwater",
+  "chance_one": 0.08,
+  "chance_two": 0.01,
+  "storm_mult": 1.5,
+  "kinds": {
+    "giant": {
+      "name": "거대",
+      "weight": 20,
+      "color": [
+        255,
+        170,
+        90
+      ],
+      "size_mult": 2.0,
+      "power_mult": 1.2,
+      "stamina_mult": 1.6,
+      "shadow_mult": 2.0,
+      "price_total_mult": 3.0,
+      "desc": "크기 ×2 (최대 크기를 넘어 신기록 가능), 힘 ×1.2, 체력 ×1.6 · 판매가 ×3",
+      "short": "크기 ×2"
+    },
+    "frenzy": {
+      "name": "광폭",
+      "weight": 18,
+      "color": [
+        255,
+        80,
+        70
+      ],
+      "telegraph_mult": 0.7,
+      "min_telegraph": 0.4,
+      "tired_mult": 0.6,
+      "chest_bonus": 0.02,
+      "desc": "예고 ×0.7 (최소 0.4초), 지침 ×0.6 · 상자 확률 +2%p",
+      "short": "예고가 빠르다"
+    },
+    "cunning": {
+      "name": "교활",
+      "weight": 16,
+      "color": [
+        190,
+        120,
+        255
+      ],
+      "fake_cue_add": 0.25,
+      "material_mult": 2,
+      "desc": "가짜 예고 +25% · 분해 소재 ×2",
+      "short": "가짜 예고"
+    },
+    "clear": {
+      "name": "투명",
+      "weight": 12,
+      "color": [
+        200,
+        230,
+        255
+      ],
+      "shadow_alpha": 0.15,
+      "sound_boost": 2,
+      "desc": "그림자가 거의 안 보임, 예고 소리 크게 + 소리 자막 · 변이 도감 기록",
+      "short": "그림자 대신 소리로"
+    },
+    "golden": {
+      "name": "황금",
+      "weight": 10,
+      "color": [
+        255,
+        214,
+        90
+      ],
+      "hook_mult": 1.5,
+      "price_mult": 5.0,
+      "desc": "바늘이 더 잘 빠짐 (×1.5) · 판매가 ×5",
+      "short": "바늘이 잘 빠진다"
+    },
+    "twin": {
+      "name": "쌍둥이",
+      "weight": 10,
+      "color": [
+        150,
+        255,
+        200
+      ],
+      "swap_sec": [
+        2.0,
+        3.0
+      ],
+      "angle_offset": 0.1,
+      "stamina_mult": 1.7,
+      "desc": "같은 종 두 마리가 2~3초마다 번갈아 당김 · 2마리 획득",
+      "short": "두 마리가 번갈아 당긴다"
+    },
+    "awake": {
+      "name": "각성",
+      "weight": 14,
+      "color": [
+        110,
+        170,
+        255
+      ],
+      "pattern_weight": 25,
+      "material_add": 3,
+      "desc": "다음 낚시터의 새 패턴 하나를 쓴다 · 소재 +3",
+      "short": "다음 낚시터의 패턴"
+    }
+  },
+  "_spot_patterns": "각성 변이가 쓰는 '다음 낚시터의 새 패턴'. 마지막 낚시터는 같은 대륙 패턴 중 무작위.",
+  "spot_order": {
+    "sharmion": [
+      "reservoir",
+      "valley",
+      "breakwater",
+      "offshore",
+      "deep",
+      "secret"
+    ],
+    "eldrasion": [
+      "marsh",
+      "crystal_cave",
+      "sky_falls",
+      "volcano",
+      "ice_sea",
+      "world_tree"
+    ]
+  },
+  "spot_patterns": {
+    "valley": [
+      "shake"
+    ],
+    "breakwater": [
+      "dive",
+      "surface"
+    ],
+    "offshore": [
+      "reverse"
+    ],
+    "deep": [
+      "twist"
+    ],
+    "secret": [
+      "chain"
+    ],
+    "marsh": [
+      "hide"
+    ],
+    "crystal_cave": [
+      "pump"
+    ],
+    "sky_falls": [
+      "thrash"
+    ],
+    "volcano": [
+      "bite"
+    ],
+    "ice_sea": [
+      "fake"
+    ],
+    "world_tree": [
+      "dual"
+    ]
+  },
+  "_dex_rewards": "변이 도감(물고기 × 변이 조합 수) 보상. kind: title(칭호) / chest(상자 등급) / float_skin(찌 외형). 칭호·외형은 U6 의뢰 상점과 같은 저장 칸(cosmetics).",
+  "dex_rewards": [
+    {
+      "count": 10,
+      "kind": "title",
+      "id": "mutant_collector",
+      "name": "변이 수집가"
+    },
+    {
+      "count": 25,
+      "kind": "chest",
+      "id": "special",
+      "name": "특별 상자"
+    },
+    {
+      "count": 50,
+      "kind": "float_skin",
+      "id": "aurora",
+      "name": "오로라 찌"
+    },
+    {
+      "count": 100,
+      "kind": "title",
+      "id": "evolution_witness",
+      "name": "진화의 증인"
+    }
+  ]
+}

@@ -17,7 +17,7 @@ from src.core.config import load_json
 from src.core.paths import save_dir
 
 SLOTS = 3
-VERSION = 2
+VERSION = 3
 RANK_ORDER = {"C": 0, "B": 1, "A": 2, "S": 3}
 GEAR_KINDS = ("rod", "reel", "line", "net")
 TOP_TIER = {"sharmion": 5, "eldrasion": 8}  # 대륙별 상점 최고 티어
@@ -62,6 +62,16 @@ def migrate(data: dict, slot: int | None = None) -> dict:
             data.setdefault("flags", {})["voyage_pending"] = True
         data.setdefault("unlocked_continents", conts)
         data["version"] = 2
+    if data["version"] < 3:
+        # 콘텐츠 업데이트 (DESIGN.md 27-8): 새 필드는 _deep_merge가 기본값으로 채운다 — 버전만 올림 (지우는 것 없음)
+        if slot is not None and ver == 2:  # v1에서 온 세이브는 이미 v1 백업이 있다
+            src, bak = _slot_path(slot), save_dir() / f"slot{slot}.v2.bak.json"
+            if src.exists() and not bak.exists():
+                try:
+                    shutil.copyfile(src, bak)
+                except OSError:
+                    pass
+        data["version"] = 3
     return data
 
 
@@ -151,7 +161,7 @@ def new_data() -> dict:
         "keepnet": [],
         "dex": {},
         "stats": {"catches": 0, "s_ranks": 0, "perfects": 0, "lost": 0, "earned": 0,
-                  "chests_opened": 0, "s_ranks_eldra": 0, "double_perfects": 0},
+                  "chests_opened": 0, "s_ranks_eldra": 0, "double_perfects": 0, "mutations_caught": 0},
         # ── 확장 (v2) ──
         "continent": "sharmion",
         "unlocked_continents": ["sharmion"],
@@ -168,6 +178,9 @@ def new_data() -> dict:
         "buffs": {"lucky_casts": 0, "lunch_until": 0.0},  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
         # ── 콘텐츠 업데이트 (DESIGN.md 27-8) ──
         "patterns_seen": [],                             # 만나 본 신규 패턴 (첫 만남 안내·도감 힌트)
+        "mutation_dex": {},                              # 물고기 id → 잡아 본 변이 목록
+        "cosmetics": {"titles": [], "float_skins": [], "rod_skins": []},
+        "equipped_cosmetic": {"title": None, "float_skin": None, "rod_skin": None},
     }
 
 
@@ -524,6 +537,10 @@ class SaveGame:
         out = {spot_continent(fish["spot"]): n}
         if r["disassemble_rare_bonus"].get(fish["rarity"]):
             out["rare"] = r["disassemble_rare_bonus"][fish["rarity"]]
+        if "cunning" in self.data["keepnet"][index].get("mut", []):
+            from src.fishing.mutation import cfg as mcfg
+            k = mcfg()["kinds"]["cunning"]["material_mult"]  # 교활 변이: 분해 소재 ×2
+            out = {key: v * k for key, v in out.items()}
         return out
 
     def disassemble(self, index: int) -> dict | None:

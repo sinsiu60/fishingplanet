@@ -144,6 +144,49 @@ class Fight:
         self.net_t = 0.0
         self.net_period = 1.0
 
+        # 변이 (U5): 쌍둥이 = 같은 종 둘이 번갈아 당김 (뇌 둘, 한 번에 하나만 행동 → 동시 2개 규칙 그대로)
+        self.mutations = list(fish.get("mutations", []))
+        self.twin_brains = None
+        self.twin_side = 0
+        if fish.get("twin"):
+            self._setup_twin()
+
+    def _setup_twin(self) -> None:
+        from src.fishing.mutation import cfg as mcfg
+        tc = mcfg()["kinds"]["twin"]
+        other = FishBrain(self.fish, self.rnd)
+        for k in ("dark", "tired_range", "telegraph_lead"):
+            setattr(other, k, getattr(self.brain, k))
+        self.twin_brains = [self.brain, other]
+        self.twin_i = 0
+        self.twin_side = 1
+        self.twin_swap_sec = tc["swap_sec"]
+        self.twin_off = tc["angle_offset"]
+        self.twin_t = self.rnd.uniform(*self.twin_swap_sec)
+
+    def _update_twin(self, dt: float) -> None:
+        """2~3초마다, 지금 당기는 녀석이 쉬는 틈(격렬 대기)일 때 다른 녀석으로 바뀐다."""
+        if self.twin_brains is None:
+            return
+        self.twin_t -= dt
+        b = self.brain
+        if self.twin_t > 0 or b.state not in ("idle", "tired", "recover") or self.pats:
+            return
+        self.twin_i ^= 1
+        nb = self.twin_brains[self.twin_i]
+        nb.busy = b.busy
+        self.brain = nb
+        self.twin_side = -self.twin_side
+        self.twin_t = self.rnd.uniform(*self.twin_swap_sec)
+        self.events.append("twin_swap")
+
+    def twin_xz(self):
+        """쌍둥이의 쉬는 쪽 위치 (그림자 표시용)."""
+        if self.twin_brains is None:
+            return None
+        a = self.angle - self.twin_side * self.twin_off
+        return math.sin(a) * self.distance, math.cos(a) * self.distance
+
     # ── 조회 ──
     @property
     def drag_frac(self) -> float:
@@ -164,9 +207,14 @@ class Fight:
             return "slack"
         return "green"
 
+    @property
+    def show_angle(self) -> float:
+        """지금 당기는 물고기의 방향 (쌍둥이면 좌우로 조금 벌어져 번갈아 당긴다)."""
+        return self.angle + (self.twin_side * self.twin_off if self.twin_brains else 0.0)
+
     def fish_side(self) -> float:
         """물고기의 화면 좌우 위치 -1~1."""
-        return clamp((self.angle - self.yaw) / 0.45, -1, 1)
+        return clamp((self.show_angle - self.yaw) / 0.45, -1, 1)
 
     def _hazard_at(self) -> dict | None:
         for hz in self.hazards:
@@ -185,7 +233,8 @@ class Fight:
         return best
 
     def fish_xz(self) -> tuple[float, float]:
-        return math.sin(self.angle) * self.distance, math.cos(self.angle) * self.distance
+        a = self.show_angle
+        return math.sin(a) * self.distance, math.cos(a) * self.distance
 
     # ── 입력 ──
     def change_drag(self, delta: int) -> None:
@@ -556,6 +605,8 @@ class Fight:
         if b.cover_dir == 0 and b.gimmick_bias > 0 and self.gim.kinds(b) & {"tangle", "ice", "current"}:
             b.cover_dir = 1 if self.angle - self.yaw >= 0 else -1  # 기믹 쪽(바깥)으로 끌고 간다
             b.cover_from_gimmick = True
+        self._update_twin(dt)
+        b = self.brain
         b.busy = len(self.pats) + (1 if self.twist.value > 0 else 0)
         b.update(dt, self.stamina <= 0, self.stamina_frac)
         for ev in b.events:
@@ -686,7 +737,7 @@ class Fight:
                 rate *= cfg["hook_slack_mult_calm"]  # 몸부림이 없으니 바늘이 덜 빠짐
             # 힘이 약한 물고기는 바늘을 덜 턴다
             rate *= clamp(self.fish.get("power", 1.0), cfg["hook_slack_power_min"], 1.0)
-            self.hook += rate * dt
+            self.hook += rate * self.fish.get("hook_mult", 1.0) * dt  # 황금 변이: 바늘이 더 잘 빠짐
         else:
             self.hook -= cfg["hook_recover_rate"] * dt
         self.hook = clamp(self.hook, self.hook_floor, 100)
@@ -799,9 +850,16 @@ class Fight:
         damage = clamp(self.line_damage / self.line_max, 0, 1)
         score = rank_mod.compute_score(self.perfects, self.misses, damage, self.elapsed, self.par)
         size = rank_mod.final_size(self.size_cm, score["rank"])
+        price = rank_mod.sell_price(self.fish, size, score["rank"])
+        if self.mutations:
+            from src.fishing.mutation import cfg as mcfg, price as mprice
+            if "giant" in self.mutations:
+                # 거대: '크기 효과 포함 총 ×3' — 원래 크기로 매긴 값에 ×3
+                price = rank_mod.sell_price(self.fish, size / mcfg()["kinds"]["giant"]["size_mult"], score["rank"])
+            price = mprice(price, self.mutations)
         self.result = {
             "fish": self.fish, "size": size, "rank": score["rank"], "score": score,
-            "price": rank_mod.sell_price(self.fish, size, score["rank"]),
+            "price": price, "mutations": list(self.mutations), "twin": self.twin_brains is not None,
             "perfects": self.perfects, "misses": self.misses, "line_damage": damage,
             "elapsed": self.elapsed, "par": self.par,
         }

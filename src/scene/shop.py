@@ -5,6 +5,7 @@ from src.core.config import load_json
 from src.render.fish_draw import RANK_COLORS, draw_fish_side, fish_colors
 from src.fishing.bite import bait_tier_mult
 from src.save.save_game import baits, enhanced, equipment, rules
+from src.fishing.mutation import label as mut_label
 from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
@@ -71,6 +72,9 @@ def score(kind: str, item: dict) -> float:
     """비교용 단일 수치 (높을수록 좋음)."""
     return {"rod": lambda i: i["green"][1] - i["green"][0], "reel": lambda i: i["speed"],
             "line": lambda i: i["durability"], "net": lambda i: i["window"]}.get(kind, lambda i: 0)(item)
+
+
+MUT_COL = (255, 190, 120)  # 변이 물고기 이름 색
 
 
 class ShopScene(Scene):
@@ -280,14 +284,17 @@ class ShopScene(Scene):
             sel = i == self.sel
             if sel or r.collidepoint(self.mouse):
                 canvas.fill(ui.PANEL_LIGHT, r)
-            text(canvas, fish["name"][:9], (r.x + 4, r.centery), RARITY_COL[fish["rarity"]], 11, "midleft")
+            name = (mut_label(it["mut"]) + " " + fish["name"]) if it.get("mut") else fish["name"]
+            text(canvas, name[:9], (r.x + 4, r.centery), MUT_COL if it.get("mut") else RARITY_COL[fish["rarity"]], 11,
+                 "midleft")
             text(canvas, f"{it['size']:.1f}cm", (r.x + 120, r.centery), ui.TEXT, 11, "midleft")
             text(canvas, it["rank"], (r.x + 168, r.centery), RANK_COLORS[it["rank"]], 11, "midleft")
             text(canvas, f"{self.save.sale_price(it):,}", (r.right - 4, r.centery), ui.ACCENT, 11, "midright")
         it = items[self.sel]
         fish = self.fish_by_id(it["id"])
         draw_fish_side(canvas, DETAIL.centerx, DETAIL.y + 40, 110, 0.0, fish_colors(fish), -1, shape=fish.get("shape"))
-        text(canvas, fish["name"], (DETAIL.centerx, DETAIL.y + 76), RARITY_COL[fish["rarity"]], 11, "center")
+        name = (mut_label(it["mut"]) + " " + fish["name"]) if it.get("mut") else fish["name"]
+        text(canvas, name, (DETAIL.centerx, DETAIL.y + 76), RARITY_COL[fish["rarity"]], 11, "center")
         text(canvas, f"{it['size']:.1f}cm · {it['rank']}랭크", (DETAIL.centerx, DETAIL.y + 92), ui.TEXT, 11, "center")
         text(canvas, f"판매가 {ui.money_text(self.save.sale_price(it))}", (DETAIL.centerx, DETAIL.y + 110), ui.ACCENT, 11,
              "center")
@@ -298,6 +305,9 @@ class ShopScene(Scene):
             notes.append("도시락 +10%")
         if it.get("twin"):
             notes.append("쌍둥이 바늘")
+        for m in it.get("mut", []):
+            if m in ("giant", "golden"):
+                notes.append(f"{mut_label([m])} ×{3 if m == 'giant' else 5}")
         if notes:
             text(canvas, " · ".join(notes) + " 적용" * (it["rank"] == "S" or self.save.lunch_active()),
                  (DETAIL.centerx, DETAIL.y + 124), RANK_COLORS["S"], 11, "center")

@@ -889,7 +889,10 @@ class Sfx:
             return None
         snd = self.sounds[name]
         snd.set_volume(self.volume * volume)
-        return snd.play()
+        ch = snd.play()
+        if getattr(self, "boost", 1) >= 2:
+            snd.play()  # 같은 소리를 겹쳐 +6dB (투명 변이의 예고 소리)
+        return ch
 
     def stop_all(self) -> None:
         if self.enabled:
