@@ -14,6 +14,12 @@
 상태형 (매 틱 읽기)
   pointer       캔버스 좌표 (화면 밖이면 가장자리로)   pointer_raw  자르지 않은 좌표
   held("reel")  릴 감기 유지                         PC: 좌클릭 유지
+  held("press") 주 입력 누르고 있음 (루어 감기)        PC: 좌클릭 유지  모바일: 수면·패드 누르기
+  held("drag_min") 드랙 순간 최저                     PC: Shift        모바일: ▼ 길게 누르기
+  rod_pitch()   낚싯대 상하 -1~1 (None = 중립)        PC: 마우스 위아래 모바일: 릴 패드 노브 위아래
+  circle_sample(min_px) 원 그리기 표본 (pos, 중심|None, 최소 반경)
+  연타          PC: 파이팅 중 primary 하나하나        모바일: reel_tap (릴 패드 누를 때마다)
+  (상태 → 이벤트 변환은 src/platform/gesture.py)
 """
 from dataclasses import dataclass
 
@@ -88,9 +94,19 @@ class PcInput:
         return self.game.screen.to_canvas(pygame.mouse.get_pos())
 
     def held(self, name: str) -> bool:
-        if name == "reel":
+        if name in ("reel", "press"):
             return bool(pygame.mouse.get_pressed()[0])
+        if name == "drag_min":
+            return bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)
         return False
+
+    def rod_pitch(self) -> float | None:
+        """화면 가운데보다 위 = 올림 (+), 아래 = 내림 (-)."""
+        h = self.game.screen.height
+        return (h / 2 - self.pointer[1]) / (h * controls_cfg()["pc_pitch_range"])
+
+    def circle_sample(self, min_px: float):
+        return self.pointer, None, min_px  # 중심은 최근 마우스 위치들의 평균
 
     def aim_override(self, fighting: bool):
         return None  # PC: 조준은 마우스 위치
@@ -125,6 +141,7 @@ class TouchInput(PcInput):
         self.aim = 0.0
         self.items_open = False
         self.flick_ready_ms = 0
+        self.pitch = 0.0
         self.controls: list = []
 
     # ── 원시 이벤트 → 손가락 ──
@@ -214,7 +231,7 @@ class TouchInput(PcInput):
             self.items_open = False
         if hit.id == "pad":
             self._pad_aim(hit, pos)
-            return None
+            return Action("reel_tap")
         if hit.id == "item":
             self.items_open = not self.items_open
             return None
@@ -280,6 +297,7 @@ class TouchInput(PcInput):
 
     def _pad_aim(self, pad, pos) -> None:
         self.aim = max(-1.0, min(1.0, (pos[0] - pad.center[0]) / max(1, pad.r)))
+        self.pitch = max(-1.0, min(1.0, (pad.center[1] - pos[1]) / max(1, pad.r * cfg()["pad_pitch_range"])))
 
     # ── 상태 ──
     @property
@@ -291,9 +309,29 @@ class TouchInput(PcInput):
         return self._pointer
 
     def held(self, name: str) -> bool:
+        roles = [f["role"] for f in self.fingers.values()]
         if name == "reel":
-            return any(f["role"] == "pad" for f in self.fingers.values())
+            return "pad" in roles
+        if name == "press":
+            return "pad" in roles or "water" in roles
+        if name == "drag_min":
+            now = pygame.time.get_ticks()
+            return any(f["role"] == "drag_down" and now - f["t0"] >= cfg()["drag_min_hold_ms"]
+                       for f in self.fingers.values())
         return False
+
+    def _pad_finger(self):
+        return next((f for f in self.fingers.values() if f["role"] == "pad"), None)
+
+    def rod_pitch(self) -> float | None:
+        return self.pitch if self._pad_finger() is not None else None  # 손을 떼면 중립
+
+    def circle_sample(self, min_px: float):
+        f = self._pad_finger()
+        pad = next((c for c in self.controls if c.id == "pad"), None)
+        if f is None or pad is None:
+            return None
+        return f["pos"], pad.center, pad.r * cfg()["circle_min_frac"]  # 패드 가운데 둘레로 돌리기
 
     def pressed_controls(self) -> set:
         return {f["role"] for f in self.fingers.values()}
@@ -309,6 +347,11 @@ class TouchInput(PcInput):
 def cfg() -> dict:
     from src.core.config import load_json
     return load_json("mobile_config.json")
+
+
+def controls_cfg() -> dict:
+    from src.core.config import load_json
+    return load_json("fishing_config.json")["controls"]
 
 
 def create_input(game):

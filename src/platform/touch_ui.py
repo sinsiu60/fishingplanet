@@ -109,7 +109,8 @@ def _icon(surf, c: Control, col) -> None:
         text(surf, c.label, (x, y), col, 11, "center")
 
 
-def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0.0, drag=None) -> None:
+def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0.0, drag=None,
+         pitch: float = 0.0) -> None:
     """버튼을 반투명으로 그린다. pressed = 지금 눌린 버튼 id."""
     a = cfg()["button_alpha"][settings.get("touch_alpha")]
     layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
@@ -124,12 +125,14 @@ def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0
             pygame.draw.rect(layer, fill, c.rect, border_radius=4)
             pygame.draw.rect(layer, edge, c.rect, 1, border_radius=4)
         if c.id == "pad":
-            # 노브: 누른 채 좌우로 밀면 낚싯대 방향
+            # 노브: 누른 채 좌우로 밀면 낚싯대 방향, 위아래로 밀면 낚싯대 상하 (손 떼면 상하만 가운데로)
             kx = c.center[0] + int(aim * c.r * 0.55)
+            ky = c.center[1] - int((pitch if on else 0.0) * c.r * 0.4)
             kr = int(c.r * 0.42)
-            pygame.draw.circle(layer, (255, 220, 120, 200) if on else (200, 210, 230, min(255, a + 30)),
-                               (kx, c.center[1]), kr)
             pygame.draw.line(layer, (220, 228, 245, a), (c.rect.x + 6, c.center[1]), (c.rect.right - 6, c.center[1]))
+            pygame.draw.line(layer, (220, 228, 245, a // 2), (c.center[0], c.rect.y + 16), (c.center[0], c.rect.bottom - 16))
+            pygame.draw.circle(layer, (255, 220, 120, 200) if on else (200, 210, 230, min(255, a + 30)),
+                               (kx, ky), kr)
     canvas.blit(layer, (0, 0))
     for c in controls:
         col = (255, 228, 140) if c.id in pressed else TEXT

@@ -68,6 +68,8 @@ class Fight:
         self.yaw = yaw
         self.drag_steps = self.gear["drag_steps"]
         self.drag = (self.drag_steps + 1) // 2
+        self.drag_min_prev: int | None = None  # 순간 최저 드랙 중이면 떼고 돌아갈 단계
+        self.ctl = None  # 추가 조작 상태 (src/platform/gesture.Controls, 낚시 씬이 넣어 줌)
         self.perfects = self.goods = self.misses = 0
         self.perfect_streak = 0
         self.elapsed = 0.0
@@ -163,6 +165,10 @@ class Fight:
 
     # ── 입력 ──
     def change_drag(self, delta: int) -> None:
+        if self.drag_min_prev is not None:
+            # 순간 최저 드랙 중: 떼고 나서 돌아갈 값을 바꾼다
+            self.drag_min_prev = int(clamp(self.drag_min_prev + delta, 1, self.drag_steps))
+            return
         self.drag = int(clamp(self.drag + delta, 1, self.drag_steps))
         if self.auto_drag_prev is not None:
             # 자동 하강 중에 직접 바꾸면, 끝난 뒤엔 바꾼 값에서 1단계 위로 돌아온다
@@ -279,6 +285,15 @@ class Fight:
         self.events.append(f"used:{item_id}")
         return True
 
+    def set_drag_min(self, on: bool) -> None:
+        """드랙 순간 최저 (PC Shift / 모바일 ▼ 길게): 누르는 동안 1단계, 떼면 원래 단계로."""
+        if on and self.drag_min_prev is None:
+            self.drag_min_prev = self.drag
+            self.drag = 1
+        elif not on and self.drag_min_prev is not None:
+            self.drag = self.drag_min_prev
+            self.drag_min_prev = None
+
     def _auto_drag(self) -> None:
         """고대 어부의 릴: 돌진 예고 때 드랙 1단계 자동 하강, 돌진이 끝나면 복귀."""
         b = self.brain
@@ -334,6 +349,8 @@ class Fight:
         if self.phase == "fight":
             if self.gear.get("auto_drag"):
                 self._auto_drag()
+            if self.drag_min_prev is not None:
+                self.drag = 1  # 자동 하강이 끝나며 되돌려도 누르는 동안은 최저
             self._update_fight(dt, reeling, rod_aim)
         elif self.phase == "net":
             self._update_net(dt)

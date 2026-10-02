@@ -264,7 +264,7 @@ def _wrap(s: str, width: int) -> list[str]:
     return lines
 
 
-def draw_debug(canvas, fight) -> None:
+def draw_debug(canvas, fight, extra: list[str] | None = None, right: int = 4) -> None:
     b = fight.brain
     tta = b.time_to_apex()
     lines = [
@@ -277,9 +277,14 @@ def draw_debug(canvas, fight) -> None:
         f"정렬 {fight.align:+.2f} 측 {fight.fish_side():+.2f}",
         f"정점 {tta:+.2f}s" if tta < 50 else "정점 -",
         f"P{fight.perfects} G{fight.goods} M{fight.misses} {fight.elapsed:.0f}/{fight.par:.0f}s",
-    ]
+    ] + (extra or [])
+    draw_debug_lines(canvas, lines, right)
+
+
+def draw_debug_lines(canvas, lines: list[str], right: int = 4) -> None:
+    """F1 수치 상자 (화면 오른쪽, right = 오른쪽 여백 — 터치는 릴 패드를 피한다)."""
     bw = 132
-    x, y = canvas.get_width() - 4 - bw, 70
+    x, y = canvas.get_width() - right - bw, 70
     box = pygame.Surface((bw, len(lines) * 12 + 6), pygame.SRCALPHA)
     box.fill((0, 0, 0, 160))
     canvas.blit(box, (x, y))

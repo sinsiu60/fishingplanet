@@ -136,6 +136,8 @@ class FishingScene(Scene):
         self.fx_t = 0.0
         self.tip_counts: dict[str, int] = {}
         self.debug = False
+        from src.platform.gesture import Controls
+        self.ctl = Controls(load_json("fishing_config.json")["controls"])  # 낚싯대 상하·연타·원·순간 최저 드랙·루어
         self.settings = game.settings
         self.tutorial = tut.Tutorial(self.settings)
         self.card: dict | None = None    # 튜토리얼 카드 (표시 중엔 게임 정지)
@@ -352,7 +354,12 @@ class FishingScene(Scene):
             if f is not None and f.phase == "fight":
                 self.sfx.play("cast", 0.3)  # 휘두르는 소리 (판정과 상관없이)
                 f.flick(a.value)
+        elif n == "reel_tap":
+            if f is not None and f.phase == "fight":
+                self.ctl.tap(self.t)  # 터치: 릴 패드를 누를 때마다
         elif n == "primary":
+            if not self.touch and f is not None and f.phase == "fight":
+                self.ctl.tap(self.t)  # PC: 파이팅 중 좌클릭 하나하나가 연타
             self._left_click()
         elif n == "secondary":
             self._right_click()
@@ -470,6 +477,7 @@ class FishingScene(Scene):
             hint = " (설정: 소리 자막)" if not self.settings.get("sound_captions") else ""
             self.toasts.show(f"모습이 보이지 않는다... 소리로 읽어라!{hint}", (200, 220, 255), 3.0, 11)
         self.ink_t = 0.0
+        self.ctl.reset()
         self.bite.shadow = None
         self.end_t = 0.0
         self.slack_t = self.red_t = 0.0
@@ -516,6 +524,7 @@ class FishingScene(Scene):
             self.game.screen.shake = (0, 0)
             return
         self.t += dt
+        self.ctl.begin_tick()
         self.clock.update(dt)
         self.clouds.update(dt)
         self._update_weather(dt)
@@ -688,6 +697,10 @@ class FishingScene(Scene):
         self.bite.events.clear()
 
         if self.cast.state == CastState.LANDED and self.bite.state != BiteState.BITE:
+            self.ctl.update_lure(dt, self.t, self.game.input.held("press"))  # 루어 조작 (효과는 U7)
+        else:
+            self.ctl.reset()
+        if self.cast.state == CastState.LANDED and self.bite.state != BiteState.BITE:
             self.idle_ripple_t += dt
             if self.idle_ripple_t > 2.2:
                 self.idle_ripple_t = 0.0
@@ -726,6 +739,10 @@ class FishingScene(Scene):
                 self.game.haptics.vibrate("tension", min(1.0, max(0.2, (f.tension - f.green_high) / 30)))
         if f.phase == "fight" and not self.touch:
             self._detect_flick(dt)  # 터치는 릴 패드에서 튕기기 → "flick" 행동
+        if f.phase == "fight":
+            self.ctl.update_fight(dt, self.t, self.game.input)
+            f.set_drag_min(self.ctl.drag_min)
+            f.ctl = self.ctl
         f.update(dt, reeling, aim)
         x, z = f.fish_xz()
         self.cast.bx, self.cast.bz = x, z
@@ -1343,6 +1360,8 @@ class FishingScene(Scene):
             canvas.fill((10, 14, 28), r)
             pygame.draw.rect(canvas, (150, 200, 255), r, 1)
             hud.text(canvas, cap, r.center, (200, 230, 255), anchor="center")
+        if self.debug and f is None and c.state == CastState.LANDED:
+            fight_hud.draw_debug_lines(canvas, ["루어 (대기 중)"] + self.ctl.debug_lines(self.t)[2:])
         if f is None and self.card is None:
             if not self.tutorial.is_seen("guide_cast") and c.state in (CastState.READY, CastState.CHARGING):
                 tut.draw_guide(canvas, "guide_cast", t)
@@ -1367,6 +1386,8 @@ class FishingScene(Scene):
         bend = 5 + tension * 0.24 + (math.sin(self.t * 31) * tension / 40 if tension > 60 else 0)
         pull_x = f.fish_side() * tension * 0.25
         swing = 10 - 24 * dip
+        if f.phase == "fight":
+            swing += self.ctl.pitch * self.ctl.cfg["rod_pitch_deg"]  # 낚싯대 상하 (+ = 끝이 위로)
         return rod_geometry(c.aim, swing + c.jerk_offset(), bend, (0, 2 * dip), pull_x=pull_x)
 
     def _fight_shadow(self) -> dict:
@@ -1451,7 +1472,8 @@ class FishingScene(Scene):
             self._draw_fight_items(canvas, pal, f)
             hud.draw_hint(canvas, pal, HINTS[CastState.HOOKED])
         if self.debug:
-            fight_hud.draw_debug(canvas, f)
+            pad_side = self.touch and not self.settings.get("touch_left")
+            fight_hud.draw_debug(canvas, f, self.ctl.debug_lines(self.t), 100 if pad_side else 4)
 
     def _equipped_float(self) -> dict | None:
         """엘드라시온에서 장착한 특수 찌 (샤르미온에선 효과도 외형도 없음)."""
@@ -1522,7 +1544,8 @@ class FishingScene(Scene):
         ctx = self.touch_context()
         controls = touch_ui.layout(canvas.get_width(), canvas.get_height(), ctx, self.settings, inp.items_open)
         inp.controls = controls
-        touch_ui.draw(canvas, controls, inp.pressed_controls(), self.settings, inp.aim, ctx["drag"])
+        touch_ui.draw(canvas, controls, inp.pressed_controls(), self.settings, inp.aim, ctx["drag"],
+                      inp.pitch)
 
     def _draw_fight_items(self, canvas, pal, f) -> None:
         """파이팅 중 쓸 수 있는 소모품 표시 (왼쪽 아래, 드랙 밑)."""

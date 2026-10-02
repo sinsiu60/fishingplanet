@@ -256,5 +256,20 @@
     "ice_scrape": 2.0,
     "heat_rate_max": 1.4,
     "heat_start_per_stamina": 0.18
+  },
+  "controls": {
+    "_설명": "U2 추가 조작 감도 (DESIGN.md 27-7). pc_pitch_range = 화면 높이의 이 비율만큼 가운데에서 위/아래로 마우스를 옮기면 낚싯대 상하 최대. pitch_smooth = 낚싯대가 따라가는 빠르기(초당). rod_event_on/off = 상하 이벤트가 나는 기울기와 다시 준비되는 기울기. rod_pitch_deg = 상하 최대일 때 낚싯대가 도는 각도(그림). tap_window_sec = 연타를 세는 시간. circle_* = 원 그리기 (PC 최소 반경 px, 중심을 잡는 최근 시간, 멈추면 누적 초기화까지). lure_* = 대기 중 짧은 클릭 최대 길이 / 감기로 보는 누름 시간 / 멈춤으로 보는 시간.",
+    "pc_pitch_range": 0.35,
+    "pitch_smooth": 14,
+    "rod_event_on": 0.55,
+    "rod_event_off": 0.3,
+    "rod_pitch_deg": 14,
+    "tap_window_sec": 1.0,
+    "circle_min_px": 20,
+    "circle_center_sec": 0.5,
+    "circle_idle_reset_sec": 0.6,
+    "lure_jerk_max_sec": 0.25,
+    "lure_retrieve_hold_sec": 0.3,
+    "lure_pause_sec": 1.5
   }
 }
