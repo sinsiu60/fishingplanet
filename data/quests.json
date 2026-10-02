@@ -106,9 +106,9 @@
   "_avg_fight_sec": "시간 의뢰 기준 = 파이팅 시간 추정(체력 × fight_sec_per_stamina + 8초, 봇 측정보다 조금 넉넉) × time_mult, 최소 min_sec. 변이 의뢰는 잘 나오는 변이(kinds) 하나 k_kind마리 또는 아무 변이 k_any마리.",
   "fight_sec_per_stamina": 0.28,
   "reward": {
-    "_설명": "골드 = 그 낚시터(대륙 의뢰는 대상 낚시터) 평균 기본 판매가 × (gold_base + gold_per_star × ⭐) — ⭐5 ≈ 5마리분. 소재 = ⭐ × materials_per_star (그 대륙). ⭐4 이상 상자 확정 (chest_by_star). 의뢰 포인트 = ⭐ × points_per_star. 주간: weekly_chest + 주간 칭호 + weekly_points.",
-    "gold_base": 2.0,
-    "gold_per_star": 0.6,
+    "_설명": "골드 = 그 낚시터(대륙 의뢰는 대상 낚시터) 평균 기본 판매가 × (gold_base + gold_per_star × ⭐) — ⭐5 ≈ 4마리분. 소재 = ⭐ × materials_per_star (그 대륙). ⭐4 이상 상자 확정 (chest_by_star). 의뢰 포인트 = ⭐ × points_per_star. 주간: weekly_chest + 주간 칭호 + weekly_points.",
+    "gold_base": 1.7,
+    "gold_per_star": 0.5,
     "materials_per_star": 2,
     "points_per_star": 10,
     "chest_by_star": {
