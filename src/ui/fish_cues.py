@@ -5,7 +5,7 @@
 
   위   : 상태 글자 (돌진! / 머리 흔들기! / 지침 …) — 등장할 때 톡 튀어나오고, 거센 행동은 떨린다
   가운데: 배지 (계열 아이콘) + 줄어드는 접근 원(예고 남은 시간) / 행동 중엔 패턴별 진행 장치
-  아래 : 할 일 칩 (연타! / 위로! / 돌려! …), 급할 때 맥동 + 작은 장력 줄
+  아래 : 작은 장력 줄 (할 일 문구는 띄우지 않음 — 지침의 '기회!'만, 31-13)
 
 어떤 신호를 띄울지는 signal_slots.collect() 그대로 (소리 전용·먹물·동굴 어둠·이중 시차 규칙 유지).
 가짜 지침은 진짜처럼 '지침 / 기회!'가 뜬다 — 꼬리 까딱·기포(몸짓)로 가려내는 게 이 패턴의 재미.
@@ -319,9 +319,7 @@ def draw(canvas, ctx: dict) -> None:
     n = len(sigs)
     for i, s in enumerate(sigs):
         sx = x + int((i - (n - 1) / 2) * 52)
-        chip = _widget(canvas, ctx, s, sx, y)
-        if chip[0]:
-            chips.append(chip)
+        _widget(canvas, ctx, s, sx, y)  # 패턴 중 할 일 문구(버텨!·감기 멈춰! 등)는 띄우지 않는다 — 그림 장치로만 (31-13)
         if label is None and s["kind"] != "residue":
             a = "dual" if b.state == "dual" or b.pending == "dual" else s["action"]
             if a == "hide" and s["kind"] == "act" and getattr(s.get("pat"), "peeking", False):

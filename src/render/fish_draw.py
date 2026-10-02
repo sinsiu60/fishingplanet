@@ -281,6 +281,21 @@ def draw_net(canvas, pal, x: float, y: float, radius: float) -> None:
 
 # ───────────────────────── 획득 컷 ─────────────────────────
 
+ONE_HAND_CM = 30  # 이보다 작으면 한 손으로 쥔다
+
+
+def catch_length(size_cm: float, w: int = 480) -> float:
+    """획득 컷 물고기 길이(px): 실제 크기에 비례 — 30cm까지 4px/cm, 30~100cm 1px/cm, 그 위 0.55px/cm (화면 안으로)."""
+    cm = max(1.0, size_cm)
+    if cm <= 30:
+        px = 4.0 * cm
+    elif cm <= 100:
+        px = 120 + (cm - 30) * 1.0
+    else:
+        px = 190 + (cm - 100) * 0.55
+    return clamp(px, 26, w * 0.88)
+
+
 def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
     w, h = canvas.get_size()
     fish = result["fish"]
@@ -310,32 +325,58 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
     if tier >= 2:
         pygame.draw.circle(canvas, lerp_color((40, 46, 80), glow, 0.45), (cx, cy), 70 + int(4 * math.sin(t * 3)))
 
-    lo, hi = fish["size_cm"]
-    k = clamp((result["size"] - lo) / max(1, hi - lo), 0, 1.2)
-    length = lerp(150, 240, k)
-    # 위에서 떨어져 두 손에 탁 안김 (0~0.3초), 안기는 순간 살짝 눌림
+    # 실제 크기에 비례 (손은 실제 크기 그대로라 크기 차이가 한눈에 보인다): 30cm까지 4px/cm, 그 위로는 점점 눌러 담음
+    length = catch_length(result["size"], w)
+    one_hand = result["size"] < ONE_HAND_CM
+    # 위에서 떨어져 손에 탁 안김 (0~0.3초), 안기는 순간 살짝 눌림 — 작은 건 손에서 파닥
     drop = clamp(t / 0.3, 0, 1)
     fall_y = lerp(-90, 0, drop * drop)
     squash = 0.12 * math.sin(clamp((t - 0.3) / 0.18, 0, 1) * math.pi) if t > 0.3 else 0.0
     bob = math.sin(t * 2.5) * 2 if t > 0.5 else 0.0
+    flap = math.sin(t * 22) * 0.18 * math.exp(-max(0.0, t - 0.3) * 1.5) if one_hand else 0.0
     colors = fish_colors(fish)
-    draw_fish_side(canvas, cx, cy + bob + fall_y, length * (1 + squash), 0.0, colors, facing=-1,
-                   tail_wag=math.sin(t * (14 if t < 0.6 else 6)) * 0.5, shape=fish.get("shape"))
-    # 두 손 (아래에서 올라와 받쳐 듦)
     skin, shadow = pal["hand"], pal["hand_shadow"]
     if pal["hand"][0] < 90:  # 밤·노을엔 손이 너무 어두우니 밝힘
         skin, shadow = (225, 175, 140), (180, 125, 100)
     rise = (1 - smoothstep(t / 0.28)) * 70
-    for hx in (cx - length * 0.22, cx + length * 0.2):
-        hy = cy + bob + length * 0.12 + rise + squash * 20
-        pygame.draw.ellipse(canvas, shadow, (hx - 15, hy - 4, 30, 18))
-        pygame.draw.ellipse(canvas, skin, (hx - 15, hy - 7, 30, 15))
-        for i in range(4):
-            pygame.draw.line(canvas, shadow, (hx - 10 + i * 6, hy - 6), (hx - 10 + i * 6, hy - 1), 1)
-        out = -1 if hx < cx else 1
-        sleeve = [(hx - 12, hy + 6), (hx + 12, hy + 6), (hx + 12 + out * 34, h + 60), (hx - 12 + out * 34, h + 60)]
+    fy = cy + bob + fall_y
+    if one_hand:
+        # 한 손: 손바닥이 배를 받치고, 손가락이 몸통을 감싸 쥠 (엄지는 위쪽)
+        body_h = length * (fish.get("shape") or {}).get("height", 0.17)
+        hx, hy = cx + 4, fy + body_h * 0.5 + 5 + rise  # 손바닥은 배 아래
+        sleeve = [(hx - 9, hy + 10), (hx + 11, hy + 10), (hx + 50, h + 60), (hx + 26, h + 60)]
         pygame.draw.polygon(canvas, (60, 80, 120), sleeve)
-        pygame.draw.line(canvas, (44, 60, 94), (hx + out * 10, hy + 8), (hx + out * 44, h), 2)
+        pygame.draw.line(canvas, (44, 60, 94), (hx + 8, hy + 12), (hx + 44, h), 2)
+        pygame.draw.ellipse(canvas, shadow, (hx - 13, hy - 2, 26, 18))
+        pygame.draw.ellipse(canvas, skin, (hx - 13, hy - 4, 26, 16))  # 손바닥 (물고기 뒤)
+        draw_fish_side(canvas, cx, fy, length * (1 + squash), flap, colors, facing=-1,
+                       tail_wag=math.sin(t * (18 if t < 0.8 else 8)) * 0.7, shape=fish.get("shape"))
+        # 앞쪽 손가락 네 개가 몸통 아래쪽을 감쌈
+        top = fy + body_h * 0.05 + rise
+        for i in range(4):
+            fx = hx - 8 + i * 5
+            fl = hy - top + 2
+            pygame.draw.ellipse(canvas, shadow, (fx - 2, top + 1, 5, fl))
+            pygame.draw.ellipse(canvas, skin, (fx - 3, top, 5, fl))
+        # 엄지: 위쪽에서 걸침
+        pygame.draw.ellipse(canvas, shadow, (hx - 3, fy - body_h * 0.62 + rise, 10, 7))
+        pygame.draw.ellipse(canvas, skin, (hx - 4, fy - body_h * 0.66 + rise, 10, 6))
+    else:
+        body_h = length * (fish.get("shape") or {}).get("height", 0.17)
+        draw_fish_side(canvas, cx, fy, length * (1 + squash), 0.0, colors, facing=-1,
+                       tail_wag=math.sin(t * (14 if t < 0.6 else 6)) * 0.5, shape=fish.get("shape"))
+        # 두 손 (아래에서 올라와 받쳐 듦) — 손 크기는 그대로, 간격만 물고기 길이에 맞춤
+        spread = clamp(length * 0.21, 26, 150)
+        for hx in (cx - spread, cx + spread * 0.92):
+            hy = cy + bob + body_h * 0.62 + rise + squash * 20  # 배 아래를 받침
+            pygame.draw.ellipse(canvas, shadow, (hx - 15, hy - 4, 30, 18))
+            pygame.draw.ellipse(canvas, skin, (hx - 15, hy - 7, 30, 15))
+            for i in range(4):
+                pygame.draw.line(canvas, shadow, (hx - 10 + i * 6, hy - 6), (hx - 10 + i * 6, hy - 1), 1)
+            out = -1 if hx < cx else 1
+            sleeve = [(hx - 12, hy + 6), (hx + 12, hy + 6), (hx + 12 + out * 34, h + 60), (hx - 12 + out * 34, h + 60)]
+            pygame.draw.polygon(canvas, (60, 80, 120), sleeve)
+            pygame.draw.line(canvas, (44, 60, 94), (hx + out * 10, hy + 8), (hx + out * 44, h), 2)
     # 희귀 이상: 별 반짝임 / 전설: 금가루 + 금테
     if tier >= 2:
         for i in range(10 + 6 * tier):
