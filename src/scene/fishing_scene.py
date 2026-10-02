@@ -1819,6 +1819,7 @@ class FishingScene(Scene):
         hour = self.clock.hour
         theme, weather = self.theme, self.weather
         pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash, self.legend_k)
+        pal = self._line_pal(pal)
         if self.dragon_k > 0.01:
             for key, v in pal.items():
                 if isinstance(v, tuple) and key not in ("text", "bobber", "bobber_base"):
@@ -1912,10 +1913,15 @@ class FishingScene(Scene):
             self.reeds.draw(canvas, rpal, t, wind={"clear": 1.0, "rain": 1.4, "storm": 2.2, "fog": 0.6}[weather])
         else:
             world.FOREGROUND[fg](canvas, pal, t)
+        from src.render.rod import gear_look
         from src.save.quests import skin_colors
+        rod_l = gear_look("rod", self.save.gear_tier("rod"))       # 티어별 외형 (gear_looks.json)
+        reel_l = gear_look("reel", self.save.gear_tier("reel"))
         skin = skin_colors(self.save, "rod_skin")
-        rod_pal = dict(pal, rod=skin[0], rod_hi=skin[1], reel=skin[2]) if skin else pal  # 낚싯대 외형
-        draw_rod(canvas, rod_pal, geo, c.reel_angle)
+        if skin:  # 의뢰 상점 낚싯대 외형이 색은 우선
+            rod_l = dict(rod_l, rod=skin[0], hi=skin[1])
+            reel_l = dict(reel_l, body=skin[2])
+        draw_rod(canvas, pal, geo, c.reel_angle, rod_l, reel_l, t)
 
         if hanging:
             bx, by = rod_tip_drop(tip, t)
@@ -2075,6 +2081,22 @@ class FishingScene(Scene):
         return {"x": x, "z": z, "heading": heading, "alpha": alpha, "len": f.fish["shadow_len_m"],
                 "scale": scale, "wag": wag, "glow": glow, **mods}
 
+    def _line_pal(self, pal: dict) -> dict:
+        """낚싯줄·뜰채 티어 외형: 줄 색(시간대 밝기와 섞음)·PE 색 마디·빛, 뜰채 테·그물·손잡이·장식·빛."""
+        from src.render.rod import gear_look
+        lk = gear_look("line", self.save.gear_tier("line"))
+        col = lerp_color(pal["line"], tuple(lk["color"]), 0.75)
+        out = dict(pal, line=col)
+        if lk.get("marks"):
+            out["line_marks"] = lerp_color(pal["line"], tuple(lk["marks"]), 0.8)
+        if lk.get("glow"):
+            out["line_glow"] = col
+        nk = gear_look("net", self.save.gear_tier("net"))  # 뜰채 티어 외형
+        for key in ("frame", "mesh", "handle", "trim", "glow"):
+            if nk.get(key):
+                out[f"net_{key}"] = tuple(nk[key])
+        return out
+
     def _rush_audio(self) -> None:
         """줄 펄스 동안: 울림 음이 단계마다 높아지고 돌진 silence_sec 전 무음, 진동은 약하게 시작해 점점 세게."""
         ph = self._rush_ph(visual=False)
@@ -2090,6 +2112,12 @@ class FishingScene(Scene):
             if self.settings.get("signal_sound"):
                 self.sfx.play(f"rush_hum{i}", 0.55 + 0.35 * ph["q"])
             self.game.haptics.vibrate("pump", c["haptic_min"] + (c["haptic_max"] - c["haptic_min"]) * ph["q"])
+
+    def _rush_ph_ok(self) -> bool:
+        """줄 펄스 같은 그림 예고를 보여도 되나 (소리 전용·동굴 어둠·먹물이면 숨김)."""
+        f = self.fight
+        b = f.brain
+        return not (b.sound_only or b.dark or self.ink_t > 0 or "dark" in f.gim.kinds(b))
 
     def _rush_ph(self, visual: bool = True):
         """돌진 줄 펄스 단계 (src/ui/rush_cue.py). visual=True면 소리 전용·동굴 어둠·먹물에선 None (소리는 따로)."""
@@ -2140,11 +2168,13 @@ class FishingScene(Scene):
             sag += 10 * d  # 역주행 예고: 줄이 처진다
         from src.ui import rush_cue
         rph = self._rush_ph()
-        sag = max(0.5, sag + rush_cue.line_sag(rph))  # 웅크림: 살짝 느슨 / 돌진 순간: 팽팽
+        lph = rush_cue.light_phase(f) if self._rush_ph_ok() else None  # 점프·방향 전환: 가벼운 줄 펄스
+        sag = max(0.5, sag + rush_cue.line_sag(rph) + rush_cue.light_sag(lph))  # 웅크림: 느슨 / 돌진 순간: 팽팽
         pts = draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.25), sag, bias=0.6, dx=dx, color=color,
                         cracks=cracks, t=self.t)
         rush_cue.draw_pulse(canvas, pts, rph, self.t)   # 빛 펄스: 물고기 → 손
         rush_cue.draw_taut(canvas, pts, rph, self.t)    # 돌진 순간 줄이 튕김
+        rush_cue.draw_light_pulse(canvas, pts, lph, self.t)
         tw = f.twist.value / 100
         if b.telegraphing("twist") and not b.sound_only:
             tw = max(tw, 0.3 * b.signal_progress())

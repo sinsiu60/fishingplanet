@@ -156,3 +156,51 @@ def draw_wake(canvas, pos, heading_side: float, scale: float, ph: dict | None, t
             pygame.draw.line(layer, (235, 245, 255, max(0, a - w * 60)), (x - d * off, y),
                              (x - d * (ln + off), y + s * ln * 0.32), 1)
     canvas.blit(layer, (0, 0))
+
+
+# ───────────────────────── 점프·방향 전환: 가벼운 줄 펄스 (31-15) ─────────────────────────
+# 돌진처럼 줄로 예고하되 '조금만': 웅크림·울림·진동 없이, 작고 옅은 펄스가 예고 동안 물고기 → 손.
+LIGHT = {"jump": (110, 220, 255), "thrash": (120, 200, 255), "leap": (120, 255, 240), "turn": (255, 230, 90)}
+
+
+def light_phase(fight) -> dict | None:
+    b = fight.brain
+    if b.state == "telegraph" and b.pending in LIGHT:
+        return {"kind": b.pending, "u": 1 - b.signal_progress(), "col": LIGHT[b.pending],
+                "dir": (b.turn_dir or 1) if b.pending == "turn" else 0, "p": b.signal_progress()}
+    return None
+
+
+def light_sag(lph: dict | None) -> float:
+    """점프 예고: 물고기가 떠오르며 줄이 조금 느슨해짐."""
+    if lph is None or lph["kind"] == "turn":
+        return 0.0
+    return 4 * lph["p"]
+
+
+def draw_light_pulse(canvas, pts: list, lph: dict | None, t: float) -> None:
+    if lph is None or not pts or len(pts) < 2:
+        return
+    n = len(pts) - 1
+    f = lph["u"] * n
+    i = min(n - 1, int(f))
+    x = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * (f - i)
+    y = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * (f - i)
+    col = lph["col"]
+    layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+    pygame.draw.circle(layer, (*col, 70), (int(x), int(y)), 6)
+    pygame.draw.circle(layer, (*col, 230), (int(x), int(y)), 2)
+    for k in (1, 2):  # 짧은 꼬리
+        uu = min(1.0, lph["u"] + k * 0.03)
+        ff = uu * n
+        j = min(n - 1, int(ff))
+        tx = pts[j][0] + (pts[j + 1][0] - pts[j][0]) * (ff - j)
+        ty = pts[j][1] + (pts[j + 1][1] - pts[j][1]) * (ff - j)
+        pygame.draw.circle(layer, (*col, 140 - k * 50), (int(tx), int(ty)), 1)
+    if lph["kind"] == "turn":
+        # 꺾을 쪽을 가리키는 작은 갈매기표가 펄스와 함께
+        d = lph["dir"]
+        for k in (0, 5):
+            cx = x + d * (8 + k)
+            pygame.draw.lines(layer, (*col, 220), False, [(cx - d * 3, y - 4), (cx, y), (cx - d * 3, y + 4)], 1)
+    canvas.blit(layer, (0, 0))

@@ -172,7 +172,16 @@ def draw_line(canvas, pal, start, end, sag: float, bias: float = 0.5, dx: float 
         a, b, c = (1 - u) ** 2, 2 * (1 - u) * u, u * u
         pts.append((a * start[0] + b * ctrl[0] + c * end[0], a * start[1] + b * ctrl[1] + c * end[1]))
     col = color or pal["line"]
+    if pal.get("line_glow") and color in (None, pal["line"]):
+        # 고티어 줄: 은은한 빛
+        g = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+        pygame.draw.lines(g, (*pal["line_glow"], 70), False, pts, 3)
+        canvas.blit(g, (0, 0))
     pygame.draw.lines(canvas, col, False, pts, 1)
+    if pal.get("line_marks") and color in (None, pal["line"]):
+        # PE 합사처럼 색 마디
+        for i in range(1, n, 3):
+            pygame.draw.line(canvas, pal["line_marks"], pts[i], pts[i + 1], 1)
     if cracks > 0:
         crack_col = lerp_color(col, (255, 60, 50), 0.6)
         step = max(1, int(5 - cracks * 3))

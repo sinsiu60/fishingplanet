@@ -268,15 +268,21 @@ def draw_net_scene(canvas, pal, fish: dict, size_cm: float, pose: float, still: 
 
 
 def draw_net(canvas, pal, x: float, y: float, radius: float) -> None:
-    frame = scale_color(pal["reel"], 1.1)
-    mesh = lerp_color(pal["reel"], pal["water_bottom"], 0.4)
+    """뜰채 (파이팅 '뜰채!' 단계). 색은 장착 뜰채 티어 외형 (pal net_*, 없으면 릴 색)."""
+    frame = pal.get("net_frame") or scale_color(pal["reel"], 1.1)
+    mesh = lerp_color(pal.get("net_mesh") or pal["reel"], pal["water_bottom"], 0.35)
+    handle = pal.get("net_handle") or frame
     rect = pygame.Rect(0, 0, radius * 2, radius * 0.8)
     rect.center = (x, y)
+    if pal.get("net_glow"):
+        pygame.draw.ellipse(canvas, lerp_color(pal["water_bottom"], pal["net_glow"], 0.6), rect.inflate(6, 4), 2)
     for i in range(1, 6):
         xx = rect.left + rect.width * i / 6
         pygame.draw.line(canvas, mesh, (xx, rect.top + 2), (xx - 4, rect.bottom + radius * 0.4), 1)
+    pygame.draw.line(canvas, handle, rect.midright, (x + radius * 1.6, y + radius * 1.4), 3)
     pygame.draw.ellipse(canvas, frame, rect, 2)
-    pygame.draw.line(canvas, frame, rect.midright, (x + radius * 1.6, y + radius * 1.4), 3)
+    if pal.get("net_trim"):
+        pygame.draw.arc(canvas, pal["net_trim"], rect, math.pi, math.tau, 1)
 
 
 # ───────────────────────── 획득 컷 ─────────────────────────

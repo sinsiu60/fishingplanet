@@ -382,9 +382,10 @@ class LandingCinematic:
             canvas.blit(fl, (0, 0))
 
     def _draw_net(self, canvas, pal, x, y, r, in_net: bool, fish) -> None:
-        frame = (190, 196, 205)
-        frame_dark = (110, 116, 130)
-        mesh = (225, 228, 235)
+        frame = pal.get("net_frame") or (190, 196, 205)   # 장착 뜰채 티어 외형
+        frame_dark = scale_color(frame, 0.6)
+        mesh = pal.get("net_mesh") or (225, 228, 235)
+        handle = pal.get("net_handle") or frame
         hw, hh = r, r * 0.28
         # 손잡이 + 두 손
         handle_end = (x + max(r, 46) * 1.9, y + max(r, 46) * 1.9)
@@ -395,11 +396,11 @@ class LandingCinematic:
             pts = [(x + hw, y)] + [((1 - u) ** 2 * (x + hw) + 2 * (1 - u) * u * mid[0] + u * u * handle_end[0],
                                     (1 - u) ** 2 * y + 2 * (1 - u) * u * mid[1] + u * u * handle_end[1])
                                    for u in (0.25, 0.5, 0.75, 1.0)]
-            pygame.draw.lines(canvas, frame_dark, False, pts, 4)
-            pygame.draw.lines(canvas, frame, False, [(px, py - 1) for px, py in pts], 2)
+            pygame.draw.lines(canvas, scale_color(handle, 0.6), False, pts, 4)
+            pygame.draw.lines(canvas, handle, False, [(px, py - 1) for px, py in pts], 2)
         else:
-            pygame.draw.line(canvas, frame_dark, (x + hw, y), handle_end, 4)
-            pygame.draw.line(canvas, frame, (x + hw, y - 1), handle_end, 2)
+            pygame.draw.line(canvas, scale_color(handle, 0.6), (x + hw, y), handle_end, 4)
+            pygame.draw.line(canvas, handle, (x + hw, y - 1), handle_end, 2)
         skin, shadow = pal["hand"], pal["hand_shadow"]
         if skin[0] < 90:
             skin, shadow = (225, 175, 140), (180, 125, 100)
@@ -428,5 +429,10 @@ class LandingCinematic:
             yy = y + depth * v * 0.8
             half = hw * (1 - v * 0.55)
             pygame.draw.line(canvas, mesh, (x - half, yy), (x + half, yy), 1)
-        # 앞쪽 테두리
+        # 앞쪽 테두리 (+ 고티어: 장식 테·빛)
+        if pal.get("net_glow"):
+            pygame.draw.arc(canvas, lerp_color(frame, pal["net_glow"], 0.5), (x - hw - 2, y - hh - 2, hw * 2 + 4, hh * 2 + 4),
+                            math.pi, math.tau, 2)
         pygame.draw.arc(canvas, frame, (x - hw, y - hh, hw * 2, hh * 2), math.pi, math.tau, 3)
+        if pal.get("net_trim"):
+            pygame.draw.arc(canvas, pal["net_trim"], (x - hw, y - hh + 1, hw * 2, hh * 2), math.pi, math.tau, 1)
