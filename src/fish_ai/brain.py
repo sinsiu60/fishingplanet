@@ -107,6 +107,16 @@ class FishBrain:
         self.rush_mult_next = 1.0    # 가짜 지침에 감았다 → 이어지는 돌진 ×1.4
         self.tired_mult_next = 1.0   # 가짜 지침을 버텼다 → 다음 진짜 지침 ×1.3
         # 첫 돌진 (가물치): 챔질 직후 예고 → 강한 돌진
+        # 파이팅 가독성 (31장 C4): 시간 규칙·부하 예산·휴식
+        self.sig = load_json("signals.json")
+        self.clock = 0.0
+        self.load_budget = self.sig["budget_3s"].get(fish.get("spot"), 99)  # 낚시터가 없으면(테스트) 제한 없음
+        self.starts: list[tuple] = []   # (시각, 부하, 그때 예산) — 3초 창 부하
+        self.ep_start: float | None = None          # 지금 에피소드(쉬지 않고 이어지는 행동 묶음) 시작
+        self.ep_action: str | None = None
+        self.last_ep_end = -99.0
+        self.last_ep_load = 0
+        self.last_ep_action: str | None = None
         self.first_rush = fish.get("first_rush")
         self.first_rush_on = False
         self.first_rush_done = not self.first_rush
@@ -301,20 +311,102 @@ class FishBrain:
         if self.state == "telegraph" and self.combo_on and self.pending:
             self.combo_seq.insert(0, self.pending)
         self.chain_left = 0
-        self._begin_telegraph("jump", telegraph_sec)
+        self._begin_telegraph("jump", telegraph_sec, penalty=True)
 
     def recover_from_net_fail(self) -> None:
         self.burst = max(self.burst, 0.6)
         self.combo_seq, self.combo_on, self.combo_mult = [], False, 1.0
         self.dual_pair = None
         self.chain_left = 0
-        self._begin_telegraph("rush")
+        self._begin_telegraph("rush", penalty=True)
 
     # ── 상태 전환 ──
     def _enter(self, state: str, duration: float) -> None:
+        rest = state in self.sig["rest_states"]
+        if rest and self.ep_start is not None:
+            # 에피소드 끝: 휴식 규칙의 기준 (부하 = 이 에피소드에서 시작한 행동 부하 합, 실패 결과 행동 제외)
+            load = sum(s[1] for s in self.starts if s[0] >= self.ep_start and not s[4])
+            if load > 0:  # 등불 가짜 예고만 있던 묶음은 패턴이 아니다 — 앞 패턴 기록을 그대로 둔다
+                self.last_ep_end = self.clock
+                self.last_ep_load = load
+                self.last_ep_action = self.ep_action
+            self.ep_start = None
+        elif not rest and self.ep_start is None:
+            self.ep_start = self.clock
+            self.ep_action = None
         self.state = state
         self.timer = duration
         self.state_t = 0.0
+
+    # ── 파이팅 가독성 (31장 C4) ──
+    def load_of(self, action: str) -> int:
+        acts = self.sig["actions"]
+        if action == "dual":
+            pairs = [self.dual_pair] if self.dual_pair else self.dual_pairs
+            return max(sum(acts.get(x, {}).get("load", 1) for x in p) for p in pairs)
+        return acts.get(action, {}).get("load", 1)
+
+    def budget(self) -> int:
+        """3초 부하 예산: 낚시터 값, 전설 마지막 페이즈는 legend_last_phase."""
+        if len(self.phases) > 1 and self.phase == len(self.phases) - 1:
+            return max(self.load_budget, self.sig["legend_last_phase"])
+        return self.load_budget
+
+    def window_load(self) -> int:
+        w = self.sig["timing"]["window_sec"]
+        return sum(s[1] for s in self.starts if s[0] > self.clock - w)
+
+    def fits(self, action: str, extra: int = 0, alone_ok: bool = True) -> bool:
+        """이 행동(+ 이어서 확정된 행동 부하 extra)을 지금 시작해도 3초 예산 안인가.
+        alone_ok: 창이 비어 있으면 예산보다 큰 단일 패턴(콤보 4·이중)도 혼자는 허용."""
+        w = self.window_load()
+        load = self.load_of(action) + extra
+        return w + load <= self.budget() or (alone_ok and extra == 0 and w == 0)
+
+    def rest_needed(self) -> float:
+        r = self.sig["rest"]
+        return r["after_heavy_sec"] if self.last_ep_load >= r["heavy_load"] else r["min_sec"]
+
+    def dual_allowed(self) -> bool:
+        """이중 패턴은 세계수 뿌리 샘 + 전설 마지막 페이즈에서만."""
+        if self.fish.get("spot") == "world_tree":
+            return True
+        return len(self.phases) > 1 and self.phase == len(self.phases) - 1
+
+    def min_telegraph(self, action: str) -> float:
+        """계열별 최소 예고 (+모바일). 가짜(lure)·펌핑(박자 미리 듣기 길이 고정)은 0."""
+        tm = self.sig["timing"]
+        if action in ("lure", "pump"):
+            return 0.0
+        if action == "chain":
+            m = tm["combo_preview"]
+        elif action in ("jump", "leap"):
+            m = tm["ring_total"] - self.cfg["jump_air_sec"] / 2
+        elif action == "thrash":
+            m = tm["ring_total"] - self.pcfg["thrash"]["air_sec"] / 2
+        elif action == "dual":
+            pair = self.dual_pair or ("shake", "bite")
+            return max(self.min_telegraph(a) for a in pair if a != "pump") + self.sig["dual_stagger_sec"] \
+                if any(a != "pump" for a in pair) else 0.0
+        else:
+            fam = self.sig["actions"].get(action, {}).get("family")
+            m = tm["min"].get(fam, 0.7)
+        return m + self.telegraph_lead
+
+    def can_start(self, action: str) -> bool:
+        """휴식이 끝났고 예산 안이면 True (뜰채 앞 다시 도망치기 같은 외부 계기용)."""
+        return (self.state in self.sig["rest_states"] and self.clock - self.last_ep_end >= self.rest_needed()
+                and self.fits(action))
+
+    def _record_start(self, action: str, penalty: bool = False) -> None:
+        """penalty = 플레이어 실패의 결과로 바로 이어지는 행동(수면 질주 실패 → 점프, 뜰채 실패 → 돌진).
+        3초 창 부하엔 넣지만(다음 패턴이 기다리게) 예산 위반 집계에선 뺀다."""
+        load = self.load_of(action)
+        if load > 0:
+            self.starts.append((self.clock, load, self.budget(), action, penalty))
+            self.starts = [s for s in self.starts if s[0] > self.clock - 10]
+        if self.ep_action is None:
+            self.ep_action = action
 
     def _short_telegraph(self) -> float:
         return max(self.cfg["min_telegraph_sec"], self.telegraph_sec * self.cfg["chain_telegraph_mult"])
@@ -338,7 +430,8 @@ class FishBrain:
             base = self.telegraph_sec * pc[action].get("telegraph_mult", 1.0)
         return max(pc["min_telegraph_sec"], base) + self.telegraph_lead
 
-    def _begin_telegraph(self, action: str, duration: float | None = None, turn_dir: int | None = None) -> None:
+    def _begin_telegraph(self, action: str, duration: float | None = None, turn_dir: int | None = None,
+                         penalty: bool = False) -> None:
         if action == "dual":
             self.dual_pair = tuple(self.rnd.choice(self.dual_pairs))
         if action == "pump" or (action == "dual" and "pump" in self.dual_pair):
@@ -360,11 +453,22 @@ class FishBrain:
             else:
                 self.turn_dir = self.rnd.choice((-1, 1))
         self.cur_telegraph = duration if duration is not None else self.telegraph_sec
+        self.cur_telegraph = max(self.cur_telegraph, self.min_telegraph(action))  # 계열별 최소 예고 (31장 C4)
         self._enter("telegraph", self.cur_telegraph)
+        if not self.combo_on:
+            self._record_start(action, penalty)  # 콤보 안의 단계는 콤보 부하(4)에 포함
         self.events.append(f"telegraph:{action}")
 
-    def _choose_action(self) -> str:
+    def _choose_action(self) -> str | None:
         names = list(self.actions)
+        if not self.dual_allowed():
+            names = [n for n in names if n != "dual"] or names
+        # 부하 예산: 멈춤 뒤엔 돌진이 확정이라 그만큼 더 본다. 같은 고부하 패턴 연속 금지.
+        heavy = self.sig["rest"]["heavy_load"]
+        names = [n for n in names if self.fits(n, 1 if n == "charge" else 0)
+                 and not (self.last_ep_load >= heavy and n == self.last_ep_action and self.load_of(n) >= heavy)]
+        if not names:
+            return None
         if self.busy >= 2:
             # 동시 2개 규칙: 이미 둘에 대응 중이면(패턴 + 꼬임 게이지 등) 신규 패턴 대신 기존 행동
             plain = [n for n in names if n not in NEW_ACTIONS]
@@ -452,6 +556,8 @@ class FishBrain:
             self._enter("turn", self.turn_sec)
         elif action == "charge":
             self._enter("charge", self._rand(self.charge_range))
+            if not self.combo_on:
+                self._record_start("charge")
         self.events.append(f"action:{action}")
 
     def _pattern_sec(self, pid: str) -> float:
@@ -469,6 +575,9 @@ class FishBrain:
             self.chain_left = self.rnd.randint(*self.jump_chain) - 1
         elif action == "turn":
             self.chain_left = self.rnd.randint(*self.turn_chain) - 1
+        # 연속 동작은 묶음 전체 부하가 예산 안에 들도록 줄인다 (31장 C4)
+        while self.chain_left > 0 and not self.fits(action, self.chain_left * self.load_of(action), alone_ok=False):
+            self.chain_left -= 1
         if self.chain_left > 0:
             self.chain_action = action
         if action == "charge":
@@ -477,6 +586,7 @@ class FishBrain:
             self._begin_telegraph(action)
 
     def update(self, dt: float, stamina_empty: bool, stamina_frac: float = 1.0) -> None:
+        self.clock += dt
         self.state_t += dt
         self.timer -= dt
         self._check_phase(stamina_frac)
@@ -523,9 +633,15 @@ class FishBrain:
         elif s == "stiff":
             self._after_action("stiff")
         elif s == "idle":
+            wait = self.rest_needed() - (self.clock - self.last_ep_end)
+            if wait > 0 and self.burst > 0:
+                self._enter("idle", wait)  # 패턴 사이 최소 휴식 (31장 C4)
+                return
             if self.burst <= 0:
-                if self.fake_tired_p and self.rnd.random() < self.fake_tired_p:
+                if self.fake_tired_p and self.rnd.random() < self.fake_tired_p and wait <= 0 \
+                        and self.fits("fake_tired", self.load_of("rush")):
                     self._enter("fake_tired", self._rand(cfg["fake_tired_sec"]))
+                    self._record_start("fake_tired")
                     self.events.append("fake_tired")
                 else:
                     self._enter("tired", self._rand(self.tired_range) * self.tired_mult_next)
@@ -534,7 +650,11 @@ class FishBrain:
             elif self.fake_cue_p and self.rnd.random() < self.fake_cue_p:
                 self._begin_telegraph("lure")
             else:
-                self._begin_action_sequence(self._choose_action())
+                act = self._choose_action()
+                if act is None:
+                    self._enter("idle", 0.3)  # 예산이 빌 때까지 조금 더 쉰다
+                    return
+                self._begin_action_sequence(act)
         elif s == "fake_tired":
             # 지친 척 끝 → 돌진 (예고는 정상 길이)
             self.burst = max(self.burst, 0.3)
@@ -570,7 +690,7 @@ class FishBrain:
             self.combo_mult = 1.0
             self.events.append("combo_end")
         # 연속 동작
-        if self.chain_left > 0 and self.chain_action == action:
+        if self.chain_left > 0 and self.chain_action == action and self.fits(action, alone_ok=False):
             self.chain_left -= 1
             if action == "turn":
                 self._begin_telegraph("turn", self._short_telegraph(), turn_dir=-self.turn_dir)
@@ -580,7 +700,8 @@ class FishBrain:
         self.chain_action = None
         # 콤보
         nxt = self.combo.get(action)
-        if nxt and self.burst > 0 and self.rnd.random() < nxt[1]:
+        if nxt and self.burst > 0 and self.rnd.random() < nxt[1] and \
+                self.fits(nxt[0], 1 if nxt[0] == "charge" else 0, alone_ok=False):
             if nxt[0] == "charge":
                 self._start_action("charge")  # 멈춤은 그 자체가 신호
             else:

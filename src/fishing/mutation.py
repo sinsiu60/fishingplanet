@@ -52,15 +52,17 @@ def label(muts: list[str]) -> str:
 
 
 def awake_pattern(fish: dict, rnd=_RNG) -> str:
-    """각성: 다음 낚시터의 새 패턴 (마지막 낚시터면 같은 대륙 패턴 중 무작위)."""
+    """각성: 다음 낚시터의 새 패턴 (마지막 낚시터면 같은 대륙 패턴 중 무작위).
+    이중 패턴은 세계수·전설 마지막 페이즈 전용이라(31장 C4) 각성으로는 주지 않는다 — 대신 같은 대륙 다른 패턴."""
     c = cfg()
     spot = fish.get("spot")
     for order in c["spot_order"].values():
         if spot in order:
+            pool = [p for s in order for p in c["spot_patterns"].get(s, []) if p != "dual"]
             i = order.index(spot)
             if i + 1 < len(order):
-                return rnd.choice(c["spot_patterns"][order[i + 1]])
-            pool = [p for s in order for p in c["spot_patterns"].get(s, [])]
+                nxt = [p for p in c["spot_patterns"][order[i + 1]] if p != "dual"]
+                return rnd.choice(nxt or pool)
             return rnd.choice(pool)
     return "shake"
 

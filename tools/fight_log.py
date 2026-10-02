@@ -51,13 +51,13 @@ def read_logs(folder: str) -> list[dict]:
 
 
 def report(res: dict) -> None:
-    print(f"{'낚시터':<13}{'파이팅':>5}{'초과파이팅':>8}{'초과창':>7}{'최대3초':>7}{'휴식<1.5':>9}{'고부하뒤<2.5':>11}{'고부하연속':>9}{'휴식중앙':>8}")
+    print(f"{'낚시터':<13}{'파이팅':>5}{'초과파이팅':>8}{'초과창':>7}{'최대3초':>7}{'휴식<1.5':>9}{'고부하뒤<2.5':>11}{'고부하연속':>9}{'휴식중앙':>8}{'최소':>6}")
     tot = {"over_fights": 0, "rest_short": 0, "rest_short_heavy": 0, "same_heavy": 0}
     for sp, s in res["spots"].items():
         for k in tot:
             tot[k] += s[k]
         print(f"{sp:<15}{s['fights']:>5}{s['over_fights']:>9}{s['over_windows']:>8}{s['max3']:>8}{s['rest_short']:>10}"
-              f"{s['rest_short_heavy']:>12}{s['same_heavy']:>10}{s['rest_median'] if s['rest_median'] is not None else '-':>9}")
+              f"{s['rest_short_heavy']:>12}{s['same_heavy']:>10}{s['rest_median'] if s['rest_median'] is not None else '-':>9}{s['rest_min'] if s['rest_min'] is not None else '-':>8}")
     print("합계", tot)
     print("\n패턴별 (횟수 / 성공 / 실패 — 돌진·멈춤처럼 판정 없는 행동은 0/0)")
     for a, p in sorted(res["patterns"].items(), key=lambda x: -x[1]["n"]):

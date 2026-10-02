@@ -794,13 +794,14 @@ class Fight:
             self.events.append("escape_start")  # 눈이 번쩍 + 물보라 폭발
         elif self.distance <= cfg["net_distance"] and b.state not in ("jump", "telegraph") + PATTERN_IDS:
             need = cfg["net_min_stamina_legend"] if self.fish["rarity"] == "legend" else cfg["net_min_stamina"]
-            if self.stamina_frac > need and b.state not in ("rush",):
+            if self.stamina_frac > need and b.state not in ("rush",) and b.can_start("rush"):
                 # 아직 힘이 남았으면 뜰채 앞에서 다시 도망친다 (예고 후 돌진)
                 b.chain_left = 0
                 b._begin_telegraph("rush")
                 self.events.append("bolt")
             elif self.stamina_frac <= need:
                 self._start_net()
+            # 힘이 남았지만 아직 휴식·예산이 안 됐으면 잠깐 버틴다 (31장 C4: 다시 도망치기도 휴식 규칙을 지킨다)
 
     # ── 특수 찌 부족: 마지막 발악 ──
     def _escape_ready(self) -> bool:

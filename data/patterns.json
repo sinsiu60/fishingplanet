@@ -182,7 +182,7 @@
     "height_mult": 1.25
   },
   "bite": {
-    "_설명": "⑩ 이빨 반짝 + 고개 돌림 / '딱'. 예고가 끝나는 순간 ±window 안에 드랙 순간 최저를 새로 누르면 성공 → stiff_sec초 경직(저항 없음, 감기 쉬움). 놓치면 줄 −fail_line_frac. 행동 자체는 sec초 (판정 창 뒤쪽).",
+    "_설명": "⑩ 이빨 반짝 + 고개 돌림 / '딱'. 예고가 끝나는 순간 ±window 안에 드랙 순간 최저를 새로 누르면 성공 → stiff_sec초 경직(저항 없음, 감기 쉬움). 놓치면 줄 −fail_line_frac. 행동 자체는 sec초 (판정 창 뒤쪽). C4: 판정 창 ±0.25 → ±0.3 (실행 가능 구간 0.6초 이상).",
     "telegraph_mult": 1.0,
     "sec": [
       0.3,
@@ -190,7 +190,7 @@
     ],
     "pull": 0.9,
     "burst_cost": 0.2,
-    "window": 0.25,
+    "window": 0.3,
     "fail_line_frac": 0.3,
     "stiff_sec": 1.2,
     "stiff_pull": 0.0
