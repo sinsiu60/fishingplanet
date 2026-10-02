@@ -549,6 +549,25 @@ class SaveGame:
         e = self.data["dex"].get(fish_id)
         return e if e and e.get("count", 0) > 0 else None  # '목격'만 한 물고기는 잡은 것이 아님
 
+    def hint_status(self, fish: dict) -> tuple[bool, list[tuple[str, int, int]]]:
+        """희귀·전설의 등장 조건(시간·날씨)이 도감에 보이는지 + 진행 [(등급, 잡은 수, 필요 수)].
+        희귀 = 그 낚시터 일반 전부 + 고급 1종 이상, 전설 = 일반·고급 전부 + 희귀 1종 이상.
+        (바로 아래 등급이 그 낚시터에 없으면 그 조건은 빠진다 — 용문 폭포의 희귀처럼)"""
+        order = ["common", "uncommon", "rare", "legend"]
+        k = order.index(fish["rarity"])
+        if k < 2:
+            return False, []
+        same = [f for f in all_fish() if f["spot"] == fish["spot"]]
+        rows = []
+        for tier in order[:k - 1]:
+            group = [f for f in same if f["rarity"] == tier]
+            if group:
+                rows.append((tier, sum(self.caught(f["id"]) for f in group), len(group)))
+        prev = [f for f in same if f["rarity"] == order[k - 1]]
+        if prev:
+            rows.append((order[k - 1], min(1, sum(self.caught(f["id"]) for f in prev)), 1))
+        return all(have >= need for _, have, need in rows), rows
+
     def caught(self, fish_id: str) -> bool:
         return self.dex_entry(fish_id) is not None
 

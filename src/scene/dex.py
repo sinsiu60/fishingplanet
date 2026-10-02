@@ -150,26 +150,37 @@ class DexScene(Scene):
         if entry is None:
             seen = self.save.data["dex"].get(f["id"], {}).get("seen")
             text(canvas, f["name"] if seen else "???", (d.centerx, y + 4), ui.DIM, 16 if not seen else 11, "center")
-            text(canvas, f"희귀도: {RARITY_KO[f['rarity']]}" if f["rarity"] == "legend" else "아직 잡지 못했다",
+            hinted = f["rarity"] in ("rare", "legend")
+            text(canvas, f"희귀도: {RARITY_KO[f['rarity']]}" if hinted else "아직 잡지 못했다",
                  (d.centerx, y + 26), ui.DIM, 11, "center")
-            if f["rarity"] == "legend":
-                bait = next((b for b in baits().values() if b.get("legend_for") == f["id"]), None)
-                lines = ["특별한 조건에서만 나타난다고 한다."]
-                if bait:
-                    lines.append(f"필요한 미끼: {bait['name']}")
-                    revealed = self.save.owns("bait", bait["id"]) or (
-                        bait.get("price", 0) >= 0 and not self.save.bait_locked_reason(bait))
-                    if revealed:
-                        # 미끼를 살 수 있게 되면 등장 조건 공개
-                        lines.append(f"조건: {_join(f['times'], TIME_KO, 4)} · {_join(f['weathers'], WEATHER_KO, 3)}"
-                                     f" · 25m 이상 던지기")
+            if hinted:
+                revealed, rows = self.save.hint_status(f)
+                lines = ["특별한 조건에서만 나타난다고 한다."] if f["rarity"] == "legend" else []
+                if f["rarity"] == "legend":
+                    bait = next((b for b in baits().values() if b.get("legend_for") == f["id"]), None)
+                    if bait:
+                        lines.append(f"필요한 미끼: {bait['name']}")
+                if revealed:
+                    # 아래 등급을 충분히 잡으면 등장 조건 공개
+                    cond = f"조건: {_join(f['times'], TIME_KO, 4)} · {_join(f['weathers'], WEATHER_KO, 3)}"
+                    if f["rarity"] == "legend":
+                        cond += " · 25m 이상 던지기"
+                    lines.append(cond)
+                    if f["rarity"] == "legend":
                         lines.append("지도에서 날씨 예보를 확인하세요.")
-                    else:
-                        lines.append("이 낚시터의 일반·고급 물고기를 모두 잡으면 단서가 보인다.")
+                else:
+                    # 바로 아래 등급은 1종 이상, 그보다 아래는 모두 (save.hint_status)
+                    prev = {"rare": "uncommon", "legend": "rare"}[f["rarity"]]
+                    lines.append("이 낚시터에서 이만큼 잡으면 단서가 보인다:")
+                    for t, h, n in rows:
+                        done = h >= n
+                        lines.append((f"{'v' if done else '·'} {RARITY_KO[t]} {'1종 이상' if t == prev else '모두'}"
+                                      f" {h}/{n}", ui.GOOD if done else ui.DIM))
                 yy = y + 46
                 for ln in lines:
+                    ln, col = ln if isinstance(ln, tuple) else (ln, ui.TEXT)
                     for w in wrap_text(ln, d.w - 12):
-                        text(canvas, w, (x, yy), ui.TEXT, 11, "midleft")
+                        text(canvas, w, (x, yy), col, 11, "midleft")
                         yy += 13
             return
         text(canvas, f["name"], (d.centerx, y + 4), RARITY_COL[f["rarity"]], 11, "center")
