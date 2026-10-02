@@ -10,7 +10,7 @@ if [[ "${1:-}" == "deps" ]]; then
     sudo apt-get update
     # buildozer / python-for-android 공식 문서의 우분투 의존성
     sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip python3-venv autoconf libtool pkg-config \
-        zlib1g-dev libncurses-dev cmake libffi-dev libssl-dev automake lld
+        zlib1g-dev libncurses-dev cmake libffi-dev libssl-dev automake lld libltdl-dev gettext build-essential
     echo "패키지 설치 끝. 이제 ./build_android.sh 로 빌드하세요."
     exit 0
 fi

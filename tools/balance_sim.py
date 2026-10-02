@@ -59,7 +59,7 @@ def gear_for_tier(tier: int) -> dict:
 def _responses(f) -> tuple[int, int]:
     """(패턴 칸 = 진행 중 패턴 + 꼬임 잔여, 전체 = 패턴 칸 + 기존 행동 대응(돌진·점프·방향 전환·몸털기))."""
     b = f.brain
-    slots = len(f.pats) + (1 if f.twist.value > 0 else 0)
+    slots = f.response_slots()
     classic = 0
     if b.state in ("rush", "jump", "turn") or (b.state == "telegraph" and b.pending in ("rush", "jump", "leap", "turn", "thrash")):
         classic = 1

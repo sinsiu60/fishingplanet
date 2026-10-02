@@ -518,6 +518,11 @@ class Fight:
         """첫 번째 진행 중 판정 (하나만 볼 때)."""
         return self.pats[0] if self.pats else None
 
+    def response_slots(self) -> int:
+        """동시 2개 규칙의 '대응 칸': 진행 중 패턴 + 꼬임 잔여(비틀기 판정이 끝난 뒤 남은 게이지)."""
+        twisting = any(p.id == "twist" for p in self.pats)
+        return len(self.pats) + (1 if self.twist.value > 0 and not twisting else 0)
+
     def _judge(self, pid: str):
         return next((p for p in self.pats if p.id == pid), None)
 
@@ -607,7 +612,7 @@ class Fight:
             b.cover_from_gimmick = True
         self._update_twin(dt)
         b = self.brain
-        b.busy = len(self.pats) + (1 if self.twist.value > 0 else 0)
+        b.busy = self.response_slots()
         b.update(dt, self.stamina <= 0, self.stamina_frac)
         for ev in b.events:
             if ev == "action:jump" and self.pre_judged:
