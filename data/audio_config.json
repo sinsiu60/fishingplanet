@@ -1,0 +1,30 @@
+{
+ "_설명": "믹서 (DESIGN.md 32-6, Phase S3). 버스 sig(신호)/sfx(파이팅 핵심)/reward(보상 연출)/mus(음악)/amb(환경음)/ui. 우선순위 숫자가 작을수록 중요 — 채널이 모자라면 큰 숫자·오래된 것부터 끊는다.",
+ "channels": 32,
+ "reserved_sig": 4,
+ "buffer_pc": 512,
+ "buffer_mobile": 1024,
+ "priority": {"sig": 1, "sfx": 2, "reward": 3, "mus": 4, "amb": 5, "ui": 6},
+ "bus_rules": [["sig_", "sig"], ["rush_hum", "sig"], ["rush_go", "sig"], ["cue_", "sig"], ["mus_", "mus"], ["bgm_", "mus"],
+               ["amb_", "amb"], ["thunder", "amb"], ["ui_", "ui"], ["click", "ui"],
+               ["sfx_rank", "reward"], ["sfx_record", "reward"], ["sfx_chest", "reward"], ["sfx_mut_", "reward"],
+               ["sfx_legend", "reward"], ["sfx_net_success", "reward"], ["chord_", "reward"], ["catch", "reward"],
+               ["chest_", "reward"], ["coin", "reward"], ["launch", "reward"], ["rise", "reward"]],
+ "duck": {
+  "sig": {"mus": -6, "amb": -6, "sec": 0.3},
+  "sig_boost": {"mus": -9, "amb": -9, "sec": 0.35},
+  "hook": {"mus": -6, "amb": -6, "sec": 0.3},
+  "perfect": {"mus": -12, "amb": -14, "sfx": -4, "sec": 0.45},
+  "fight": {"amb": -4}
+ },
+ "sig_boost_gain": 1.3,
+ "variation": {"pitch_pct": [-4, -2, 2, 4], "vol_db": 2.0,
+               "names": ["splash", "splash_small", "nibble", "bubbles", "twist_click", "creak", "creak2", "creak3", "reel1",
+                         "scrape", "miss", "impact", "click", "coin", "sfx_reel_click", "sfx_land", "sfx_thrash",
+                         "sfx_line_crack", "sfx_jerk", "sfx_drag_step", "ui_click", "ui_tab"]},
+ "max_same": 3,
+ "min_interval": {"default": 0.025, "sfx_reel_click": 0.01, "sfx_line_crack": 0.06, "click": 0.04, "ui_click": 0.04},
+ "limiter": {"max_sum": 3.0, "release_sec": 0.4},
+ "slowmo": {"pitch": 0.93, "lowpass": 7},
+ "audio_offset_range_ms": [-100, 200]
+}

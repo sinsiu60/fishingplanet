@@ -47,7 +47,7 @@ class Music:
     def update(self) -> None:
         if not self.sfx.enabled:
             return
-        pygame.mixer.music.set_volume(self.sfx.volume * self.gain)
+        self.sfx.music_gain = self.gain  # 음악 볼륨은 믹서(sfx.update)가 버스·덕킹과 함께 정한다
         if self.target == self.current and not self.fading:
             return
         if self.current is not None and pygame.mixer.music.get_busy():

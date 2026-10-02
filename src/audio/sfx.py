@@ -858,6 +858,7 @@ class Sfx:
             self.enabled = True
         except pygame.error:
             return
+        self._mixer_setup()
         from src.platform.detect import IS_MOBILE
         cache = _cache_path(self.rate, self.channels, seed) if IS_MOBILE else None
         if cache is not None and self._load_cache(cache):
@@ -1027,30 +1028,236 @@ class Sfx:
             self.sounds.clear()
             return False
 
-    def play(self, name: str, volume: float = 1.0) -> pygame.mixer.Channel | None:
+    # ───────────────────────── 믹서 (DESIGN.md 32-6, S3) ─────────────────────────
+    def _mixer_setup(self) -> None:
+        from src.core.config import load_json
+        self.cfg = load_json("audio_config.json")
+        c = self.cfg
+        pygame.mixer.set_num_channels(c["channels"])
+        self.n_sig = c["reserved_sig"]
+        pygame.mixer.set_reserved(self.n_sig)        # 0~3번 채널은 신호 전용
+        self.bus_vol = {"master": self.volume, "mus": 1.0, "sfx": 1.0, "amb": 1.0}
+        self.sig_boost = False
+        self.duck_db = {b: 0.0 for b in c["priority"]}  # 지금 낮춘 양 (dB, 음수)
+        self.duck_hold: dict[str, float] = {}
+        self.base_duck = {b: 0.0 for b in c["priority"]}  # 계속 낮춤 (파이팅 중 환경음 등)
+        self.limiter = 1.0
+        self.slow = False
+        self.active: list[dict] = []
+        self.last_play: dict[str, float] = {}
+        self.variants: dict[str, list] = {}
+        self.slowed: dict[str, pygame.mixer.Sound] = {}
+        self._bus_cache: dict[str, str] = {}
+        self.clock = 0.0
+
+    def bus_of(self, name: str) -> str:
+        b = self._bus_cache.get(name)
+        if b is None:
+            b = next((bus for pre, bus in self.cfg["bus_rules"] if name.startswith(pre)), "sfx")
+            self._bus_cache[name] = b
+        return b
+
+    def set_volumes(self, master: float, music: float = 1.0, sfx: float = 1.0, amb: float = 1.0,
+                    sig_boost: bool = False) -> None:
+        self.volume = master
+        if self.enabled:
+            self.bus_vol.update(master=master, mus=music, sfx=sfx, amb=amb)
+            self.sig_boost = sig_boost
+
+    def bus_gain(self, bus: str, limit: bool = True) -> float:
+        """버스 최종 배율: 전체 × 버스 볼륨 × 덕킹 × 리미터 (신호 강조면 신호 ×1.3)."""
+        bv = self.bus_vol
+        g = bv["master"] * bv.get({"mus": "mus", "amb": "amb"}.get(bus, "sfx"), 1.0)
+        if bus == "sig" and self.sig_boost:
+            g *= self.cfg["sig_boost_gain"]
+        db = self.duck_db.get(bus, 0.0) + self.base_duck.get(bus, 0.0)
+        g *= 10 ** (db / 20)
+        if limit and bus not in ("sig", "mus"):
+            g *= self.limiter
+        return g
+
+    def duck(self, kind: str) -> None:
+        """순간 덕킹: 신호·챔질·퍼펙트 때 음악·환경음을 잠깐 낮춘다 (sec 동안 유지 후 복귀)."""
+        if not self.enabled:
+            return
+        if kind == "sig" and self.sig_boost:
+            kind = "sig_boost"
+        d = self.cfg["duck"].get(kind)
+        if not d:
+            return
+        for bus, db in d.items():
+            if bus == "sec":
+                continue
+            self.duck_db[bus] = min(self.duck_db.get(bus, 0.0), db)
+            self.duck_hold[bus] = max(self.duck_hold.get(bus, 0.0), d.get("sec", 0.3))
+
+    def set_base_duck(self, kind: str | None) -> None:
+        """계속 낮춤 (예: 파이팅 중 환경음 −4dB). None이면 해제."""
+        if not self.enabled:
+            return
+        self.base_duck = {b: 0.0 for b in self.cfg["priority"]}
+        if kind:
+            for bus, db in self.cfg["duck"].get(kind, {}).items():
+                if bus != "sec":
+                    self.base_duck[bus] = db
+
+    def _variant(self, name: str) -> pygame.mixer.Sound:
+        """반복 소리 변주: 피치 ±2·4% 변형 중 하나 (처음 쓸 때 만들어 둠), 슬로우모션이면 낮고 먹먹한 변형."""
+        snd = self.sounds[name]
+        if self.slow and self.bus_of(name) in ("sfx", "reward", "amb"):
+            if name not in self.slowed:
+                self.slowed[name] = self._resampled(snd, self.cfg["slowmo"]["pitch"], self.cfg["slowmo"]["lowpass"])
+            return self.slowed[name]
+        if name not in self.cfg["variation"]["names"]:
+            return snd
+        if name not in self.variants:
+            self.variants[name] = [snd] + [self._resampled(snd, 1 + p / 100) for p in self.cfg["variation"]["pitch_pct"]]
+        import random
+        return random.choice(self.variants[name])
+
+    def _resampled(self, snd: pygame.mixer.Sound, ratio: float, lowpass: int = 0) -> pygame.mixer.Sound:
+        a = pygame.sndarray.array(snd).astype(np.float32)
+        n = max(2, int(len(a) / ratio))
+        idx = np.linspace(0, len(a) - 1, n)
+        if a.ndim == 1:
+            out = np.interp(idx, np.arange(len(a)), a)
+            if lowpass > 1:
+                out = np.convolve(out, np.ones(lowpass) / lowpass, mode="same")
+        else:
+            out = np.stack([np.interp(idx, np.arange(len(a)), a[:, c]) for c in range(a.shape[1])], axis=1)
+            if lowpass > 1:
+                k = np.ones(lowpass) / lowpass
+                out = np.stack([np.convolve(out[:, c], k, mode="same") for c in range(out.shape[1])], axis=1)
+        return pygame.sndarray.make_sound(np.ascontiguousarray(np.clip(out, -32768, 32767).astype(np.int16)))
+
+    def _channel(self, bus: str):
+        """빈 채널. 신호는 예약 채널(0~3). 없으면 우선순위가 같거나 낮은 것 중 가장 덜 중요하고 오래된 소리를 끊는다."""
+        prio = self.cfg["priority"][bus]
+        if bus == "sig":
+            for i in range(self.n_sig):
+                ch = pygame.mixer.Channel(i)
+                if not ch.get_busy():
+                    return ch
+            olds = [e for e in self.active if e["bus"] == "sig" and not e["loop"]]
+            if olds:
+                e = min(olds, key=lambda e: e["t0"])
+                e["ch"].stop()
+                return e["ch"]
+            return pygame.mixer.Channel(0)
+        ch = pygame.mixer.find_channel(False)
+        if ch is not None:
+            return ch
+        cands = [e for e in self.active if not e["loop"] and e["bus"] != "sig" and e["prio"] >= prio
+                 and e["ch"].get_busy()]
+        if not cands:
+            return None
+        e = max(cands, key=lambda e: (e["prio"], -e["t0"]))
+        e["ch"].stop()
+        return e["ch"]
+
+    def play(self, name: str, volume: float = 1.0, pan: float | None = None) -> pygame.mixer.Channel | None:
+        """효과음 한 번. pan: -1(왼쪽)~1(오른쪽). 같은 소리 동시 3개·최소 간격·우선순위 채널·변주 적용."""
         if not self.enabled or name not in self.sounds:
             return None
-        snd = self.sounds[name]
-        snd.set_volume(self.volume * volume)
-        ch = snd.play()
-        if getattr(self, "boost", 1) >= 2:
-            snd.play()  # 같은 소리를 겹쳐 +6dB (투명 변이의 예고 소리)
+        c = self.cfg
+        gap = c["min_interval"].get(name, c["min_interval"]["default"])
+        if self.clock - self.last_play.get(name, -9.0) < gap:
+            return None
+        same = [e for e in self.active if e["name"] == name and e["ch"].get_busy()]
+        if len(same) >= c["max_same"]:
+            oldest = min(same, key=lambda e: e["t0"])
+            oldest["ch"].stop()
+        bus = self.bus_of(name)
+        ch = self._channel(bus)
+        if ch is None:
+            return None
+        snd = self._variant(name)
+        snd.set_volume(1.0)
+        if name in c["variation"]["names"]:
+            import random
+            volume *= 10 ** (random.uniform(-1, 1) * c["variation"]["vol_db"] / 20)
+        if getattr(self, "boost", 1) >= 2 and bus == "sig":
+            volume *= 2.0  # 투명 변이: 예고 소리 +6dB
+        ch.play(snd)
+        e = {"ch": ch, "name": name, "bus": bus, "prio": c["priority"][bus], "t0": self.clock, "vol": volume,
+             "pan": pan, "loop": False}
+        self.active = [a for a in self.active if a["ch"].id != ch.id]  # Channel 객체는 매번 새로 만들어진다 → id로 비교
+        self.active.append(e)
+        self.last_play[name] = self.clock
+        self._apply(e)
+        if bus == "sig":
+            self.duck("sig")
         return ch
+
+    def _apply(self, e: dict) -> None:
+        v = min(1.0, e["vol"] * self.bus_gain(e["bus"]))
+        if e["pan"] is None:
+            e["ch"].set_volume(v)
+        else:
+            a = (max(-1.0, min(1.0, e["pan"])) + 1) * np.pi / 4
+            e["ch"].set_volume(min(1.0, v * np.cos(a) * 1.41), min(1.0, v * np.sin(a) * 1.41))
+
+    def update(self, dt: float, slow: bool = False) -> None:
+        """매 프레임: 덕킹 복귀, 끝난 소리 정리, 리미터, 루프·재생 중 소리 볼륨 갱신."""
+        if not self.enabled:
+            return
+        self.clock += dt
+        self.slow = slow
+        for bus in list(self.duck_db):
+            if self.duck_hold.get(bus, 0) > 0:
+                self.duck_hold[bus] -= dt
+            elif self.duck_db[bus] < 0:
+                self.duck_db[bus] = min(0.0, self.duck_db[bus] + dt * 30)  # 초당 30dB로 복귀
+        self.active = [e for e in self.active if e["ch"].get_busy() and e["ch"].get_sound() is not None]
+        self.bus_vol["master"] = self.volume
+        total = sum(min(1.0, e["vol"] * self.bus_gain(e["bus"], limit=False))
+                    for e in self.active if e["bus"] not in ("sig", "mus"))
+        lim = self.cfg["limiter"]
+        want = min(1.0, (lim["max_sum"] / total) ** 0.5) if total > 0 else 1.0  # 부드럽게 (제곱근)
+        if want < self.limiter:
+            self.limiter = want
+        else:
+            self.limiter = min(want, self.limiter + dt / lim["release_sec"])
+        for e in self.active:
+            self._apply(e)
+        pygame.mixer.music.set_volume(min(1.0, self.bus_gain("mus") * getattr(self, "music_gain", 0.6)))
 
     def stop_all(self) -> None:
         if self.enabled:
             pygame.mixer.stop()
+            self.active.clear()
         self.loops.clear()
 
     def loop(self, name: str, on: bool, volume: float = 1.0) -> None:
+        """반복 재생 켜기/끄기. 켜진 채로 다시 부르면 볼륨만 바뀐다."""
         if not self.enabled or name not in self.sounds:
             return
-        ch = self.loops.get(name)
+        e = self.loops.get(name)
         if on:
+            if e is not None and e["ch"].get_busy() and e["ch"].get_sound() is self.sounds[name]:
+                e["vol"] = volume
+                self._apply(e)
+                return
+            bus = self.bus_of(name)
+            ch = self._channel(bus) if bus == "sig" else pygame.mixer.find_channel(False) or self._channel(bus)
+            if ch is None:
+                return
             snd = self.sounds[name]
-            snd.set_volume(self.volume * volume)
-            if ch is None or not ch.get_busy():
-                self.loops[name] = snd.play(loops=-1)
-        elif ch is not None:
-            ch.stop()
+            snd.set_volume(1.0)
+            ch.play(snd, loops=-1)
+            e = {"ch": ch, "name": name, "bus": bus, "prio": self.cfg["priority"][bus], "t0": self.clock, "vol": volume,
+                 "pan": None, "loop": True}
+            self.active = [a for a in self.active if a["ch"].id != ch.id]  # Channel 객체는 매번 새로 만들어진다 → id로 비교
+            self.active.append(e)
+            self.loops[name] = e
+            self._apply(e)
+        elif e is not None:
+            e["ch"].stop()
             self.loops.pop(name, None)
+
+    def stats(self) -> dict:
+        """사운드 테스트 룸·검증용: 버스별 재생 중 수, 리미터, 덕킹."""
+        out = {b: 0 for b in self.cfg["priority"]}
+        for e in self.active:
+            out[e["bus"]] += 1
+        return {"busy": out, "limiter": round(self.limiter, 2), "duck": {k: round(v, 1) for k, v in self.duck_db.items() if v}}

@@ -16,7 +16,10 @@ AUTOSAVE_SEC = 60.0
 class Game:
     def __init__(self, max_frames: int | None = None, start_scene=None):
         cfg = game_config()
-        pygame.mixer.pre_init(44100, -16, 2, 512)
+        from src.platform.detect import IS_MOBILE as _mob
+        from src.core.config import load_json as _lj
+        _ac = _lj("audio_config.json")
+        pygame.mixer.pre_init(44100, -16, 2, _ac["buffer_mobile"] if _mob else _ac["buffer_pc"])
         pygame.init()
         self.settings = Settings()
         self.tick_rate = cfg["tick_rate"]
@@ -49,7 +52,7 @@ class Game:
                 from src.platform import android
                 android.keep_screen_on()
         self.sfx = Sfx()
-        self.sfx.volume = self.settings.get("volume")
+        self.apply_audio_settings()
         self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
         self.save = None            # 현재 SaveGame (메뉴에선 None)
         self.autosave_t = 0.0
@@ -102,6 +105,12 @@ class Game:
         else:
             from src.scene.menu import TitleScene
             self.scenes.push(TitleScene(self))
+
+    def apply_audio_settings(self) -> None:
+        """설정 → 믹서 버스 볼륨·신호 강조 (32장 S3)."""
+        s = self.settings
+        self.sfx.set_volumes(s.get("volume"), s.get("vol_music"), s.get("vol_sfx"), s.get("vol_amb"),
+                             bool(s.get("signal_boost")))
 
     def slowmo(self, real_sec: float, scale: float) -> None:
         self.slow_timer = real_sec
@@ -160,6 +169,7 @@ class Game:
                     self.scenes.current.update(self.tick_dt)
                 accumulator -= self.tick_dt
             self.music.update()
+            self.sfx.update(frame_time, slow=self.time_scale < 0.99)  # 믹서: 덕킹·리미터·버스 볼륨
 
             if self.scenes.current:
                 self.scenes.current.draw(self.screen.canvas)

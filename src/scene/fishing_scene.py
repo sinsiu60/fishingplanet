@@ -569,6 +569,7 @@ class FishingScene(Scene):
             self.tutorial.mark("guide_wait")
             c.hooked()
             self.sfx.play("hookset")
+            self.sfx.duck("hook")
             self.toasts.show("챔질 성공!", GOOD, 1.0)
             self._splash_at(c.bx, c.bz, big=0.6)
             self._start_fight()
@@ -620,8 +621,9 @@ class FishingScene(Scene):
         self.fight.brain.access_mult = TELE_MULTS[self.settings.get("tele_mult")]  # 접근성 예고 배율 (31장 C6)
         self.missed_signals: list[str] = []   # 결과 화면: 놓친 신호
         self.mastery_ups: list[str] = []      # 결과 화면: 숙련도가 오른 패턴
-        if self.touch:
-            self.fight.input_latency = load_json("mobile_config.json")["pump_latency_sec"]
+        lat = load_json("mobile_config.json")["pump_latency_sec"] if self.touch else 0.0
+        # 오디오 지연 보정 (설정 → 소리, 32장 S3): 소리가 늦게 들리는 기기면 박자 판정을 그만큼 늦춘다
+        self.fight.input_latency = lat + self.settings.get("audio_offset_ms") / 1000
         self.fight.lure_info = {"bite": self.bite.lure_bite, "used": set(self.bite.lure_used),
                                 "profile": getattr(self.bite, "lure_profile", None)}
         from src.save.quests import QuestRun
@@ -716,6 +718,10 @@ class FishingScene(Scene):
         self.toasts.sink = self._say if self._fight_text_mode() else None
         self.sig_dim_t = max(0.0, getattr(self, "sig_dim_t", 0.0) - dt)
         self._rush_audio()
+        fighting = self.fight is not None and self.fight.phase in ("fight", "net")
+        if fighting != getattr(self, "_amb_fight", False):
+            self._amb_fight = fighting
+            self.sfx.set_base_duck("fight" if fighting else None)  # 파이팅 중 환경음 −4dB
         self.drag_seen_t = max(0.0, getattr(self, "drag_seen_t", 0.0) - dt)
         signal_slots.configure(self.settings)
         if self.captions:
@@ -1490,6 +1496,7 @@ class FishingScene(Scene):
         if perfect:
             self.game.haptics.vibrate("perfect")
             self.sfx.play("perfect")
+            self.sfx.duck("perfect")
             self.sfx.play("impact", 0.8)
             self.sparkles.burst(*pos, count=40, speed=1.7)
             self.sparkles.burst(*pos, count=16, speed=0.6, ring=False)
@@ -1709,6 +1716,7 @@ class FishingScene(Scene):
             self.game.haptics.vibrate("perfect")
             self.sfx.play("perfect")
             self.sfx.play("impact", 0.9)
+            self.sfx.duck("perfect")
             self.sparkles.burst(*pos, count=40, speed=1.7)
             self.sparkles.burst(*pos, count=16, speed=0.6, ring=False)
             self.screen_fx.perfect(self.screen_fx.map(pos))

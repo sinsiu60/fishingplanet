@@ -1,8 +1,9 @@
 """설정.
 
-PC     : 탭 두 개 — [화면·소리] 음량, 화면 연출, 화면 배율, 튜토리얼 다시 보기, 소리 자막, 세이브 옮기기
+PC     : 탭 세 개 — [화면] 화면 연출, 화면 배율, 튜토리얼 다시 보기, 소리 자막, 세이브 옮기기
+                    [소리] 전체·음악·효과음·환경음 볼륨, 신호 강조, 오디오 지연 보정, 사운드 테스트 룸 (32장 S3)
                     [접근성] 예고 시간 배율, 첫 만남 카드, 신호 크기, 색약 모드, 소리 신호 (31장 C6)
-모바일 : 탭 세 개 — [화면·소리] 음량, 화면 연출, 소리 자막, 튜토리얼
+모바일 : 탭 네 개 — [화면] 화면 연출, 소리 자막, 튜토리얼 / [소리] PC와 같음
                     [터치·기기] 터치 버튼 크기·진하기, 왼손잡이, 진동(끔/약/중/강), 화면 갱신(30/60), 세이브 옮기기
                     [접근성] PC와 같음
 """
@@ -27,28 +28,30 @@ class SettingsScene(Scene):
         self.w = game.screen.ui_rect.w
         self.x0 = self.w // 2 - 140
         if IS_MOBILE:
-            self.tabs = ui.Tabs(self.w // 2 - 137, 56, ["화면·소리", "터치·기기", "접근성"], width=90)
+            self.tabs = ui.Tabs(self.w // 2 - 136, 56, ["화면", "소리", "터치·기기", "접근성"], width=66)
         else:
-            self.tabs = ui.Tabs(self.w // 2 - 102, 56, ["화면·소리", "접근성"], width=100)
+            self.tabs = ui.Tabs(self.w // 2 - 110, 56, ["화면", "소리", "접근성"], width=72)
         self._build()
 
     # ── 줄 정의: (이름, 종류, 값 글자 함수, 동작들) ──
     def _rows(self) -> list[tuple]:
         s = self.s
         sound = [
-            ("음량", "volume", None, (lambda: self._volume(-0.1), lambda: self._volume(0.1))),
             ("화면 연출 (흔들림·줌)", "toggle", lambda: s.get("screen_shake"), self._toggle_fx),
         ]
         tutorial = ("튜토리얼", "button", lambda: "처음부터 다시 보기", self._reset_tutorial)
         captions = ("소리 자막 (예고음 글자로)", "toggle", lambda: s.get("sound_captions"), self._toggle_captions)
         transfer = ("세이브 옮기기 (PC·모바일)", "button", lambda: "열기", self._open_transfer)
-        if self.tabs.labels[self.tabs.index] == "접근성":
+        tab = self.tabs.labels[self.tabs.index]
+        if tab == "접근성":
             return self._access_rows()
+        if tab == "소리":
+            return self._sound_rows()
         if not IS_MOBILE:
             scale = ("화면 배율", "step", lambda: f"{self.game.screen.scale}배 (최대 {self._max_scale()})",
                      (lambda: self._scale(-1), lambda: self._scale(1)))
             return sound + [scale, tutorial, captions, transfer]
-        if self.tabs.index == 0:
+        if tab == "화면":
             return sound + [captions, tutorial]
         size = ("터치 버튼 크기", "step", lambda: ("작게", "보통", "크게")[s.get("touch_size")],
                 (lambda: self._step("touch_size", -1, 2), lambda: self._step("touch_size", 1, 2)))
@@ -77,10 +80,42 @@ class SettingsScene(Scene):
                lambda: s.set("signal_sound", not s.get("signal_sound")))
         return [tele, cards, slot, cb, snd]
 
+    def _sound_rows(self) -> list[tuple]:
+        """소리 (32장 S3): 버스 볼륨 4개, 신호 강조, 오디오 지연 보정, 사운드 테스트 룸."""
+        s = self.s
+
+        def vol(label, key):
+            return (label, "volume", lambda: key, (lambda: self._vol(key, -0.1), lambda: self._vol(key, 0.1)))
+        boost = ("신호 강조", "toggle", lambda: s.get("signal_boost"), self._toggle_boost)
+        offset = ("오디오 지연 보정", "step", lambda: f"{s.get('audio_offset_ms'):+d}ms",
+                  (lambda: self._offset(-10), lambda: self._offset(10)))
+        test = ("사운드 테스트 룸", "button", lambda: "열기", self._open_sound_test)
+        return [vol("전체 음량", "volume"), vol("음악", "vol_music"), vol("효과음", "vol_sfx"), vol("환경음", "vol_amb"),
+                boost, offset, test]
+
+    def _vol(self, key: str, d: float) -> None:
+        self.s.set(key, round(min(1.0, max(0.0, self.s.get(key) + d)), 1))
+        self.game.apply_audio_settings()
+        self.game.sfx.play("sfx_hook_success" if key == "vol_sfx" else "click", 0.6)
+
+    def _toggle_boost(self) -> None:
+        self.s.set("signal_boost", not self.s.get("signal_boost"))
+        self.game.apply_audio_settings()
+
+    def _offset(self, d: int) -> None:
+        from src.core.config import load_json
+        lo, hi = load_json("audio_config.json")["audio_offset_range_ms"]
+        self.s.set("audio_offset_ms", max(lo, min(hi, self.s.get("audio_offset_ms") + d)))
+
+    def _open_sound_test(self) -> None:
+        from src.scene.sound_test import SoundTestScene
+        self.game.scenes.push(SoundTestScene(self.game))
+
     def _build(self) -> None:
         x = self.x0 + ROW_X
-        y0, step, back_y = 86, 24, 226
         self.rows = self._rows()
+        y0, back_y = 86, 226
+        step = 24 if len(self.rows) <= 6 else 19
         self.rows_y = [y0 + i * step for i in range(len(self.rows))]
         self.buttons = []
         for (label, kind, value, act), y in zip(self.rows, self.rows_y):
@@ -96,10 +131,6 @@ class SettingsScene(Scene):
     def s(self):
         return self.game.settings
 
-    def _volume(self, d: float) -> None:
-        v = round(min(1.0, max(0.0, self.s.get("volume") + d)), 1)
-        self.s.set("volume", v)
-        self.game.sfx.volume = v
 
     def _step(self, key: str, d: int, top: int) -> None:
         self.s.set(key, max(0, min(top, self.s.get(key) + d)))
@@ -177,7 +208,7 @@ class SettingsScene(Scene):
         for (label, kind, value, act), y in zip(self.rows, self.rows_y):
             text(canvas, label, (self.x0, y), ui.TEXT, 11, "midleft")
             if kind == "volume":
-                ui.bar(canvas, (x + 22, y - 4, 78, 8), self.s.get("volume"), (140, 200, 255))
+                ui.bar(canvas, (x + 22, y - 4, 78, 8), self.s.get(value()), (140, 200, 255))
                 bi += 2
             elif kind == "step":
                 text(canvas, value(), (x + 61, y), ui.TEXT, 11, "center")
