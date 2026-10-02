@@ -6,6 +6,7 @@ data/music_patterns.json → src/audio/music_synth.py 로 합성 → assets/musi
   python tools/bake_music.py            바뀐 층만
   python tools/bake_music.py --all      전부 다시
   python tools/bake_music.py 이름 ...   그 층만
+  python tools/bake_music.py --check    확인만 (CI)
 """
 import hashlib
 import json

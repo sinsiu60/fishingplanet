@@ -72,6 +72,8 @@ class AdaptiveMusic:
 
     def _names(self, ctx: tuple) -> dict[str, str]:
         cont, spot, legend = ctx
+        if cont == "ending":
+            return {"theme": "mus_ending"}
         if spot is None:
             return {"theme": f"mus_theme_{cont}"}  # 메뉴·지도: 대륙 테마만
         out = dict(pad=f"mus_pad_{spot}", shimmer=f"mus_shimmer_{cont}", tension=f"mus_tension_{cont}",
@@ -82,7 +84,9 @@ class AdaptiveMusic:
 
     # ── 바깥에서 부르는 것 ──
     def set_context(self, continent: str, spot: str | None, legend: bool = False) -> None:
-        ctx = (continent if continent in self.cfg["continents"] else "sharmion", spot, bool(legend))
+        if continent != "ending" and continent not in self.cfg["continents"]:
+            continent = "sharmion"
+        ctx = (continent, spot, bool(legend))
         if ctx == self.ctx or ctx == self.ctx_next:
             return
         self.ctx_next = ctx

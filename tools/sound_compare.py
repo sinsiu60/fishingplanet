@@ -1,7 +1,7 @@
-"""기존 합성음 vs 새 레시피 소리 비교 (DESIGN.md 32장 S2).
+"""두 소리 번갈아 비교 (DESIGN.md 32장 S2 — 예전 내장음은 S8에서 지움, 지금은 아무 두 소리나).
 
-  python tools/sound_compare.py [기존이름=hookset] [새이름=sfx_hook_success] [--wav 폴더]
-스피커로 기존 → 1초 쉼 → 새 소리를 3번 번갈아 재생하고, --wav 를 주면 두 소리를 wav로 저장한다.
+  python tools/sound_compare.py [첫째=sfx_hook_success] [둘째=sfx_hook_heavy] [--wav 폴더]
+스피커로 첫째 → 1초 쉼 → 둘째를 3번 번갈아 재생하고, --wav 를 주면 두 소리를 wav로 저장한다.
 """
 import os
 import sys
@@ -21,12 +21,12 @@ def main(argv):
         i = argv.index("--wav")
         out = argv[i + 1]
         argv = argv[:i] + argv[i + 2:]
-    old = argv[0] if argv else "hookset"
-    new = argv[1] if len(argv) > 1 else "sfx_hook_success"
+    old = argv[0] if argv else "sfx_hook_success"
+    new = argv[1] if len(argv) > 1 else "sfx_hook_heavy"
     pygame.mixer.pre_init(44100, -16, 2, 512)
     pygame.init()
     from src.audio.sfx import Sfx
-    sfx = Sfx(1)
+    sfx = Sfx()
     if not sfx.enabled:
         print("오디오 장치 없음")
         return 1

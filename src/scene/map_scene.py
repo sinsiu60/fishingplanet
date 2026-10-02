@@ -149,7 +149,7 @@ class MapScene(Scene):
             return
         if self.unlocked(sp):
             self.fishing.travel(sp["id"])
-            self.game.sfx.play("splash_small", 0.6)
+            self.game.sfx.play("sfx_splash_small", 0.6)
             self.game.scenes.pop()
             self.game.fade_in(0.8)
             return
@@ -158,13 +158,13 @@ class MapScene(Scene):
             self.save.data["money"] -= sp["unlock"].get("cost", 0)
             self.save.data["unlocked_spots"].append(sp["id"])
             self.game.sfx.play("ui_buy")
-            self.game.sfx.play("catch", 0.7)
+            self.game.sfx.play("sfx_catch", 0.7)
             self._say(f"{sp['name']} 해금!", ui.GOOD)
             reward = {"secret": ("dragon_pearl", "여의주"), "world_tree": ("world_fruit", "세계수 열매")}.get(sp["id"])
             if reward and not self.save.owns("bait", reward[0]):
                 # 최종 전설을 부르는 미끼
                 self.save.data["owned"]["bait"].append(reward[0])
-                self.game.sfx.play("chord_legend", 0.7)
+                self.game.sfx.play("sfx_chord_legend", 0.7)
                 self._say(f"{sp['name']} 해금! {reward[1]}을(를) 얻었다", (255, 214, 90))
             self.game.save_now()
 

@@ -2401,3 +2401,27 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
   ui_quest_done(의뢰 완료 세 음) · ui_dex_new(결과 화면 NEW! 배지 — 책장 + 차임, 신기록보다 우선) · ui_error(돈·소재 부족 등 빨간 안내 '뚜둣', 의뢰 실패).
 - 검증 `s7_test` 17/17: 12곳 바탕 + 조각(2분에 18~47개), 낮 새·밤 풀벌레/부엉이, 좌우 무작위, 새 3종 섞임, 비 빗방울 203개, 폭풍 바탕, 파이팅 조각 78→31, 안개 78→50·먹먹 바탕·맑으면 복귀,
   천둥 30번 전부 시간차·가까움/멂, UI 8종 버스·길이·저음 없음, 상점 오류음, stop_all 뒤 음악 층 유지.
+
+## 32-14. S8 검증
+1. **재생 지점 전수 점검** `tools/sound_audit.py` (CI `--strict`): 소리 이름(문자열·f-string·조건식)을 src 전체에서 찾아 실제 소리와 맞춤.
+   - 처음 결과: 없는 소리 0 · **예전 이름 84곳(29종)** · 안 쓰는 소리 49.
+   - 예전 이름 29종을 새 레시피 23개로 옮김: sfx_great · sfx_impact · sfx_judge_miss · sfx_splash(_small) · sfx_bubbles · sfx_roar · sfx_chord_rare/legend ·
+     sfx_rise · sfx_launch · sfx_catch · sfx_coin · sfx_flee · sfx_lose · sfx_whip · sfx_scrape · sfx_twist_step#0~2 · sfx_twist_snap · sig_bell · sig_drum · sig_lure · sig_leap
+     (+ cast → sfx_cast_swing, reel1 → sfx_reel_click#3, click → ui_click / 박자 놓침 sfx_judge_miss, cue_charge는 감기 계열 소리와 겹쳐 지움). 엔딩 bgm_ending → 음악 층 mus_ending.
+   - **결과: 재생 지점 169곳 · 소리 151개 + 음악 층 32개 — 없는 소리 0 · 예전 이름 0 · 안 쓰는 소리 0.**
+   - 그래서 **실행 중 합성하던 내장음 뱅크(약 80종)와 모바일 캐시를 통째로 지움** (`sfx.py` 1030 → 358줄). 시작 1.13초 → 0.77초 (PC), 폰은 첫 실행 합성 몇 초가 사라짐.
+     구운 파일을 못 읽으면(코덱 문제 등) 그 레시피만 실행 중 합성으로 대신함.
+   - 믹서 설정도 새 이름으로: 버스 규칙(sfx_chord_/coin/catch/launch/rise → reward), 변주 22종, 최소 간격(단계 소리 #는 바탕 이름 규칙 — 릴 클릭 15ms).
+2. **음량 점검** `tools/loudness.py [--apply]`: 소리마다 최대(dBFS)·울리는 동안 평균(10ms 창, −40dB 아래 제외). 묶음(sig/sfx/reward/amb/ui/바탕) 중앙값보다
+   +4dB 넘게 크면 +2dB까지 내리고, −8dB 넘게 작으면 최대 음량 여유만큼 올림 → 레시피 `gain_db`.
+   - 고침 8개: 광폭 변이 −6.6 · 개구리 −3.4 · 심해 바탕 −2.6 · 들어 올림 −2.6 · 각성 −2.3 · 오류음 −2.2 · 폭풍 바탕 −2.2 · 전설 상자 +0.2.
+   - 남은 1개: 전설 상자(−8.4dB) — 빌드업·무음이 길어 평균이 낮은 의도된 소리 (터짐은 최대 음량).
+   - 묶음 중앙값: sig −15.0 > sfx −16.5 (신호가 효과음보다 위), reward −15.6, amb −14.0, 바탕 −19.9, ui −18.5.
+3. **최악 상황** `tools/sound_stress.py 20 [--wav]`: 전설 마지막 페이즈(보스 3층) + 폭풍(바탕·바람·빗방울·천둥) + 1.5초마다 예고 + 0.75초마다 신호 두 계열 동시 + 퍼펙트 연타 + 더블 퍼펙트 + 빨강 장력·릴 감기,
+   실제 시간 속도 20초. 매 프레임 믹서 상태로 **출력과 같은 합을 오프라인으로 재구성**:
+   동시 재생 최대 17~19개(채널 40) · 최대 −0.9dBFS · **찢어진 샘플 0** · 신호 57번·효과음 101번·환경음 70번 중 **채널 못 얻은 재생 0** · 리미터 최저 ×0.86~1.0.
+4. **지연** `tools/sound_latency.py`: 챔질 클릭·감기 누름·정점 우클릭·UI 버튼 모두 **입력과 같은 틱에 재생**(코드 지연 0틱, 입력 샘플링 ≤1프레임 16.7ms) + 어택 0~1ms
+   + 출력 버퍼 2개 → **PC ≈ 24ms, 모바일(버퍼 1024) ≈ 47ms** (+ 기기 출력 지연은 설정 '오디오 지연 보정'으로).
+5. **빌드**: CI 두 작업 모두 `bake_sfx.py --check` · `bake_music.py --check`(레시피 해시 = manifest, 파일 있음, ffmpeg 불필요) + PC는 `sound_audit.py --strict`,
+   exe 실행 확인은 `--frames 120 --require-baked`(구운 소리가 빠진 채 묶였으면 종료 코드 2). PyInstaller `--add-data assets`, 안드로이드 buildozer `ogg,json` 포함.
+6. **직접 들어볼 체크리스트**: 저장소 루트 `SOUND_CHECKLIST.md` (상황별 '이렇게 들려야 함' + 준비 방법 + 자동 점검 명령).

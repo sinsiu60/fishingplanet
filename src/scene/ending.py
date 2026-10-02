@@ -46,14 +46,14 @@ class EndingScene(Scene):
         if game.music.has(self.track):
             game.music.play(self.track)
         else:
-            game.sfx.loop("bgm_ending", True, 0.6)
+            game.adaptive.set_context("ending", None)  # 합성 엔딩 곡 mus_ending (32장 S8)
+            game.adaptive.set("menu")
 
     def handle_action(self, a) -> None:
         if a.name == "primary":
             if self.t < STATS_T and self.t > 1.0:
                 self.t = STATS_T  # 건너뛰기
             elif self.t > STATS_T + 1.5:
-                self.game.sfx.loop("bgm_ending", False)
                 self.game.scenes.pop()
                 if self.kind == "sharmion" and "eldrasion" not in self.game.save.data["unlocked_continents"]:
                     from src.scene.voyage import VoyageScene

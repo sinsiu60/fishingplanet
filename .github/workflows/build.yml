@@ -21,6 +21,13 @@ jobs:
           python-version: "3.11"
       - name: 의존성
         run: python -m pip install -r requirements.txt -r requirements-build.txt
+      - name: 사운드 점검 (구운 파일 최신 · 재생 지점 전부 연결, DESIGN.md 32-14)
+        env:
+          SDL_AUDIODRIVER: dummy
+        run: |
+          python tools/bake_sfx.py --check
+          python tools/bake_music.py --check
+          python tools/sound_audit.py --strict
       - name: 아이콘
         run: python tools/make_icon.py build/icon.ico
       - name: PyInstaller (build.bat 과 같은 옵션)
@@ -36,7 +43,7 @@ jobs:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
         run: |
-          ./dist/FishingGame/FishingGame.exe --frames 120
+          ./dist/FishingGame/FishingGame.exe --frames 120 --require-baked
           echo "exit $?"
       - uses: actions/upload-artifact@v4
         with:
@@ -64,6 +71,10 @@ jobs:
         run: python -m pip install "buildozer==1.6.0" "cython<3.1" setuptools pygame-ce==2.5.8 numpy
       - name: 아이콘·스플래시
         run: python tools/make_android_assets.py
+      - name: 사운드 점검 (APK에 묶일 구운 파일이 최신인지)
+        run: |
+          python tools/bake_sfx.py --check
+          python tools/bake_music.py --check
       - name: SDK·NDK 캐시
         uses: actions/cache@v4
         with:

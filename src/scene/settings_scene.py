@@ -96,7 +96,7 @@ class SettingsScene(Scene):
     def _vol(self, key: str, d: float) -> None:
         self.s.set(key, round(min(1.0, max(0.0, self.s.get(key) + d)), 1))
         self.game.apply_audio_settings()
-        self.game.sfx.play("sfx_hook_success" if key == "vol_sfx" else "click", 0.6)
+        self.game.sfx.play("sfx_hook_success" if key == "vol_sfx" else "ui_click", 0.6)
 
     def _toggle_boost(self) -> None:
         self.s.set("signal_boost", not self.s.get("signal_boost"))

@@ -89,7 +89,7 @@ class ChestScene(Scene):
                 self.particles.append([cx, cy - 18, math.cos(ang) * sp, math.sin(ang) * sp, random.uniform(0.5, 1.1),
                                        col])
             if grade == "common":
-                sfx.play("coin", 0.5)
+                sfx.play("sfx_coin", 0.5)
             elif grade == "special":
                 self.game.screen.shake = (2, 1)
             if grade in ("special", "legend"):
@@ -97,7 +97,7 @@ class ChestScene(Scene):
         elif key == "card":
             r = a["reward"]
             if r["type"] == "item" and not r.get("dup"):
-                sfx.play("catch", 0.7)
+                sfx.play("sfx_catch", 0.7)
 
     def _action(self) -> None:
         if self.kind == "exchange":

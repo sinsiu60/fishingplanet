@@ -56,7 +56,7 @@ class VoyageScene(Scene):
             self.game.sfx.play("sfx_cast_swing", 0.8)  # 돛이 바람을 받는 휙 (예전 'whoosh'는 없는 소리였음)
             self.game.sfx.play("amb_wave_crash", 0.6)
         if prev < T_ARRIVE <= self.t:
-            self.game.sfx.play("chord_legend", 0.8)
+            self.game.sfx.play("sfx_chord_legend", 0.8)
         if self.t >= T_END + 3.0:
             self._finish()
 

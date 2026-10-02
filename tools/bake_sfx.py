@@ -6,6 +6,7 @@ data/sfx_recipes.json 의 레시피를 합성해서 assets/sfx_generated/<이름
   python tools/bake_sfx.py            바뀐 레시피만 다시 굽기 (assets/sfx_generated/manifest.json 의 해시로 판단)
   python tools/bake_sfx.py --all      전부 다시
   python tools/bake_sfx.py 이름 ...   그 소리만
+  python tools/bake_sfx.py --check    굽지 않고 확인만 (최신이 아니면 종료 코드 1 — CI)
 
 OGG 인코딩은 ffmpeg(libvorbis)를 쓴다. ffmpeg이 없으면 .wav 로 저장 (게임은 둘 다 읽음).
 """
@@ -59,6 +60,12 @@ def main(argv: list[str], rec: dict | None = None, out_dir: str = OUT, quality: 
     man_path = os.path.join(out_dir, "manifest.json")
     manifest = json.load(open(man_path, encoding="utf-8")) if os.path.exists(man_path) else {}
     rec = synth.recipes() if rec is None else rec
+    if "--check" in argv:
+        # 빌드 전 확인 (CI, ffmpeg 필요 없음): 레시피가 바뀌었는데 안 구웠거나 파일이 빠졌으면 실패
+        stale = [n for n in rec if manifest.get(n) != hash_fn(n, rec[n]) or not any(
+            os.path.exists(os.path.join(out_dir, n.replace("#", "__") + e)) for e in (".ogg", ".wav"))]
+        print(f"{os.path.relpath(out_dir, ROOT)}: {len(rec) - len(stale)}/{len(rec)} 최신" + (f" — 다시 구울 것: {stale}" if stale else ""))
+        return 1 if stale else 0
     names = [a for a in argv if not a.startswith("--")] or list(rec)
     force = "--all" in argv or any(not a.startswith("--") for a in argv)
     ffmpeg = shutil.which("ffmpeg")

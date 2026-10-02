@@ -9,6 +9,7 @@
   mus_rise_C       물고기 지침: 상승 멜로디
   mus_boss1~3_C    전설 파이팅: 페이즈마다 한 층씩 (오스티나토 + 북 / 금관 화음 / 빠른 현 + 스네어)
   mus_sting_win    포획 승리 스팅 (반복 없음)
+  mus_ending       엔딩 (공기 패드 + 하프 + 유리 멜로디)
 모든 반복 층은 같은 길이(bars마디)로 잘라 넘친 울림을 앞에 더한다 (synth "wrap").
 """
 import random
@@ -209,6 +210,11 @@ def recipes() -> dict:
         cid = spot_continent(sid)
         out[f"mus_pad_{sid}"] = _loop(_chord_style(c["continents"][cid], p["inst"], p["style"], p["oct"], zlib.crc32(sid.encode()) & 0xFFFF),
                                       -19.0, reverb={"mix": 0.22, "time": 1.4})
+    # 엔딩: 샤르미온 화성 위에 공기 패드 + 하프 아르페지오 + 유리 멜로디 (넓은 잔향)
+    sh = c["continents"]["sharmion"]
+    en = (_chord_style(sh, "airy", "hold", 0, 3) + _chord_style(sh, "harp", "arp", 0, 4)
+          + _melody(sh["theme"], "glass", 0.8) + _bass(sh, rhythm=((0, 4),), gain=0.6))
+    out["mus_ending"] = _loop(en, -19.0, reverb={"mix": 0.3, "time": 1.8})
     sw = c["sting_win"]
     st = [_note("glass", m, t, d, 1.0) for t, m, d in sw["notes"]] + [_note("bass", m, t, d, 1.0) for t, m, d in sw["bass"]]
     st += _drum("kick", 0.6, 1.0, "wood") + _drum("crash_first", 0.6, 1.0, "wood")

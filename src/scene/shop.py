@@ -168,7 +168,7 @@ class ShopScene(Scene):
             return
         if self.kind == "sell":
             gained = self.save.sell(self.sel)
-            self.game.sfx.play("coin")
+            self.game.sfx.play("sfx_coin")
             self._say(f"+{ui.money_text(gained)}", ui.GOOD)
             self.sel = max(0, min(self.sel, len(self.items()) - 1))
             return
@@ -208,7 +208,7 @@ class ShopScene(Scene):
     def _sell_all(self) -> None:
         if self.save.data["keepnet"]:
             total = self.save.sell_all()
-            self.game.sfx.play("coin")
+            self.game.sfx.play("sfx_coin")
             self._say(f"모두 팔았어요 +{ui.money_text(total)}", ui.GOOD)
             self.sel = 0
 

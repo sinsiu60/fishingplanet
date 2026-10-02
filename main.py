@@ -25,7 +25,12 @@ def main() -> None:
     max_frames = None
     if "--frames" in sys.argv:
         max_frames = int(sys.argv[sys.argv.index("--frames") + 1])
-    Game(max_frames=max_frames).run()
+    game = Game(max_frames=max_frames)
+    if "--require-baked" in sys.argv and game.sfx.enabled and game.sfx.missing_baked:
+        # 빌드 확인 (CI): 미리 구운 소리가 빠진 채 묶였으면 실패 (32장 S8)
+        print("구운 소리 없음:", game.sfx.missing_baked)
+        sys.exit(2)
+    game.run()
 
 
 if __name__ == "__main__":
