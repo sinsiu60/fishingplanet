@@ -1,6 +1,7 @@
 """파이팅 로그 분석 (DESIGN.md 31장 C2).
 
   python tools/fight_log.py sim [N] [낚시터,...]   봇이 물고기마다 N번(기본 5) 파이팅 → 낚시터별 부하·휴식·패턴 성공률
+  (봇 실력: 환경 변수 FIGHTLOG_SKILL=skilled|average, 기본 skilled)
   python tools/fight_log.py read [폴더]            디버그 빌드가 남긴 fight_logs/*.jsonl 분석 (기본: 세이브 폴더/fight_logs)
 
 출력: 3초 부하 예산 초과(파이팅 수·0.1초 창 수·최대 부하), 휴식 < 1.5초, 부하 3 이상 뒤 < 2.5초, 같은 고부하 연속, 휴식 중앙값,
@@ -37,7 +38,7 @@ def run_sim(n: int, only: list | None) -> list[dict]:
             continue
         gear = gear_for_tier(SPOT_TIER[fish["spot"]] + (1 if fish["rarity"] == "legend" else 0))
         for _ in range(n):
-            bot_fight(fish, spots[fish["spot"]], gear, SKILLS["skilled"], rnd)
+            bot_fight(fish, spots[fish["spot"]], gear, SKILLS[os.environ.get("FIGHTLOG_SKILL", "skilled")], rnd)
     F.Fight.__init__ = orig
     return [lg.to_dict() for lg in logs]
 

@@ -114,7 +114,8 @@ def analyze(logs: list[dict]) -> dict:
         over = False
         for i, s in enumerate(starts):
             # 이 패턴을 시작하는 순간, 직전 3초 안에 시작한 패턴 부하 합 (두뇌가 고를 때와 같은 기준·그때 예산)
-            inwin = [x for x in starts[: i + 1] if x["t"] > s["t"] - win]
+            # 로그 시각은 소수 셋째 자리 반올림 — 정확히 3초 떨어진 시작이 창에 들어오지 않게 0.005초 여유 (C7)
+            inwin = [x for x in starts[: i + 1] if x["t"] > s["t"] - win + 0.005]
             total = sum(x["load"] for x in inwin)
             st["max3"] = max(st["max3"], total)
             if total > s["budget"] and len(inwin) > 1:

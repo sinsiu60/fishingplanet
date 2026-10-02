@@ -3,7 +3,7 @@
 실제 낚시 화면(FishingScene)으로 기존 행동 + 신규 패턴 12종 + 전설을 파이팅시키며 매 3프레임 그려서
 hud.text / big_text 호출을 모두 센다. 디버그(F1)·멈춤 카드·도움말·결과 화면은 제외.
 
-  python tools/fight_text_check.py [pc|touch] [초=20]
+  python tools/fight_text_check.py [pc|touch] [초=20] [all]   (all = 모든 물고기, 신규 패턴은 그 물고기 것 중 하나씩 강제)
 위반이 있으면 목록을 출력하고 종료 코드 1.
 """
 import collections
@@ -14,6 +14,7 @@ import tempfile
 
 mode = sys.argv[1] if len(sys.argv) > 1 else "pc"
 secs = float(sys.argv[2]) if len(sys.argv) > 2 else 20.0
+ALL = "all" in sys.argv[3:]
 sys.argv = [sys.argv[0]] + (["--mobile-preview", "--preset", "phone20"] if mode == "touch" else [])
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -110,6 +111,12 @@ PLAN = [("bass", None), ("snakehead", None), ("cherry_salmon", "shake"), ("rockf
         ("red_seabream", "reverse"), ("alfonsino", "twist"), ("galaxy_trout", "chain"), ("marsh_eel", "hide"),
         ("stalactite_catfish", "pump"), ("falls_salmon", "thrash"), ("lava_grouper", "bite"), ("glacier_ray", "fake"),
         ("life_trout", "dual"), ("bluefin", None), ("marlin", None), ("ignis", None)]
+if ALL:
+    NEW = ("shake", "dive", "surface", "reverse", "twist", "chain", "hide", "pump", "thrash", "bite")
+    PLAN = []
+    for fish in all_fish():
+        mine = [a for a in fish.get("actions", {}) if a in NEW]
+        PLAN.append((fish["id"], random.choice(mine) if mine else None))
 frames, bad = 0, collections.Counter()
 max_n, max_len = 0, 0
 for fid, pid in PLAN:

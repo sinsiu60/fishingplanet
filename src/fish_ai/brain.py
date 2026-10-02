@@ -328,11 +328,14 @@ class FishBrain:
         rest = state in self.sig["rest_states"]
         if rest and self.ep_start is not None:
             # 에피소드 끝: 휴식 규칙의 기준 (부하 = 이 에피소드에서 시작한 행동 부하 합, 실패 결과 행동 제외)
-            load = sum(s[1] for s in self.starts if s[0] >= self.ep_start and not s[4])
-            if load > 0:  # 등불 가짜 예고만 있던 묶음은 패턴이 아니다 — 앞 패턴 기록을 그대로 둔다
+            mine = [s for s in self.starts if s[0] >= self.ep_start]
+            load = sum(s[1] for s in mine if not s[4])
+            if mine:  # 등불 가짜 예고만 있던 묶음(기록 없음)은 패턴이 아니다 — 앞 패턴 기록을 그대로 둔다
+                # 실패 결과 행동(수면 질주 실패 → 점프)만 있던 묶음도 휴식은 그 뒤부터 센다 (C7)
                 self.last_ep_end = self.clock
-                self.last_ep_load = load
-                self.last_ep_action = self.ep_action
+                if load > 0:
+                    self.last_ep_load = load
+                    self.last_ep_action = self.ep_action
             self.ep_start = None
         elif not rest and self.ep_start is None:
             self.ep_start = self.clock
