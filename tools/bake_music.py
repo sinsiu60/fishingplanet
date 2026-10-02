@@ -26,6 +26,7 @@ OUT = os.path.join(ROOT, "assets", "music_generated")
 
 def music_hash(name: str, recipe: dict) -> str:
     src = b"".join(open(os.path.join(ROOT, "src", "audio", f), "rb").read() for f in ("synth.py", "music_synth.py"))
+    src = src.replace(b"\r\n", b"\n")  # 줄바꿈 무관
     return hashlib.sha1(src + json.dumps(recipe, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
 
 

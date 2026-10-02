@@ -29,6 +29,7 @@ OUT = os.path.join(ROOT, "assets", "sfx_generated")
 
 def recipe_hash(name: str, recipe: dict) -> str:
     src = open(os.path.join(ROOT, "src", "audio", "synth.py"), "rb").read()  # 엔진이 바뀌어도 다시 굽는다
+    src = src.replace(b"\r\n", b"\n")  # 윈도 체크아웃(CRLF)에서도 같은 해시 — CI --check
     return hashlib.sha1(src + json.dumps(recipe, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
 
 
