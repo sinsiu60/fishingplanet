@@ -314,10 +314,7 @@ def draw(canvas, ctx: dict) -> None:
         fight_fx.draw_tired_ring(canvas, (ax, ay), 1.2, t)
         fight_fx.draw_tired_ring(canvas, (ax, ay), 1.2, t + 0.33)
         label, lcol = ("완전 지침" if b.state == "exhausted" else "지침"), TIRED
-        if int(t * 3) % 2 == 0:
-            chips.append(("기회!", GOLD, True))
-        else:
-            chips.append(("감아!", TIRED, False))
+        chips.append(("기회!", GOLD, True))  # '기회!' 하나만 (테두리만 맥동)
     # 일반 신호들 (이중이면 좌우로 나란히)
     n = len(sigs)
     for i, s in enumerate(sigs):
