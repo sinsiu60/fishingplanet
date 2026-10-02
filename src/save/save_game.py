@@ -161,7 +161,8 @@ def new_data() -> dict:
         "keepnet": [],
         "dex": {},
         "stats": {"catches": 0, "s_ranks": 0, "perfects": 0, "lost": 0, "earned": 0,
-                  "chests_opened": 0, "s_ranks_eldra": 0, "double_perfects": 0, "mutations_caught": 0},
+                  "chests_opened": 0, "s_ranks_eldra": 0, "double_perfects": 0, "mutations_caught": 0,
+                  "quests_done": 0},
         # ── 확장 (v2) ──
         "continent": "sharmion",
         "unlocked_continents": ["sharmion"],
@@ -181,6 +182,7 @@ def new_data() -> dict:
         "mutation_dex": {},                              # 물고기 id → 잡아 본 변이 목록
         "cosmetics": {"titles": [], "float_skins": [], "rod_skins": []},
         "equipped_cosmetic": {"title": None, "float_skin": None, "rod_skin": None},
+        "quests": {"points": 0, "done": 0, "boards": {}},  # 챌린지 의뢰 (대륙별 게시판, src/save/quests.py)
     }
 
 
@@ -206,8 +208,9 @@ class SaveGame:
         if sg is None:
             return None
         d = sg.data
+        from src.save.quests import title_name
         return {"money": d["money"], "dex": sg.dex_count(), "dex_total": len(all_fish()),
-                "playtime": d["playtime"], "updated": d["updated"], "spot": d["spot"]}
+                "playtime": d["playtime"], "updated": d["updated"], "spot": d["spot"], "title": title_name(sg)}
 
     @staticmethod
     def latest_slot() -> int | None:

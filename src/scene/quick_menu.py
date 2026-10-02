@@ -1,4 +1,4 @@
-"""모바일 '가방' 버튼: 지도·상점·도감·보물상자·도움말을 큰 버튼으로 (PC는 단축키 M/B/Tab/C/H)."""
+"""모바일 '가방' 버튼: 지도·상점·도감·보물상자·의뢰·도움말을 큰 버튼으로 (PC는 단축키 M/B/Tab/C/J/H)."""
 from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import text
@@ -12,15 +12,16 @@ class QuickMenuScene(Scene):
         self.fishing = fishing
         self.mouse = (-100, -100)
         self.age = 0.0
-        items = [("지도", "map"), ("상점", "shop"), ("도감", "dex"), ("보물상자", "chest")]
-        bw, bh, gap = 104, 40, 8
-        x0 = 240 - (bw * 2 + gap) // 2
+        items = [("지도", "map"), ("상점", "shop"), ("도감", "dex"), ("보물상자", "chest"), ("의뢰", "quests")]
+        bw, bh, gap = 104, 36, 8
+        x0 = 240 - (bw * 3 + gap * 2) // 2
         self.buttons = []
         for i, (label, which) in enumerate(items):
-            x, y = x0 + (i % 2) * (bw + gap), 70 + (i // 2) * (bh + gap)
+            x, y = x0 + (i % 3) * (bw + gap), 70 + (i // 3) * (bh + gap)
             self.buttons.append(ui.Button((x, y, bw, bh), label, lambda w=which: self._open(w), size=16))
-        self.buttons.append(ui.Button((x0, 70 + 2 * (bh + gap), bw, 30), "도움말", self._help))
-        self.buttons.append(ui.Button((x0 + bw + gap, 70 + 2 * (bh + gap), bw, 30), "닫기", self._close))
+        x, y = x0 + 2 * (bw + gap), 70 + (bh + gap)
+        self.buttons.append(ui.Button((x, y, bw, bh), "도움말", self._help, size=16))
+        self.buttons.append(ui.Button((240 - bw // 2, 70 + 2 * (bh + gap), bw, 30), "닫기", self._close))
 
     def _open(self, which: str) -> None:
         self.game.scenes.pop()
@@ -51,7 +52,7 @@ class QuickMenuScene(Scene):
         self.fishing.draw(canvas)
         ui.dim(canvas, int(150 * min(1.0, self.age / 0.15)))
         canvas = self.ui_canvas(canvas)
-        ui.panel(canvas, (240 - 128, 34, 256, 194))
+        ui.panel(canvas, (240 - 176, 34, 352, 194))
         text(canvas, "가방", (240, 50), ui.ACCENT, 16, "center")
         for b in self.buttons:
             b.draw(canvas, self.mouse)

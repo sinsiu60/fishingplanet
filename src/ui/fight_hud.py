@@ -224,6 +224,8 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
         for i, (label, col) in enumerate(badges):
             if t > 1.0 + i * 0.15:
                 text(canvas, label, (12, 24 + i * 15), col, 11, "midleft")
+    if news and news.get("title") and t > 0.6:
+        text(canvas, f"「{news['title']}」", (w // 2, 176), (255, 214, 90), 11, "center")  # 장착한 칭호
     if t > 1.2:
         text(canvas, "살림망에 보관했어요 (B: 상점에서 판매)", (w // 2, 240), (170, 180, 200), 11, "center")
     if t > CATCH_READY_T + 0.5 and int(t * 2) % 2 == 0:
@@ -262,6 +264,23 @@ def _wrap(s: str, width: int) -> list[str]:
     if cur:
         lines.append(cur)
     return lines
+
+
+def draw_quests(canvas, lines: list, inset: int = 0) -> None:
+    """파이팅 중 의뢰 진행 (오른쪽 위 작게): 지키는 중 / 실패 / 완료."""
+    w = canvas.get_width()
+    y = 44  # 물고기 이름·체력 바(20~36) 아래, 패턴 안내(69~) 위
+    font = get_font(11)
+    for label, state in lines:
+        col = {"ok": (220, 225, 240), "fail": (255, 110, 95), "done": (130, 255, 180)}[state]
+        if len(label) > 30:
+            label = label[:29] + "…"
+        tw, th = font.size(label)
+        bg = pygame.Surface((tw + 6, th + 2), pygame.SRCALPHA)
+        bg.fill((0, 0, 0, 110))
+        canvas.blit(bg, (w - 8 - inset - tw - 3, y - th // 2 - 1))
+        text(canvas, label, (w - 8 - inset, y), col, 11, "midright")
+        y += 13
 
 
 def draw_debug(canvas, fight, extra: list[str] | None = None, right: int = 4) -> None:

@@ -31,6 +31,7 @@ KEY_ACTIONS = {
     pygame.K_TAB: ("menu", "dex"),
     pygame.K_m: ("menu", "map"),
     pygame.K_c: ("menu", "chest"),
+    pygame.K_j: ("menu", "quests"),
     pygame.K_h: ("help", 0),
     pygame.K_t: ("time_fast", 0),
     pygame.K_q: ("drag", -1),
@@ -47,6 +48,7 @@ KEY_ACTIONS = {
     pygame.K_F6: ("debug", "F6"),
     pygame.K_F9: ("debug", "F9"),
     pygame.K_F10: ("debug", "F10"),
+    pygame.K_F11: ("debug", "F11"),
 }
 
 

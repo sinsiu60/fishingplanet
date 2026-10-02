@@ -64,6 +64,8 @@ class TitleScene(Scene):
         w = game.screen.ui_rect.w
         self.mouse = (0, 0)
         self.latest = SaveGame.latest_slot()
+        info = SaveGame.summary(self.latest) if self.latest is not None else None
+        self.latest_title = info.get("title") if info else None
         bx, bw = w // 2 - 60, 120
         y0 = 132
         items = [("이어하기", self._continue, self.latest is not None),
@@ -114,6 +116,8 @@ class TitleScene(Scene):
         w = canvas.get_width()
         big_text(canvas, game_config()["title"], (w // 2, 62), (255, 228, 150), 3.0, outline=True)
         text(canvas, "어렵지만 공정한 1인칭 낚시", (w // 2, 96), (235, 225, 240), 11, "center")
+        if self.latest_title:
+            text(canvas, f"「{self.latest_title}」", (w // 2, 114), (255, 214, 90), 11, "center")  # 장착한 칭호
         for b in self.buttons:
             b.draw(canvas, self.mouse)
         draw_cursor(canvas, self.mouse)
@@ -198,6 +202,8 @@ class SlotScene(Scene):
                 when = datetime.datetime.fromtimestamp(info["updated"]).strftime("%m/%d %H:%M")
                 text(canvas, f"{ui.money_text(info['money'])}   도감 {info['dex']}/{info['dex_total']}",
                      (r.x + 80, r.y + 16), ui.TEXT, 11, "midleft")
+                if info.get("title"):
+                    text(canvas, f"「{info['title']}」", (r.right - 8, r.y + 12), (255, 214, 90), 11, "midright")
                 text(canvas, f"{SPOT_NAMES.get(info['spot'], '')} · {ui.time_text(info['playtime'])} · {when}",
                      (r.x + 80, r.y + 34), ui.DIM, 11, "midleft")
             if self.confirm == s:

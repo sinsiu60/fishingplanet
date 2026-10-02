@@ -22,6 +22,7 @@ class PauseScene(Scene):
                  ("상점 (B)", lambda: self._open("shop"), can_shop),
                  ("도감 (Tab)", lambda: self._open("dex"), True),
                  ("보물상자 (C)", lambda: self._open("chest"), can_shop),
+                 ("의뢰 게시판 (J)", lambda: self._open("quests"), fishing.fight is None),
                  ("설정", self._settings, True),
                  ("저장하고 타이틀로", self._to_title, True),
                  ("저장하고 종료", game.quit, True)]

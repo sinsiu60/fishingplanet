@@ -292,6 +292,21 @@ class FishingScene(Scene):
             w.current = WEATHERS[(WEATHERS.index(w.current) + 1) % len(WEATHERS)]
             self.toasts.show(f"[테스트] 날씨: {WEATHER_KO[w.current]}", INFO, 1.5, 11)
 
+    def _quest_events(self, qr) -> None:
+        """의뢰 진행 알림: 실패는 작게, 완료는 보상과 함께."""
+        for ev in qr.events:
+            if ev == "quest_fail":
+                self.sfx.play("click", 0.6)
+            elif ev == "quest_done":
+                it = next((x for x in qr.items if x[1] == "done" and len(x) > 3 and not x[3].get("_shown")), None)
+                if it is not None:
+                    got = it[3]
+                    got["_shown"] = True
+                    from src.save.quests import reward_text
+                    self.toasts.show(f"의뢰 완료! {reward_text(it[0]['reward'])}", (255, 214, 90), 3.0, 11)
+                    self.sfx.play("chord_rare", 0.7)
+        qr.events.clear()
+
     def _record_mutation(self, f, muts: list) -> None:
         """변이 포획: 살림망 표시·쌍둥이 두 번째·각성 소재·변이 도감과 수집 보상."""
         from src.fishing import mutation
@@ -382,15 +397,20 @@ class FishingScene(Scene):
                     from src.scene.quick_menu import QuickMenuScene
                     self.sfx.play("click")
                     self.game.scenes.push(QuickMenuScene(self.game, self))
-            elif a.value == "dex":
+            elif a.value in ("dex", "quests"):
                 if self.fight is None:
-                    self.open_menu("dex")
+                    self.open_menu(a.value)
             elif self.can_open_menus():
                 self.open_menu(a.value)
         elif n == "debug":
             if a.value in ("F3", "F4", "F5", "F6"):
                 if f is None and self.fish_cfg.get("debug_keys"):
                     self._cycle_debug(a.value)
+            elif a.value == "F11":
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    from src.save import quests
+                    quests.force_new_day(self.save, quests.spot_cont(self.spot_id))
+                    self.toasts.show("[테스트] 의뢰를 새로 받았어요 (J: 게시판)", INFO, 1.5, 11)
             elif a.value == "F10":
                 if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
                     self._cycle_mutation()
@@ -453,6 +473,11 @@ class FishingScene(Scene):
                 return
             from src.scene.chest_scene import ChestScene
             self.game.scenes.push(ChestScene(self.game, self))
+        elif which == "quests":
+            if self.fight is not None:
+                return
+            from src.scene.quest_board import QuestBoardScene
+            self.game.scenes.push(QuestBoardScene(self.game, self))
         if self.reel_loop:
             self.sfx.loop(self.reel_loop, False)
             self.reel_loop = None
@@ -531,6 +556,8 @@ class FishingScene(Scene):
                            touch_lead=load_json("mobile_config.json")["touch_lead_sec"] if self.touch else 0.0)
         if self.touch:
             self.fight.input_latency = load_json("mobile_config.json")["pump_latency_sec"]
+        from src.save.quests import QuestRun
+        self.quest_run = QuestRun(self.save, self.fight, fish["id"], self.spot_id, self.weather, self.clock.period()[0])
         if muts:
             kinds = mutation.cfg()["kinds"]
             col = tuple(kinds[muts[0]]["color"])
@@ -831,6 +858,10 @@ class FishingScene(Scene):
             self._on_fight_event(ev)
         f.events.clear()
         self.sfx.boost = 1
+        qr = getattr(self, "quest_run", None)
+        if qr is not None and f.phase == "fight":
+            qr.update(f)
+            self._quest_events(qr)
         if f.phase != "fight":
             return
         # 처음으로 느슨/빨간 구간에 머물면 설명
@@ -1257,6 +1288,9 @@ class FishingScene(Scene):
     def _on_fight_event(self, ev: str) -> None:
         f = self.fight
         x, z = f.fish_xz()
+        qr = getattr(self, "quest_run", None)
+        if qr is not None:
+            qr.on_event(ev)
         if ev in tut.CARDS and self.card is None and self.tutorial.want(ev):
             self._open_card(ev, None if ev == "net_start" else "fish")
         elif ev == "hazard_enter":
@@ -1426,6 +1460,12 @@ class FishingScene(Scene):
             self.catch_news["chest"] = self.chest_drop
             if muts:
                 self._record_mutation(f, muts)
+            qr = getattr(self, "quest_run", None)
+            if qr is not None:
+                qr.on_caught(f, f.result)
+                self._quest_events(qr)
+            from src.save.quests import title_name
+            self.catch_news["title"] = title_name(self.save)
             if (self.save.charm_on("twin_hook") and f.fish["rarity"] != "legend" and random.random() < 0.05):
                 # 쌍둥이 바늘: 같은 물고기 한 마리 더 (판매·소재용, 도감·랭크 기록 없음)
                 self.save.data["keepnet"].append(dict(self.save.data["keepnet"][-1], twin=True))
@@ -1556,7 +1596,10 @@ class FishingScene(Scene):
             self.reeds.draw(canvas, rpal, t, wind={"clear": 1.0, "rain": 1.4, "storm": 2.2, "fog": 0.6}[weather])
         else:
             world.FOREGROUND[fg](canvas, pal, t)
-        draw_rod(canvas, pal, geo, c.reel_angle)
+        from src.save.quests import skin_colors
+        skin = skin_colors(self.save, "rod_skin")
+        rod_pal = dict(pal, rod=skin[0], rod_hi=skin[1], reel=skin[2]) if skin else pal  # 낚싯대 외형
+        draw_rod(canvas, rod_pal, geo, c.reel_angle)
 
         if hanging:
             bx, by = rod_tip_drop(tip, t)
@@ -1776,6 +1819,9 @@ class FishingScene(Scene):
         fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
         fight_hud.draw_boss_bar(canvas, pal, f)
         pattern_fx.draw_pattern_panel(canvas, f, self.touch, t)
+        qr = getattr(self, "quest_run", None)
+        if qr is not None and qr.items:
+            fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)
         if self.touch:
             # 드랙·소모품·조작 안내는 터치 버튼이 대신한다
             fight_hud.draw_distance(canvas, pal, f, self.hud_inset)
@@ -1825,6 +1871,10 @@ class FishingScene(Scene):
         fl = self._equipped_float()
         if fl is not None:
             out = dict(out, bobber=tuple(fl["color"]))
+        from src.save.quests import skin_colors
+        skin = skin_colors(self.save, "float_skin")
+        if skin:
+            out = dict(out, bobber=skin[0], bobber_base=skin[1])  # 의뢰 상점 찌 외형
         if self.save.cosmetic_on("sparkle_float"):
             glint = 0.5 + 0.5 * math.sin(self.t * 6)
             out = dict(out, bobber=lerp_color((255, 196, 60), (255, 250, 200), glint * 0.5))
