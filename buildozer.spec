@@ -31,7 +31,8 @@ android.api = 35
 android.minapi = 24
 android.ndk = 28c
 android.accept_sdk_license = True
-android.archs = arm64-v8a, armeabi-v7a
+# armeabi-v7a(32비트 옛 폰)는 뺐다: p4a가 두 번째 아키텍처에서 pip venv를 재사용하다 깨짐 (2017년 이후 폰은 거의 64비트)
+android.archs = arm64-v8a
 android.allow_backup = True
 p4a.bootstrap = sdl2
 # pygame 2.6.1 로컬 레시피 (기본 2.1.0은 Python 3.14에서 빌드 실패)

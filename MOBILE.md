@@ -230,7 +230,7 @@ DESIGN.md 모바일 섹션 기준으로 Phase M5 구현해줘.
    - data/ JSON, 폰트 등 필요한 파일 확장자 포함
    - 가로 화면 고정, 진동 권한, 화면 꺼짐 방지 권한
    - 앱 아이콘(기존 물고기 아이콘을 안드로이드 규격으로 변환), 스플래시 화면
-   - 지원 아키텍처: arm64-v8a, armeabi-v7a
+   - 지원 아키텍처: arm64-v8a, armeabi-v7a (→ 실제 빌드는 arm64-v8a만, DESIGN.md 26-13)
 3. build_android.sh 스크립트 (WSL에서 실행, 결과 APK를 프로젝트 dist/android/에 복사)
 4. 디버그 APK 빌드 실행
 5. USB로 연결된 기기에 설치하는 방법(adb install)과 크래시 로그 보는 방법(adb logcat 필터)도 알려줘

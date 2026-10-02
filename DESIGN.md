@@ -1290,7 +1290,7 @@ M3·M4는 서로 기대므로 실제로는 **M4(미리보기)의 뼈대를 M3 �
 
 | 파일 | 내용 |
 |---|---|
-| `buildozer.spec` | buildozer 1.6.0 / p4a 2026.5.9 기준. 이름 '낚시 게임', `com.sinsiu.fishingplanet` 1.0.0, requirements `python3,pygame,numpy,pyjnius,android` (p4a에 pygame-ce 레시피가 없어 pygame. p4a 기본 레시피 2.1.0은 p4a의 Python 3.14에서 미리 생성된 Cython C가 컴파일되지 않아 `android/recipes/pygame` 로컬 레시피로 **2.6.1** + 최신 Cython(3.1~3.2)으로 다시 생성. 게임은 pygame 2.1.3·2.6.1 둘 다에서 테스트 통과), sdl2 부트스트랩, 가로 고정(뒤집기 허용), 전체 화면, 권한 VIBRATE·WAKE_LOCK, api 35 / minapi 24 / NDK 28c, arm64-v8a·armeabi-v7a, 포함 확장자 py·json·ttf·txt·png·ogg·wav·mp3, tools·build·dist 등 제외 |
+| `buildozer.spec` | buildozer 1.6.0 / p4a 2026.5.9 기준. 이름 '낚시 게임', `com.sinsiu.fishingplanet` 1.0.0, requirements `python3,pygame,numpy,pyjnius,android` (p4a에 pygame-ce 레시피가 없어 pygame. p4a 기본 레시피 2.1.0은 p4a의 Python 3.14에서 미리 생성된 Cython C가 컴파일되지 않아 `android/recipes/pygame` 로컬 레시피로 **2.6.1** + 최신 Cython(3.1~3.2)으로 다시 생성. 게임은 pygame 2.1.3·2.6.1 둘 다에서 테스트 통과), sdl2 부트스트랩, 가로 고정(뒤집기 허용), 전체 화면, 권한 VIBRATE·WAKE_LOCK, api 35 / minapi 24 / NDK 28c, **arm64-v8a만** (armeabi-v7a를 같이 넣으면 p4a가 두 번째 아키텍처에서 pip venv를 재사용하다 깨짐 — 2017년 이후 폰은 거의 64비트), 포함 확장자 py·json·ttf·txt·png·ogg·wav·mp3, tools·build·dist 등 제외 |
 | `tools/make_android_assets.py` | `android/icon.png`(512, PC 아이콘과 같은 그림) · `android/presplash.png`(1280×720) 생성 |
 | `build_android.sh` | WSL용. `./build_android.sh deps` = 우분투 패키지 설치(sudo), `./build_android.sh` = 전용 venv(~/.fishing-buildozer)에 buildozer → 아이콘 → `buildozer android debug` → `dist/android/`에 복사. /mnt/c 아래에서 돌리면 느리다고 경고 |
 | `.github/workflows/build.yml` | push(claude/**, main)·수동 실행 때 **윈도우 exe**(build.bat과 같은 PyInstaller 옵션 + 화면 없이 120프레임 실행)와 **디버그 APK**를 빌드해 Artifacts로 올림 (WSL 없이 받기) |
@@ -1638,8 +1638,9 @@ PC 리플레이(샤르미온·엘드라시온) U7과 프레임 해시 동일, �
    (빙하가오리 물기 20, 유빙넙치 몸부림 20). 위 표처럼 샤르미온 수준(0.35~0.5)으로. 동시 2개 유지 확인.
    반영 후 실제 데이터로 다시 측정: 습지 0.46 / 동굴 0.37 / 부유섬 0.35 / 화산 0.48 / 빙해 0.34 / 세계수 0.81, 동시 최대 2.
    바뀐 19종 성공률·시간(24회): 변화 없음(±1마리 수준).
-2. (선택) 완주 시간: 전부 켜면 평균 30 → 23시간. 원래 목표(약 20시간)보다 길어서 **그대로 두는 것을 권장**.
-   30시간대를 지키고 싶으면 의뢰 골드 ×0.7 + 황금 변이 판매 ×5 → ×4 정도.
+2. ✅ **반영 (사용자: '조금씩만 줄여')** — 완주 시간: 전부 켜면 평균 30 → 23시간이던 것을 살짝 늘림.
+   의뢰 골드 `2 + 0.6×⭐` → `1.7 + 0.5×⭐` (약 −15%), 황금 변이 판매가 ×5 → ×4.5.
+   결과(16시드): 평균 **25.6시간**(23.2 → 25.6, 변이 몫 6.6%, 의뢰 몫 3.5%), 숙련 **18.4시간**(17.3 → 18.4).
 
 ---
 
