@@ -52,3 +52,20 @@ AI 작곡용 프롬프트와 파일 이름은 [MUSIC_PROMPTS.md](MUSIC_PROMPTS.m
 - "Windows의 PC 보호" 창이 뜨면 **[추가 정보] → [실행]** (코드 서명이 없는 개인 제작 exe라 뜨는 정상 경고).
 - 백신이 막으면 예외 등록하거나 VirusTotal로 확인. (onedir 방식이라 onefile보다 오탐이 적습니다)
 - 실행이 안 되면 `내 문서\FishingPlanet\crash.log` 내용을 확인하세요.
+
+## 안드로이드 APK 빌드
+
+**방법 1 — GitHub에서 받기 (설치 없음)**: 저장소 Actions → `build` 실행 → 맨 아래 Artifacts의 `FishingGame-android`
+(디버그 APK)와 `FishingGame-windows`(exe 폴더). 브랜치에 push하면 자동으로 돌고, Actions 화면의 "Run workflow"로도 실행.
+
+**방법 2 — WSL2 우분투에서 직접**: 프로젝트를 WSL 홈(예: `~/fishingplanet`)에 두고
+```
+./build_android.sh deps   # 처음 한 번: 자바·빌드 도구 설치 (sudo 암호)
+./build_android.sh        # 디버그 APK → dist/android/
+```
+첫 빌드는 SDK·NDK 내려받기로 30분~1시간 걸립니다.
+
+**폰에 설치**: 폰 설정에서 개발자 옵션 → USB 디버깅 켜고 연결 →
+`adb install -r dist/android/<파일>.apk` (또는 APK 파일을 폰에 복사해 열기 — '출처를 알 수 없는 앱' 허용).
+튕기면 `adb logcat -s python:D SDL:D AndroidRuntime:E` 로 에러를 볼 수 있습니다.
+
