@@ -320,7 +320,14 @@ class FishBrain:
         return max(self.cfg["min_telegraph_sec"], self.telegraph_sec * self.cfg["chain_telegraph_mult"])
 
     def pattern_telegraph(self, action: str) -> float:
-        """신규 패턴 예고 길이: 물고기 예고 × 배율, 최소 0.4초, 모바일은 조금 더."""
+        """신규 패턴 예고 길이: 물고기 예고 × 배율, 최소 0.4초, 모바일은 조금 더.
+        이중 패턴은 두 예고가 시차(dual_stagger_sec)를 두고 차례로 뜨니 그만큼 길게 (31장 C3)."""
+        t = self._pattern_telegraph(action)
+        if action == "dual":
+            t += load_json("signals.json")["dual_stagger_sec"]
+        return t
+
+    def _pattern_telegraph(self, action: str) -> float:
         pc = self.pcfg
         if action == "chain":
             base = pc["chain"]["telegraph_sec"]

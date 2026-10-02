@@ -1,35 +1,192 @@
 {
-  "_설명": "파이팅 가독성 (DESIGN.md 31장, FIGHT_CLARITY.md). 신호 사전 = 대응 6계열. actions: 행동/패턴 → 계열·부하. budget_3s: 3초 동안 부하 합계 예산 (낚시터별, 전설은 +legend_extra). rest: 패턴 사이 최소 휴식. C2에선 파이팅 로그·분석만 이 값을 쓰고, 색·아이콘·소리(C3)와 시간 규칙(C4)이 뒤에 붙는다.",
-  "families": {
-    "release": {"name": "풀기"},
-    "reel": {"name": "감기"},
-    "timing": {"name": "타이밍"},
-    "direction": {"name": "방향"},
-    "endure": {"name": "참기"},
-    "gesture": {"name": "제스처"}
+ "_설명": "파이팅 가독성 (DESIGN.md 31장, FIGHT_CLARITY.md). 신호 사전 = 대응 6계열. families: 계열마다 색·아이콘 모양·소리·진동·손(L 왼손 슬롯 / R 오른손 슬롯) — 같은 계열이면 같은 신호. actions: 행동/패턴 → 계열·부하(+ 입력하는 손이 계열과 다르면 hand로 덮어씀: 펌핑·몸털기는 릴 패드·마우스로 하니 R). 숨기는 1단계(풀어 주기) = 풀기 L, 고개를 내밀면(2단계) = 감기 R. budget_3s: 3초 부하 예산(낚시터별, 전설 +legend_extra). rest: 패턴 사이 최소 휴식. slots: 화면 위치(PC는 가운데 조준점 좌우, 모바일은 각 손 쪽). dual_stagger_sec: 이중 패턴 두 예고의 시차.",
+ "families": {
+  "release": {
+   "name": "풀기",
+   "color": [
+    90,
+    160,
+    255
+   ],
+   "icon": "release",
+   "sound": "sig_release",
+   "haptic": "sig_release",
+   "hand": "L"
   },
-  "actions": {
-    "rush": {"family": "release", "load": 1},
-    "bite": {"family": "release", "load": 1},
-    "hide": {"family": "release", "load": 2},
-    "charge": {"family": "reel", "load": 1},
-    "reverse": {"family": "reel", "load": 2},
-    "jump": {"family": "timing", "load": 2},
-    "leap": {"family": "timing", "load": 2},
-    "thrash": {"family": "timing", "load": 3},
-    "pump": {"family": "timing", "load": 3},
-    "turn": {"family": "direction", "load": 1},
-    "dive": {"family": "direction", "load": 1},
-    "surface": {"family": "direction", "load": 1},
-    "shake": {"family": "endure", "load": 1},
-    "twist": {"family": "gesture", "load": 3},
-    "chain": {"family": "combo", "load": 4},
-    "fake_tired": {"family": "fake", "load": 1},
-    "lure": {"family": "fake", "load": 1}
+  "reel": {
+   "name": "감기",
+   "color": [
+    110,
+    230,
+    130
+   ],
+   "icon": "reel",
+   "sound": "sig_reel",
+   "haptic": "sig_reel",
+   "hand": "R"
   },
-  "budget_3s": {"reservoir": 2, "valley": 2, "breakwater": 2, "offshore": 3, "deep": 3, "secret": 3,
-                "marsh": 4, "crystal_cave": 4, "sky_falls": 4, "volcano": 4, "ice_sea": 4, "world_tree": 5},
-  "legend_extra": 1,
-  "rest": {"min_sec": 1.5, "after_heavy_sec": 2.5, "heavy_load": 3},
-  "rest_states": ["idle", "recover", "tired", "exhausted", "stiff"]
+  "timing": {
+   "name": "타이밍",
+   "color": [
+    255,
+    214,
+    90
+   ],
+   "icon": "ring",
+   "sound": "sig_timing",
+   "haptic": "sig_timing",
+   "hand": "L"
+  },
+  "direction": {
+   "name": "방향",
+   "color": [
+    240,
+    244,
+    252
+   ],
+   "icon": "arrow",
+   "sound": "sig_direction",
+   "haptic": "sig_direction",
+   "hand": "R"
+  },
+  "endure": {
+   "name": "참기",
+   "color": [
+    165,
+    170,
+    186
+   ],
+   "icon": "hand",
+   "sound": "sig_endure",
+   "haptic": "sig_endure",
+   "hand": "R"
+  },
+  "gesture": {
+   "name": "제스처",
+   "color": [
+    190,
+    130,
+    255
+   ],
+   "icon": "spin",
+   "sound": "sig_gesture",
+   "haptic": "sig_gesture",
+   "hand": "R"
+  }
+ },
+ "actions": {
+  "rush": {
+   "family": "release",
+   "load": 1
+  },
+  "bite": {
+   "family": "release",
+   "load": 1
+  },
+  "hide": {
+   "family": "release",
+   "load": 2
+  },
+  "charge": {
+   "family": "reel",
+   "load": 1
+  },
+  "reverse": {
+   "family": "reel",
+   "load": 2
+  },
+  "jump": {
+   "family": "timing",
+   "load": 2
+  },
+  "leap": {
+   "family": "timing",
+   "load": 2,
+   "hand": "R"
+  },
+  "thrash": {
+   "family": "timing",
+   "load": 3
+  },
+  "pump": {
+   "family": "timing",
+   "load": 3,
+   "hand": "R"
+  },
+  "turn": {
+   "family": "direction",
+   "load": 1
+  },
+  "dive": {
+   "family": "direction",
+   "load": 1
+  },
+  "surface": {
+   "family": "direction",
+   "load": 1
+  },
+  "shake": {
+   "family": "endure",
+   "load": 1
+  },
+  "twist": {
+   "family": "gesture",
+   "load": 3
+  },
+  "chain": {
+   "family": "combo",
+   "load": 4
+  },
+  "fake_tired": {
+   "family": "fake",
+   "load": 1
+  },
+  "lure": {
+   "family": "fake",
+   "load": 1
+  },
+  "tired": {
+   "family": "reel",
+   "load": 1
+  }
+ },
+ "budget_3s": {
+  "reservoir": 2,
+  "valley": 2,
+  "breakwater": 2,
+  "offshore": 3,
+  "deep": 3,
+  "secret": 3,
+  "marsh": 4,
+  "crystal_cave": 4,
+  "sky_falls": 4,
+  "volcano": 4,
+  "ice_sea": 4,
+  "world_tree": 5
+ },
+ "legend_extra": 1,
+ "rest": {
+  "min_sec": 1.5,
+  "after_heavy_sec": 2.5,
+  "heavy_load": 3
+ },
+ "rest_states": [
+  "idle",
+  "recover",
+  "tired",
+  "exhausted",
+  "stiff"
+ ],
+ "slots": {
+  "pc_dx": 62,
+  "pc_y": 0.66,
+  "touch_x": [
+   0.3,
+   0.7
+  ],
+  "touch_y": 0.6,
+  "size": 40,
+  "ring_spread": 30
+ },
+ "dual_stagger_sec": 0.5
 }

@@ -28,7 +28,6 @@ os.environ["FISHING_SAVE_DIR"] = SAVE
 import random  # noqa: E402
 
 random.seed(4)
-import pygame  # noqa: E402
 
 from src.save.save_game import SaveGame, all_fish  # noqa: E402
 from src.save.settings import Settings  # noqa: E402

@@ -6,7 +6,7 @@ import pygame
 
 from src.core.fonts import get_font
 from src.core.mathutil import clamp, lerp, lerp_color
-from src.ui.hud import SHADOW, text
+from src.ui.hud import SHADOW
 
 GOLD = (255, 214, 90)
 GREAT_COL = (130, 255, 180)
@@ -28,16 +28,17 @@ RING_SPREAD = 58     # 예고 시작 시 접근 원이 판정 원보다 얼마�
 # ───────────────────────── 점프 판정 원 ─────────────────────────
 
 def draw_jump_ring(canvas, center, time_to_apex: float, total: float, perfect_w: float, good_w: float,
-                   t: float) -> None:
+                   t: float, spread: float | None = None) -> None:
     """바깥 원이 줄어들어 판정 원과 겹치는 순간 = 점프 정점 = 퍼펙트."""
+    sp = spread or RING_SPREAD  # 신호 슬롯 안에선 작게 (31장 C3)
     if center is None or total <= 0:
         return
     cx, cy = int(center[0]), int(center[1])
-    k = RING_SPREAD / total          # 초당 줄어드는 픽셀
+    k = sp / total          # 초당 줄어드는 픽셀
     r_approach = RING_R + time_to_apex * k
     if r_approach < RING_R - good_w * k - 2:
         return
-    size = (RING_R + RING_SPREAD + 8) * 2
+    size = (RING_R + sp + 8) * 2
     surf = pygame.Surface((size, size), pygame.SRCALPHA)
     o = size // 2
     # GREAT 구간 (옅은 띠)
@@ -57,86 +58,13 @@ def draw_jump_ring(canvas, center, time_to_apex: float, total: float, perfect_w:
     # 접근 원
     if r_approach > 1:
         col = (255, 255, 255) if not in_good else (GOLD if in_perfect else GREAT_COL)
-        alpha = int(clamp(255 * (1.2 - (r_approach - RING_R) / RING_SPREAD), 90, 255))
+        alpha = int(clamp(255 * (1.2 - (r_approach - RING_R) / sp), 90, 255))
         pygame.draw.circle(surf, (*SHADOW, alpha // 2), (o + 1, o + 1), int(r_approach), 2)
         pygame.draw.circle(surf, (*col, alpha), (o, o), int(r_approach), 2)
     canvas.blit(surf, (cx - o, cy - o))
 
 
 # ───────────────────────── 행동 아이콘 ─────────────────────────
-
-def draw_behavior_icon(canvas, pos, kind: str, progress: float, turn_dir: int, t: float) -> None:
-    """물고기 머리 위 배지: 무엇을 할지 + 예고 남은 시간(테두리 원호)."""
-    if pos is None:
-        return
-    x, y = int(pos[0]), int(pos[1] - 20)
-    col = ICON_COL[kind]
-    pop = 1.0 + 0.4 * max(0.0, 1 - progress / 0.15) if progress < 0.15 else 1.0
-    r = int(9 * pop)
-    pygame.draw.circle(canvas, SHADOW, (x + 1, y + 1), r + 1)
-    pygame.draw.circle(canvas, (24, 28, 46), (x, y), r)
-    # 남은 예고 시간: 원호가 줄어든다
-    if kind != "tired":
-        remain = 1 - progress
-        if remain > 0.02:
-            rect = pygame.Rect(0, 0, (r + 2) * 2, (r + 2) * 2)
-            rect.center = (x, y)
-            pygame.draw.arc(canvas, col, rect, math.pi / 2, math.pi / 2 + math.tau * remain, 2)
-    else:
-        pygame.draw.circle(canvas, col, (x, y), r + 1, 1)
-    # 아이콘
-    if kind == "rush":
-        for dy in (-2, 3):
-            pygame.draw.lines(canvas, col, False, [(x - 4, y + dy + 2), (x, y + dy - 2), (x + 4, y + dy + 2)], 2)
-    elif kind == "jump":
-        pygame.draw.line(canvas, col, (x, y + 5), (x, y - 4), 2)
-        pygame.draw.lines(canvas, col, False, [(x - 4, y), (x, y - 5), (x + 4, y)], 2)
-    elif kind == "turn":
-        d = turn_dir or 1
-        pygame.draw.line(canvas, col, (x - 5 * d, y), (x + 4 * d, y), 2)
-        pygame.draw.lines(canvas, col, False, [(x + 1 * d, y - 4), (x + 5 * d, y), (x + 1 * d, y + 4)], 2)
-    elif kind == "charge":
-        canvas.fill(col, (x - 4, y - 4, 3, 8))
-        canvas.fill(col, (x + 1, y - 4, 3, 8))
-    elif kind == "shake":  # 지그재그 떨림
-        pygame.draw.lines(canvas, col, False, [(x - 5, y), (x - 3, y - 3), (x - 1, y + 3), (x + 1, y - 3),
-                                               (x + 3, y + 3), (x + 5, y)], 1)
-    elif kind == "dive":  # 아래 화살표
-        pygame.draw.line(canvas, col, (x, y - 5), (x, y + 4), 2)
-        pygame.draw.lines(canvas, col, False, [(x - 4, y), (x, y + 5), (x + 4, y)], 2)
-    elif kind == "surface":  # 물결 위 화살표
-        pygame.draw.lines(canvas, col, False, [(x - 5, y + 4), (x - 2, y + 2), (x + 1, y + 4), (x + 4, y + 2)], 1)
-        pygame.draw.lines(canvas, col, False, [(x - 4, y - 1), (x, y - 5), (x + 4, y - 1)], 2)
-    elif kind == "reverse":  # 다가오는 원 (커지는 고리)
-        pygame.draw.circle(canvas, col, (x, y), 2)
-        pygame.draw.circle(canvas, col, (x, y), 5, 1)
-    elif kind == "twist":  # 나선
-        pts = [(x + math.cos(a * 0.5) * a * 0.45, y + math.sin(a * 0.5) * a * 0.45) for a in range(0, 13)]
-        pygame.draw.lines(canvas, col, False, pts, 1)
-    elif kind == "chain":
-        from src.ui import icons
-        icons.pips(canvas, x, y, 3, col, 4)
-    elif kind == "hide":  # 바위 + 아래로 파고듦
-        pygame.draw.polygon(canvas, col, [(x - 5, y + 4), (x - 2, y - 3), (x + 3, y - 4), (x + 5, y + 4)], 1)
-        canvas.fill(col, (x - 1, y, 2, 3))
-    elif kind == "pump":  # 북 박자: 점 두 개
-        pygame.draw.circle(canvas, col, (x - 3, y), 2)
-        pygame.draw.circle(canvas, col, (x + 3, y), 2)
-    elif kind == "thrash":  # 위 화살표 두 개
-        for dy in (-1, 4):
-            pygame.draw.lines(canvas, col, False, [(x - 4, y + dy), (x, y + dy - 4), (x + 4, y + dy)], 2)
-    elif kind == "bite":  # 송곳니 두 개 (위아래)
-        pygame.draw.polygon(canvas, col, [(x - 5, y - 4), (x - 1, y - 4), (x - 3, y + 1)])
-        pygame.draw.polygon(canvas, col, [(x + 1, y + 4), (x + 5, y + 4), (x + 3, y - 1)])
-    elif kind == "dual":
-        from src.ui import icons
-        icons.pips(canvas, x, y, 2, col, 5)
-    elif kind == "tired":
-        canvas.fill(col, (x - 1, y - 5, 3, 7))
-        canvas.fill(col, (x - 1, y + 3, 3, 2))
-        if int(t * 3) % 2 == 0:
-            pygame.draw.circle(canvas, col, (x, y), r + 3, 1)  # 기회: 글자 대신 깜빡이는 고리
-
 
 # ───────────────────────── 판정 텍스트 ─────────────────────────
 
@@ -272,25 +200,6 @@ def draw_tired_ring(canvas, pos, scale: float, t: float) -> None:
     pygame.draw.ellipse(canvas, col, (pos[0] - r, pos[1] - r * 0.3, r * 2, r * 0.6), 1)
 
 
-def draw_turn_chevrons(canvas, pos, direction: int, amount: float, t: float) -> None:
-    """방향 전환: 물고기 옆에 진행 방향으로 흐르는 화살표 (>>>)."""
-    if pos is None or not direction:
-        return
-    x0, y0 = pos
-    for i in range(3):
-        off = (t * 2.5 + i / 3) % 1.0
-        x = x0 + direction * (14 + off * 34)
-        a = amount * (1 - abs(off - 0.5) * 1.4)
-        if a <= 0.05:
-            continue
-        col = lerp_color((60, 50, 20), ICON_COL["turn"], a)
-        pts = [(x - direction * 4, y0 - 6), (x + direction * 2, y0), (x - direction * 4, y0 + 6)]
-        pygame.draw.lines(canvas, SHADOW, False, [(p[0] + 1, p[1] + 1) for p in pts], 2)
-        pygame.draw.lines(canvas, col, False, pts, 2)
-
-
-# ───────────────────────── 슬라이드 (꺾기 · 몸털기) ─────────────────────────
-
 def _arrow(canvas, cx: float, cy: float, direction: int, length: float, color, width: int = 3) -> None:
     x0, x1 = cx - direction * length / 2, cx + direction * length / 2
     pygame.draw.line(canvas, SHADOW, (x0 + 1, cy + 1), (x1 + 1, cy + 1), width + 1)
@@ -301,44 +210,18 @@ def _arrow(canvas, cx: float, cy: float, direction: int, length: float, color, w
         pygame.draw.line(canvas, color, (x1, cy), (x1 - direction * head, cy + sgn * head * 0.7), width)
 
 
-def draw_turn_prompt(canvas, pos, need: int, offset: float, before: float, after: float, perfect: float,
-                     t: float) -> None:
-    """방향 전환 꺾기: 물고기 옆 큰 화살표 + 타이밍 막대 (가운데 = 전환 순간 = PERFECT)."""
-    if pos is None:
-        return
-    x, y = pos
-    in_perfect = abs(offset) <= perfect
-    in_window = -before <= offset <= after
-    col = GOLD if in_perfect else (SWIPE if in_window else (200, 210, 220))
-    pulse = 1.0 + (0.25 * math.sin(t * 30) if in_window else 0.0)
-    _arrow(canvas, x + need * 34, y - 10, need, 30 * pulse, col, 3)
-    # 타이밍 막대
-    bw = 70
-    bx, by = x + need * 34 - bw // 2, y + 6
-    canvas.fill(SHADOW, (bx - 1, by - 1, bw + 2, 7))
-    canvas.fill((30, 36, 56), (bx, by, bw, 5))
-    span = before + after
-    zero = bx + bw * before / span
-    pz = bw * perfect / span
-    canvas.fill((70, 140, 150), (bx + int(bw * 0 / span), by, int(bw * (before + after) / span), 5))
-    canvas.fill((60, 70, 90), (bx, by, int(zero - bx - pz), 5))
-    canvas.fill(GOLD, (int(zero - pz), by, max(2, int(pz * 2)), 5))
-    k = clamp((offset + before) / span, -0.4, 1.0)
-    mx = bx + bw * k
-    canvas.fill((255, 255, 255), (int(mx) - 1, by - 3, 3, 11))
-
-
 def draw_swipe_ring(canvas, center, time_to_apex: float, total: float, perfect_w: float, good_w: float,
-                    need: int, t: float) -> None:
+                    need: int, t: float, spread: float | None = None) -> None:
     """몸털기 점프: 하늘색 판정 원 + 안쪽 화살표. 원이 겹치는 순간 화살표 방향으로 슬라이드."""
+    sp = spread or RING_SPREAD  # 신호 슬롯 안에선 작게 (31장 C3)
     if center is None or total <= 0:
         return
     cx, cy = int(center[0]), int(center[1])
-    k = RING_SPREAD / total
+    k = sp / total
     r_approach = RING_R + time_to_apex * k
     if r_approach < RING_R - good_w * k - 2:
         return
-    size = (RING_R + RING_SPREAD + 8) * 2
+    size = (RING_R + sp + 8) * 2
     surf = pygame.Surface((size, size), pygame.SRCALPHA)
     o = size // 2
     good_out = int(RING_R + good_w * k)

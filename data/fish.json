@@ -5983,7 +5983,7 @@
    "dual_pairs": [
     [
      "dive",
-     "twist"
+     "bite"
     ],
     [
      "shake",
@@ -6121,7 +6121,7 @@
    "dual_pairs": [
     [
      "surface",
-     "twist"
+     "bite"
     ]
    ]
   },
@@ -6193,8 +6193,8 @@
    "hint10": "모든 행동 20%씩.",
    "dual_pairs": [
     [
-     "pump",
-     "twist"
+     "twist",
+     "hide"
     ]
    ]
   },

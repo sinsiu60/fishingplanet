@@ -25,7 +25,7 @@ from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
 from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
 from src.scene.base import Scene
-from src.ui import fight_fx, fight_hud, hud, pattern_fx, pattern_guide
+from src.ui import fight_fx, fight_hud, hud, pattern_fx, signal_slots
 from src.ui import tutorial as tut
 
 
@@ -73,9 +73,6 @@ CAPTIONS = {"telegraph:rush": "쏴아 — 물보라 (돌진)", "telegraph:jump":
             "telegraph:hide": "쿵 — 바위 틈 (숨기)", "telegraph:pump": "둥 둥 — 북 박자 (펌핑)",
             "telegraph:thrash": "보글보글보글 — 큰 기포 (공중 몸부림)", "telegraph:bite": "딱 — 이빨 (물어뜯기)",
             "telegraph:dual": "두 소리가 겹친다 — 이중 패턴", "hide_peek": "뽀글 — 고개를 내밀었다 (지금 감기)"}
-PATTERN_CUES = {"shake": "cue_shake", "dive": "cue_dive", "surface": "cue_surface", "reverse": "cue_reverse",
-                "twist": "cue_twist", "chain": "cue_combo",
-                "hide": "cue_hide", "pump": "cue_drum", "thrash": "bubbles", "bite": "cue_bite", "dual": None}
 FORCE_PATTERNS = ("shake", "dive", "surface", "reverse", "twist", "chain", "hide", "pump", "thrash", "bite", "fake", "dual")
 PATTERN_EVENTS = ("twist_snap", "twist_turn", "combo_break", "combo_ok", "pump_hit", "pump_miss", "hide_peek",
                   "double_perfect", "thrash_second_miss", "stiff", "dual_ok", "fake_tired")
@@ -577,7 +574,6 @@ class FishingScene(Scene):
         if muts:
             kinds = mutation.cfg()["kinds"]
             col = tuple(kinds[muts[0]]["color"])
-            desc = " · ".join(kinds[m]["short"] for m in muts)
             self.toasts.show(f"{kinds[muts[0]]['name']} 변이", col, 3.2, 11)
             self.sfx.play("chord_rare", 0.6)
             self.sparkles.burst(*self._fish_screen(), count=16, speed=0.9)
@@ -1241,9 +1237,7 @@ class FishingScene(Scene):
 
     def _use_fight_item(self, item_id: str) -> None:
         """파이팅 중 소모품 (1: 수리용 실타래 / 2: 잔잔한 물 부적), 파이팅당 1개."""
-        from src.save.treasure import item_info
         f = self.fight
-        name = item_info(item_id)["name"]
         if self.save.consumable_count(item_id) <= 0:
             self.toasts.show("없음!", BAD, 1.2, 11)
         elif f.consumable_used:
@@ -1251,7 +1245,6 @@ class FishingScene(Scene):
         elif f.use_consumable(item_id):
             self.save.use_consumable(item_id)
             self.sfx.play("great", 0.6)
-            msg = "줄 내구도 +20%" if item_id == "repair_spool" else "줄 걸림이 느려졌다 (이번 파이팅)"
             self.toasts.show("사용!", GOOD, 1.8, 11)
             self.sparkles.burst(*self._fish_screen(), count=10, speed=0.7, ring=False)
 
@@ -1308,16 +1301,10 @@ class FishingScene(Scene):
         if ev == "fake_tired":
             kind, pid = "telegraph", "fake"  # 가짜 지침은 예고 없이 상태가 곧 신호 — 첫 만남 안내만
         if kind == "telegraph":
-            if pid == "dual":
-                for a in f.brain.dual_pair or ():
-                    self.sfx.play(PATTERN_CUES[a] or "bubbles", 0.8)
-            elif PATTERN_CUES.get(pid):
-                self.sfx.play(PATTERN_CUES[pid], 0.9)
+            # 신호 소리·진동은 계열별로 _signal_cue 가 낸다 (31장 C3). 여기선 물고기 몸짓 소리·연출만.
             if pid == "thrash":
                 self.sfx.play("splash_small", 0.6)
-            if pid in ("shake", "reverse"):
-                self.game.haptics.vibrate(pid)
-            elif pid == "bite" and not f.brain.sound_only:
+            if pid == "bite" and not f.brain.sound_only:
                 self.sparkles.burst(*pos, count=6, speed=0.5, ring=False)  # 이빨 반짝
             seen = self.save.data.setdefault("patterns_seen", [])
             card = f"pattern:{pid}"
@@ -1422,9 +1409,26 @@ class FishingScene(Scene):
         p = self.cam.project(x, z, h)
         return (p[0], p[1]) if p else (self.cam.cx, self.cam.horizon + 20)
 
+    def _signal_cue(self, action: str) -> None:
+        """신호 사전: 같은 대응 계열 = 같은 소리·진동 (가짜 예고·콤보 머리는 없음)."""
+        sig = signal_slots.cfg()
+        acts = list(self.fight.brain.dual_pair or ()) if action == "dual" else [action]
+        for a in acts:
+            fam = sig["actions"].get(a, {}).get("family")
+            if fam not in sig["families"]:
+                continue
+            fc = sig["families"][fam]
+            self.sfx.play(fc["sound"], 0.8)
+            self.game.haptics.vibrate(fc["haptic"])
+
     def _on_fight_event(self, ev: str) -> None:
         f = self.fight
         x, z = f.fish_xz()
+        self.sfx.boost = 2 if "clear" in f.mutations and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
+        if ev.startswith("telegraph:"):
+            self._signal_cue(ev.split(":", 1)[1])
+        elif ev in ("action:charge", "tired", "hide_peek"):
+            self._signal_cue("charge")  # 감기 계열 (빈틈·고개 내밂)
         qr = getattr(self, "quest_run", None)
         if qr is not None:
             qr.on_event(ev)
@@ -1449,9 +1453,8 @@ class FishingScene(Scene):
         clear = "clear" in f.mutations
         if ev in CAPTIONS and (self.settings.get("sound_captions") or clear):
             self.captions = [CAPTIONS[ev], 1.2]  # 투명 변이: 소리 자막 강제
-        self.sfx.boost = 2 if clear and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
         kind, _, pid = ev.partition(":")
-        if pid in PATTERN_CUES or kind in ("pattern_ok", "pattern_fail", "pattern_neutral", "twist_step", "pump_beat") or \
+        if pid in FORCE_PATTERNS or kind in ("pattern_ok", "pattern_fail", "pattern_neutral", "twist_step", "pump_beat") or \
                 ev in PATTERN_EVENTS:
             self._on_pattern_event(ev, kind, pid)
         if ev == "telegraph:lure":
@@ -1966,14 +1969,8 @@ class FishingScene(Scene):
         self.screen_fx.draw_edges(canvas)
         fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
         fight_hud.draw_boss_bar(canvas, pal, f)
-        pattern_fx.draw_pattern_panel(canvas, f, self.touch, t)
         if f.phase == "fight":
-            bite_at = None
-            if self.touch:
-                dn = next((ct for ct in self.game.input.controls if ct.id == "drag_down"), None)
-                if dn is not None:
-                    bite_at = (dn.rect.right + 64, dn.rect.centery - 8)  # 드랙 칸·글자 오른쪽
-            pattern_guide.draw_cue(canvas, f, self.ctl.pitch, self._cue_anchor(canvas), t, self.touch, bite_at)
+            self._draw_signal_slots(canvas)
         qr = getattr(self, "quest_run", None)
         if qr is not None and qr.items:
             fight_hud.draw_quest_icon(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)
@@ -2074,16 +2071,6 @@ class FishingScene(Scene):
         if msg:
             w, h = canvas.get_size()
             hud.text(canvas, msg, (w // 2, h - 30), col, 11, "center")
-
-    def _cue_anchor(self, canvas) -> tuple[int, int]:
-        """조작 방향 표시 자리: 모바일 = 릴 패드 위, PC = 낚싯대 끝 왼쪽 아래 (손이 가는 곳 근처)."""
-        if self.touch:
-            pad = next((ct for ct in self.game.input.controls if ct.id == "pad"), None)
-            if pad is not None:
-                return pad.rect.centerx, pad.rect.top - 34
-        tip = self._rod_geo()["tip"]
-        w, h = canvas.get_size()
-        return int(max(40, min(w - 40, tip[0] - 46))), int(max(110, min(h - 60, tip[1] + 40)))
 
     def _fight_text_mode(self) -> bool:
         """파이팅(뜰채 포함) 중: 글자 예산 1개·6글자 (31장)."""
@@ -2242,73 +2229,15 @@ class FishingScene(Scene):
             pygame.draw.line(canvas, col, (x, y + r + 4), (x, y + r + 16 * prog + 6), 2)
 
     def _draw_behavior_ui(self, canvas) -> None:
-        """물고기 머리 위 행동 아이콘 + 점프 판정 원."""
-        f, b, t = self.fight, self.fight.brain, self.t
+        """대응 신호는 신호 슬롯 두 칸에만 (31장 C3). 여기선 물고기 몸짓 쪽 연출(동굴 천장 반사광)만."""
         self._draw_ceiling_cues(canvas)
-        mapped = self.screen_fx.map(self._fish_screen())
+
+    def _draw_signal_slots(self, canvas) -> None:
+        f, b = self.fight, self.fight.brain
+        dark = "dark" in f.gim.kinds(b)
         inked = self.ink_t > 0 or b.dark
-        sig = b.signal
-        prompt_on = (f.turn_flick is not None and not f.turn_flick["done"] and b.turn_offset() is not None
-                     and b.turn_offset() >= -(self.flick_cfg["turn_before_sec"] + 0.35))
-        if b.sound_only:
-            sig, prompt_on = None, False  # 행동 아이콘·꺾기 프롬프트 없음 (점프 중 판정 원만)
-        elif "dark" in f.gim.kinds(b):
-            sig = None  # 동굴: 아이콘 대신 천장 반사광 (꺾기 타이밍 막대는 유지)
-        if sig == "dual" and b.dual_pair:
-            for i, a in enumerate(b.dual_pair):  # 이중 패턴: 아이콘 두 개 나란히
-                fight_fx.draw_behavior_icon(canvas, (mapped[0] + (i * 2 - 1) * 12, mapped[1]), a, b.signal_progress(), 0, t)
-        elif sig == "rush" or (sig == "turn" and not prompt_on) or sig in PATTERN_CUES:
-            fight_fx.draw_behavior_icon(canvas, mapped, sig, b.signal_progress(), b.turn_dir, t)
-        if not b.sound_only and (sig == "turn" or b.state == "turn"):
-            amount = b.signal_progress() if sig == "turn" else 1.0
-            fight_fx.draw_turn_chevrons(canvas, mapped, b.turn_dir, 0.4 + 0.6 * amount, t)
-        elif b.state == "charge" and not b.sound_only:
-            prog = b.state_t / max(0.01, b.state_t + b.timer)
-            fight_fx.draw_behavior_icon(canvas, mapped, "charge", prog, 0, t)
-        elif b.state in ("tired", "fake_tired", "exhausted"):
-            fight_fx.draw_behavior_icon(canvas, mapped, "tired", 0.0, 0, t)
-        # 방향 전환 꺾기 프롬프트
-        tf, off = f.turn_flick, b.turn_offset()
-        fc = self.flick_cfg
-        if tf and not tf["done"] and off is not None and off >= -(fc["turn_before_sec"] + 0.35) and not b.sound_only:
-            fight_fx.draw_turn_prompt(canvas, mapped, tf["need"], off, fc["turn_before_sec"], fc["turn_after_sec"],
-                                      fc["turn_perfect_sec"], t)
-        # 몸털기 점프: 하늘색 원 + 슬라이드 방향 화살표
-        swiping = b.state == "jump" and b.jump_kind == "swipe" and not b.jump_judged
-        if (sig == "leap" and not inked) or swiping:
-            x, z = f.fish_xz()
-            apex = self.cam.project(x, z, b.jump_height)
-            if apex:
-                total = b.cur_telegraph + b.jump_air / 2
-                fcf = self.fish_cfg["fight"]
-                fight_fx.draw_swipe_ring(canvas, self.screen_fx.map((apex[0], apex[1])), b.time_to_apex(), total,
-                                         fcf["perfect_window_sec"], fcf["good_window_sec"], -b.leap_dir, t)
-        # 점프 판정 원: 바깥 원이 줄어들어 판정 원과 만나는 순간 = 정점
-        # 공중 몸부림: 정점 원 → (판정 뒤) 착수 직전 원
-        thrashing = b.state == "jump" and b.jump_kind == "thrash" and not b.jump_judged
-        if (sig == "thrash" and not inked and not f.pre_judged) or thrashing:
-            x, z = f.fish_xz()
-            second = thrashing and b.thrash_judged[0]
-            h = b.pcfg["thrash"]["height_mult"] * b.jump_height
-            if second:
-                h *= 0.35  # 떨어지는 중 — 원도 수면 가까이
-            pt = self.cam.project(x, z, h)
-            if pt:
-                fc = self.fish_cfg["fight"]
-                tt = b.time_to_second() if second else b.time_to_apex()
-                total = (b.jump_air / 2 - b.pcfg["thrash"]["land_before"] + b.jump_air / 2) if second \
-                    else b.cur_telegraph + b.jump_air / 2
-                fight_fx.draw_jump_ring(canvas, self.screen_fx.map((pt[0], pt[1])), tt, max(0.3, total),
-                                        fc["perfect_window_sec"], fc["good_window_sec"], t)
-        jumping = b.state == "jump" and b.jump_kind == "dip" and not b.jump_judged
-        if (sig == "jump" and not inked and not f.pre_judged) or jumping:
-            x, z = f.fish_xz()
-            apex = self.cam.project(x, z, b.jump_height)
-            if apex:
-                total = b.cur_telegraph + b.jump_air / 2
-                fc = self.fish_cfg["fight"]
-                fight_fx.draw_jump_ring(canvas, self.screen_fx.map((apex[0], apex[1])), b.time_to_apex(), total,
-                                        fc["perfect_window_sec"], fc["good_window_sec"], t)
+        sigs = signal_slots.collect(f, b.sound_only, inked, dark)
+        signal_slots.draw(canvas, f, sigs, self.touch, bool(self.touch and self.settings.get("touch_left")), self.t)
 
     def _draw_line_and_bobber(self, canvas, pal, tip) -> None:
         c, cam = self.cast, self.cam

@@ -748,6 +748,58 @@ def make_double_perfect(rng) -> np.ndarray:
     return out
 
 
+# ── 신호 사전 6계열 (31장 C3): 같은 대응 = 같은 소리 ──
+def make_sig_release(rng) -> np.ndarray:
+    """풀기: 낮게 빠지는 '쉬익' (아래로 미끄러지는 노이즈)."""
+    sec = 0.32
+    n = int(RATE * sec)
+    noise = _lowpass(_noise(sec, rng), 6)
+    tone = np.sin(2 * np.pi * np.cumsum(np.linspace(420, 160, n)) / RATE) * 0.35
+    return (noise * 0.5 + tone) * _env(n, 0.01, 0.16) * 0.8
+
+
+def make_sig_reel(rng) -> np.ndarray:
+    """감기: 높은 '딸깍' 두 번."""
+    out = np.zeros(int(RATE * 0.16))
+    for i in range(2):
+        s = int(RATE * i * 0.07)
+        k = int(RATE * 0.025)
+        click = np.sin(2 * np.pi * 3200 * _t(0.025)) * _env(k, 0.0005, 0.008)
+        out[s:s + k] += click * 0.6
+    return out
+
+
+def make_sig_timing(rng) -> np.ndarray:
+    """타이밍: 맑은 '띵'."""
+    sec = 0.45
+    n = int(RATE * sec)
+    t = _t(sec)
+    return (np.sin(2 * np.pi * 1568 * t) + 0.35 * np.sin(2 * np.pi * 3136 * t)) * _env(n, 0.002, 0.16) * 0.45
+
+
+def make_sig_direction(rng) -> np.ndarray:
+    """방향: 짧고 밝은 '휙'."""
+    w = make_whoosh(rng, 0.2, 1.6)
+    return w / max(1e-6, float(np.abs(w).max())) * 0.6
+
+
+def make_sig_endure(rng) -> np.ndarray:
+    """참기: '타타탁' (줄 떨림)."""
+    return make_cue_shake(rng)
+
+
+def make_sig_gesture(rng) -> np.ndarray:
+    """제스처: 올라가는 '끼릭' 톱니 소리."""
+    out = np.zeros(int(RATE * 0.36))
+    for i in range(5):
+        s = int(RATE * i * 0.06)
+        k = int(RATE * 0.03)
+        f = 900 + i * 180
+        saw = 2 * ((_t(0.03) * f) % 1.0) - 1
+        out[s:s + k] += saw * _env(k, 0.001, 0.012) * 0.3
+    return out
+
+
 def _cache_path(rate: int, channels: int, seed: int):
     """소리 캐시 파일: 이 파일(합성 코드) 내용이 바뀌면 이름이 바뀌어 새로 만든다."""
     import hashlib
@@ -848,6 +900,13 @@ class Sfx:
             "cue_drum": make_cue_drum(rng),
             "cue_bite": make_cue_bite(rng),
             "double_perfect": make_double_perfect(rng),
+            # 신호 사전 6계열 (31장 C3) — 맨 뒤
+            "sig_release": make_sig_release(rng),
+            "sig_reel": make_sig_reel(rng),
+            "sig_timing": make_sig_timing(rng),
+            "sig_direction": make_sig_direction(rng),
+            "sig_endure": make_sig_endure(rng),
+            "sig_gesture": make_sig_gesture(rng),
         }
         pcms = {}
         for name, wave in bank.items():

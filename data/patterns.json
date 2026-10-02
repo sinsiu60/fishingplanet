@@ -202,26 +202,30 @@
     "tired_mult": 1.3
   },
   "dual": {
-    "_설명": "⑫ 두 예고가 동시에(색·소리 각각). 서로 다른 손이라 동시에 대응 가능한 짝만 (fish.json dual_pairs, 허용: allowed). 행동 길이 = 두 패턴 각자 길이, 둘 다 끝나면 끝. 둘 다 성공 → 스태미나 −ok_stamina_frac 추가.",
+    "_설명": "⑫ 두 예고가 동시에(색·소리 각각). 서로 다른 손이라 동시에 대응 가능한 짝만 (fish.json dual_pairs, 허용: allowed). 행동 길이 = 두 패턴 각자 길이, 둘 다 끝나면 끝. 둘 다 성공 → 스태미나 −ok_stamina_frac 추가. C3(31장): 반드시 왼손 1개 + 오른손 1개 (signals.json 손) — 왼손 패턴은 물어뜯기·숨기뿐이라 둘 중 하나가 꼭 들어간다. 두 예고는 dual_stagger_sec 시차.",
     "telegraph_mult": 1.2,
     "burst_cost": 0.35,
     "ok_stamina_frac": 0.12,
     "allowed": [
       [
-        "dive",
-        "twist"
-      ],
-      [
-        "surface",
-        "twist"
-      ],
-      [
         "shake",
         "bite"
       ],
       [
+        "dive",
+        "bite"
+      ],
+      [
+        "surface",
+        "bite"
+      ],
+      [
         "pump",
-        "twist"
+        "bite"
+      ],
+      [
+        "twist",
+        "hide"
       ]
     ]
   }

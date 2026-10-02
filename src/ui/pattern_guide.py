@@ -1,10 +1,8 @@
-"""신규 패턴·루어를 직관적으로: 처음 만날 때 튜토리얼 카드(움직이는 시범 그림) + 파이팅 중 조작 방향 표시.
+"""신규 패턴·루어를 직관적으로: 처음 만날 때 튜토리얼 카드(움직이는 시범 그림).
 
 - 카드: tutorial.CARDS 에 "pattern:<id>"·"lure_intro"로 들어가 있고(PC 문구), 터치 문구는 TOUCH_LINES.
   카드 위쪽에 DEMO 그림이 움직이며 '무엇을 하라는지'를 보여 준다.
-- 파이팅 중 표시(draw_cue): 낚싯대를 움직여야 하는 패턴(잠수 ↑, 수면 질주 ↓, 비틀기 ⟳, 머리 흔들기 = 가만히,
-  역주행 = 연타, 물어뜯기 = 그 순간 Shift)은 예고·행동 동안 PC는 낚싯대 옆, 모바일은 릴 패드 위에 화살표를 그린다.
-  잘하고 있으면 초록, 아니면 흰색으로 깜빡인다.
+- 파이팅 중 조작 방향 표시는 31장 C3부터 신호 슬롯(src/ui/signal_slots.py)이 맡는다.
 """
 import math
 
@@ -103,7 +101,6 @@ TOUCH_LINES = {
 # 카드 키 → 시범 그림 종류
 DEMO = {k: k.split(":", 1)[1] for k in CARDS if k.startswith("pattern:")}
 DEMO["lure_intro"] = "lure"
-CUE = ("shake", "dive", "surface", "twist", "reverse", "bite")  # 파이팅 중 방향 표시를 그리는 패턴
 
 
 # ───────────────────────── 그림 조각 ─────────────────────────
@@ -334,63 +331,3 @@ def draw_card(canvas, key: str, title: str, lines_pc: list, focus, t: float, tou
         text(canvas, ln, (w // 2, ty + i * 15), (232, 236, 245), 11, "center")
     if t > 0.35 and int(t * 2) % 2 == 0:
         text(canvas, "탭해서 계속" if touch else "클릭해서 계속", (w // 2, y + ph - 9), (160, 170, 195), 11, "center")
-
-
-# ───────────────────────── 파이팅 중 조작 방향 ─────────────────────────
-
-def _doing_ok(pat, pitch: float) -> bool:
-    if pat.id == "dive":
-        return pitch >= pat.c["pitch_need"]
-    if pat.id == "surface":
-        return pitch <= -pat.c["pitch_need"]
-    if pat.id in ("shake", "reverse"):
-        return bool(getattr(pat, "last_ok", False)) or (pat.id == "reverse" and pat.gauge >= pat.c["keep_level"])
-    return False
-
-
-def draw_cue(canvas, fight, pitch: float, anchor, t: float, touch: bool, bite_anchor=None) -> None:
-    """예고·행동 중인 '조작형' 패턴의 방향 표시. anchor = PC 낚싯대 옆 / 모바일 릴 패드 위.
-    bite_anchor: 모바일에서 물어뜯기는 ▼ 버튼 옆에 (누를 곳 바로 옆)."""
-    b = fight.brain
-    if b.sound_only:
-        return
-    pats = [p for p in fight.pats if p.id in CUE]
-    if bite_anchor is not None and any(p.id == "bite" for p in pats):
-        p = next(p for p in pats if p.id == "bite")
-        _cue_one(canvas, p, int(bite_anchor[0]), int(bite_anchor[1]), t, WHITE, touch)
-        pats = [q for q in pats if q.id != "bite"]
-    if not pats:
-        return
-    cx, cy = int(anchor[0]), int(anchor[1])
-    n = len(pats)
-    for i, p in enumerate(pats):
-        x = cx + (i - (n - 1) / 2) * 46
-        ok = p.active and _doing_ok(p, pitch)
-        blink = p.active or int(t * 6) % 2 == 0
-        col = GOOD if ok else (WHITE if blink else DIM)
-        _cue_one(canvas, p, int(x), cy, t, col, touch)
-
-
-def _cue_one(canvas, p, x: int, y: int, t: float, col, touch: bool) -> None:
-    """조작 방향 표시: 그림만 (파이팅 중 글자 금지, 31장)."""
-    pid = p.id
-    back = pygame.Surface((40, 40), pygame.SRCALPHA)
-    pygame.draw.rect(back, (10, 14, 28, 120), back.get_rect(), border_radius=8)
-    canvas.blit(back, (x - 20, y - 26))
-    cy = y - 6
-    if pid == "dive":
-        _chevrons(canvas, x, cy, -1, t, col, 12)
-    elif pid == "surface":
-        _chevrons(canvas, x, cy, 1, t, col, 12)
-    elif pid == "twist":
-        _ring_arrow(canvas, x, cy, 11, t, col, 2)
-    elif pid == "shake":
-        _hand_still(canvas, x - 8, cy, t, col)
-    elif pid == "reverse":
-        on = int(t * 10) % 2 == 0
-        pygame.draw.circle(canvas, col, (x, cy), 9 if on else 6, 2)
-    else:  # bite: 풀기(▼▼) — 예고 끝나는 순간 금색
-        from src.ui import icons
-        b = p.fight.brain
-        lit = b.state != "telegraph" or b.timer < 0.15
-        icons.release(canvas, x, cy, GOLD if lit else col, 6 if lit else 5)
