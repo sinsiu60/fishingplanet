@@ -26,6 +26,7 @@ if exist "dist\FishingGame" rmdir /s /q "dist\FishingGame"
     --name FishingGame ^
     --icon "%~dp0build\icon.ico" ^
     --add-data "%~dp0data;data" ^
+    --add-data "%~dp0assets;assets" ^
     --exclude-module tkinter ^
     --specpath build ^
     "%~dp0main.py"

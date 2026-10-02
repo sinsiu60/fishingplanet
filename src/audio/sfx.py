@@ -861,6 +861,7 @@ class Sfx:
         from src.platform.detect import IS_MOBILE
         cache = _cache_path(self.rate, self.channels, seed) if IS_MOBILE else None
         if cache is not None and self._load_cache(cache):
+            self._load_assets()
             return  # 모바일: 처음 한 번 만든 소리를 저장해 두고 다음부터 불러옴 (폰에서 합성은 몇 초 걸림)
         rng = np.random.default_rng(seed)
         bank = {
@@ -945,6 +946,7 @@ class Sfx:
         for name, wave in bank.items():
             pcms[name] = self._to_pcm(wave)
             self.sounds[name] = self._pcm_sound(pcms[name])
+        self._load_assets()
         if cache is not None:
             try:
                 cache.parent.mkdir(parents=True, exist_ok=True)
@@ -965,6 +967,55 @@ class Sfx:
 
     def _to_sound(self, wave: np.ndarray) -> pygame.mixer.Sound:
         return self._pcm_sound(self._to_pcm(wave))
+
+    def _load_assets(self) -> None:
+        """새 방식 소리 (DESIGN.md 32장 S2). 우선순위:
+        assets/sfx/<이름>.ogg|wav (외부 음원, 기존 이름도 덮어씀) → assets/sfx_generated/<이름> (미리 구운 레시피)
+        → 레시피를 지금 합성 (경고). 레시피에 없는 assets/sfx 파일도 그 이름으로 쓴다."""
+        from src.audio import synth
+        from src.core.paths import asset_path
+        self.missing_baked: list[str] = []
+        try:
+            rec = synth.recipes()
+        except (OSError, ValueError):
+            rec = {}
+        override = {}
+        d = asset_path("sfx")
+        if d.is_dir():
+            for p in d.iterdir():
+                if p.suffix.lower() in (".ogg", ".wav"):
+                    override[p.stem] = p
+        for name in sorted(set(rec) | set(override)):
+            path = override.get(name)
+            if path is None:
+                for ext in (".ogg", ".wav"):
+                    q = asset_path("sfx_generated", name + ext)
+                    if q.exists():
+                        path = q
+                        break
+            try:
+                if path is not None:
+                    self.sounds[name] = pygame.mixer.Sound(str(path))
+                    continue
+            except pygame.error:
+                pass
+            # 구운 파일이 없다: 지금 합성 (tools/bake_sfx.py 를 돌리면 사라지는 경고)
+            self.missing_baked.append(name)
+            print(f"[sfx] 구운 파일 없음, 실행 중 합성: {name} (python tools/bake_sfx.py)")
+            st = synth.render(rec[name])
+            self.sounds[name] = pygame.sndarray.make_sound(self._to_pcm_stereo(st))
+
+    def _to_pcm_stereo(self, st: np.ndarray) -> np.ndarray:
+        """합성 엔진의 스테레오 float → 믹서 형식 (샘플레이트 맞춤, 모노 믹서면 섞음)."""
+        if self.rate != RATE:
+            idx = np.linspace(0, len(st) - 1, int(len(st) * self.rate / RATE))
+            st = np.stack([np.interp(idx, np.arange(len(st)), st[:, c]) for c in range(2)], axis=1)
+        pcm = (np.clip(st, -1, 1) * 32767).astype(np.int16)
+        if self.channels == 1:
+            return pcm.mean(axis=1).astype(np.int16)
+        if self.channels > 2:
+            return np.repeat(pcm[:, :1], self.channels, axis=1)
+        return np.ascontiguousarray(pcm)
 
     def _load_cache(self, path) -> bool:
         try:

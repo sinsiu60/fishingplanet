@@ -26,7 +26,7 @@ jobs:
       - name: PyInstaller (build.bat 과 같은 옵션)
         shell: cmd
         run: |
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name FishingGame --icon "%CD%\build\icon.ico" --add-data "%CD%\data;data" --exclude-module tkinter --specpath build "%CD%\main.py"
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name FishingGame --icon "%CD%\build\icon.ico" --add-data "%CD%\data;data" --add-data "%CD%\assets;assets" --exclude-module tkinter --specpath build "%CD%\main.py"
           if errorlevel 1 exit /b 1
           copy /y dist_readme.txt dist\FishingGame\README.txt
       - name: 실행 확인 (화면 없이 120프레임)

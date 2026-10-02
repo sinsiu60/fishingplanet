@@ -24,6 +24,11 @@ def data_path(*parts: str) -> Path:
     return resource_root().joinpath("data", *parts)
 
 
+def asset_path(*parts: str) -> Path:
+    """assets/ (효과음 파일: assets/sfx = 외부 음원 덮어쓰기, assets/sfx_generated = 미리 구운 합성음)."""
+    return resource_root().joinpath("assets", *parts)
+
+
 def save_dir() -> Path:
     override = os.environ.get("FISHING_SAVE_DIR")  # 테스트용
     path = Path(override) if override else user_dir()

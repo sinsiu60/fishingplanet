@@ -1,0 +1,17 @@
+{
+ "_설명": "효과음 레시피 (DESIGN.md 32장, src/audio/synth.py). 이름 규칙 sfx_/sig_/mus_/amb_/ui_. tools/bake_sfx.py 가 assets/sfx_generated/<이름>.ogg 로 굽는다. assets/sfx/<이름>.ogg 가 있으면 그게 우선.",
+ "sfx_hook_success": {
+  "_소리": "챔질 성공: 날카로운 '딱'(어택) + 저음 '쿵'(바디, 폰 스피커용 중음 섞음) + 줄 팽팽 '팅' + 물보라(테일)",
+  "len": 0.7,
+  "layers": [
+   {"wave": "click", "len": 0.01, "gain": 0.9},
+   {"wave": "noise", "len": 0.035, "filter": {"type": "hp", "f": 3200, "q": 0.9}, "env": {"a": 0.0005, "d": 0.012, "s": 0, "r": 0.01}, "gain": 0.75},
+   {"wave": "sine", "freq": [110, 42], "len": 0.42, "env": {"a": 0.002, "d": 0.16, "s": 0.0, "r": 0.08}, "dist": 0.35, "gain": 1.0},
+   {"wave": "triangle", "freq": [220, 120], "len": 0.22, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.2, "gain": 0.45},
+   {"wave": "sine", "freq": 1320, "harm": [[2.0, 0.28], [3.01, 0.12]], "start": 0.012, "len": 0.5, "vib": [34, 0.004], "env": {"a": 0.001, "d": 0.11, "s": 0.12, "r": 0.18}, "gain": 0.32},
+   {"wave": "pink", "start": 0.03, "len": 0.6, "filter": {"type": "bp", "f": [3400, 650], "q": 0.8}, "env": {"a": 0.008, "d": 0.2, "s": 0.0, "r": 0.12}, "gain": 0.55}
+  ],
+  "reverb": {"mix": 0.12, "time": 0.5},
+  "peak_db": -1.0
+ }
+}

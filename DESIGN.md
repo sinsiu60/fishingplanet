@@ -2261,3 +2261,23 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
 - `sfx_` 효과음 (sfx_hook_success, sfx_reel, sfx_line_snap, sfx_chest_legend), `sig_` 신호 6계열 (sig_release …), `mus_` 음악 층 (mus_fight_perc, mus_pad_reservoir), `amb_` 환경음 (amb_reservoir_bugs — 조각은 숫자 `_1 _2`), `ui_` UI (ui_click, ui_buy, ui_equip).
 - 변주 파일은 `@` 뒤 번호 (`sfx_splash@2`), 상태 연동 단계는 `#` 뒤 번호 (`sfx_reel#3`). 외부 음원은 같은 이름의 `assets/sfx/<이름>.ogg`로 덮어씀.
 - 기존 이름은 S2~S5에서 새 이름으로 옮기며 `ALIAS` 표로 잠깐 유지 (예: hookset → sfx_hook_success).
+
+## 32-8. S2 구현 — 합성 엔진 + 레시피 + 미리 굽기
+- **`src/audio/synth.py`**: 파형(사인·사각·톱니·삼각·흰/핑크 노이즈·클릭), ADSR 음량 엔벨로프, 피치 엔벨로프(`freq: [시작, 끝]`, 지수/직선/여러 점),
+  배음(`harm`), 비브라토·트레몰로, 상태 변수 필터(lp/hp/bp, 컷오프가 시간에 따라 변함), tanh 왜곡, 잔향(지수 감쇠 노이즈 임펄스 FFT 합성곱, 좌우 다르게),
+  메아리, 일정 파워 패닝, 정규화(기본 −1dBFS) → float32 스테레오.
+- **`data/sfx_recipes.json`**: 소리 = 레이어 목록 + 전체 잔향·메아리·패닝·정규화. 첫 레시피 `sfx_hook_success`
+  (클릭 + 고역 노이즈 '딱' / 110→42Hz 왜곡 사인 '쿵' + 220→120Hz 삼각 중음(폰 스피커용) / 1320Hz + 배음 + 떨림 '팅' / 핑크 노이즈 대역 3.4k→650Hz 물보라 + 잔향).
+- **`tools/bake_sfx.py`**: 레시피(+ 엔진 코드) 해시가 바뀐 것만 `assets/sfx_generated/<이름>.ogg`로 굽는다 (ffmpeg libvorbis q6, 없으면 .wav).
+  `manifest.json`에 해시, 레시피에서 지운 소리는 파일도 정리. **구운 파일은 저장소에 함께 올린다** (빌드 머신에 ffmpeg가 없어도 됨).
+- **로딩 순서** (`Sfx._load_assets`): `assets/sfx/<이름>` (외부 음원 — 기존 이름도 덮어씀, 레시피에 없는 이름도 등록) → `assets/sfx_generated/<이름>` →
+  레시피를 실행 중 합성 + 콘솔 경고 (`Sfx.missing_baked`). 기존 79개 합성음은 그대로 (S4·S5에서 새 이름으로 옮김).
+- 빌드: PyInstaller에 `--add-data assets` (build.bat·CI), 안드로이드는 buildozer `source.include_exts`의 ogg로 포함. `assets/sfx/README.txt`, `CREDITS.md` 템플릿.
+- **비교** (`tools/sound_compare.py hookset sfx_hook_success [--wav 폴더]`: 스피커로 번갈아 3번 재생 + wav 저장):
+  | | 기존 hookset | 새 sfx_hook_success |
+  |---|---|---|
+  | 길이 | 0.24초 | 0.7초 + 잔향 = 1.2초 |
+  | 구성 | 노이즈 한 덩어리 (처음부터 끝까지 비슷) | 날카로운 어택 → 저음 쿵 → 줄 팅(배음 줄무늬) → 물보라 꼬리 |
+  | 200Hz 아래 에너지 | 1% | 79% |
+  | 처음 0.3초 RMS | 0.315 | 0.165 (저음 위주라 숫자는 작음 — S3 믹서·S8 음량 점검에서 맞춤) |
+- 게임 안 챔질은 아직 기존 소리 (S4에서 교체). 지금 바로 들어 보려면 `assets/sfx_generated/sfx_hook_success.ogg`를 `assets/sfx/hookset.ogg`로 복사.
