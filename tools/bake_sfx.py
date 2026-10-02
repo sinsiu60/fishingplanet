@@ -33,19 +33,20 @@ def recipe_hash(name: str, recipe: dict) -> str:
 
 def bake(name: str, recipe: dict, ffmpeg: str | None) -> str:
     wav = synth.render(recipe, seed=int(hashlib.sha1(name.encode()).hexdigest()[:6], 16))
+    fname = name.replace("#", "__")  # 단계 소리 이름의 #은 파일 이름에선 __
     for ext in (".ogg", ".wav"):
-        old = os.path.join(OUT, name + ext)
+        old = os.path.join(OUT, fname + ext)
         if os.path.exists(old):
             os.remove(old)
     if ffmpeg:
         with tempfile.TemporaryDirectory() as tmp:
-            src = os.path.join(tmp, name + ".wav")
+            src = os.path.join(tmp, "x.wav")
             synth.write_wav(src, wav)
-            dst = os.path.join(OUT, name + ".ogg")
+            dst = os.path.join(OUT, fname + ".ogg")
             subprocess.run([ffmpeg, "-loglevel", "error", "-y", "-i", src, "-c:a", "libvorbis", "-q:a", "6", dst],
                            check=True)
             return dst
-    dst = os.path.join(OUT, name + ".wav")
+    dst = os.path.join(OUT, fname + ".wav")
     synth.write_wav(dst, wav)
     return dst
 
@@ -67,7 +68,7 @@ def main(argv: list[str]) -> int:
             continue
         h = recipe_hash(name, rec[name])
         if not force and manifest.get(name) == h and any(
-                os.path.exists(os.path.join(OUT, name + e)) for e in (".ogg", ".wav")):
+                os.path.exists(os.path.join(OUT, name.replace("#", "__") + e)) for e in (".ogg", ".wav")):
             continue
         path = bake(name, rec[name], ffmpeg)
         manifest[name] = h
@@ -75,7 +76,7 @@ def main(argv: list[str]) -> int:
         print(f"굽기: {os.path.relpath(path, ROOT)} ({os.path.getsize(path) // 1024}KB)")
     for gone in [k for k in manifest if k not in rec]:  # 레시피에서 지운 소리 정리
         for e in (".ogg", ".wav"):
-            p = os.path.join(OUT, gone + e)
+            p = os.path.join(OUT, gone.replace("#", "__") + e)
             if os.path.exists(p):
                 os.remove(p)
         manifest.pop(gone)

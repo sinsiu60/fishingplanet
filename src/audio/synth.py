@@ -11,6 +11,8 @@
   gain     레이어 음량 (선형), pan -1(왼쪽)~1(오른쪽)
 레시피 전체: len(전체 길이), reverb {"mix", "time"} 간단한 잔향, echo {"delay", "fb", "mix"} 메아리,
             pan, peak_db (정규화 목표, 기본 -1dBFS), gain_db (정규화 뒤 더할 음량)
+            loop: true → 끝과 처음을 겹쳐(크로스페이드) 이음매 없는 반복음
+            steps {"n", "pitch": [시작, 끝], "gain_db": [시작, 끝]} → <이름>#0 … #n-1 단계 소리로 펼쳐짐 (상태 연동용)
 결과는 float32 스테레오 [-1, 1] 배열 (RATE 44100).
 """
 import numpy as np
@@ -144,9 +146,9 @@ def normalize(stereo: np.ndarray, peak_db: float = -1.0) -> np.ndarray:
 
 # ───────────────────────── 레시피 ─────────────────────────
 
-def render_layer(layer: dict, rng) -> tuple[int, np.ndarray]:
+def render_layer(layer: dict, rng, pitch: float = 1.0) -> tuple[int, np.ndarray]:
     n = max(1, int(RATE * layer.get("len", 0.3)))
-    freq = _curve(layer.get("freq", 440), n, layer.get("curve", "exp"))
+    freq = _curve(layer.get("freq", 440), n, layer.get("curve", "exp")) * pitch
     if "vib" in layer:
         hz, depth = layer["vib"]
         freq = freq * (1 + depth * np.sin(2 * np.pi * hz * np.arange(n) / RATE))
@@ -156,7 +158,8 @@ def render_layer(layer: dict, rng) -> tuple[int, np.ndarray]:
             x = x + amp * oscillator(layer.get("wave", "sine"), freq * mult, rng)
     flt = layer.get("filter")
     if flt:
-        x = svf(x, flt.get("type", "lp"), _curve(flt.get("f", 2000), n, flt.get("curve", "exp")), flt.get("q", 0.707))
+        fc = _curve(flt.get("f", 2000), n, flt.get("curve", "exp")) * (pitch if flt.get("track", True) else 1.0)
+        x = svf(x, flt.get("type", "lp"), fc, flt.get("q", 0.707))
     x = distort(x, layer.get("dist", 0.0))
     e = layer.get("env", {})
     x = x * adsr(n, e.get("a", 0.002), e.get("d", 0.15), e.get("s", 0.0), e.get("r", 0.03))
@@ -170,7 +173,8 @@ def render_layer(layer: dict, rng) -> tuple[int, np.ndarray]:
 def render(recipe: dict, seed: int = 1) -> np.ndarray:
     """레시피 → float32 스테레오 (-1~1)."""
     rng = np.random.default_rng(seed)
-    parts = [render_layer(ly, rng) for ly in recipe["layers"]]
+    pitch = recipe.get("pitch_mult", 1.0)
+    parts = [render_layer(ly, rng, pitch) for ly in recipe["layers"]]
     n = max(int(RATE * recipe.get("len", 0)), max(s + len(x) for s, x in parts))
     out = np.zeros((n, 2))
     for s, x in parts:
@@ -184,10 +188,17 @@ def render(recipe: dict, seed: int = 1) -> np.ndarray:
     if "reverb" in recipe:
         r = recipe["reverb"]
         out = reverb(out, r.get("mix", 0.2), r.get("time", 0.6), rng)
-    # 끝 1ms 페이드 (딸깍 방지) → 정규화
-    k = min(len(out), int(RATE * 0.001))
-    if k:
-        out[-k:] *= np.linspace(1, 0, k)[:, None]
+    if recipe.get("loop"):
+        # 반복음: 꼬리를 앞머리에 겹쳐 이음매를 없앤다
+        xf = min(len(out) // 3, int(RATE * recipe.get("xfade", 0.08)))
+        a = np.linspace(0, 1, xf)[:, None]
+        out[:xf] = out[:xf] * a + out[-xf:] * (1 - a)
+        out = out[:-xf]
+    else:
+        # 끝 1ms 페이드 (딸깍 방지)
+        k = min(len(out), int(RATE * 0.001))
+        if k:
+            out[-k:] *= np.linspace(1, 0, k)[:, None]
     out = normalize(out, recipe.get("peak_db", -1.0))
     out *= 10 ** (recipe.get("gain_db", 0.0) / 20)
     return np.clip(out, -1, 1).astype(np.float32)
@@ -208,5 +219,21 @@ def write_wav(path, stereo: np.ndarray) -> None:
 
 
 def recipes() -> dict:
+    """레시피 표 (steps가 있으면 <이름>#i 로 펼침)."""
     from src.core.config import load_json
-    return {k: v for k, v in load_json("sfx_recipes.json").items() if not k.startswith("_")}
+    out = {}
+    for k, v in load_json("sfx_recipes.json").items():
+        if k.startswith("_"):
+            continue
+        st = v.get("steps")
+        if not st:
+            out[k] = v
+            continue
+        n = st["n"]
+        p0, p1 = st.get("pitch", [1.0, 1.0])
+        g0, g1 = st.get("gain_db", [0.0, 0.0])
+        for i in range(n):
+            u = i / max(1, n - 1)
+            out[f"{k}#{i}"] = dict(v, pitch_mult=p0 * (p1 / p0) ** u, gain_db=v.get("gain_db", 0.0) + g0 + (g1 - g0) * u,
+                                   steps=None)
+    return out

@@ -123,7 +123,6 @@ def make_line_out(rng) -> np.ndarray:
     스풀 회전(진폭 떨림)과 윙 하는 음이 점점 느려지고 낮아진다.
     """
     sec = 1.6
-    n = int(RATE * sec)
     t = _t(sec)
     slow = np.exp(-t / 0.9)                       # 회전이 서서히 느려짐
     whine_f = 420 + 520 * slow                    # 940Hz → 약 520Hz
@@ -985,12 +984,12 @@ class Sfx:
         if d.is_dir():
             for p in d.iterdir():
                 if p.suffix.lower() in (".ogg", ".wav"):
-                    override[p.stem] = p
+                    override[p.stem.replace("__", "#")] = p
         for name in sorted(set(rec) | set(override)):
             path = override.get(name)
             if path is None:
                 for ext in (".ogg", ".wav"):
-                    q = asset_path("sfx_generated", name + ext)
+                    q = asset_path("sfx_generated", name.replace("#", "__") + ext)
                     if q.exists():
                         path = q
                         break

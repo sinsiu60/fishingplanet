@@ -165,8 +165,10 @@ class FishingScene(Scene):
         self.shake_on = self.settings.get("screen_shake")
         self.screen_fx.enabled = self.shake_on
         self.shake_kick = 0.0
-        self.reel_loop = None
-        self.line_ch = None      # 캐스팅 줄 풀림 소리 채널
+        from src.audio.fight_audio import FightAudio
+        self.fight_audio = FightAudio(self.sfx)  # 상태 연동 연속음 (32장 S4)
+        self.cast_far = self.fish_cfg["cast"]["max_distance"]  # 소리 거리 감쇠 기준
+        self.cast_loops: dict[str, str | None] = {"charge": None, "line": None}
         self.legend_builtin = False
         self.captions = None     # [글자, 남은 시간] 소리 자막
         self.t = 0.0
@@ -458,7 +460,7 @@ class FishingScene(Scene):
                 f.change_drag(1 if a.value > 0 else -1)
         elif n == "flick":
             if f is not None and f.phase == "fight":
-                self.sfx.play("cast", 0.3)  # 휘두르는 소리 (판정과 상관없이)
+                self.sfx.play("sfx_cast_swing", 0.3)  # 휘두르는 소리 (판정과 상관없이)
                 f.flick(a.value)
         elif n == "reel_tap":
             if f is not None and f.phase == "fight":
@@ -533,9 +535,7 @@ class FishingScene(Scene):
                 return
             from src.scene.quest_board import QuestBoardScene
             self.game.scenes.push(QuestBoardScene(self.game, self))
-        if self.reel_loop:
-            self.sfx.loop(self.reel_loop, False)
-            self.reel_loop = None
+        self.fight_audio.stop()
 
     def write_save(self) -> None:
         d = self.save.data
@@ -568,13 +568,14 @@ class FishingScene(Scene):
         if result == "hooked":
             self.tutorial.mark("guide_wait")
             c.hooked()
-            self.sfx.play("hookset")
+            heavy = sum(self.bite.fish["size_cm"]) / 2 >= 100 if self.bite.fish else False
+            self.sfx.play("sfx_hook_heavy" if heavy else "sfx_hook_success")  # 딱 + 쿵 + 팅 + 물보라 (큰 물고기는 더 깊게)
             self.sfx.duck("hook")
             self.toasts.show("챔질 성공!", GOOD, 1.0)
             self._splash_at(c.bx, c.bz, big=0.6)
             self._start_fight()
         elif result == "scared":
-            self.sfx.play("hookset", 0.5)
+            self.sfx.play("sfx_hook_success", 0.4)
             self.sfx.play("flee")
             self.toasts.show("물고기가 놀라 도망갔다...", BAD, 2.4)
         else:
@@ -698,9 +699,9 @@ class FishingScene(Scene):
                 self.card["t"] += dt
             mx, my = self.game.input.pointer_raw
             self.mouse = (int(clamp(mx, 0, self.cam.width - 1)), int(clamp(my, 0, self.cam.height - 1)))
-            if self.reel_loop:
-                self.sfx.loop(self.reel_loop, False)
-                self.reel_loop = None
+            self.fight_audio.stop()
+            self._cast_loop("charge", None)
+            self._cast_loop("line", None)
             self.game.screen.shake = (0, 0)
             return
         self.t += dt
@@ -762,19 +763,16 @@ class FishingScene(Scene):
                 self._splash()
                 self.recast_told = False
             elif ev == "launch":
-                self.sfx.play("cast")
-                self.line_ch = self.sfx.play("line_out", 0.45 + 0.45 * self.cast.power)
+                self.sfx.play("sfx_cast_swing", 0.45 + 0.55 * self.cast.power)  # 휙 (파워만큼 크게)
         self.cast.events.clear()
-        if self.line_ch is not None and self.cast.state != CastState.FLIGHT:
-            self.line_ch.fadeout(120)  # 착수(또는 취소) 순간 줄 풀림 소리를 끊는다
-            self.line_ch = None
+        self._cast_audio()
 
         if self.fight is not None:
             self._update_fight(dt, aim)
         else:
             self._update_waiting(dt)
 
-        self._update_reel_sound()
+        self._update_fight_audio(dt)
         self._maybe_escape_tutorial()
         self._update_shake(dt)
         self._update_legend(dt)
@@ -936,6 +934,7 @@ class FishingScene(Scene):
         return True
 
     def _jerk_fx(self) -> None:
+        self.sfx.play("sfx_jerk", 0.7)
         """저킹: 찌가 톡 튀며 작은 물결 + 아래쪽에 '톡! 저킹 (간격)' (리듬을 맞추기 쉽게)."""
         prev = getattr(self, "last_jerk_t", None)
         self.last_jerk_t = self.t
@@ -1218,7 +1217,7 @@ class FishingScene(Scene):
             d = 1 if dx > 0 else -1
             self.flick_cd = fc["cooldown_sec"]
             self.flick_hist.clear()
-            self.sfx.play("cast", 0.3)  # 휘두르는 소리 (판정과 상관없이)
+            self.sfx.play("sfx_cast_swing", 0.3)  # 휘두르는 소리 (판정과 상관없이)
             self.fight.flick(d)
 
     def _swipe_vfx(self, perfect: bool) -> None:
@@ -1245,32 +1244,42 @@ class FishingScene(Scene):
             self.sfx.play("great", 0.7)
             self.shake_kick = 1.4
 
-    REEL_VOL = {"reel0": 0.5, "reel1": 0.45, "reel2": 0.4, "reel3": 0.34}
 
-    def _update_reel_sound(self) -> None:
-        name = None
+    def _cast_loop(self, slot: str, name: str | None, vol: float = 1.0) -> None:
+        cur = self.cast_loops[slot]
+        if cur != name and cur is not None:
+            self.sfx.loop(cur, False)
+        if name is not None:
+            self.sfx.loop(name, True, vol)
+        self.cast_loops[slot] = name
+
+    def _cast_audio(self) -> None:
+        """캐스팅: 파워 충전(삐걱 + 상승 바람, 파워 단계), 비행 중 줄 풀림 래칫 (32장 S4)."""
+        c = self.cast
+        if c.state == CastState.CHARGING:
+            self._cast_loop("charge", f"sfx_cast_charge#{min(3, int(c.power * 4))}", 0.25 + 0.45 * c.power)
+        else:
+            self._cast_loop("charge", None)
+        if c.state == CastState.FLIGHT:
+            self._cast_loop("line", "sfx_line_out", 0.3 + 0.35 * c.power)
+        else:
+            self._cast_loop("line", None)
+
+    def _update_fight_audio(self, dt: float) -> None:
+        """파이팅 연속음: 릴 클릭·드랙 풀림·장력 삐걱임·줄 실금·드랙 딸깍·몸부림 (src/audio/fight_audio.py)."""
         f = self.fight
-        if f is not None and f.phase == "fight" and f.reeling:
-            v = f.reel_speed_now
-            cur = self.reel_loop
-            # 경계값 근처에서 소리가 계속 바뀌며 처음부터 다시 재생되지 않도록 여유(히스테리시스)를 둔다
-            edges = (0.6, 1.2, 2.0)
-            tiers = ("reel0", "reel1", "reel2", "reel3")
-            if cur in tiers:
-                i = tiers.index(cur)
-                lo = edges[i - 1] - 0.12 if i > 0 else -1.0
-                hi = edges[i] + 0.12 if i < 3 else 99.0
-                name = cur if lo <= v < hi else None
-            if name is None:
-                name = tiers[sum(v >= e for e in edges)]
+        fa = self.fight_audio
+        if f is not None and f.phase == "fight":
+            far = self.cast_far
+            fa.update(dt, {"reel": f.reel_speed_now if f.reeling else 0.0,
+                           "payout": min(1.0, f.payout_now / self.fish_cfg["fight"]["payout_max_speed"]),
+                           "tension": f.tension, "line": f.line_frac, "drag": f.drag - 1,
+                           "near": max(0.0, 1 - f.distance / far)},
+                      red_at=f.green_high, active=f.brain.is_active and not f.brain.sound_only)
         elif self.cast.state == CastState.RETRIEVE:
-            name = "reel2"
-        if name != self.reel_loop:
-            if self.reel_loop:
-                self.sfx.loop(self.reel_loop, False)
-            if name:
-                self.sfx.loop(name, True, self.REEL_VOL[name])
-            self.reel_loop = name
+            fa.update(dt, {"reel": 1.6}, active=False)  # 회수: 릴만 감김
+        else:
+            fa.stop()
 
     def _maybe_escape_tutorial(self) -> None:
         if getattr(self, "escape_tutorial_pending", False) and self.end_t > 1.2:
@@ -1324,7 +1333,8 @@ class FishingScene(Scene):
         self.tutorial.mark("guide_cast")
         c = self.cast
         self._splash_at(c.bx, c.bz, big=1.0)
-        self.sfx.play("splash")
+        far = self.cast_far
+        self.sfx.play("sfx_land", max(0.25, 1.0 - 0.7 * c.current_distance() / far))  # 퐁 — 멀수록 작게
         # 행운의 떡밥: 남은 캐스팅 동안 희귀 이상 +3%p
         buffs = self.save.data["buffs"]
         self.bite.rare_bonus = 0.03 if buffs.get("lucky_casts", 0) > 0 else 0.0
@@ -1351,12 +1361,12 @@ class FishingScene(Scene):
             self.sfx.play("roar", 0.6)
             self.shake_kick = 1.5
         elif ev == "nibble":
-            self.sfx.play("nibble")
+            self.sfx.play("sfx_nibble", 0.8)
             self.game.haptics.vibrate("nibble")
             big = self.save.cosmetic_on("sparkle_float")  # 반짝이 찌: 입질 파문이 더 잘 보임
             self.ripples.spawn(c.bx, c.bz, size=0.5 if big else 0.35, life=1.0 if big else 0.8)
         elif ev == "bite":
-            self.sfx.play("bite")
+            self.sfx.play("sfx_bite_real")
             self.game.haptics.vibrate("bite")
             self.ripples.spawn(c.bx, c.bz, size=1.3, life=1.5, rings=3)
             p = self.cam.project(c.bx, c.bz)
@@ -1426,7 +1436,7 @@ class FishingScene(Scene):
             self.shake_kick = max(self.shake_kick, 2.5)
             self.game.haptics.vibrate("lose", 0.4)
         elif ev == "twist_turn":
-            self.sfx.play("twist_click", 0.8)
+            self.sfx.play("sfx_twist_turn", 0.8)
             self.pvfx.tick(pos[0], pos[1], self._pattern_col("twist"))
         elif ev == "combo_break":
             self.toasts.show("콤보가 끊겼다! 남은 행동이 더 거세진다", BAD, 1.8, 11)
@@ -1479,7 +1489,7 @@ class FishingScene(Scene):
             self.pvfx.combo(pos[0], pos[1], [self._pattern_col(a) for a in pair])
             self.popups.add("dual_ok", pos)
         if kind == "pattern_fail" and pid == "bite":
-            self.sfx.play("snap", 0.6)
+            self.sfx.play("sfx_line_crack", 1.0)
             self.toasts.show("줄을 물어뜯겼다! (줄 -30%) 이빨이 번쩍이면 드랙 순간 최저", BAD, 2.0, 11)
             self.game.haptics.vibrate("bite")
         elif kind == "pattern_fail" and pid == "fake":
@@ -1666,7 +1676,7 @@ class FishingScene(Scene):
             self.shake_kick = max(self.shake_kick, 1.5)
         elif ev == "action:jump":
             self.jump_facing = -1 if f.fish_side() > 0 else 1
-            self.sfx.play("splash", 0.7)
+            self.sfx.play("sfx_jump_out", 0.8)
             self._splash_at(x, z, 0.8)
         elif ev == "telegraph:leap":
             if sound_only:
@@ -1676,7 +1686,7 @@ class FishingScene(Scene):
                 self.sfx.play("splash_small", 0.5)
         elif ev == "action:leap":
             self.jump_facing = f.brain.leap_dir  # 몸을 던지는 쪽으로 비튼다
-            self.sfx.play("splash", 0.8)
+            self.sfx.play("sfx_jump_out", 0.85)
             self._splash_at(x, z, 0.9)
         elif ev in ("flick_perfect", "flick_good"):
             self._swipe_vfx(ev == "flick_perfect")
@@ -1693,7 +1703,7 @@ class FishingScene(Scene):
             self.screen_fx.miss(self.screen_fx.map(pos))
             self.shake_kick = 3.0
         elif ev == "jump_land":
-            self.sfx.play("splash", 0.9)
+            self.sfx.play("sfx_jump_land", 0.95)  # 철썩
             self._splash_at(x, z, 1.0)
         elif ev == "ink":
             self.ink_t = self.fish_cfg["fight"]["ink_sec"]
@@ -1739,7 +1749,7 @@ class FishingScene(Scene):
             self.screen_fx.miss(self.screen_fx.map(pos))
             self.shake_kick = 3.0
         elif ev == "creak":
-            self.sfx.play(random.choice(("creak", "creak2", "creak3")), random.uniform(0.45, 0.65))
+            pass  # 줄 실금 소리는 fight_audio 가 내구도에 맞춰 낸다 (32장 S4)
         elif ev == "net_start":
             self.sfx.play("splash", 0.8)
             self.toasts.show("뜰채!", INFO, 1.6, 11)
@@ -1796,7 +1806,8 @@ class FishingScene(Scene):
             self.shake_kick = 4.0
         elif ev == "escape_snap":
             self.game.haptics.vibrate("lose")
-            self.sfx.play("snap", 1.0)  # 투둑
+            self.sfx.play("sfx_line_snap", 1.0)  # 투둑
+            self.sfx.duck("snap")
             self.screen_fx.miss(self.screen_fx.map(self._fish_screen()))
             self.game.slowmo(1.0, 0.35)
             self.shake_kick = 3.0
@@ -1817,7 +1828,9 @@ class FishingScene(Scene):
             self.game.save_now()
             if ev != "lost:escape":  # 도주는 '투둑' 순간(escape_snap)에 이미 진동
                 self.game.haptics.vibrate("lose")
-            self.sfx.play("snap" if ev == "lost:snap" else "flee")
+            self.sfx.play("sfx_line_snap" if ev == "lost:snap" else "flee")
+            if ev == "lost:snap":
+                self.sfx.duck("snap")  # 팅! 뒤 잠깐 무음
             self.sfx.play("lose", 0.8)
             self.end_t = 0.0
             self.shake_kick = 4.0 if ev == "lost:snap" else 0.0
