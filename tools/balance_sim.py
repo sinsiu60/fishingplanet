@@ -82,7 +82,11 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
         else:
             react_t = 0.0
             f.drag = f.drag_steps if b.is_calm else max(1, f.drag_steps // 2)
-        reeling = f.tension < f.green_high - 3 - (2 if skill is SKILLS["average"] else 0)
+        # 감기: 초록 위쪽 끝 바로 아래까지 / 울렁이는 물고기가 날뛸 땐 초록 가운데를 노린다 (좋은 플레이어처럼)
+        edge = f.green_high - 3 - (2 if skill is SKILLS["average"] else 0)
+        if b.is_active and f.heave_amp > 0:
+            edge = min(edge, (f.green_low + f.green_high) / 2 + 2)
+        reeling = f.tension < edge
         # 낚싯대: 물고기 반대쪽 (위협 구역·기믹 쪽이면 더 세게)
         target = -f.fish_side() * 0.9
         aim += (target - aim) * 0.08

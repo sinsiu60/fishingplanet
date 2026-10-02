@@ -59,6 +59,13 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
     hf = fight.hook / 100
     hc = (255, 170, 60) if hf < 0.6 or int(t * 6) % 2 else (255, 60, 40)
     _vbar(canvas, 60, y, 5, h, hf, hc)
+    # 실수로 쌓인 몫 (줄어들지 않음): 어두운 빨강 + 1/3 눈금
+    floor = getattr(fight, "hook_floor", 0.0)
+    if floor > 0:
+        fh = int(h * min(1.0, floor / 100))
+        canvas.fill((150, 30, 40), (60, y + h - fh, 5, fh))
+    for k in (1, 2):
+        canvas.fill((14, 16, 26), (59, y + h - h * k // 3, 7, 1))
     text(canvas, "바늘", (61, y + h + 12), pal["text"], 11, "center")
     # 줄 걸림 (위협 구역이 있는 낚시터만)
     if fight.hazards:

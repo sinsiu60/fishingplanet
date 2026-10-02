@@ -16,6 +16,7 @@ LOSE_REASONS = {
     "slack": ("바늘이 빠졌다", "줄이 너무 느슨했다. 장력을 초록 구간 아래로 떨어뜨리지 마세요."),
     "jump": ("바늘이 빠졌다", "점프 정점에 낚싯대를 숙이지 못했다. 그림자가 커지면 우클릭을 준비하세요."),
     "snag": ("줄이 걸려 끊어졌다", "물고기가 위협 구역(수초·바위)으로 들어갔다. 그쪽으로 가면 마우스를 반대로 당겨 빼내세요."),
+    "worn": ("바늘이 빠졌다", "신호 대응(숙이기·꺾기·몸털기)을 세 번 놓쳐 바늘이 헐거워졌다. 바늘 게이지의 어두운 칸은 다시 줄어들지 않아요."),
     "escape": ("마지막 발악! 줄을 끊고 달아났다", "엘드라시온의 물고기는 특수 찌 없이는 끝까지 잡을 수 없다. 상점에서 필요한 찌를 장착하세요."),
 }
 
@@ -40,6 +41,10 @@ class Fight:
         self.line = float(self.line_max)
         self.line_damage = 0.0
         self.hook = 0.0
+        self.hook_floor = 0.0  # 신호 대응 실패로 쌓인, 줄어들지 않는 바늘 게이지 (한 번에 1/3)
+        # 힘센 물고기의 울렁임 (장력이 천천히 크게 오르내림) — 좋은 낚싯대(넓은 초록)일수록 버티기 쉽다
+        self.heave_amp = max(0.0, fish.get("power", 1.0) - self.cfg["heave_from_power"]) * self.cfg["heave_per_power"]
+        self.heave_phase = self.rnd.uniform(0, math.tau)
         self.stamina_max = float(fish.get("stamina", 100))
         self.stamina = self.stamina_max
         self.cast_distance = cast_distance
@@ -228,6 +233,7 @@ class Fight:
             self.turn_mult = fc["turn_fail_lateral"]
             self.tension += fc["turn_fail_tension"]
             self.hook += fc["turn_fail_hook"]
+            self._fail_floor()
             self.misses += 1
             self.perfect_streak = 0
             self.last_judge = "flick_miss"
@@ -288,11 +294,17 @@ class Fight:
         self.last_judge = "good"
         self.events.append("good")
 
+    def _fail_floor(self) -> None:
+        """신호 대응 실패: 바늘 게이지 바닥이 1/3씩 올라가 다시 내려오지 않는다."""
+        self.hook_floor = min(100.0, self.hook_floor + self.cfg["fail_hook_floor"])
+        self.hook = max(self.hook, self.hook_floor)
+
     def _miss(self, kind: str) -> None:
         self.misses += 1
         self.perfect_streak = 0
         self.tension += self.cfg["miss_tension_spike"]
         self.hook += self.cfg["miss_hook"]
+        self._fail_floor()
         self.last_jump_miss_t = self.elapsed
         self.last_judge = kind
         self.events.append(kind)
@@ -354,7 +366,8 @@ class Fight:
             if calm:
                 reel_t *= cfg["reel_tension_mult_when_calm"]
         target = cfg["base_line_tension"] + pull + reel_t
-        self.drag_limit = lerp(cfg["drag_limit_min"], cfg["drag_limit_max"], drag_frac)
+        self.drag_limit = lerp(cfg["drag_limit_min"], cfg["drag_limit_max"], drag_frac) + \
+            max(0.0, self.fish.get("power", 1.0) - 1.0) * cfg["drag_floor_per_power"]  # 힘센 물고기는 드랙을 풀어도 무겁다
         payout = 0.0
         if target > self.drag_limit:
             over = target - self.drag_limit
@@ -367,6 +380,8 @@ class Fight:
             target = max(target, floor)
         if b.is_active:
             target += math.sin(self.elapsed * 13.0) * 2.5 + math.sin(self.elapsed * 5.3) * 2.0
+            if b.state not in ("rush", "jump"):  # 돌진·점프는 따로 대응(드랙·숙이기)이 있으니 겹치지 않게
+                target += self.heave_amp * math.sin(self.elapsed * cfg["heave_speed"] + self.heave_phase)
         target += self.gim.tension_offset(self)  # 부유섬 물살
         self.target = target
         k = 1 - math.exp(-dt / cfg["tension_response_sec"])
@@ -430,7 +445,7 @@ class Fight:
             self.hook += rate * dt
         else:
             self.hook -= cfg["hook_recover_rate"] * dt
-        self.hook = clamp(self.hook, 0, 100)
+        self.hook = clamp(self.hook, self.hook_floor, 100)
 
         # 줄 걸림 (환경 위협)
         hz = self._hazard_at()
@@ -457,7 +472,10 @@ class Fight:
         elif self.snag >= 100:
             self._lose("snag")
         elif self.hook >= 100:
-            self._lose("jump" if self.elapsed - self.last_jump_miss_t < 1.5 else "slack")
+            if self.hook_floor >= 99.9:
+                self._lose("worn")  # 실수 세 번
+            else:
+                self._lose("jump" if self.elapsed - self.last_jump_miss_t < 1.5 else "slack")
         elif self._escape_ready():
             self.escape_t = 0.0
             self.events.append("escape_start")  # 눈이 번쩍 + 물보라 폭발
