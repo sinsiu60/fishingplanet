@@ -166,6 +166,8 @@ def new_data() -> dict:
         "treasure_dex": {},
         "flags": {"eldra_escape_tutorial": False},
         "buffs": {"lucky_casts": 0, "lunch_until": 0.0},  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
+        # ── 콘텐츠 업데이트 (DESIGN.md 27-8) ──
+        "patterns_seen": [],                             # 만나 본 신규 패턴 (첫 만남 안내·도감 힌트)
     }
 
 

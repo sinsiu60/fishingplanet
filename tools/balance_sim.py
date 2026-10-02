@@ -24,14 +24,15 @@ sys.path.insert(0, ROOT)
 from src.core.config import load_json  # noqa: E402
 from src.fishing.bite import bait_tier_mult, pick_fish  # noqa: E402
 from src.fishing.fight import Fight  # noqa: E402
+from src.fishing.patterns import PATTERN_IDS, PatternInput  # noqa: E402
 from src.fishing.rank import sell_price  # noqa: E402
 from src.save.save_game import SaveGame, all_fish, enhanced, equipment  # noqa: E402
 
 OUT = os.path.join(ROOT, "build")
 DT = 1 / 60
 SKILLS = {
-    "skilled": dict(sigma=0.05, react=0.25, miss_jump=0.0, turn_sigma=0.06),
-    "average": dict(sigma=0.10, react=0.40, miss_jump=0.10, turn_sigma=0.11),
+    "skilled": dict(sigma=0.05, react=0.25, miss_jump=0.0, turn_sigma=0.06, taps=5.0, turns=1.6, miss_pattern=0.05),
+    "average": dict(sigma=0.10, react=0.40, miss_jump=0.10, turn_sigma=0.11, taps=4.0, turns=1.15, miss_pattern=0.15),
 }
 # 그 낚시터에 처음 도착할 무렵의 장비 티어 (진행 경로 가정)
 SPOT_TIER = {s["id"]: s.get("gear_tier", 1) for s in load_json("spots.json")["spots"]}  # spots.json gear_tier
@@ -66,6 +67,10 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
     react_t = 0.0
     seen_turn = -1
     steps = 0
+    pat_seen_t = 0.0      # 신규 패턴 예고를 본 뒤 지난 시간 (반응 시간 뒤에 대응 시작)
+    pat_id = None
+    pat_skip = False      # 이번 패턴은 놓침 (실수)
+    tap_acc = turn_acc = 0.0
     while f.phase in ("fight", "net") and steps < 60 * 400:
         b = f.brain
         steps += 1
@@ -90,7 +95,9 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
         reeling = f.tension < edge
         # 낚싯대: 물고기 반대쪽 (위협 구역·기믹 쪽이면 더 세게)
         target = -f.fish_side() * 0.9
-        aim += (target - aim) * 0.08
+        cur = b.pending if b.state == "telegraph" else b.state
+        if not (cur == "shake" and pat_id == "shake" and pat_seen_t >= skill["react"] and not pat_skip):
+            aim += (target - aim) * 0.08  # 머리 흔들기 대응 중엔 손을 멈춘다
         # 점프(우클릭)
         if b.state == "jump" and b.jump_kind == "dip" and not b.jump_judged:
             if plan_jump is None:
@@ -116,7 +123,33 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
                 f.flick(-b.turn_dir)
                 seen_turn = b.turn_count
                 plan_turn = None
-        f.update(DT, reeling, aim)
+        # 신규 패턴 (U3): 예고를 보고 반응 시간 뒤부터 대응
+        inp = PatternInput()
+        st = b.pending if b.state == "telegraph" else b.state
+        if st in PATTERN_IDS:
+            if st != pat_id:
+                pat_id, pat_seen_t = st, 0.0
+                pat_skip = rnd.random() < skill["miss_pattern"]
+            pat_seen_t += DT
+            if pat_seen_t >= skill["react"] and not pat_skip:
+                if st == "shake":
+                    reeling = False  # 낚싯대 방향은 위에서 멈춰 둠
+                elif st == "dive":
+                    inp.pitch = 1.0
+                elif st == "surface":
+                    inp.pitch = -1.0
+                elif st == "reverse":
+                    tap_acc += skill["taps"] * DT
+                    if tap_acc >= 1:
+                        inp.taps, tap_acc = 1, tap_acc - 1
+        else:
+            pat_id = None
+        if (f.twist.value > 0 or st == "twist") and not (st == "twist" and pat_skip):
+            if st != "twist" or pat_seen_t >= skill["react"]:
+                turn_acc += skill["turns"] * DT
+                if turn_acc >= 1:
+                    inp.turns, turn_acc = 1, turn_acc - 1
+        f.update(DT, reeling, aim, inp)
     res = {"ok": f.phase == "caught", "t": round(f.elapsed, 1), "reason": f.lose_reason}
     if f.result:
         res.update(rank=f.result["rank"], size=f.result["size"], perfects=f.result["perfects"])

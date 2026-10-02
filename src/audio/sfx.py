@@ -632,6 +632,82 @@ def make_flee(rng) -> np.ndarray:
     return out
 
 
+# ── 신규 패턴 예고 (U3) ──
+def make_cue_shake(rng) -> np.ndarray:
+    """① 머리 흔들기: 줄이 떨리는 '타타탁' — 짧고 빠른 딸깍 6번."""
+    out = np.zeros(int(RATE * 0.42))
+    for i in range(6):
+        s = int(RATE * i * 0.055)
+        n = int(RATE * 0.03)
+        click = (_noise(0.03, rng) * 0.6 + np.sin(2 * np.pi * 2200 * _t(0.03)) * 0.4) * _env(n, 0.0005, 0.008)
+        out[s:s + n] += click * (0.55 if i % 2 else 0.4)
+    return out
+
+
+def make_cue_dive(rng) -> np.ndarray:
+    """② 잠수: 낮게 내려가는 '꾸르륵' — 아래로 미끄러지는 저음 + 큰 기포 몇 개."""
+    sec = 0.7
+    n = int(RATE * sec)
+    body = _sweep(220, 70, sec) * _env(n, 0.02, 0.35) * 0.45
+    for _ in range(5):
+        st = rng.integers(0, n - int(RATE * 0.09))
+        b = _sweep(rng.uniform(260, 380), rng.uniform(120, 180), 0.09) * _env(int(RATE * 0.09), 0.004, 0.03)
+        body[st:st + len(b)] += b * 0.35
+    return body
+
+
+def make_cue_surface(rng) -> np.ndarray:
+    """③ 수면 질주: 물을 가르는 '쉬이익' — 밝아지는 노이즈."""
+    sec = 0.6
+    n = int(RATE * sec)
+    noise = _noise(sec, rng)
+    bright = noise - _lowpass(noise, 4)
+    env = np.linspace(0.15, 1.0, n) ** 1.5 * _env(n, 0.01, 0.4)
+    return bright * env * 1.2
+
+
+def make_cue_reverse(rng) -> np.ndarray:
+    """④ 역주행: 줄이 풀려 늘어지는 '스르르' — 부드럽게 내려가는 미끄럼 소리."""
+    sec = 0.6
+    n = int(RATE * sec)
+    noise = _lowpass(_noise(sec, rng), 5)
+    slide = _sweep(900, 380, sec) * 0.25
+    return (noise * 0.45 + slide) * _env(n, 0.05, 0.3) * 0.8
+
+
+def make_cue_twist(rng) -> np.ndarray:
+    """⑤ 줄 비틀기: '끼릭끼릭' — 높은 삐걱 두 번."""
+    out = np.zeros(int(RATE * 0.5))
+    for k, start in enumerate((0.0, 0.22)):
+        sec = 0.16
+        t = _t(sec)
+        base = 1500 + k * 180
+        freq = base * (1 + 0.12 * np.sin(2 * np.pi * 22 * t)) + rng.uniform(-40, 40, len(t))
+        saw = 2 * ((np.cumsum(freq) / RATE) % 1.0) - 1
+        w = _lowpass(saw, 4) * _env(len(t), 0.006, 0.07) * 0.4
+        s = int(RATE * start)
+        out[s:s + len(w)] += w
+    return out
+
+
+def make_cue_combo(rng) -> np.ndarray:
+    """⑥ 연쇄 콤보: 북 세 번 '둥 둥 둥'."""
+    out = np.zeros(int(RATE * 0.75))
+    for i in range(3):
+        sec = 0.22
+        drum = _sweep(130 - i * 10, 55, sec) * _env(int(RATE * sec), 0.002, 0.09)
+        hit = _lowpass(_noise(sec, rng), 6) * _env(int(RATE * sec), 0.001, 0.02)
+        s = int(RATE * i * 0.2)
+        out[s:s + int(RATE * sec)] += drum * 0.8 + hit * 0.3
+    return out
+
+
+def make_twist_click(rng) -> np.ndarray:
+    """원 한 바퀴로 꼬임이 풀릴 때 '틱'."""
+    n = int(RATE * 0.05)
+    return np.sin(2 * np.pi * 1300 * _t(0.05)) * _env(n, 0.001, 0.015) * 0.35
+
+
 def _cache_path(rate: int, channels: int, seed: int):
     """소리 캐시 파일: 이 파일(합성 코드) 내용이 바뀌면 이름이 바뀌어 새로 만든다."""
     import hashlib
@@ -719,6 +795,14 @@ class Sfx:
             "chest_open": make_chest_open(rng),
             "bell": make_bell(rng),
             "chest_legend": make_chest_legend(rng),
+            # 신규 패턴 (U3) — 맨 뒤에 붙여 기존 소리의 난수가 바뀌지 않게
+            "cue_shake": make_cue_shake(rng),
+            "cue_dive": make_cue_dive(rng),
+            "cue_surface": make_cue_surface(rng),
+            "cue_reverse": make_cue_reverse(rng),
+            "cue_twist": make_cue_twist(rng),
+            "cue_combo": make_cue_combo(rng),
+            "twist_click": make_twist_click(rng),
         }
         pcms = {}
         for name, wave in bank.items():

@@ -25,7 +25,7 @@ from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
 from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
 from src.scene.base import Scene
-from src.ui import fight_fx, fight_hud, hud
+from src.ui import fight_fx, fight_hud, hud, pattern_fx
 from src.ui import tutorial as tut
 
 
@@ -67,7 +67,13 @@ TIPS = {
 # 소리 자막 (설정 '소리 자막'): 예고 소리를 글자로도 보여준다
 CAPTIONS = {"telegraph:rush": "쏴아 — 물보라 (돌진)", "telegraph:jump": "보글보글 — 기포 (점프)",
             "telegraph:leap": "촵촵 — 몸털기", "telegraph:turn": "스윽 — 긁힘 (방향 전환)",
-            "action:charge": "쿵 — 힘 모으기", "telegraph:lure": "팅 — 등불 (가짜)"}
+            "action:charge": "쿵 — 힘 모으기", "telegraph:lure": "팅 — 등불 (가짜)",
+            "telegraph:shake": "타타탁 — 줄 떨림 (머리 흔들기)", "telegraph:dive": "꾸르륵 — 가라앉음 (잠수)",
+            "telegraph:surface": "쉬이익 — 물살 (수면 질주)", "telegraph:reverse": "스르르 — 줄 처짐 (역주행)",
+            "telegraph:twist": "끼릭끼릭 — 줄 꼬임 (비틀기)", "telegraph:chain": "둥 둥 둥 — 콤보"}
+PATTERN_CUES = {"shake": "cue_shake", "dive": "cue_dive", "surface": "cue_surface", "reverse": "cue_reverse",
+                "twist": "cue_twist", "chain": "cue_combo"}
+FORCE_PATTERNS = ("shake", "dive", "surface", "reverse", "twist", "chain")
 TIP_REPEAT = 1
 SLACK_RED_CARD_SEC = 0.6  # 이 시간 이상 느슨/빨강이면 튜토리얼 카드
 
@@ -280,6 +286,17 @@ class FishingScene(Scene):
             w.current = WEATHERS[(WEATHERS.index(w.current) + 1) % len(WEATHERS)]
             self.toasts.show(f"[테스트] 날씨: {WEATHER_KO[w.current]}", INFO, 1.5, 11)
 
+    def _force_pattern(self) -> None:
+        """[테스트] F9: 신규 패턴을 차례로 지금 바로 발동 (파이팅 중)."""
+        f = self.fight
+        if f is None or f.phase != "fight":
+            self.toasts.show("[테스트] F9는 파이팅 중에 패턴을 발동해요", INFO, 1.5, 11)
+            return
+        self.force_pat_i = (getattr(self, "force_pat_i", -1) + 1) % len(FORCE_PATTERNS)
+        pid = FORCE_PATTERNS[self.force_pat_i]
+        f.brain.force_pattern(pid)
+        self.toasts.show(f"[테스트] 패턴 발동: {pattern_fx.action_name(pid)}", INFO, 1.2, 11)
+
     def _open_card(self, key: str, focus: str | None) -> None:
         self.card = {"key": key, "focus": focus, "t": 0.0}
 
@@ -335,6 +352,9 @@ class FishingScene(Scene):
             if a.value in ("F3", "F4", "F5", "F6"):
                 if f is None and self.fish_cfg.get("debug_keys"):
                     self._cycle_debug(a.value)
+            elif a.value == "F9":
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    self._force_pattern()
             elif a.value == "F1":
                 self.debug = not self.debug
             elif a.value == "F2":
@@ -457,7 +477,8 @@ class FishingScene(Scene):
         angle = math.atan2(c.bx, c.bz)
         self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(self.clock.period()[0]),
                            hazards=self.spot["hazards"], gimmick=self.current_gimmick(),
-                           float_need=self.save.float_need(fish, self.spot), float_tier=self.save.float_tier())
+                           float_need=self.save.float_need(fish, self.spot), float_tier=self.save.float_tier(),
+                           touch_lead=load_json("mobile_config.json")["touch_lead_sec"] if self.touch else 0.0)
         for g in sorted(self.fight.gim.kinds(self.fight.brain)):
             key = f"gimmick:{g}"
             if self.card is None and self.tutorial.want(key):
@@ -743,7 +764,8 @@ class FishingScene(Scene):
             self.ctl.update_fight(dt, self.t, self.game.input)
             f.set_drag_min(self.ctl.drag_min)
             f.ctl = self.ctl
-        f.update(dt, reeling, aim)
+        from src.fishing.patterns import PatternInput
+        f.update(dt, reeling, aim, PatternInput.from_controls(self.ctl) if f.phase == "fight" else None)
         x, z = f.fish_xz()
         self.cast.bx, self.cast.bz = x, z
         for ev in f.events:
@@ -795,11 +817,51 @@ class FishingScene(Scene):
         elif sig == "jump" and p and self.ink_t <= 0 and not b.dark:
             # 그림자 커짐 + 기포
             self.bubbles.spawn(p[0], p[1], max(3.0, f.fish["shadow_len_m"] * p[2]))
+        elif self._pattern_cue_fx(b, sig, x, z, p):
+            pass
         elif b.state in ("idle", "rush", "turn", "recover") and self.fx_t > (0.15 if b.state == "rush" else 0.6):
             self.fx_t = 0.0
             self.ripples.spawn(x, z, size=0.4 if b.state != "rush" else 0.6, life=0.9)
             if b.state == "rush" and p:
                 self.droplets.burst(p[0], p[1], max(0.5, p[2] / 25), count=3)
+
+    def _pattern_cue_fx(self, b, sig, x: float, z: float, p) -> bool:
+        """신규 패턴 예고·행동의 물 위 연출. 처리했으면 True (기본 잔물결 대신)."""
+        st = b.state if b.state in PATTERN_CUES else None
+        kind = sig if sig in PATTERN_CUES else st
+        if kind is None:
+            return False
+        strong = st is not None
+        if kind == "shake":
+            # 줄이 떨리며 물방울이 잘게 튄다
+            if p and self.fx_t > (0.06 if strong else 0.1):
+                self.fx_t = 0.0
+                self.droplets.burst(p[0] + random.uniform(-3, 3), p[1], max(0.4, p[2] / 30), count=2 if strong else 1)
+        elif kind == "surface":
+            # V자 물살: 물고기 뒤로 좌우 두 갈래
+            if self.fx_t > 0.09:
+                self.fx_t = 0.0
+                back = math.atan2(x, z)
+                bx, bz = math.sin(back), math.cos(back)
+                for side in (-1, 1):
+                    k = 0.35 if strong else 0.25
+                    self.ripples.spawn(x + bx * 0.3 + bz * side * k, z + bz * 0.3 - bx * side * k, size=0.35, life=0.8)
+                if strong and p:
+                    self.droplets.burst(p[0], p[1], max(0.5, p[2] / 25), count=2)
+        elif kind == "reverse":
+            # 다가오는 물고기 앞쪽으로 퍼지는 물결
+            if self.fx_t > 0.25:
+                self.fx_t = 0.0
+                fwd = math.atan2(x, z)
+                self.ripples.spawn(x - math.sin(fwd) * 0.5, z - math.cos(fwd) * 0.5, size=0.5, life=0.9)
+        elif kind == "twist":
+            # 제자리에서 도는 소용돌이
+            if self.fx_t > 0.12:
+                self.fx_t = 0.0
+                a = self.t * 9
+                self.ripples.spawn(x + math.cos(a) * 0.3, z + math.sin(a) * 0.3, size=0.3, life=0.7)
+        # dive: 기포·물결이 멈춘다 (아무것도 안 그림 — 그게 신호)
+        return True
 
     def _update_landing(self, dt: float) -> None:
         for ev in self.landing.update(dt):
@@ -999,6 +1061,57 @@ class FishingScene(Scene):
             self.sfx.play("flee", 0.6)
             self.toasts.show("미끼만 먹고 도망갔다... (우클릭: 회수)", BAD, 2.6)
 
+    def _on_pattern_event(self, ev: str, kind: str, pid: str) -> None:
+        """신규 패턴(U3): 예고 소리·진동·첫 만남 안내, 판정 결과 연출."""
+        pos = self._fish_screen()
+        if kind == "telegraph":
+            self.sfx.play(PATTERN_CUES[pid], 0.9)
+            if pid in ("shake", "reverse"):
+                self.game.haptics.vibrate(pid)
+            seen = self.save.data.setdefault("patterns_seen", [])
+            if pid not in seen:
+                # 첫 만남: 잠깐 느려지며 한 줄 안내 (이후 도감에 패턴 힌트)
+                seen.append(pid)
+                pc = load_json("patterns.json")
+                fm = pc["first_meet"]
+                self.game.slowmo(fm["real_sec"], fm["scale"])
+                self.toasts.show(f"새 패턴 · {pc['names'][pid]} — {pc['guide'][pid]}", (255, 214, 90), 3.4, 11)
+        elif kind == "action":
+            if pid == "surface":
+                self.sfx.play("splash_small", 0.8)
+            elif pid == "dive":
+                self.sfx.play("bubbles", 0.5)
+        elif kind == "pattern_ok":
+            self.sfx.play("good", 0.8)
+            self.popups.add(f"ok_{pid}", pos)
+            self.game.haptics.vibrate("perfect", 0.5)
+        elif kind == "pattern_fail":
+            self.sfx.play("miss")
+            self.popups.add(f"fail_{pid}", pos)
+            self.screen_fx.miss(self.screen_fx.map(pos))
+            self.shake_kick = max(self.shake_kick, 2.0)
+            if pid == "dive":
+                self.toasts.show("바닥에 쓸렸다! 줄 손상 · 거리 +3m", BAD, 1.6, 11)
+            elif pid == "surface":
+                self.toasts.show("수면을 박차고 뛰어오른다! 점프 대비", BAD, 1.6, 11)
+        elif kind == "twist_step":
+            self.game.haptics.vibrate("twist", 0.4 + 0.2 * int(pid))
+            self.sfx.play("creak2", 0.3 + 0.15 * int(pid))
+        elif ev == "twist_snap":
+            self.sfx.play("scrape", 1.0)
+            self.sfx.play("creak3", 1.0)
+            self.toasts.show("꼬인 줄이 상했다! (줄 -25%) 원을 그려 꼬임을 푸세요", BAD, 2.0, 11)
+            self.shake_kick = max(self.shake_kick, 2.5)
+            self.game.haptics.vibrate("lose", 0.4)
+        elif ev == "twist_turn":
+            self.sfx.play("twist_click", 0.8)
+        elif ev == "combo_break":
+            self.toasts.show("콤보가 끊겼다! 남은 행동이 더 거세진다", BAD, 1.8, 11)
+        elif ev == "combo_ok":
+            self.sfx.play("perfect", 0.7)
+            self.popups.add("combo_ok", pos)
+            self.game.haptics.vibrate("perfect")
+
     def _tip(self, key: str) -> None:
         n = self.tip_counts.get(key, 0)
         if key in TIPS and n < TIP_REPEAT:
@@ -1037,6 +1150,10 @@ class FishingScene(Scene):
             self.sfx.play("scrape", 0.6)
         if ev in CAPTIONS and self.settings.get("sound_captions"):
             self.captions = [CAPTIONS[ev], 1.2]
+        kind, _, pid = ev.partition(":")
+        if pid in PATTERN_CUES or kind in ("pattern_ok", "pattern_fail", "pattern_neutral", "twist_step") or \
+                ev in ("twist_snap", "twist_turn", "combo_break", "combo_ok"):
+            self._on_pattern_event(ev, kind, pid)
         if ev == "telegraph:lure":
             self.sfx.play("cue_lure", 0.8)
             pos = self._fish_screen()
@@ -1401,6 +1518,21 @@ class FishingScene(Scene):
                "tired": 3.0, "fake_tired": 3.0, "charge": 0.0, "exhausted": 2.0}.get(b.state, 10.0)
         scale = 1.0 + 0.9 * b.signal_progress() if b.signal in ("jump", "leap", "lure") else 1.0
         alpha = 0.0 if b.state == "jump" else 0.7 if b.state in ("tired", "fake_tired", "exhausted") else 1.0
+        # 신규 패턴: 잠수 = 작아지며 흐려짐, 역주행 = 이쪽을 향함, 비틀기 = 빙글빙글, 흔들기 = 머리를 좌우로
+        prog = b.signal_progress()
+        if b.signal == "dive" or b.state == "dive":
+            k = prog if b.signal == "dive" else 1.0
+            scale *= 1 - 0.45 * k
+            alpha *= 1 - 0.4 * k
+        elif b.signal == "reverse" or b.state == "reverse":
+            heading += math.pi * (prog if b.signal == "reverse" else 1.0)
+        elif b.signal == "twist" or b.state == "twist":
+            heading += self.t * (4 + 8 * (prog if b.signal == "twist" else 1.0))
+        elif b.signal == "shake" or b.state == "shake":
+            heading += math.sin(self.t * 38) * (0.25 if b.state == "shake" else 0.15)
+            wag = 30.0
+        elif b.state == "surface":
+            alpha = min(1.0, alpha * 1.2)
         if f.fish["rarity"] == "legend":
             scale *= self.fish_cfg["legend"]["shadow_scale"] * 0.55
         return {"x": x, "z": z, "heading": heading, "alpha": alpha, "len": f.fish["shadow_len_m"],
@@ -1423,14 +1555,23 @@ class FishingScene(Scene):
             dx = b.turn_dir * (6 + 22 * b.signal_progress()) + math.sin(self.t * 40) * 1.5
         elif b.state == "turn":
             dx = b.turn_dir * 22
+        if b.signal == "shake" or b.state == "shake":
+            dx += math.sin(self.t * 70) * (3.0 if b.state == "shake" else 1.5 + 1.5 * b.signal_progress())
         lf = f.line_frac
         color = pal["line"] if lf >= 0.5 else lerp_color(pal["line"], (235, 70, 55), (0.5 - lf) * 2)
         if lf < 0.25 and int(self.t * 8) % 2 == 0:
             color = (255, 90, 70)
         cracks = 0.0 if lf >= 0.5 else (0.5 - lf) * 2
         sag = max(0.0, (45 - f.tension) * 0.35) + 1
+        if b.signal == "reverse":
+            sag += 10 * b.signal_progress()  # 역주행 예고: 줄이 처진다
         draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.25), sag, bias=0.6, dx=dx, color=color,
                   cracks=cracks, t=self.t)
+        tw = f.twist.value / 100
+        if b.signal == "twist":
+            tw = max(tw, 0.3 * b.signal_progress())
+        if not b.sound_only or b.state == "twist" or f.twist.value > 0:
+            pattern_fx.draw_line_twist(canvas, tip, (sx, sy + bob - size * 0.25), tw, self.t)
         if f.phase == "fight":
             draw_bobber(canvas, pal, sx, sy + bob, size, floating=True, dip=0.55)
 
@@ -1463,6 +1604,7 @@ class FishingScene(Scene):
         self.screen_fx.draw_edges(canvas)
         fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
         fight_hud.draw_boss_bar(canvas, pal, f)
+        pattern_fx.draw_pattern_panel(canvas, f, self.touch, t)
         if self.touch:
             # 드랙·소모품·조작 안내는 터치 버튼이 대신한다
             fight_hud.draw_distance(canvas, pal, f, self.hud_inset)
@@ -1643,7 +1785,7 @@ class FishingScene(Scene):
         if sig == "lure" and int(t * 12) % 2 == 0:
             return  # 가짜 반사광은 깜빡인다
         col = {"jump": (255, 214, 90), "lure": (255, 214, 90), "leap": (120, 220, 255), "rush": (240, 245, 255),
-               "turn": (200, 180, 255)}.get(sig, (255, 255, 255))
+               "turn": (200, 180, 255)}.get(sig, fight_fx.ICON_COL.get(sig, (255, 255, 255)))
         r = int(4 + 6 * prog)
         glow = pygame.Surface((60, 60), pygame.SRCALPHA)
         pygame.draw.circle(glow, (*col, 70), (30, 30), r + 10)
@@ -1673,7 +1815,7 @@ class FishingScene(Scene):
             sig, prompt_on = None, False  # 행동 아이콘·꺾기 프롬프트 없음 (점프 중 판정 원만)
         elif "dark" in f.gim.kinds(b):
             sig = None  # 동굴: 아이콘 대신 천장 반사광 (꺾기 타이밍 막대는 유지)
-        if sig == "rush" or (sig == "turn" and not prompt_on):
+        if sig == "rush" or (sig == "turn" and not prompt_on) or sig in PATTERN_CUES:
             fight_fx.draw_behavior_icon(canvas, mapped, sig, b.signal_progress(), b.turn_dir, t)
         if not b.sound_only and (sig == "turn" or b.state == "turn"):
             amount = b.signal_progress() if sig == "turn" else 1.0

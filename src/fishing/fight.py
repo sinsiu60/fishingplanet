@@ -10,12 +10,17 @@ from src.core.config import load_json
 from src.core.mathutil import clamp, lerp
 from src.fish_ai.brain import FishBrain
 from src.fishing import rank as rank_mod
+from src.fishing.patterns import JUDGES, PATTERN_IDS, Combo, PatternInput, TwistGauge
 
 LOSE_REASONS = {
     "snap": ("줄이 끊어졌다", "빨간 구간에 너무 오래 있었다. 돌진할 땐 드랙(Q)을 낮추고 감기를 멈추세요."),
     "slack": ("바늘이 빠졌다", "줄이 너무 느슨했다. 장력을 초록 구간 아래로 떨어뜨리지 마세요."),
     "jump": ("바늘이 빠졌다", "점프 정점에 낚싯대를 숙이지 못했다. 그림자가 커지면 우클릭을 준비하세요."),
     "snag": ("줄이 걸려 끊어졌다", "물고기가 위협 구역(수초·바위)으로 들어갔다. 그쪽으로 가면 마우스를 반대로 당겨 빼내세요."),
+    "shake": ("바늘이 빠졌다", "머리를 흔들 때 감거나 낚싯대를 움직였다. 줄이 떨리면 감기를 멈추고 손을 가만히 두세요."),
+    "reverse": ("바늘이 빠졌다", "정면으로 달려올 때 줄이 처졌다. 그림자가 다가오면 연타로 감아 줄을 팽팽하게 유지하세요."),
+    "dive": ("줄이 끊어졌다", "잠수할 때 줄이 바닥에 쓸렸다. 그림자가 작아지며 가라앉으면 낚싯대를 위로 세우세요."),
+    "twist": ("줄이 끊어졌다", "꼬인 줄이 버티지 못했다. 줄에 나선이 보이면 원을 그려 꼬임을 풀어 주세요."),
     "worn": ("바늘이 빠졌다", "신호 대응(숙이기·꺾기·몸털기)을 세 번 놓쳐 바늘이 헐거워졌다. 바늘 게이지의 어두운 칸은 다시 줄어들지 않아요."),
     "escape": ("마지막 발악! 줄을 끊고 달아났다", "엘드라시온의 물고기는 특수 찌 없이는 끝까지 잡을 수 없다. 상점에서 필요한 찌를 장착하세요."),
 }
@@ -39,7 +44,7 @@ def heave_amp(fish: dict, cfg: dict, rod_tier: int | None = None) -> float:
 class Fight:
     def __init__(self, fish: dict, size_cm: float, cast_distance: float, angle: float, yaw: float,
                  gear: dict | None = None, rnd: random.Random | None = None, hazards: list | None = None,
-                 gimmick: str | None = None, float_need: int = 0, float_tier: int = 0):
+                 gimmick: str | None = None, float_need: int = 0, float_tier: int = 0, touch_lead: float = 0.0):
         root = load_json("fishing_config.json")
         self.cfg = root["fight"]
         self.fcfg = root["flick"]
@@ -70,6 +75,15 @@ class Fight:
         self.drag = (self.drag_steps + 1) // 2
         self.drag_min_prev: int | None = None  # 순간 최저 드랙 중이면 떼고 돌아갈 단계
         self.ctl = None  # 추가 조작 상태 (src/platform/gesture.Controls, 낚시 씬이 넣어 줌)
+        # 신규 패턴 (U3): 진행 중 판정, 꼬임 게이지, 연쇄 콤보
+        self.inp = PatternInput()
+        self.pat = None
+        self.twist = TwistGauge(self)
+        self.combo: Combo | None = None
+        self.calm_heave_t = 0.0     # 줄 비틀기 성공: 장력 울렁임 없음
+        self.aim_rate = 0.0         # 낚싯대 방향이 바뀌는 빠르기 (머리 흔들기 판정)
+        self.last_pattern_fail: tuple[str, float] | None = None
+        self.brain.telegraph_lead = touch_lead  # 모바일: 신규 패턴 예고 +0.1초
         self.perfects = self.goods = self.misses = 0
         self.perfect_streak = 0
         self.elapsed = 0.0
@@ -255,6 +269,8 @@ class Fight:
             self.tension += fc["turn_fail_tension"]
             self.hook += fc["turn_fail_hook"]
             self._fail_floor()
+            if self.combo:
+                self.combo.fail()
             self.misses += 1
             self.perfect_streak = 0
             self.last_judge = "flick_miss"
@@ -330,7 +346,20 @@ class Fight:
         self.hook = max(self.hook, self.hook_floor)
         self.events.append(f"hook_floor:{round(self.hook_floor / self.cfg['fail_hook_floor'])}")
 
+    def pattern_result(self, pid: str, result: str) -> None:
+        """패턴 판정 끝 (patterns.Judge.finish 가 부름)."""
+        if result == "fail":
+            self.misses += 1
+            self.perfect_streak = 0
+            self.last_pattern_fail = (pid, self.elapsed)
+            if self.combo:
+                self.combo.fail()
+        self.last_judge = f"pattern_{result}"
+        self.events.append(f"pattern_{result}:{pid}")
+
     def _miss(self, kind: str) -> None:
+        if self.combo:
+            self.combo.fail()
         self.misses += 1
         self.perfect_streak = 0
         self.tension += self.cfg["miss_tension_spike"]
@@ -341,7 +370,12 @@ class Fight:
         self.events.append(kind)
 
     # ── 틱 ──
-    def update(self, dt: float, reeling: bool, rod_aim: float) -> None:
+    def update(self, dt: float, reeling: bool, rod_aim: float, inp: PatternInput | None = None) -> None:
+        if inp is not None:
+            self.inp = inp
+        if dt > 0:
+            inst = abs(rod_aim - self.rod_aim) / dt
+            self.aim_rate += (inst - self.aim_rate) * min(1.0, dt / 0.1)
         self.dip_t = max(0.0, self.dip_t - dt)
         if self.escape_t is not None and self.phase == "fight":
             self._update_escape(dt)
@@ -354,6 +388,45 @@ class Fight:
             self._update_fight(dt, reeling, rod_aim)
         elif self.phase == "net":
             self._update_net(dt)
+
+    # ── 신규 패턴 (U3) ──
+    def _pattern_event(self, ev: str) -> None:
+        b = self.brain
+        kind, _, pid = ev.partition(":")
+        if self.combo is not None:
+            self.combo.on_event(ev)
+        if kind == "telegraph" and pid in PATTERN_IDS:
+            self.pat = JUDGES[pid](self)
+        elif kind == "action" and pid in PATTERN_IDS:
+            if self.pat is None or self.pat.id != pid or self.pat.active:
+                self.pat = JUDGES[pid](self)
+            self.pat.begin(b.timer)
+        elif kind == "end" and pid in PATTERN_IDS:
+            if self.pat is not None and self.pat.id == pid and self.pat.active:
+                self.pat.finish()
+            self.pat = None
+        elif ev == "action:chain":
+            self.combo = Combo(self, b.combo_all)
+            self.combo.on_event("action:" + b.state)  # 첫 행동은 바로 시작
+        elif ev == "combo_end" and self.combo is not None:
+            self.combo.finish()
+            self.combo = None
+
+    def _update_patterns(self, dt: float, reeling: bool) -> None:
+        b, p = self.brain, self.pat
+        if p is not None:
+            # 페이즈 전환·지침 등으로 끊기면 효과 없이 버린다
+            if (not p.active and not (b.state == "telegraph" and b.pending == p.id)) or (p.active and b.state != p.id):
+                self.pat = p = None
+        if p is not None:
+            p.update(dt, self.inp, reeling, self.aim_rate)
+        self.twist.update(dt, self.inp, b.state == "twist")
+        if self.combo is not None:
+            if not b.combo_on:
+                self.combo = None  # 페이즈 전환 등으로 콤보가 끊김
+            else:
+                self.combo.update(dt)
+        self.calm_heave_t = max(0.0, self.calm_heave_t - dt)
 
     def _update_fight(self, dt: float, reeling: bool, rod_aim: float) -> None:
         cfg = self.cfg
@@ -369,6 +442,7 @@ class Fight:
         if b.cover_dir == 0 and b.gimmick_bias > 0 and self.gim.kinds(b) & {"tangle", "ice", "current"}:
             b.cover_dir = 1 if self.angle - self.yaw >= 0 else -1  # 기믹 쪽(바깥)으로 끌고 간다
             b.cover_from_gimmick = True
+        b.busy = (1 if self.pat is not None else 0) + (1 if self.twist.value > 0 else 0)
         b.update(dt, self.stamina <= 0, self.stamina_frac)
         for ev in b.events:
             if ev == "action:jump" and self.pre_judged:
@@ -377,7 +451,9 @@ class Fight:
             if ev == "jump_land" and not b.jump_judged:
                 self._miss("miss_none")
             self.events.append(ev)
+            self._pattern_event(ev)
         b.events.clear()
+        self._update_patterns(dt, reeling)
 
         self._update_turn_flick()
 
@@ -413,8 +489,13 @@ class Fight:
             target = max(target, floor)
         if b.is_active:
             target += math.sin(self.elapsed * 13.0) * 2.5 + math.sin(self.elapsed * 5.3) * 2.0
-            if b.state not in ("rush", "jump"):  # 돌진·점프는 따로 대응(드랙·숙이기)이 있으니 겹치지 않게
+            if b.state not in ("rush", "jump") and self.calm_heave_t <= 0:  # 돌진·점프는 따로 대응(드랙·숙이기)이 있으니 겹치지 않게
                 target += self.heave_amp * math.sin(self.elapsed * cfg["heave_speed"] + self.heave_phase)
+            if b.state == "shake":
+                target += math.sin(self.elapsed * 47.0) * 4.0  # 머리 흔들기: 장력이 잘게 떨림
+        ov = self.pat.tension_override(self) if self.pat is not None else None
+        if ov is not None:
+            target = ov + math.sin(self.elapsed * 13.0) * 2.0  # 역주행: 줄이 처진다 (연타로 끌어올림)
         target += self.gim.tension_offset(self)  # 부유섬 물살
         self.target = target
         k = 1 - math.exp(-dt / cfg["tension_response_sec"])
@@ -428,6 +509,8 @@ class Fight:
             reel_in = self.gear["reel_speed"] * (cfg["reel_speed_drag_min"] + cfg["reel_speed_drag_add"] * drag_frac) * mult
         else:
             reel_in = 0.0
+        if self.pat is not None and self.pat.hold_payout:
+            payout = 0.0  # 잠수 중 낚싯대를 세우고 있으면 줄이 풀리지 않는다
         self.reel_speed_now = reel_in
         self.payout_now = payout
         self.distance = max(0.0, self.distance + (payout - reel_in) * dt)
@@ -500,19 +583,23 @@ class Fight:
         self.stamina = max(0.0, self.stamina - drain * dt)
 
         # 종료 판정
+        recent = self.last_pattern_fail if self.last_pattern_fail and \
+            self.elapsed - self.last_pattern_fail[1] < 2.5 else None
         if self.line <= 0:
-            self._lose("snap")
+            self._lose(recent[0] if recent and recent[0] in ("dive", "twist") else "snap")
         elif self.snag >= 100:
             self._lose("snag")
         elif self.hook >= 100:
             if self.hook_floor >= 99.9:
                 self._lose("worn")  # 실수 세 번
+            elif recent and recent[0] in ("shake", "reverse"):
+                self._lose(recent[0])
             else:
                 self._lose("jump" if self.elapsed - self.last_jump_miss_t < 1.5 else "slack")
         elif self._escape_ready():
             self.escape_t = 0.0
             self.events.append("escape_start")  # 눈이 번쩍 + 물보라 폭발
-        elif self.distance <= cfg["net_distance"] and b.state not in ("jump", "telegraph"):
+        elif self.distance <= cfg["net_distance"] and b.state not in ("jump", "telegraph") + PATTERN_IDS:
             need = cfg["net_min_stamina_legend"] if self.fish["rarity"] == "legend" else cfg["net_min_stamina"]
             if self.stamina_frac > need and b.state not in ("rush",):
                 # 아직 힘이 남았으면 뜰채 앞에서 다시 도망친다 (예고 후 돌진)

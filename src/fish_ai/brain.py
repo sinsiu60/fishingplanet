@@ -32,17 +32,28 @@ stamina가 0이면: exhausted (끝까지 저항 거의 없음)
   lightning_cue   점프 예고마다 번개가 친다 (번개 = 박자)
   jump_height_m   점프 높이 (꼬리 연타는 낮게)
   dragon          용으로 변신 (연출)
+
+신규 패턴 (Phase U3, data/patterns.json · DESIGN.md 27-2): actions에 넣으면 예고 → 패턴 상태 → 끝
+  shake 머리 흔들기 / dive 잠수 / surface 수면 질주 / reverse 역주행 / twist 줄 비틀기
+  chain 연쇄 콤보: 예고 한 번 뒤 chain_seq(3행동)를 짧은 예고로 이어 간다
+  판정은 fishing/patterns.py (Fight가 들고 있음). 패턴 상태가 끝나면 events에 "end:<id>"
 """
 import random
 
 from src.core.config import load_json
 
-ACTIVE_STATES = ("idle", "telegraph", "rush", "jump", "turn", "fake_tired")
+PATTERNS = ("shake", "dive", "surface", "reverse", "twist")  # 상태가 되는 신규 패턴 (chain은 순서만 정함)
+ACTIVE_STATES = ("idle", "telegraph", "rush", "jump", "turn", "fake_tired") + PATTERNS
 CALM_STATES = ("charge", "tired", "exhausted")
 STATE_NAMES = {
     "idle": "격렬", "telegraph": "격렬", "rush": "돌진!", "jump": "점프!", "turn": "방향 전환",
     "charge": "멈춤", "tired": "지침", "fake_tired": "지침", "recover": "회복 중", "exhausted": "완전 지침",
+    "shake": "머리 흔들기!", "dive": "잠수!", "surface": "수면 질주!", "reverse": "역주행!", "twist": "줄 비틀기!",
 }
+
+
+def patterns_cfg() -> dict:
+    return load_json("patterns.json")
 
 
 class FishBrain:
@@ -55,6 +66,7 @@ class FishBrain:
         cfg = self.cfg
         self.phases = fish.get("phases") or []
         self.phase = 0
+        self.pcfg = patterns_cfg()
         self._load_params(fish)
         if self.phases:
             self._load_params({**fish, **self.phases[0]})
@@ -75,6 +87,13 @@ class FishBrain:
         self.rush_after_charge = False
         self.jump_judged = False
         self.events: list[str] = []
+        # 신규 패턴
+        self.telegraph_lead = 0.0   # 모바일: 신규 패턴 예고를 이만큼 길게 (Fight가 넣어 줌)
+        self.combo_seq: list[str] = []  # 연쇄 콤보 남은 행동
+        self.combo_all: list[str] = []  # 이번 콤보 전체 (화면 표시용)
+        self.combo_on = False
+        self.combo_mult = 1.0       # 콤보 중간 실패 → 남은 행동 힘 ×1.3
+        self.busy = 0               # Fight가 매 틱 알려줌: 지금 대응 중인 것 수 (동시 2개 규칙)
         # 첫 돌진 (가물치): 챔질 직후 예고 → 강한 돌진
         self.first_rush = fish.get("first_rush")
         self.first_rush_on = False
@@ -112,6 +131,7 @@ class FishBrain:
         self.sound_only = src.get("sound_only", False)
         if self.sound_only:
             self.dark = True
+        self.chain_seq = src.get("chain_seq") or self.pcfg["chain"]["default_seq"]
 
     @property
     def phase_desc(self) -> str:
@@ -133,6 +153,7 @@ class FishBrain:
         self.pending = None
         self.chain_left = 0
         self.chain_action = None
+        self.combo_seq, self.combo_on, self.combo_mult = [], False, 1.0
         self.burst = max(self.burst, 0.8)
         pause = self.legend_cfg["phase_pause_sec"] + (self.legend_cfg["dragon_extra_pause_sec"] if self.dragon else 0)
         self._enter("idle", pause)  # 숨 돌릴 틈 (용 변신은 연출 동안 더 길게)
@@ -141,7 +162,8 @@ class FishBrain:
     # ── 조회 ──
     @property
     def pull(self) -> float:
-        p = self.cfg["pull"][self.state]
+        p = self.cfg["pull"][self.state] if self.state in self.cfg["pull"] else self.pcfg[self.state]["pull"]
+        p *= self.combo_mult
         if self.state == "rush" and self.rush_after_charge:
             p *= self.charge_rush_mult
         if self.state == "rush" and self.first_rush_on:
@@ -202,8 +224,16 @@ class FishBrain:
     def lose_burst(self, amount: float) -> None:
         self.burst -= amount
 
+    def insert_jump(self, telegraph_sec: float) -> None:
+        """수면 질주 실패: 곧바로 점프 시도. 콤보 중이면 밀려난 다음 행동은 점프 뒤로."""
+        if self.state == "telegraph" and self.combo_on and self.pending:
+            self.combo_seq.insert(0, self.pending)
+        self.chain_left = 0
+        self._begin_telegraph("jump", telegraph_sec)
+
     def recover_from_net_fail(self) -> None:
         self.burst = max(self.burst, 0.6)
+        self.combo_seq, self.combo_on, self.combo_mult = [], False, 1.0
         self.chain_left = 0
         self._begin_telegraph("rush")
 
@@ -216,7 +246,20 @@ class FishBrain:
     def _short_telegraph(self) -> float:
         return max(self.cfg["min_telegraph_sec"], self.telegraph_sec * self.cfg["chain_telegraph_mult"])
 
+    def pattern_telegraph(self, action: str) -> float:
+        """신규 패턴 예고 길이: 물고기 예고 × 배율, 최소 0.4초, 모바일은 조금 더."""
+        pc = self.pcfg
+        if action == "chain":
+            base = pc["chain"]["telegraph_sec"]
+        else:
+            base = self.telegraph_sec * pc[action].get("telegraph_mult", 1.0)
+        return max(pc["min_telegraph_sec"], base) + self.telegraph_lead
+
     def _begin_telegraph(self, action: str, duration: float | None = None, turn_dir: int | None = None) -> None:
+        if duration is None and (action in PATTERNS or action == "chain"):
+            duration = self.pattern_telegraph(action)
+        elif duration is not None and action in PATTERNS:
+            duration = max(self.pcfg["min_telegraph_sec"], duration) + self.telegraph_lead
         self.pending = action
         if action == "leap":
             self.leap_dir = self.rnd.choice((-1, 1))
@@ -235,18 +278,56 @@ class FishBrain:
 
     def _choose_action(self) -> str:
         names = list(self.actions)
+        if self.busy >= 2:
+            # 동시 2개 규칙: 이미 둘에 대응 중이면(패턴 + 꼬임 게이지 등) 신규 패턴 대신 기존 행동
+            plain = [n for n in names if n not in PATTERNS and n != "chain"]
+            names = plain or names
         return self.rnd.choices(names, [self.actions[n] for n in names])[0]
+
+    def force_pattern(self, action: str) -> None:
+        """테스트(F9): 지금 바로 그 패턴 예고."""
+        self.chain_left = 0
+        self.chain_action = None
+        self.combo_seq = []
+        self.combo_on = False
+        self.combo_mult = 1.0
+        self.burst = max(self.burst, 0.6)
+        self._begin_telegraph(action)
 
     def _start_action(self, action: str) -> None:
         cfg = self.cfg
         # 연속 동작(체인) 중엔 burst를 덜 쓴다
-        cost = cfg["burst_cost"].get(action, 0.2)
+        if action in PATTERNS or action == "chain":
+            cost = self.pcfg[action]["burst_cost"]
+        else:
+            cost = cfg["burst_cost"].get(action, 0.2)
+        if self.combo_on:
+            cost *= 0.5  # 콤보는 묶어서 한 번 크게 쓴 셈
         self.burst -= cost * (0.5 if self.chain_action == action else 1.0)
         self.pending = None
         if action == "lure":
             # 가짜 예고: 아무 일도 없다
             self.events.append("action:lure")
             self._enter("idle", self._rand(cfg["idle_sec"]))
+            return
+        if action == "chain":
+            # 연쇄 콤보: 예고가 끝나면 첫 행동을 바로 시작 (예고 때 순서를 보여 줬다)
+            self.combo_all = list(self.chain_seq)
+            self.combo_seq = list(self.chain_seq)
+            self.combo_on = True
+            self.combo_mult = 1.0
+            self.events.append("action:chain")
+            first = self.combo_seq.pop(0)
+            self.chain_left = 0
+            self.chain_action = None
+            if first == "charge":
+                self._start_action("charge")
+            else:
+                self._start_action(first)
+            return
+        if action in PATTERNS:
+            self._enter(action, self._rand(self.pcfg[action]["sec"]))
+            self.events.append(f"action:{action}")
             return
         if action == "rush":
             if not self.first_rush_done:
@@ -309,6 +390,9 @@ class FishBrain:
             if s == "rush" and self.ink_p and self.rnd.random() < self.ink_p:
                 self.events.append("ink")
             self._after_action(s)
+        elif s in PATTERNS:
+            self.events.append(f"end:{s}")
+            self._after_action(s)
         elif s == "idle":
             if self.burst <= 0:
                 if self.fake_tired_p and self.rnd.random() < self.fake_tired_p:
@@ -339,6 +423,19 @@ class FishBrain:
             # 첫 돌진에 힘을 다 써서 빨리 지친다
             self.first_rush_on = False
             self.burst = min(self.burst, self.first_rush.get("burst_after", 0.7))
+        # 연쇄 콤보: 다음 행동을 짧은 예고로
+        if self.combo_on:
+            if self.combo_seq:
+                nxt = self.combo_seq.pop(0)
+                gap = self.pcfg["chain"]["gap_telegraph_sec"]
+                if nxt == "charge":
+                    self._start_action("charge")
+                else:
+                    self._begin_telegraph(nxt, max(gap, self.cfg["min_telegraph_sec"]))
+                return
+            self.combo_on = False
+            self.combo_mult = 1.0
+            self.events.append("combo_end")
         # 연속 동작
         if self.chain_left > 0 and self.chain_action == action:
             self.chain_left -= 1

@@ -1,5 +1,5 @@
 {
- "_설명": "물고기 89종: 샤르미온 47 (DESIGN.md 3·18장) + 엘드라시온 42 (23장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. hint3/hint10은 도감 힌트. spawn_weight = 출현 가중치 덮어쓰기 (없으면 희귀도 기본값). 조건이 까다로운 가물치·숭어·어름치·만새기는 희귀로 올리되 출현 빈도는 고급 그대로(25).",
+ "_설명": "물고기 89종: 샤르미온 47 (DESIGN.md 3·18장) + 엘드라시온 42 (23장). 행동은 fish_ai 공통값 + 종별 덮어쓰기. hint3/hint10은 도감 힌트. spawn_weight = 출현 가중치 덮어쓰기 (없으면 희귀도 기본값). 조건이 까다로운 가물치·숭어·어름치·만새기는 희귀로 올리되 출현 빈도는 고급 그대로(25). 신규 패턴(U3, data/patterns.json): actions에 shake·dive·surface·reverse·twist·chain 가중치, chain_seq = 연쇄 콤보 3행동 (DESIGN.md 27-3 배치표).",
  "fish": [
   {
    "id": "crucian",
@@ -763,7 +763,8 @@
     "jump": 40,
     "leap": 12,
     "rush": 24,
-    "turn": 24
+    "turn": 24,
+    "shake": 30
    },
    "shadow_len_m": 0.28,
    "nibbles": [
@@ -829,7 +830,8 @@
    "actions": {
     "turn": 45,
     "rush": 35,
-    "charge": 20
+    "charge": 20,
+    "shake": 20
    },
    "shadow_len_m": 0.38,
    "nibbles": [
@@ -894,7 +896,8 @@
     "turn": 40,
     "jump": 22,
     "leap": 15,
-    "rush": 23
+    "rush": 23,
+    "shake": 20
    },
    "shadow_len_m": 0.57,
    "nibbles": [
@@ -962,7 +965,8 @@
    "actions": {
     "jump": 40,
     "turn": 35,
-    "rush": 25
+    "rush": 25,
+    "shake": 20
    },
    "combo": {
     "jump": [
@@ -1031,7 +1035,8 @@
    "actions": {
     "turn": 50,
     "rush": 30,
-    "charge": 20
+    "charge": 20,
+    "shake": 20
    },
    "cover_bias": 0.9,
    "hazard_mult": 1.3,
@@ -1142,7 +1147,13 @@
       2,
       2
      ],
-     "cover_bias": 0.95
+     "cover_bias": 0.95,
+     "actions": {
+      "turn": 45,
+      "rush": 35,
+      "jump": 20,
+      "shake": 25
+     }
     },
     {
      "desc": "도주하자마자 뛰어오른다!",
@@ -1311,7 +1322,9 @@
    "actions": {
     "rush": 40,
     "turn": 30,
-    "charge": 30
+    "charge": 30,
+    "dive": 22,
+    "surface": 22
    },
    "shadow_len_m": 0.36,
    "nibbles": [
@@ -1375,7 +1388,9 @@
    "actions": {
     "rush": 50,
     "charge": 30,
-    "turn": 20
+    "turn": 20,
+    "shake": 15,
+    "dive": 20
    },
    "shadow_len_m": 0.43,
    "nibbles": [
@@ -1440,7 +1455,8 @@
     "jump": 30,
     "leap": 18,
     "turn": 32,
-    "rush": 20
+    "rush": 20,
+    "surface": 25
    },
    "shadow_len_m": 0.71,
    "nibbles": [
@@ -1481,6 +1497,10 @@
     "turn": [
      "jump",
      0.5
+    ],
+    "surface": [
+     "jump",
+     0.5
     ]
    }
   },
@@ -1508,7 +1528,9 @@
    "actions": {
     "jump": 45,
     "rush": 30,
-    "turn": 25
+    "turn": 25,
+    "dive": 18,
+    "surface": 18
    },
    "jump_chain": [
     2,
@@ -1692,7 +1714,14 @@
      "jump_chain": [
       2,
       2
-     ]
+     ],
+     "actions": {
+      "jump": 40,
+      "leap": 18,
+      "turn": 27,
+      "rush": 15,
+      "surface": 25
+     }
     },
     {
      "desc": "번개가 칠 때마다 뛰어오른다!",
@@ -1794,7 +1823,9 @@
     "jump": 38,
     "leap": 20,
     "rush": 27,
-    "turn": 15
+    "turn": 15,
+    "surface": 18,
+    "reverse": 18
    },
    "shadow_len_m": 0.85,
    "nibbles": [
@@ -1864,7 +1895,8 @@
    "actions": {
     "charge": 45,
     "rush": 40,
-    "turn": 15
+    "turn": 15,
+    "reverse": 30
    },
    "shadow_len_m": 0.52,
    "nibbles": [
@@ -1993,7 +2025,9 @@
    "actions": {
     "rush": 55,
     "turn": 40,
-    "charge": 5
+    "charge": 5,
+    "dive": 18,
+    "reverse": 18
    },
    "shadow_len_m": 1.09,
    "nibbles": [
@@ -2065,7 +2099,9 @@
    "actions": {
     "rush": 70,
     "turn": 15,
-    "charge": 15
+    "charge": 15,
+    "shake": 15,
+    "reverse": 20
    },
    "shadow_len_m": 1.66,
    "nibbles": [
@@ -2205,7 +2241,9 @@
     "jump": 50,
     "leap": 15,
     "rush": 25,
-    "turn": 10
+    "turn": 10,
+    "surface": 18,
+    "reverse": 18
    },
    "jump_chain": [
     3,
@@ -2354,7 +2392,8 @@
       "jump": 50,
       "leap": 20,
       "rush": 20,
-      "turn": 10
+      "turn": 10,
+      "reverse": 25
      }
     }
    ]
@@ -2448,7 +2487,8 @@
     "jump": 28,
     "leap": 14,
     "rush": 28,
-    "turn": 30
+    "turn": 30,
+    "twist": 25
    },
    "shadow_len_m": 0.38,
    "nibbles": [
@@ -2577,7 +2617,9 @@
    "actions": {
     "turn": 70,
     "rush": 20,
-    "charge": 10
+    "charge": 10,
+    "dive": 15,
+    "twist": 20
    },
    "shadow_len_m": 2.6,
    "nibbles": [
@@ -2640,7 +2682,8 @@
    "actions": {
     "rush": 40,
     "turn": 40,
-    "charge": 20
+    "charge": 20,
+    "twist": 25
    },
    "shadow_len_m": 2.6,
    "nibbles": [
@@ -2766,7 +2809,9 @@
    "actions": {
     "turn": 70,
     "rush": 20,
-    "charge": 10
+    "charge": 10,
+    "reverse": 15,
+    "twist": 20
    },
    "turn_chain": [
     3,
@@ -2875,7 +2920,13 @@
     {
      "desc": "어둠이 그림자를 삼킨다! 줄과 소리로 읽어라",
      "telegraph_sec": 0.5,
-     "dark": true
+     "dark": true,
+     "actions": {
+      "charge": 40,
+      "rush": 35,
+      "turn": 25,
+      "twist": 25
+     }
     },
     {
      "desc": "지친 척하다 질주한다! 지느러미 빛을 보라",
@@ -2915,7 +2966,8 @@
     "jump": 20,
     "leap": 16,
     "turn": 28,
-    "charge": 14
+    "charge": 14,
+    "chain": 25
    },
    "shadow_len_m": 0.52,
    "nibbles": [
@@ -2961,7 +3013,12 @@
      "jump",
      0.3
     ]
-   }
+   },
+   "chain_seq": [
+    "turn",
+    "shake",
+    "jump"
+   ]
   },
   {
    "id": "ghost_catfish",
@@ -2986,7 +3043,8 @@
    "actions": {
     "charge": 20,
     "rush": 40,
-    "turn": 25
+    "turn": 25,
+    "chain": 25
    },
    "shadow_len_m": 1.33,
    "nibbles": [
@@ -3020,7 +3078,12 @@
    "desc": "폭풍 속 폭포 아래 떠도는 창백한 메기. 지친 척을 한다.",
    "hint3": "지친 것처럼 보여도 기포가 올라오면 가짜! 돌진이 온다.",
    "hint10": "지칠 때마다 50% 가짜 지침 (1~1.6초 뒤 돌진).",
-   "fake_tired": 0.5
+   "fake_tired": 0.5,
+   "chain_seq": [
+    "shake",
+    "dive",
+    "rush"
+   ]
   },
   {
    "id": "fog_carp",
@@ -3050,7 +3113,8 @@
     "jump": 25,
     "turn": 25,
     "charge": 10,
-    "leap": 10
+    "leap": 10,
+    "chain": 20
    },
    "sound_only": true,
    "colors": {
@@ -3083,7 +3147,12 @@
     1,
     2
    ],
-   "shadow_len_m": 0.76
+   "shadow_len_m": 0.76,
+   "chain_seq": [
+    "surface",
+    "reverse",
+    "jump"
+   ]
   },
   {
    "id": "scale_king",
@@ -3112,7 +3181,8 @@
     "rush": 30,
     "turn": 30,
     "jump": 25,
-    "charge": 15
+    "charge": 15,
+    "chain": 25
    },
    "phase_at": [
     0.5
@@ -3120,7 +3190,12 @@
    "phases": [
     {
      "desc": "비늘을 세우고 버틴다",
-     "telegraph_sec": 0.55
+     "telegraph_sec": 0.55,
+     "chain_seq": [
+      "shake",
+      "surface",
+      "jump"
+     ]
     },
     {
      "desc": "비늘이 번쩍인다! 점프가 이어진다",
@@ -3134,7 +3209,12 @@
        "jump",
        0.6
       ]
-     }
+     },
+     "chain_seq": [
+      "reverse",
+      "twist",
+      "jump"
+     ]
     }
    ],
    "colors": {

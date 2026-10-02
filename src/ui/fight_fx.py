@@ -12,7 +12,10 @@ GOLD = (255, 214, 90)
 GREAT_COL = (130, 255, 180)
 MISS_COL = (255, 110, 95)
 ICON_COL = {"rush": (255, 150, 60), "jump": (110, 220, 255), "turn": (255, 230, 90), "charge": (210, 150, 255),
-            "tired": (110, 255, 140), "leap": (120, 255, 240)}
+            "tired": (110, 255, 140), "leap": (120, 255, 240),
+            # 신규 패턴 (U3)
+            "shake": (255, 120, 200), "dive": (90, 150, 255), "surface": (150, 240, 255), "reverse": (255, 190, 120),
+            "twist": (200, 255, 120), "chain": (255, 214, 90)}
 SWIPE = (120, 255, 240)
 
 RING_R = 13          # 판정 원 반지름
@@ -94,6 +97,23 @@ def draw_behavior_icon(canvas, pos, kind: str, progress: float, turn_dir: int, t
     elif kind == "charge":
         canvas.fill(col, (x - 4, y - 4, 3, 8))
         canvas.fill(col, (x + 1, y - 4, 3, 8))
+    elif kind == "shake":  # 지그재그 떨림
+        pygame.draw.lines(canvas, col, False, [(x - 5, y), (x - 3, y - 3), (x - 1, y + 3), (x + 1, y - 3),
+                                               (x + 3, y + 3), (x + 5, y)], 1)
+    elif kind == "dive":  # 아래 화살표
+        pygame.draw.line(canvas, col, (x, y - 5), (x, y + 4), 2)
+        pygame.draw.lines(canvas, col, False, [(x - 4, y), (x, y + 5), (x + 4, y)], 2)
+    elif kind == "surface":  # 물결 위 화살표
+        pygame.draw.lines(canvas, col, False, [(x - 5, y + 4), (x - 2, y + 2), (x + 1, y + 4), (x + 4, y + 2)], 1)
+        pygame.draw.lines(canvas, col, False, [(x - 4, y - 1), (x, y - 5), (x + 4, y - 1)], 2)
+    elif kind == "reverse":  # 다가오는 원 (커지는 고리)
+        pygame.draw.circle(canvas, col, (x, y), 2)
+        pygame.draw.circle(canvas, col, (x, y), 5, 1)
+    elif kind == "twist":  # 나선
+        pts = [(x + math.cos(a * 0.5) * a * 0.45, y + math.sin(a * 0.5) * a * 0.45) for a in range(0, 13)]
+        pygame.draw.lines(canvas, col, False, pts, 1)
+    elif kind == "chain":
+        text(canvas, "x3", (x, y), col, 11, "center")
     elif kind == "tired":
         canvas.fill(col, (x - 1, y - 5, 3, 7))
         canvas.fill(col, (x - 1, y + 3, 3, 2))
@@ -115,6 +135,18 @@ class JudgePopups:
         "flick_miss": ("꺾기 실패!", MISS_COL, 1.2),
         "swipe_perfect": ("PERFECT!", SWIPE, 2.0),
         "swipe_good": ("GREAT!", SWIPE, 1.6),
+        # 신규 패턴 (U3)
+        "ok_shake": ("버텼다!", GREAT_COL, 1.6),
+        "ok_dive": ("끌어올렸다!", GREAT_COL, 1.6),
+        "ok_surface": ("눌러 막았다!", GREAT_COL, 1.6),
+        "ok_reverse": ("따라잡았다!", GREAT_COL, 1.6),
+        "ok_twist": ("꼬임 풀림!", GREAT_COL, 1.6),
+        "fail_shake": ("흔들렸다!", MISS_COL, 1.2),
+        "fail_dive": ("바닥에 쓸렸다!", MISS_COL, 1.2),
+        "fail_surface": ("튀어 오른다!", MISS_COL, 1.2),
+        "fail_reverse": ("줄이 처졌다!", MISS_COL, 1.2),
+        "fail_twist": ("줄이 꼬였다!", MISS_COL, 1.2),
+        "combo_ok": ("콤보 완파!", GOLD, 2.0),
     }
 
     def __init__(self):

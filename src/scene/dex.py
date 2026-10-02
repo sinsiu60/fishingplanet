@@ -7,6 +7,7 @@ from src.core.config import load_json
 from src.core.weather import WEATHER_KO
 from src.render.fish_draw import RANK_COLORS, draw_fish_side, fish_colors
 from src.save.save_game import baits
+from src.fishing.patterns import TIP_SHORT, fish_patterns
 from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
@@ -212,6 +213,15 @@ class DexScene(Scene):
                 for ln in wrap_text(f"· 힌트 잠김: {need}회 포획 시 해금 ({entry['count']}/{need})", d.w - 12):
                     text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
                     yy += 12
+        pats = fish_patterns(f)
+        if pats:
+            # 신규 패턴 힌트: 만나 본 패턴만 이름과 대응, 아직이면 ???
+            seen = self.save.data.get("patterns_seen", [])
+            names = load_json("patterns.json")["names"]
+            parts = [f"{names[p]}({TIP_SHORT[p]})" if p in seen else "???" for p in pats]
+            for ln in wrap_text("· 패턴: " + ", ".join(parts), d.w - 12)[:2]:
+                text(canvas, ln, (x, yy), (255, 200, 150), 11, "midleft")
+                yy += 12
         if entry["best_rank"] == "S":
             pulse = 0.5 + 0.5 * math.sin(self.t * 4)
             pygame.draw.rect(canvas, GOLD if pulse > 0.3 else (180, 140, 40), d, 1)
