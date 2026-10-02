@@ -120,6 +120,7 @@ def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:
     rel = shadow["heading"] - cam.yaw
     side = math.sin(rel)
     body_w = max(2.0, length * (0.45 + 0.55 * abs(side)))
+    body_w *= shadow.get("squash", 1.0) * (1 + shadow.get("stretch", 0.0))  # 돌진: 웅크림 압축 / 돌진 늘어남 (31-14)
     body_h = max(3.0, length * 0.34)
     row = clamp((sy - cam.horizon) / (cam.height - cam.horizon), 0, 1) ** 0.55
     water = lerp_color(pal["water_top"], pal["water_bottom"], row)
@@ -136,6 +137,18 @@ def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:
     tail_x = sx - direction * body_w / 2
     wag = math.sin(t * shadow.get("wag", 9.0)) * body_h * 0.35
     tail_len = max(2.0, body_w * 0.3)
+    curl = shadow.get("curl", 0.0)
+    if curl > 0.05:
+        # 웅크림: 꼬리가 S자로 말림 (위로 꺾였다 아래로)
+        tl = tail_len * 1.4
+        pts = [(tail_x, sy), (tail_x - direction * tl * 0.45, sy - body_h * 0.55 * curl),
+               (tail_x - direction * tl * 0.8, sy + body_h * 0.1 * curl),
+               (tail_x - direction * tl, sy + body_h * 0.5 * curl)]
+        pygame.draw.lines(canvas, color, False, pts, max(2, int(body_h * 0.35)))
+        ex, ey = pts[-1]
+        pygame.draw.polygon(canvas, color, [(ex, ey), (ex - direction * tail_len * 0.5, ey - body_h * 0.4),
+                                            (ex - direction * tail_len * 0.5, ey + body_h * 0.3)])
+        return
     pygame.draw.polygon(canvas, color, [
         (tail_x, sy),
         (tail_x - direction * tail_len, sy - body_h * 0.45 + wag),

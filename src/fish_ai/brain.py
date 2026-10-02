@@ -150,6 +150,7 @@ class FishBrain:
         self.jump_height = src.get("jump_height_m", cfg["jump_height_m"])
         self.dragon = src.get("dragon", False)
         self.fake_cue_p = src.get("fake_cue", 0.0)
+        self.fake_rush_p = src.get("fake_rush", 0.0)  # 교활 변이: 웅크렸다가 안 오는 가짜 돌진 (31-14)
         self.gimmick = src.get("gimmick")            # 전설 페이즈가 기믹을 바꿀 때 (오르시엘)
         self.gimmick_mult = src.get("gimmick_mult", 1.0)
         self.gimmick_bias = src.get("gimmick_bias", 0.0)  # 기믹 쪽(바깥)으로 끄는 경향 — 위협 구역 경향과 따로
@@ -406,7 +407,7 @@ class FishBrain:
 
     def learn_mult(self, action: str) -> float:
         """숙련도 배율 (처음 1.5 / 익숙함 1.2 / 숙련 1.0) + 연속 실패 보조(다음 1번 1.2) 중 큰 쪽."""
-        if self.mastery is None or action == "lure":
+        if self.mastery is None or action in ("lure", "fake_rush"):
             return 1.0
         mc = self.sig["mastery"]
         n = self.mastery.get(action, 0)
@@ -530,9 +531,9 @@ class FishBrain:
             cost *= 0.5  # 콤보는 묶어서 한 번 크게 쓴 셈
         self.burst -= cost * (0.5 if self.chain_action == action else 1.0)
         self.pending = None
-        if action == "lure":
-            # 가짜 예고: 아무 일도 없다
-            self.events.append("action:lure")
+        if action in ("lure", "fake_rush"):
+            # 가짜 예고: 아무 일도 없다 (가짜 돌진 = 웅크림·안쪽 물결만, 줄 펄스 없음)
+            self.events.append(f"action:{action}")
             self._enter("idle", self._rand(cfg["idle_sec"]))
             return
         if action == "chain":
@@ -676,6 +677,8 @@ class FishBrain:
                     self.events.append("tired")
             elif self.fake_cue_p and self.rnd.random() < self.fake_cue_p:
                 self._begin_telegraph("lure")
+            elif self.fake_rush_p and self.rnd.random() < self.fake_rush_p:
+                self._begin_telegraph("fake_rush")
             else:
                 act = self._choose_action()
                 if act is None:

@@ -54,7 +54,7 @@ DRAGON_LOOK = {"colors": {"body": [200, 40, 40], "belly": [255, 214, 110], "fin"
 
 # 튜토리얼 카드를 본 뒤 한 번 더 짧게 상기시킨다 (DESIGN.md 4장)
 TIPS = {
-    "telegraph:rush": "꼬리 물보라 = 돌진! Q로 드랙을 낮추세요",
+    "telegraph:rush": "빛이 줄을 타고 손에 닿으면 돌진! 그 전에 Q로 드랙을 낮추세요",
     "telegraph:jump": "그림자가 커진다 = 점프! 원이 겹치는 순간 우클릭",
     "telegraph:turn": "줄이 쏠린다 = 방향 전환! 꺾는 순간 반대쪽으로 확 슬라이드",
     "telegraph:leap": "하늘색 원 = 몸털기! 원이 겹칠 때 화살표 쪽으로 슬라이드",
@@ -64,7 +64,7 @@ TIPS = {
     "telegraph:lure": "등불만 번쩍 = 가짜 신호! 기포·판정 원이 없으면 속지 마세요",
 }
 # 소리 자막 (설정 '소리 자막'): 예고 소리를 글자로도 보여준다
-CAPTIONS = {"telegraph:rush": "쏴아 — 물보라 (돌진)", "telegraph:jump": "보글보글 — 기포 (점프)",
+CAPTIONS = {"telegraph:rush": "웅— 줄이 울린다 (돌진)", "telegraph:jump": "보글보글 — 기포 (점프)",
             "telegraph:leap": "촵촵 — 몸털기", "telegraph:turn": "스윽 — 긁힘 (방향 전환)",
             "action:charge": "쿵 — 힘 모으기", "telegraph:lure": "팅 — 등불 (가짜)",
             "telegraph:shake": "타타탁 — 줄 떨림 (머리 흔들기)", "telegraph:dive": "꾸르륵 — 가라앉음 (잠수)",
@@ -715,6 +715,7 @@ class FishingScene(Scene):
         self.toasts.update(dt)
         self.toasts.sink = self._say if self._fight_text_mode() else None
         self.sig_dim_t = max(0.0, getattr(self, "sig_dim_t", 0.0) - dt)
+        self._rush_audio()
         self.drag_seen_t = max(0.0, getattr(self, "drag_seen_t", 0.0) - dt)
         signal_slots.configure(self.settings)
         if self.captions:
@@ -1083,13 +1084,8 @@ class FishingScene(Scene):
             # 초롱아귀 가짜 예고: 등불이 번쩍 (기포 없음)
             self.fx_t = 0.0
             self.sparkles.burst(p[0], p[1] - 2, count=3, speed=0.4, ring=False)
-        if sig == "rush" and self.fx_t > 0.12:
-            # 꼬리 물보라: 물고기 뒤쪽에서 하얀 물방울
-            self.fx_t = 0.0
-            back = math.atan2(x, z)
-            self.ripples.spawn(x + math.sin(back) * 0.4, z + math.cos(back) * 0.4, size=0.45, life=0.7)
-            if p:
-                self.droplets.burst(p[0] + random.uniform(-3, 3), p[1], max(0.5, p[2] / 25), count=4)
+        if sig in ("rush", "fake_rush"):
+            pass  # 돌진 예고는 웅크림·안쪽 물결·줄 펄스로 (rush_cue, 31-14)
         elif sig == "leap" and p and self.ink_t <= 0 and not b.dark:
             # 몸털기 점프 예고: 그림자 커짐 + 몸을 던질 쪽으로 튀는 물보라
             self.bubbles.spawn(p[0], p[1], max(3.0, f.fish["shadow_len_m"] * p[2]))
@@ -1165,9 +1161,16 @@ class FishingScene(Scene):
     def _update_landing(self, dt: float) -> None:
         for ev in self.landing.update(dt):
             if ev == "hit":
-                self.sfx.play("splash", 1.0)
-                self.sfx.play("impact", 0.5)
-                self.shake_kick = 2.0
+                cls = self.landing.cls
+                self.sfx.play("splash_small" if cls == "small" else "splash", {"small": 0.6}.get(cls, 1.0))
+                self.sfx.play("impact", {"small": 0.25, "mid": 0.5, "big": 0.8, "huge": 1.0}[cls])
+                self.shake_kick = {"small": 0.8, "mid": 2.0, "big": 3.0, "huge": 4.0}[cls]
+            elif ev.startswith("heave"):
+                # 큰 물고기 '영차': 처졌다가 확 들어 올림
+                self.sfx.play("impact", 0.7)
+                self.sfx.play("splash", 0.6)
+                self.shake_kick = 3.0 if self.landing.cls == "big" else 4.0
+                self.game.haptics.vibrate("lose", 0.5)
             elif ev == "lift":
                 self.sfx.play("rise", 0.9)
                 if self.landing.tier >= 3:
@@ -1521,6 +1524,8 @@ class FishingScene(Scene):
     def _signal_cue(self, action: str) -> None:
         """신호 사전: 같은 대응 계열 = 같은 소리·진동 (가짜 예고·콤보 머리는 없음)."""
         sig = signal_slots.cfg()
+        if action == "rush":
+            return  # 돌진은 줄 울림(점점 높아짐)·점점 세지는 진동으로 (_rush_audio, 31-14)
         acts = list(self.fight.brain.dual_pair or ()) if action == "dual" else [action]
         for a in acts:
             fam = sig["actions"].get(a, {}).get("family")
@@ -1620,8 +1625,9 @@ class FishingScene(Scene):
             self.sparkles.burst(*pos, count=8, speed=0.6, ring=False)  # 등불 번쩍 (판정 원과 헷갈리지 않게 고리 없음)
         elif ev == "action:charge" and sound_only:
             self.sfx.play("cue_charge", 1.0)
-        elif ev == "telegraph:rush":
-            self.sfx.play("splash_small", 0.7)
+        elif ev in ("telegraph:rush", "telegraph:fake_rush"):
+            self.sfx.play("bubbles", 0.45)  # 웅크림: 물을 빨아들이는 소리
+            self.rush_hum_i = -1
         elif ev == "telegraph:jump":
             self.sfx.play("bubbles", 0.8)
             if f.brain.lightning_cue:
@@ -1645,8 +1651,12 @@ class FishingScene(Scene):
         elif ev == "telegraph:turn":
             self.sfx.play("scrape", 0.8)
         elif ev == "action:rush":
-            self.sfx.play("splash_small", 1.0)
-            self._splash_at(x, z, 0.6)
+            # 펄스가 손에 닿음 = 돌진: 쉬익 + 물보라 + 툭
+            self.sfx.play("rush_go", 1.0)
+            self.sfx.play("splash_small", 0.8)
+            self._splash_at(x, z, 0.9)
+            self.game.haptics.vibrate("bite", 1.0)
+            self.shake_kick = max(self.shake_kick, 1.5)
         elif ev == "action:jump":
             self.jump_facing = -1 if f.fish_side() > 0 else 1
             self.sfx.play("splash", 0.7)
@@ -1856,6 +1866,13 @@ class FishingScene(Scene):
             elif not f.brain.dark:
                 sh = self._fight_shadow()
                 draw_fish_shadow(canvas, pal, cam, sh, t)
+                from src.ui import rush_cue
+                rph = self._rush_ph()
+                if rph is not None:
+                    p = cam.project(sh["x"], sh["z"], -0.2)
+                    if p:
+                        rush_cue.draw_ripples(canvas, (p[0], p[1]), p[2] / 20, rph, t)   # 안쪽으로 빨려드는 물결
+                        rush_cue.draw_wake(canvas, (p[0], p[1]), math.sin(sh["heading"] - cam.yaw), p[2] / 20, rph, t)
                 tx = f.twin_xz()
                 if tx is not None:
                     # 쌍둥이: 쉬는 녀석의 그림자 (조금 흐리게)
@@ -2051,8 +2068,39 @@ class FishingScene(Scene):
             shown = [m for m in muts if m != "clear"]
             if shown:
                 glow = tuple(mcfg()["kinds"][shown[int(self.t * 1.5) % len(shown)]]["color"])
+        from src.ui import rush_cue
+        mods = rush_cue.shadow_mods(self._rush_ph())  # 돌진: 웅크림 압축·꼬리 S자 / 돌진 늘어남
+        if mods.get("curl"):
+            wag = 0.0
         return {"x": x, "z": z, "heading": heading, "alpha": alpha, "len": f.fish["shadow_len_m"],
-                "scale": scale, "wag": wag, "glow": glow}
+                "scale": scale, "wag": wag, "glow": glow, **mods}
+
+    def _rush_audio(self) -> None:
+        """줄 펄스 동안: 울림 음이 단계마다 높아지고 돌진 silence_sec 전 무음, 진동은 약하게 시작해 점점 세게."""
+        ph = self._rush_ph(visual=False)
+        if ph is None or ph["stage"] != "pulse":
+            return
+        from src.ui import rush_cue
+        c = rush_cue.cfg()
+        if ph["left"] <= c["silence_sec"]:
+            return
+        i = min(c["hum_steps"] - 1, int(ph["q"] * c["hum_steps"]))
+        if i > getattr(self, "rush_hum_i", -1):
+            self.rush_hum_i = i
+            if self.settings.get("signal_sound"):
+                self.sfx.play(f"rush_hum{i}", 0.55 + 0.35 * ph["q"])
+            self.game.haptics.vibrate("pump", c["haptic_min"] + (c["haptic_max"] - c["haptic_min"]) * ph["q"])
+
+    def _rush_ph(self, visual: bool = True):
+        """돌진 줄 펄스 단계 (src/ui/rush_cue.py). visual=True면 소리 전용·동굴 어둠·먹물에선 None (소리는 따로)."""
+        f = self.fight
+        if f is None or f.phase != "fight":
+            return None
+        b = f.brain
+        if visual and (b.sound_only or b.dark or self.ink_t > 0 or "dark" in f.gim.kinds(b)):
+            return None
+        from src.ui import rush_cue
+        return rush_cue.phase(f)
 
     @staticmethod
     def _pat_k(b, pid: str):
@@ -2090,8 +2138,13 @@ class FishingScene(Scene):
         sag = max(0.0, (45 - f.tension) * 0.35) + 1
         if (d := self._pat_k(b, "reverse")) is not None and not b.doing("reverse"):
             sag += 10 * d  # 역주행 예고: 줄이 처진다
-        draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.25), sag, bias=0.6, dx=dx, color=color,
-                  cracks=cracks, t=self.t)
+        from src.ui import rush_cue
+        rph = self._rush_ph()
+        sag = max(0.5, sag + rush_cue.line_sag(rph))  # 웅크림: 살짝 느슨 / 돌진 순간: 팽팽
+        pts = draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.25), sag, bias=0.6, dx=dx, color=color,
+                        cracks=cracks, t=self.t)
+        rush_cue.draw_pulse(canvas, pts, rph, self.t)   # 빛 펄스: 물고기 → 손
+        rush_cue.draw_taut(canvas, pts, rph, self.t)    # 돌진 순간 줄이 튕김
         tw = f.twist.value / 100
         if b.telegraphing("twist") and not b.sound_only:
             tw = max(tw, 0.3 * b.signal_progress())

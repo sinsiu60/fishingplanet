@@ -97,6 +97,8 @@ def apply(fish: dict, muts: list[str], rnd=_RNG) -> dict:
         f["colors"]["eye"] = g["color"]
     if "cunning" in muts:
         f["fake_cue"] = fish.get("fake_cue", 0.0) + c["cunning"]["fake_cue_add"]
+        from src.core.config import load_json
+        f["fake_rush"] = fish.get("fake_rush", 0.0) + load_json("signals.json")["rush_pulse"]["cunning_fake_rush"]
         f["colors"]["fin"] = c["cunning"]["color"]
     if "golden" in muts:
         f["hook_mult"] = c["golden"]["hook_mult"]

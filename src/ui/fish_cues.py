@@ -188,6 +188,35 @@ def combo_row(canvas, fight, x, y, t: float) -> None:
 
 # ───────────────────────── 한 신호 ─────────────────────────
 
+def _rush_badge(canvas, f, x, y, fam, col, t, R) -> None:
+    """돌진 배지: 줄 펄스 진행률만큼 아래부터 차오르고, 돌진 순간 꽉 차며 번쩍 (31-14)."""
+    from src.ui import rush_cue
+    ph = rush_cue.phase(f)
+    fill = 0.0
+    flash = 0.0
+    if ph is not None:
+        if ph["stage"] == "pulse":
+            fill = ph["q"]
+        elif ph["stage"] == "rush":
+            fill, flash = 1.0, max(0.0, 1 - ph["k"])
+    elif f.brain.state == "rush":
+        fill = 1.0
+    pygame.draw.circle(canvas, SHADOW, (x + 1, y + 1), R + 1)
+    pygame.draw.circle(canvas, (16, 20, 36), (x, y), R)
+    if fill > 0:
+        surf = pygame.Surface((R * 2 + 2, R * 2 + 2), pygame.SRCALPHA)
+        pygame.draw.circle(surf, (*col, 150), (R + 1, R + 1), R)
+        cut = int((R * 2 + 2) * (1 - fill))
+        surf.fill((0, 0, 0, 0), (0, 0, R * 2 + 2, cut))
+        canvas.blit(surf, (x - R - 1, y - R - 1))
+    pygame.draw.circle(canvas, col, (x, y), R, 2)
+    ss.family_icon(canvas, fam, x, y, WHITE if fill > 0.5 else col, t)
+    if flash > 0:
+        pygame.draw.circle(canvas, (255, 255, 255), (x, y), int(R + 2 + 10 * (1 - flash)), 2)
+        if flash > 0.7:
+            pygame.draw.circle(canvas, (255, 255, 255), (x, y), R)  # 꽉 차는 순간 번쩍
+
+
 def _widget(canvas, ctx: dict, s: dict, x: int, y: int) -> tuple[str, object, bool]:
     """신호 하나를 물고기 자리에 그린다. 돌려줌: (할 일 칩 글자, 칩 색, 급함)."""
     f, b, t, touch = ctx["fight"], ctx["fight"].brain, ctx["t"], ctx["touch"]
@@ -197,6 +226,13 @@ def _widget(canvas, ctx: dict, s: dict, x: int, y: int) -> tuple[str, object, bo
     tele = kind == "tele"
     strong = ss.OPTS["strong"]
     R = int(14 * ss.OPTS["scale"])
+    if act == "rush":
+        _rush_badge(canvas, f, x, y, fam, col, t, R)
+        if not tele:
+            red = f.zone() == "red"
+            pulse = int(R + 3 + 3 * abs(math.sin(t * 14)))
+            pygame.draw.circle(canvas, BAD if red else col, (x, y), pulse, 1)
+        return "", col, False
     if tele:
         left = 1 - b.signal_progress()
         if act == "bite":
@@ -215,12 +251,6 @@ def _widget(canvas, ctx: dict, s: dict, x: int, y: int) -> tuple[str, object, bo
             v_arrow(canvas, x + R + 14, y, -1 if act == "dive" else 1, col)
         return _hint(act if act in HINTS else "", touch), col, left < 0.25
     # ── 행동 중 ──
-    if act == "rush":
-        red = f.zone() == "red"
-        pulse = int(R + 3 + 3 * abs(math.sin(t * 14)))
-        badge(canvas, x, y, fam, BAD if red else col, t, R)
-        pygame.draw.circle(canvas, BAD if red else col, (x, y), pulse, 1)
-        return _hint("rush_red" if red else "rush_act", touch), BAD if red else col, red
     if act == "charge":
         prog = b.state_t / max(0.01, b.state_t + b.timer)
         badge(canvas, x, y, fam, col, t, R)
@@ -305,7 +335,8 @@ def draw(canvas, ctx: dict) -> None:
     w, h = canvas.get_size()
     ax, ay = ctx["anchor"]
     x = int(clamp(ax, 70, w - 70))
-    y = int(clamp(ay - 4, 62, h - 74))
+    # 배지 묶음은 물고기 바로 위 — 그림자(웅크림·물결 같은 몸짓 신호)를 가리지 않게 (31-14)
+    y = int(clamp(ay - 30, 62, h - 74))
     sigs = [s for s in ctx["sigs"] if s["action"] not in ("jump", "thrash", "leap", "turn")]
     label, lcol, heavy = None, WHITE, False
     chips = []
@@ -356,7 +387,7 @@ def draw(canvas, ctx: dict) -> None:
         ly = y - 48  # '확 꺾기!' 위로
     if label and not ctx.get("judge_busy"):  # 판정 글자가 막 떴으면 그쪽이 우선
         state_label(canvas, x, max(30, ly), label, lcol, b.state_t, t, heavy)
-    cy = y + 26
+    cy = max(y + 26, int(ay) + 16)  # 칩·장력 줄은 물고기 아래
     for s, c, urgent in chips[:2]:
         hint_chip(canvas, x, cy, s, c, t, urgent)
         cy += 17

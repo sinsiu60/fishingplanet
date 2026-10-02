@@ -17,8 +17,9 @@ from src.ui.hud import text
 BASE_FISH = {"rush": "bass", "jump": "bass", "turn": "bass", "leap": "bass", "shake": "cherry_salmon",
              "dive": "rockfish", "surface": "sea_bass", "reverse": "red_seabream", "twist": "alfonsino",
              "chain": "galaxy_trout", "hide": "marsh_eel", "pump": "stalactite_catfish", "thrash": "falls_salmon",
-             "bite": "lava_grouper", "dual": "life_trout"}
-ORDER = ("rush", "jump", "turn", "leap", "shake", "dive", "surface", "reverse", "twist", "chain", "hide", "pump",
+             "bite": "lava_grouper", "dual": "life_trout", "rush_big": "marlin"}
+# rush_big = 돌진 (대형): 큰 물고기라 줄 펄스가 2번 (31-14)
+ORDER = ("rush", "rush_big", "jump", "turn", "leap", "shake", "dive", "surface", "reverse", "twist", "chain", "hide", "pump",
          "thrash", "bite", "dual")
 SPEEDS = (("slow", "0.5배"), ("norm", "1배"), ("real", "실전"))
 
@@ -28,8 +29,9 @@ def unlocked(save, tutorial) -> list[str]:
     seen = set(save.data.get("patterns_seen", []))
     out = []
     for p in ORDER:
-        if p in ("rush", "jump", "turn", "leap"):
-            if tutorial.is_seen(f"telegraph:{p}") or save.data.get("pattern_mastery", {}).get(p):
+        if p in ("rush", "rush_big", "jump", "turn", "leap"):
+            q = "rush" if p == "rush_big" else p
+            if tutorial.is_seen(f"telegraph:{q}") or save.data.get("pattern_mastery", {}).get(q):
                 out.append(p)
         elif p in seen:
             out.append(p)
@@ -62,14 +64,14 @@ class TrainingTank:
         kind, v = self.entries[self.index]
         if kind == "fam":
             return f"계열: {ss.cfg()['families'][v]['name']}"
-        return load_json("patterns.json")["names"].get(v) or {"rush": "돌진", "jump": "점프", "turn": "방향 전환",
-                                                                 "leap": "몸털기 점프"}[v]
+        return load_json("patterns.json")["names"].get(v) or {"rush": "돌진", "rush_big": "돌진 (대형)", "jump": "점프",
+                                                                 "turn": "방향 전환", "leap": "몸털기 점프"}[v]
 
     def actions(self) -> list[str]:
         kind, v = self.entries[self.index]
         if kind == "pat":
             return [v]
-        return [p for p in self.pats if ss.family_of(p) == v]
+        return [p for p in self.pats if ss.family_of(p) == v and p != "rush_big"]
 
     def _pick(self, d: int) -> None:
         self.index = (self.index + d) % len(self.entries)
@@ -91,7 +93,7 @@ class TrainingTank:
         fish.pop("phases", None)
         fish.pop("first_rush", None)
         fish["rarity"] = "uncommon"
-        fish["actions"] = {a: 10 for a in acts}
+        fish["actions"] = {("rush" if a == "rush_big" else a): 10 for a in acts}
         fish["fake_tired"] = 0.0
         fish["fake_cue"] = 0.0
         fish["spot"] = "world_tree" if "dual" in acts else sc.spot_id

@@ -749,6 +749,25 @@ def make_double_perfect(rng) -> np.ndarray:
 
 
 # ── 신호 사전 6계열 (31장 C3): 같은 대응 = 같은 소리 ──
+def make_rush_hum(rng, hz: float) -> np.ndarray:
+    """돌진 예고 줄 울림 한 박: 팽팽한 줄이 웅— 하고 우는 짧은 음 (배음 + 살짝 떨림)."""
+    sec = 0.13
+    t = _t(sec)
+    vib = 1 + 0.01 * np.sin(2 * np.pi * 28 * t)
+    tone = (np.sin(2 * np.pi * hz * t * vib) + 0.45 * np.sin(2 * np.pi * hz * 2 * t * vib)
+            + 0.2 * np.sin(2 * np.pi * hz * 3.01 * t))
+    return tone * _env(len(t), 0.008, 0.07) * 0.45
+
+
+def make_rush_go(rng) -> np.ndarray:
+    """돌진 시작 '쉬익': 줄이 확 당겨지며 물을 가르는 소리."""
+    w = make_whoosh(rng, 0.34, 1.8)
+    sec = 0.34
+    n = int(RATE * sec)
+    snap = np.sin(2 * np.pi * np.cumsum(np.linspace(900, 300, n)) / RATE) * _env(n, 0.002, 0.04) * 0.5
+    return w[:n] * 0.9 + snap
+
+
 def make_sig_release(rng) -> np.ndarray:
     """풀기: 낮게 빠지는 '쉬익' (아래로 미끄러지는 노이즈)."""
     sec = 0.32
@@ -800,13 +819,24 @@ def make_sig_gesture(rng) -> np.ndarray:
     return out
 
 
+def _rush_hums(rng) -> dict:
+    from src.core.config import load_json
+    c = load_json("signals.json")["rush_pulse"]
+    n = c["hum_steps"]
+    return {f"rush_hum{i}": make_rush_hum(rng, c["hum_base_hz"] * (c["hum_top_hz"] / c["hum_base_hz"]) ** (i / max(1, n - 1)))
+            for i in range(n)}
+
+
 def _cache_path(rate: int, channels: int, seed: int):
     """소리 캐시 파일: 이 파일(합성 코드) 내용이 바뀌면 이름이 바뀌어 새로 만든다."""
     import hashlib
     from src.core.paths import save_dir
     try:
         with open(__file__, "rb") as f:
-            key = hashlib.sha1(f.read() + f"{rate}/{channels}/{seed}".encode()).hexdigest()[:12]
+            from src.core.config import load_json
+            hum = load_json("signals.json")["rush_pulse"]  # 줄 울림 음높이를 바꾸면 캐시도 새로
+            extra = f"{hum['hum_steps']}/{hum['hum_base_hz']}/{hum['hum_top_hz']}"
+            key = hashlib.sha1(f.read() + f"{rate}/{channels}/{seed}/{extra}".encode()).hexdigest()[:12]
     except OSError:
         return None
     return save_dir() / "cache" / f"sfx_{key}.npz"
@@ -907,6 +937,9 @@ class Sfx:
             "sig_direction": make_sig_direction(rng),
             "sig_endure": make_sig_endure(rng),
             "sig_gesture": make_sig_gesture(rng),
+            # 돌진 줄 펄스 (31-14) — 맨 뒤. 울림 음높이는 signals.json rush_pulse
+            "rush_go": make_rush_go(rng),
+            **_rush_hums(rng),
         }
         pcms = {}
         for name, wave in bank.items():

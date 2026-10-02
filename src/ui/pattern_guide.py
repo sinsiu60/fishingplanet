@@ -20,7 +20,7 @@ DEMO_BG = (14, 18, 34)
 # 첫 만남 정지 카드 (31장 C5): 신호 아이콘(물고기 자리 배지와 같은 그림) + 손동작 애니메이션 + 한 줄.
 # (제목, [PC 한 줄]) — tutorial.CARDS 로 합쳐진다. 터치 한 줄은 TOUCH_LINES. 기존 행동(돌진·점프·방향 전환·몸털기) 카드도 같은 모양으로.
 CARDS = {
-    "telegraph:rush": ("돌진!", ["▼▼ 풀기 — Q로 드랙을 낮추고, 빨강이면 감기를 멈춘다"]),
+    "telegraph:rush": ("돌진!", ["웅크린 뒤 빛이 줄을 타고 손에 닿으면 돌진 — 그 전에 Q로 드랙을 낮춘다"]),
     "telegraph:jump": ("점프!", ["링이 겹치는 순간 우클릭 (낚싯대 숙이기)"]),
     "telegraph:turn": ("방향 전환!", ["막대가 가운데에 올 때 화살표 쪽으로 마우스를 확"]),
     "telegraph:leap": ("몸털기 점프!", ["링이 겹치는 순간 화살표 쪽으로 마우스를 확"]),
@@ -42,7 +42,7 @@ CARDS = {
 }
 
 TOUCH_LINES = {
-    "telegraph:rush": ["▼▼ 풀기 — ▼로 드랙을 낮추고, 빨강이면 패드에서 손을 뗀다"],
+    "telegraph:rush": ["웅크린 뒤 빛이 줄을 타고 손에 닿으면 돌진 — 그 전에 ▼로 드랙을 낮춘다"],
     "telegraph:jump": ["링이 겹치는 순간 숙이기 버튼"],
     "telegraph:turn": ["막대가 가운데에 올 때 화살표 쪽으로 패드를 확"],
     "telegraph:leap": ["링이 겹치는 순간 화살표 쪽으로 패드를 확"],
@@ -241,15 +241,51 @@ def draw_demo(canvas, kind: str, rect: pygame.Rect, t: float, touch: bool) -> No
         text(canvas, "+", (cx, cy), WHITE, 16, "center")
         _ring_arrow(canvas, cx + 34, cy, 12, t, GOOD, 2)
     elif kind == "rush":
-        on = loop > 0.5
-        _key(canvas, dev_x, cy, "▼" if touch else "Q", on)
-        # 장력이 빨강에서 초록으로 내려온다
-        bx, bw = cx - 10, 90
-        canvas.fill((52, 64, 86), (bx, cy - 3, 30, 6))
-        canvas.fill((40, 100, 52), (bx + 30, cy - 3, 35, 6))
-        canvas.fill((120, 38, 36), (bx + 65, cy - 3, 25, 6))
-        k = min(1.0, max(0.0, (loop - 0.5) / 0.8))
-        canvas.fill(WHITE, (bx + int(bw * (0.9 - 0.4 * k)), cy - 6, 2, 12))
+        # 돌진 예고 = 줄 펄스 (31-14): 웅크림 → 빛이 줄을 타고 물고기→손 → 닿는 순간 돌진. 그 전에 드랙↓
+        loop = t % 2.6
+        fx, fy = rect.x + 34, cy + 8            # 물고기 (왼쪽 아래)
+        hx, hy = rect.right - 46, rect.y + 12   # 낚싯대 끝 (오른쪽 위)
+        crouch = min(1.0, loop / 0.7)
+        rushing = loop > 1.9
+        # 그림자: 웅크림(압축 + 꼬리 S) → 돌진(길게 늘어나며 멀어짐)
+        sq = 1 - 0.38 * crouch if not rushing else 1.6
+        sx = fx - (loop - 1.9) * 20 if rushing else fx
+        bw = int(26 * sq)
+        pygame.draw.ellipse(canvas, (30, 44, 70), (sx - bw // 2, fy - 5, bw, 10))
+        if not rushing:
+            tx = sx + bw // 2
+            pygame.draw.lines(canvas, (30, 44, 70), False, [(tx, fy), (tx + 5, fy - 4 * crouch), (tx + 9, fy + 1),
+                                                           (tx + 12, fy + 4 * crouch)], 3)
+            # 안쪽으로 빨려드는 점선 물결
+            for i in range(3):
+                k = 1 - ((t / 0.6 + i / 3) % 1.0)
+                rx, ry = 10 + 22 * k, (10 + 22 * k) * 0.32
+                for j in range(0, 14, 2):
+                    a0, a1 = j / 14 * math.tau, (j + 1) / 14 * math.tau
+                    pygame.draw.line(canvas, (150, 175, 210), (fx + math.cos(a0) * rx, fy + math.sin(a0) * ry),
+                                     (fx + math.cos(a1) * rx, fy + math.sin(a1) * ry), 1)
+        else:
+            for s_ in (-1, 1):
+                pygame.draw.line(canvas, (220, 235, 255), (sx + bw // 2, fy), (sx + bw // 2 + 18, fy + s_ * 7), 1)
+        # 줄 (느슨 → 팽팽)
+        sag = 10 * crouch * (1 if loop < 1.9 else 0) + (2 if loop < 1.9 else 0)
+        pts = []
+        for i in range(17):
+            u = i / 16
+            x = hx + (sx - hx) * u
+            y = hy + (fy - hy) * u + math.sin(u * math.pi) * sag
+            pts.append((x, y))
+        pygame.draw.lines(canvas, (255, 255, 255) if rushing and loop < 2.15 else (200, 205, 215), False, pts, 1)
+        _rod_icon(canvas, hx + 22, hy + 16, 0.6)
+        # 빛 펄스: 물고기 → 손
+        if 0.7 <= loop < 1.9:
+            q = (loop - 0.7) / 1.2
+            i = int((1 - q) * 16)
+            px, py = pts[min(16, i)]
+            pygame.draw.circle(canvas, (255, 236, 160), (int(px), int(py)), 5, 1)
+            pygame.draw.circle(canvas, (255, 255, 255), (int(px), int(py)), 2)
+        # Q(▼): 펄스가 손에 가까워지면 눌러 둔다
+        _key(canvas, rect.x + 14, rect.y + 12, "▼" if touch else "Q", 1.4 <= loop < 2.4)
     elif kind in ("jump", "leap"):
         from src.ui import fight_fx
         tta = 1.0 - (t % 1.6)

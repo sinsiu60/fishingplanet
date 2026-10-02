@@ -12,7 +12,7 @@ import pygame
 
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 from src.render.chest import draw_chest, draw_glow
-from src.render.fish_draw import draw_fish_side, fish_colors
+from src.render.fish_draw import catch_length, draw_fish_side, fish_colors
 from src.ui.fight_fx import big_text
 
 T_HIT = 0.22      # 뜰채가 물고기에 닿음
@@ -28,6 +28,21 @@ RISE_SEC = (0.45, 0.48, 0.55, 0.7)
 APEX_HOLD = (0.22, 0.27, 0.45, 0.95)
 SPINS = (1.0, 1.0, 1.5, 2.0)
 BANNER = {2: "희귀!", 3: "전설!"}
+# 크기 등급 (cm): 작은 건 가볍게 휙, 큰 건 무겁게 버티며 끌어올림
+#            (닿음, 퍼 담기 끝, 끌어올리기 끝, 히트스톱, 물보라 수, 뜰채 반지름, 끌어올리는 중 '영차' 횟수)
+SIZE_CLASS = (
+    (30, "small", (0.16, 0.38, 1.0, 0.04, 10, 38, 0)),
+    (100, "mid", (T_HIT, T_SCOOP, T_LIFT, HIT_STOP, 26, 0, 0)),
+    (200, "big", (0.26, 0.7, 1.65, 0.1, 44, 70, 1)),
+    (99999, "huge", (0.3, 0.85, 2.0, 0.13, 64, 76, 2)),
+)
+
+
+def size_class(size_cm: float) -> tuple[str, tuple]:
+    for lim, name, v in SIZE_CLASS:
+        if size_cm < lim:
+            return name, v
+    return SIZE_CLASS[-1][1], SIZE_CLASS[-1][2]
 
 
 def draw_star(canvas, x: float, y: float, r: float, color) -> None:
@@ -54,7 +69,12 @@ class LandingCinematic:
             self.chest_color = tuple(grade_info(chest)["color"])
         self.colors = fish_colors(fish)
         self.shape = fish.get("shape")
-        self.length = clamp(size_cm * 3.4, 80, 165)
+        # 크기에 비례 (획득 컷과 같은 눈금), 튀어 오를 때 화면을 넘지 않게 340px까지
+        self.size_cm = size_cm
+        self.cls, (self.t_hit, self.t_scoop, self.t_lift, self.hit_stop, self.n_splash, net_r, self.heaves) = \
+            size_class(size_cm)
+        self.length = min(340.0, catch_length(size_cm))
+        self.net_r = net_r or clamp(self.length * 0.58, 46, 90)
         self.t = 0.0
         self.x0 = start_x
         self.y0 = 200.0
@@ -68,7 +88,7 @@ class LandingCinematic:
         if golden:
             self.glow = (255, 214, 90)
         self.tier = TIER.get(fish["rarity"], 0)
-        self.t_apex = T_LIFT + RISE_SEC[self.tier]
+        self.t_apex = self.t_lift + RISE_SEC[self.tier] * (1.25 if self.cls in ("big", "huge") else 1.0)
         self.t_flash = self.t_apex + APEX_HOLD[self.tier]
         self.total = self.t_flash + 0.18
         self.trail: list[list[float]] = []
@@ -92,15 +112,19 @@ class LandingCinematic:
             self.hold -= dt
         else:
             self.t += dt
-        for key, at in (("hit", T_HIT), ("lift", T_SCOOP), ("launch", T_LIFT), ("apex", self.t_apex),
-                        ("done", self.total)):
+        keys = [("hit", self.t_hit), ("lift", self.t_scoop), ("launch", self.t_lift), ("apex", self.t_apex),
+                ("done", self.total)]
+        # 큰 물고기: 끌어올리는 중간에 '영차' (잠깐 처졌다가 다시 들어 올림)
+        for i in range(self.heaves):
+            keys.append((f"heave{i}", self._heave_at(i)))
+        for key, at in keys:
             if self.t >= at and key not in self.fired:
                 self.fired.add(key)
                 events.append(key)
                 if key == "hit":
-                    self.hold = HIT_STOP
+                    self.hold = self.hit_stop
                     fx, fy = self.fish_pos()
-                    for _ in range(26):
+                    for _ in range(self.n_splash):
                         a = random.uniform(math.pi * 1.05, math.pi * 1.95)
                         sp = random.uniform(60, 170)
                         self.splash.append([fx + random.uniform(-30, 30), fy, math.cos(a) * sp, math.sin(a) * sp,
@@ -116,9 +140,9 @@ class LandingCinematic:
                     for i in range(max(0, self.tier - 1) * 2):
                         self.rings.append(-i * 0.1)
         # 물방울: 끌어올리는 동안 그물에서 뚝뚝
-        if T_HIT < self.t < T_LIFT + 0.2:
+        if self.t_hit < self.t < self.t_lift + 0.2:
             nx, ny, r = self.net_pos()
-            for _ in range(2):
+            for _ in range({"small": 1, "mid": 2, "big": 4, "huge": 6}[self.cls]):  # 클수록 물이 쏟아짐
                 self.drips.append([nx + random.uniform(-r * 0.5, r * 0.5), ny + r * 0.75, random.uniform(-8, 8),
                                    random.uniform(10, 40), 1.0])
         for d in self.drips:
@@ -136,7 +160,7 @@ class LandingCinematic:
         self.splash = [p for p in self.splash if p[4] > 0]
         self.sparks = [p for p in self.sparks if p[4] > 0]
         # 고급 이상: 튀어 오를 때 반짝이 꼬리
-        if self.tier >= 1 and T_LIFT < self.t < self.t_flash:
+        if self.tier >= 1 and self.t_lift < self.t < self.t_flash:
             fx, fy = self.fish_pos()
             for _ in range(self.tier):
                 self.trail.append([fx + random.uniform(-14, 14), fy + random.uniform(-8, 8), random.uniform(0.3, 0.6)])
@@ -146,7 +170,7 @@ class LandingCinematic:
         self.trail = [p for p in self.trail if p[2] > 0]
         self.rings = [r + dt for r in self.rings if r < 0.6]
         # 전설: 화면 전체 금가루
-        if self.t > T_SCOOP:
+        if self.t > self.t_scoop:
             for d in self.rain:
                 d[1] += d[2] * dt
                 if d[1] > 275:
@@ -155,38 +179,65 @@ class LandingCinematic:
         return events
 
     # ───────────────────────── 위치 계산 ─────────────────────────
+    def _heave_at(self, i: int) -> float:
+        span = self.t_lift - self.t_scoop
+        return self.t_scoop + span * (0.35 + 0.35 * i) if self.heaves == 2 else self.t_scoop + span * 0.45
+
+    def _sag(self) -> float:
+        """큰 물고기를 들어 올리는 중 무게로 처짐 (영차 직전 가장 깊고, 영차 순간 확 올라감)."""
+        if not self.heaves or not (self.t_scoop < self.t < self.t_lift):
+            return 0.0
+        out = 0.0
+        for i in range(self.heaves):
+            d = self.t - self._heave_at(i)
+            if -0.35 < d < 0:
+                out = max(out, (1 + d / 0.35) * (14 if self.cls == "huge" else 9))
+            elif 0 <= d < 0.18:
+                out = max(out, -6 * (1 - d / 0.18))
+        return out
+
+    def strain(self) -> float:
+        """뜰채 손잡이 휨 정도 0~1 (무거운 물고기를 들 때)."""
+        if self.cls not in ("big", "huge") or not (self.t_hit < self.t < self.t_lift):
+            return 0.0
+        base = 0.55 if self.cls == "big" else 0.85
+        return base * (0.7 + 0.3 * math.sin(self.t * 9)) + self._sag() * 0.02
+
     def tilt_offset(self) -> float:
         """시선을 들어 올리는 양 (화면이 아래로 흐르는 픽셀)."""
-        if self.t < T_SCOOP:
+        if self.t < self.t_scoop:
             return 0.0
-        return smoothstep((self.t - T_SCOOP) / (T_LIFT - T_SCOOP + 0.3)) * 150
+        return smoothstep((self.t - self.t_scoop) / (self.t_lift - self.t_scoop + 0.3)) * 150
 
     def net_pos(self):
         """뜰채 고리 중심과 반지름."""
-        r = self.length * 0.58
+        r = self.net_r
         t = self.t
-        if t < T_HIT:
-            k = _ease_out(t / T_HIT)
+        if t < self.t_hit:
+            k = _ease_out(t / self.t_hit)
             return lerp(430, self.x0, k), lerp(300, self.y0 + 6, k), r
-        if t < T_SCOOP:
-            k = (t - T_HIT) / (T_SCOOP - T_HIT)
+        if t < self.t_scoop:
+            k = (t - self.t_hit) / (self.t_scoop - self.t_hit)
             dip = math.sin(k * math.pi) * 8
             return self.x0, lerp(self.y0 + 6, self.y0 - 20, smoothstep(k)) + dip, r
-        if t < T_LIFT:
-            k = smoothstep((t - T_SCOOP) / (T_LIFT - T_SCOOP))
-            return lerp(self.x0, 240, k), lerp(self.y0 - 20, 128, k), r
+        if t < self.t_lift:
+            k = smoothstep((t - self.t_scoop) / (self.t_lift - self.t_scoop))
+            wob = math.sin(t * 13) * 2.5 * self.strain()  # 무거우면 부들부들
+            return lerp(self.x0, 240, k) + wob, lerp(self.y0 - 20, 128, k) + self._sag(), r
         # 튀어 오르면 뜰채는 아래로 빠짐
-        k = (t - T_LIFT) / (self.total - T_LIFT)
+        k = (t - self.t_lift) / (self.total - self.t_lift)
         return 240, 128 + 260 * k * k, r
 
     def fish_pos(self):
         t = self.t
-        if t < T_HIT:
+        if t < self.t_hit:
             return self.x0, self.y0
-        if t < T_LIFT:
+        if t < self.t_lift:
             nx, ny, r = self.net_pos()
+            if self.cls == "small":
+                return nx + math.sin(t * 17) * r * 0.25, ny + r * 0.32 - abs(math.sin(t * 11)) * r * 0.45  # 그물 안에서 팔딱
             return nx, ny + r * 0.32
-        k = clamp((t - T_LIFT) / (self.t_apex - T_LIFT), 0, 1)
+        k = clamp((t - self.t_lift) / (self.t_apex - self.t_lift), 0, 1)
         start_y = 128 + self.length * 0.58 * 0.32
         y = lerp(start_y, 78, _ease_out(k))
         if t > self.t_apex:
@@ -205,7 +256,7 @@ class LandingCinematic:
             for y in range(0, off, 3):
                 canvas.fill(lerp_color(top, pal["sky_top"], y / max(1, off)), (0, y, w, 3))
         water_line = int(self.y0 + self.length * 0.1) + off
-        if t < T_SCOOP + 0.1:
+        if t < self.t_scoop + 0.1:
             # 물고기가 잠긴 수면 (뜰채 단계와 같은 화면)
             water = lerp_color(pal["water_top"], pal["water_bottom"], 0.85)
             canvas.fill(water, (0, water_line, w, h - water_line))
@@ -215,14 +266,14 @@ class LandingCinematic:
 
         tier = self.tier
         # 1-1) 전설: 끌어올리는 동안 하늘이 어두워지고 물에서 금빛 기둥이 솟음
-        if tier >= 3 and t > T_SCOOP:
-            dk = clamp((t - T_SCOOP) / 0.5, 0, 1) * (1 - clamp((t - self.t_flash) / 0.2, 0, 1))
+        if tier >= 3 and t > self.t_scoop:
+            dk = clamp((t - self.t_scoop) / 0.5, 0, 1) * (1 - clamp((t - self.t_flash) / 0.2, 0, 1))
             dim = pygame.Surface((w, h))
             dim.fill((10, 6, 20))
             dim.set_alpha(int(150 * dk))
             canvas.blit(dim, (0, 0))
             nx0 = self.net_pos()[0]
-            pk = clamp((t - T_SCOOP) / 0.6, 0, 1)
+            pk = clamp((t - self.t_scoop) / 0.6, 0, 1)
             pw = int(lerp(4, 70, pk) + math.sin(t * 20) * 3)
             pillar = pygame.Surface((pw * 2, h), pygame.SRCALPHA)
             for i in range(pw):
@@ -232,8 +283,8 @@ class LandingCinematic:
             canvas.blit(pillar, (nx0 - pw, 0))
 
         # 2) 튀어 오를 때 뒤로 퍼지는 빛살 (희귀 이상은 반대로 도는 빛살 한 겹 더)
-        if t > T_LIFT:
-            k = clamp((t - T_LIFT) / 0.35, 0, 1)
+        if t > self.t_lift:
+            k = clamp((t - self.t_lift) / 0.35, 0, 1)
             fx, fy = self.fish_pos()
             sky = pal["sky_top"] if tier < 3 else (30, 20, 40)
             layers = [(14, 0.8, 0.55, 0.3)]
@@ -259,9 +310,9 @@ class LandingCinematic:
         # 3) 물고기 + 뜰채
         nx, ny, r = self.net_pos()
         fx, fy = self.fish_pos()
-        in_net = T_HIT <= t < T_LIFT
+        in_net = self.t_hit <= t < self.t_lift
         flap = math.sin(t * 34)
-        if t < T_HIT:
+        if t < self.t_hit:
             # 아직 물속에서 몸부림
             draw_fish_side(canvas, fx, fy, self.length, flap * 0.08, self.colors, -1, tail_wag=flap, shape=self.shape)
             water = lerp_color(pal["water_top"], pal["water_bottom"], 0.85)
@@ -271,9 +322,10 @@ class LandingCinematic:
             self._draw_net(canvas, pal, nx, ny, r, in_net=True, fish=(fx, fy, flap))
         else:
             # 그물에서 튀어 올라 빙글
-            k = clamp((t - T_LIFT) / (self.t_apex - T_LIFT), 0, 1)
+            k = clamp((t - self.t_lift) / (self.t_apex - self.t_lift), 0, 1)
             spin = _ease_out(k) * math.tau * SPINS[tier]
-            scale = lerp(1.0, 1.2 + 0.05 * tier, _ease_out(k))
+            grow = 0.0 if self.cls in ("big", "huge") else 0.2 + 0.05 * tier
+            scale = lerp(1.0, 1.0 + grow, _ease_out(k))
             self._draw_net(canvas, pal, nx, ny, r, in_net=False, fish=None)
             draw_fish_side(canvas, fx, fy, self.length * scale, spin, self.colors, -1,
                            tail_wag=math.sin(t * 20) * (1 - k * 0.7), shape=self.shape)
@@ -319,8 +371,8 @@ class LandingCinematic:
 
         # 5) 섬광: 닿는 순간 짧게, 마지막엔 하얗게 덮음
         flash = 0.0
-        if T_HIT <= t < T_HIT + 0.12:
-            flash = 0.55 * (1 - (t - T_HIT) / 0.12)
+        if self.t_hit <= t < self.t_hit + 0.12:
+            flash = 0.55 * (1 - (t - self.t_hit) / 0.12)
         if t > self.t_flash - 0.22:
             flash = max(flash, clamp((t - (self.t_flash - 0.22)) / 0.22, 0, 1))
         if flash > 0.01:
@@ -335,9 +387,19 @@ class LandingCinematic:
         mesh = (225, 228, 235)
         hw, hh = r, r * 0.28
         # 손잡이 + 두 손
-        handle_end = (x + r * 1.9, y + r * 1.9)
-        pygame.draw.line(canvas, frame_dark, (x + hw, y), handle_end, 4)
-        pygame.draw.line(canvas, frame, (x + hw, y - 1), handle_end, 2)
+        handle_end = (x + max(r, 46) * 1.9, y + max(r, 46) * 1.9)
+        st = self.strain()
+        if st > 0.01:
+            # 무거우면 손잡이가 휜다 (가운데가 아래로)
+            mid = ((x + hw + handle_end[0]) / 2 - 6 * st, (y + handle_end[1]) / 2 + 16 * st)
+            pts = [(x + hw, y)] + [((1 - u) ** 2 * (x + hw) + 2 * (1 - u) * u * mid[0] + u * u * handle_end[0],
+                                    (1 - u) ** 2 * y + 2 * (1 - u) * u * mid[1] + u * u * handle_end[1])
+                                   for u in (0.25, 0.5, 0.75, 1.0)]
+            pygame.draw.lines(canvas, frame_dark, False, pts, 4)
+            pygame.draw.lines(canvas, frame, False, [(px, py - 1) for px, py in pts], 2)
+        else:
+            pygame.draw.line(canvas, frame_dark, (x + hw, y), handle_end, 4)
+            pygame.draw.line(canvas, frame, (x + hw, y - 1), handle_end, 2)
         skin, shadow = pal["hand"], pal["hand_shadow"]
         if skin[0] < 90:
             skin, shadow = (225, 175, 140), (180, 125, 100)
