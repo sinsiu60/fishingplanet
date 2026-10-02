@@ -1323,8 +1323,7 @@
     "rush": 40,
     "turn": 30,
     "charge": 30,
-    "dive": 22,
-    "surface": 22
+    "dive": 30
    },
    "shadow_len_m": 0.36,
    "nibbles": [
@@ -5460,8 +5459,7 @@
    "actions": {
     "turn": 50,
     "rush": 30,
-    "charge": 20,
-    "bite": 20
+    "charge": 20
    },
    "turn_speed": 1.3,
    "gimmick_bias": 0.6,
@@ -5522,7 +5520,8 @@
     "charge": 50,
     "turn": 30,
     "rush": 20,
-    "thrash": 20
+    "thrash": 20,
+    "bite": 20
    },
    "shadow_len_m": 0.67,
    "nibbles": [
