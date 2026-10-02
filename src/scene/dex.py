@@ -150,7 +150,7 @@ class DexScene(Scene):
         if entry is None:
             seen = self.save.data["dex"].get(f["id"], {}).get("seen")
             text(canvas, f["name"] if seen else "???", (d.centerx, y + 4), ui.DIM, 16 if not seen else 11, "center")
-            hinted = f["rarity"] in ("rare", "legend")
+            hinted = f["rarity"] in ("uncommon", "rare", "legend")
             text(canvas, f"희귀도: {RARITY_KO[f['rarity']]}" if hinted else "아직 잡지 못했다",
                  (d.centerx, y + 26), ui.DIM, 11, "center")
             if hinted:
@@ -170,7 +170,7 @@ class DexScene(Scene):
                         lines.append("지도에서 날씨 예보를 확인하세요.")
                 else:
                     # 바로 아래 등급은 1종 이상, 그보다 아래는 모두 (save.hint_status)
-                    prev = {"rare": "uncommon", "legend": "rare"}[f["rarity"]]
+                    prev = {"uncommon": None, "rare": "uncommon", "legend": "rare"}[f["rarity"]]
                     lines.append("이 낚시터에서 이만큼 잡으면 단서가 보인다:")
                     for t, h, n in rows:
                         done = h >= n
