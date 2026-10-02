@@ -34,7 +34,7 @@ def float_name(tier: int) -> str:
     return next((f["name"] for f in load_json("floats.json")["floats"] if f["tier"] == tier), "특수 찌")
 
 HINTS = {
-    CastState.READY: "좌클릭 유지: 던지기  M: 지도  B: 상점  Tab: 도감  C: 상자  H: 도움말  ESC: 메뉴",
+    CastState.READY: "좌클릭 유지: 던지기   오른쪽 버튼: 지도·상점·의뢰·도감",
     CastState.CHARGING: "놓으면 던지기   우클릭: 취소",
     CastState.SWING: "",
     CastState.FLIGHT: "",
@@ -464,6 +464,8 @@ class FishingScene(Scene):
             if f is not None and f.phase == "fight":
                 self.ctl.tap(self.t)  # 터치: 릴 패드를 누를 때마다
         elif n == "primary":
+            if self._side_menu_click(a.pos):
+                return
             if not self.touch and f is not None and f.phase == "fight":
                 self.ctl.tap(self.t)  # PC: 파이팅 중 좌클릭 하나하나가 연타
             self._left_click()
@@ -471,6 +473,35 @@ class FishingScene(Scene):
             self._right_click()
 
     # ───────────────────────── 메뉴 · 저장 ─────────────────────────
+    def _side_menu_on(self) -> bool:
+        """PC 오른쪽 메뉴 버튼: 파이팅·던지는 중·카드·도움말·훈련 수조에선 숨김."""
+        return (not self.touch and self.fight is None and self.card is None and not self.help
+                and self.landing is None and self.training is None
+                and self.cast.state in (CastState.READY, CastState.LANDED, CastState.RETRIEVE))
+
+    def _side_menu_rects(self):
+        from src.ui import side_menu
+        return side_menu.layout(self.cam.width, self.cam.height, self.hud_inset)
+
+    def _side_menu_click(self, pos) -> bool:
+        if not self._side_menu_on():
+            return False
+        from src.ui import side_menu
+        k = side_menu.hit(self._side_menu_rects(), pos)
+        if k is None:
+            return False
+        if k == "help":
+            self.sfx.play("click")
+            self.help = True
+            self.help_page = 0
+        elif k == "settings":
+            self.sfx.play("click")
+            from src.scene.settings_scene import SettingsScene
+            self.game.scenes.push(SettingsScene(self.game))
+        else:
+            self.open_menu(k)
+        return True
+
     def can_open_menus(self) -> bool:
         return self.fight is None and self.cast.state in (CastState.READY, CastState.LANDED, CastState.RETRIEVE)
 
@@ -1921,7 +1952,12 @@ class FishingScene(Scene):
             if hint:
                 hud.draw_hint(canvas, pal, hint, center=self.touch)
             self._draw_lure_status(canvas)
-            hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t)
+            side = self._side_menu_on()
+            hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t, right_inset=30 if side else 0)
+            if side:
+                from src.ui import side_menu
+                chests = sum(self.save.data.get("chests", {}).values())
+                side_menu.draw(canvas, self._side_menu_rects(), self.mouse, t, {"chest": chests})
         self.toasts.draw(canvas)
         if self.captions:
             cap, left = self.captions

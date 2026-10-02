@@ -62,7 +62,7 @@ def draw_power_gauge(canvas, pal, power: float, distance: float) -> None:
     text(canvas, f"{distance:.0f}m", (x + w // 2, y - 3), pal["text"], anchor="midbottom")
 
 
-def draw_look_arrows(canvas, pal, left: bool, right: bool, t: float) -> None:
+def draw_look_arrows(canvas, pal, left: bool, right: bool, t: float, right_inset: int = 0) -> None:
     h = canvas.get_height()
     cy = h // 2 - 20
     blink = int(t * 4) % 2 == 0
@@ -70,7 +70,7 @@ def draw_look_arrows(canvas, pal, left: bool, right: bool, t: float) -> None:
     if left:
         pygame.draw.polygon(canvas, color, [(4, cy), (11, cy - 6), (11, cy + 6)])
     if right:
-        w = canvas.get_width()
+        w = canvas.get_width() - right_inset
         pygame.draw.polygon(canvas, color, [(w - 5, cy), (w - 12, cy - 6), (w - 12, cy + 6)])
 
 
