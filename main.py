@@ -30,16 +30,23 @@ def main() -> None:
     from src.core import bootlog
     bootlog.start()
     from src.platform.detect import IS_ANDROID
-    if IS_ANDROID and bootlog.previous:
-        # 지난번 시작이 끝까지 못 갔다 (앱이 통째로 죽음) → 어디서 멈췄는지 보여 주고 계속
-        bootlog.show_lines("지난번 실행이 시작 도중 꺼졌어요 (마지막 기록)", bootlog.previous)
+    audio = True
+    if IS_ANDROID and (bootlog.previous or bootlog.fault):
+        # 지난번 실행이 통째로 죽었다 → 어디서 멈췄는지 보여 주고, 이번엔 소리 없이(안전 모드) 시작
+        audio = False
+        os.environ["SDL_AUDIODRIVER"] = "dummy"
+        bootlog.mark("안전 모드: 소리 끔")
+        lines = list(bootlog.previous or [])
+        if bootlog.fault:
+            lines += ["", "충돌 위치 (faulthandler):"] + bootlog.fault
+        bootlog.show_lines("지난번 실행이 도중에 꺼졌어요 — 이번엔 소리 없이 시작합니다", lines)
     from src.core.game import Game
 
     # 자동 테스트: python main.py --frames 120
     max_frames = None
     if "--frames" in sys.argv:
         max_frames = int(sys.argv[sys.argv.index("--frames") + 1])
-    game = Game(max_frames=max_frames)
+    game = Game(max_frames=max_frames, audio=audio)
     if "--require-baked" in sys.argv and game.sfx.enabled and game.sfx.missing_baked:
         # 빌드 확인 (CI): 미리 구운 소리가 빠진 채 묶였으면 실패 (32장 S8)
         print("구운 소리 없음:", game.sfx.missing_baked)

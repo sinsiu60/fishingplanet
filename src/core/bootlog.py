@@ -11,6 +11,8 @@ import time
 _path = None
 _t0 = time.perf_counter()
 previous: list[str] | None = None   # 지난번 시작이 끝까지 못 간 경우 그 기록
+fault: list[str] = []               # 지난번 실행이 네이티브로 죽었을 때 faulthandler 가 남긴 파이썬 위치
+_fault_file = None
 
 
 def start() -> None:
@@ -23,6 +25,14 @@ def start() -> None:
             if old and old[-1].strip() != "OK":
                 previous = old[-14:]
         _path.write_text("", encoding="utf-8")
+        # 네이티브 충돌(SIGSEGV 등)도 그 순간의 파이썬 위치를 fault.log 에 남긴다 → 다음 실행에서 보여 줌
+        global _fault_file, fault
+        fpath = _path.with_name("fault.log")
+        if fpath.exists():
+            fault = [ln for ln in fpath.read_text(encoding="utf-8", errors="replace").splitlines() if ln.strip()][-12:]
+        import faulthandler
+        _fault_file = open(fpath, "w", encoding="utf-8")
+        faulthandler.enable(file=_fault_file, all_threads=False)
     except Exception:
         _path = None
     from src.version import VERSION

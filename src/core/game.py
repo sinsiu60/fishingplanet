@@ -14,7 +14,7 @@ AUTOSAVE_SEC = 60.0
 
 
 class Game:
-    def __init__(self, max_frames: int | None = None, start_scene=None):
+    def __init__(self, max_frames: int | None = None, start_scene=None, audio: bool = True):
         cfg = game_config()
         from src.platform.detect import IS_MOBILE as _mob
         from src.core.config import load_json as _lj
@@ -55,7 +55,7 @@ class Game:
                 from src.platform import android
                 android.keep_screen_on()
         bootlog.mark("효과음 불러오기")
-        self.sfx = Sfx()
+        self.sfx = Sfx(audio=audio)
         bootlog.mark(f"효과음 {len(self.sfx.sounds)}개 (실행 중 합성 {len(getattr(self.sfx, 'missing_baked', []))})")
         self.sfx.haptics = self.haptics  # play(..., haptic=종류) → 소리 어택 순간에 진동
         self.apply_audio_settings()

@@ -8,14 +8,42 @@ import numpy as np
 import pygame
 
 RATE = 44100
+LAZY_SEC = 2.5   # 이보다 긴 소리(환경음 바탕 9초 등)는 처음 쓸 때 읽는다 → 시작 메모리·시간 절반 (폰, v0.8.3)
+
+
+class _Sounds(dict):
+    """이름 → Sound. 긴 소리는 이름만 먼저 등록하고 처음 꺼낼 때 파일을 읽는다."""
+
+    def __init__(self):
+        super().__init__()
+        self.paths: dict[str, str] = {}
+
+    def add_lazy(self, name: str, path) -> None:
+        self.paths[name] = str(path)
+        dict.__setitem__(self, name, None)
+
+    def __getitem__(self, name):
+        snd = dict.__getitem__(self, name)
+        if snd is None:
+            try:
+                snd = pygame.mixer.Sound(self.paths[name])
+            except Exception:
+                snd = pygame.mixer.Sound(buffer=bytes(64))  # 못 읽으면 무음
+            dict.__setitem__(self, name, snd)
+        return snd
+
+    def get(self, name, default=None):
+        return self[name] if name in self else default
 
 
 class Sfx:
-    def __init__(self):
+    def __init__(self, audio: bool = True):
         self.enabled = False
         self.volume = 0.8
-        self.sounds: dict[str, pygame.mixer.Sound] = {}
+        self.sounds = _Sounds()
         self.loops: dict[str, pygame.mixer.Channel] = {}
+        if not audio:
+            return  # 안전 모드: 소리 없이 (지난번 시작이 소리 준비 중에 꺼졌을 때)
         try:
             init = pygame.mixer.get_init()
             if init is None:
@@ -60,7 +88,10 @@ class Sfx:
                         break
             try:
                 if path is not None:
-                    self.sounds[name] = pygame.mixer.Sound(str(path))
+                    if rec.get(name, {}).get("len", 0) >= LAZY_SEC:
+                        self.sounds.add_lazy(name, path)
+                    else:
+                        self.sounds[name] = pygame.mixer.Sound(str(path))
                     continue
             except Exception as e:  # 파일을 못 읽어도 게임은 계속 (그 소리만 대신 합성 또는 무음)
                 if not self.load_errors:

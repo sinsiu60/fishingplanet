@@ -33,7 +33,10 @@ def _resolve_font_file() -> str | None:
         path = pygame.font.match_font(name)
         if path:
             return path
-    return None
+    # 한글 시스템 폰트가 없는 리눅스(CI의 안드로이드 스플래시 그림 등) → 게임에 넣은 Noto Sans KR
+    from src.core.paths import data_path
+    bundled = data_path("fonts", "NotoSansKR-Subset.ttf")
+    return str(bundled) if bundled.exists() else None
 
 
 def get_font(size: int) -> pygame.font.Font:
