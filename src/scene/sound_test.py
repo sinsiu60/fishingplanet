@@ -12,7 +12,7 @@ from src.ui.hud import draw_cursor, text
 
 BUSES = ("전체", "sig", "자연", "sfx", "reward", "mus", "amb", "ui")  # 자연 = 자연음 신호·보조음 (SOUND_CLEANUP N2)
 ROWS = 12
-MUS_STATES = ("끔", "idle", "bite", "fight", "tired", "legend", "legend_tired", "win", "fail", "menu")
+MUS_STATES = ("끔", "idle", "bite", "fight", "fight_big", "legend", "legend_tired", "win", "fail", "menu")
 
 
 class SoundTestScene(Scene):

@@ -850,27 +850,31 @@ class FishingScene(Scene):
         self.legend_k += ((1.0 if on else 0.0) - self.legend_k) * min(1.0, dt / 0.8)
 
     def _update_music(self, legend: bool) -> None:
-        """적응형 음악 층 (src/audio/adaptive_music.py, 32장 S6): 대기 → 진짜 입질 긴장 → 파이팅 타악(장력만큼) → 지침 상승 멜로디
-        → 포획 스팅 / 실패 페이드. 전설은 보스 층이 페이즈마다 하나씩. 낮 밝기만큼 높은 반짝임."""
+        """적응형 음악 층 (src/audio/adaptive_music.py, 32장 S6 + N4 음악 절제):
+        대기(간헐적 — 울림/정적) → 입질·일반 파이팅은 그대로 낮추기만 / 대형(100cm+)은 낮은 긴장 층 하나 / 전설은 보스 테마
+        (장력 타악은 전설만) → 포획 스팅은 희귀 이상만 / 실패 페이드. 낮 밝기만큼 높은 반짝임."""
         am = self.game.adaptive
         f = self.fight
         am.set_context(self.spot.get("continent", "sharmion"), self.spot_id, legend)
-        intensity, phase = 0.0, 0
+        intensity, phase, rarity = 0.0, 0, None
         if f is not None and f.phase in ("fight", "net"):
-            # v0.8.14 롤백: 지침(기회!) 동안 음악이 상승 멜로디로 바뀌지 않게 — 뜰채 단계에서만
-            tired = f.phase == "net"
-            state = ("legend_tired" if tired else "legend") if legend else ("tired" if tired else "fight")
+            if legend:
+                # v0.8.14 롤백: 지침(기회!) 동안 음악이 바뀌지 않게 — 전설만 뜰채 단계에서 상승 멜로디
+                state = "legend_tired" if f.phase == "net" else "legend"
+            else:
+                state = "fight_big" if f.size_cm >= 100 else "fight"  # 일반: 층 변화 없음 (뜰채 단계도 그대로)
             intensity = (f.tension - 30) / max(1.0, f.green_high - 30)
             phase = f.brain.phase
         elif f is not None and f.phase == "caught":
             state = "win"
+            rarity = f.fish.get("rarity")
         elif f is not None and f.phase == "lost":
             state = "fail"
         elif self.bite.state == BiteState.BITE or (legend and f is None):
             state = "bite"
         else:
             state = "idle"
-        am.set(state, intensity, phase, am.daylight_of(self.clock.hour, tuple(am.cfg["night_hours"])))
+        am.set(state, intensity, phase, am.daylight_of(self.clock.hour, tuple(am.cfg["night_hours"])), rarity=rarity)
 
     def _update_weather(self, dt: float) -> None:
         w = self.weather_sys
