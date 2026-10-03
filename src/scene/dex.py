@@ -5,7 +5,7 @@ import pygame
 
 from src.core.config import load_json
 from src.core.weather import WEATHER_KO
-from src.render.fish_draw import RANK_COLORS, draw_fish_side, fish_colors
+from src.render.fish_draw import RANK_COLORS, draw_fish_side, fish_colors, fish_shape
 from src.save.save_game import baits
 from src.fishing.patterns import TIP_SHORT, fish_patterns
 from src.fishing import mutation
@@ -282,7 +282,7 @@ class DexScene(Scene):
         cx, cy = r.centerx, r.y + 24
         length = 62 if f["rarity"] != "legend" else 70
         if entry:
-            draw_fish_side(canvas, cx, cy, length, 0.0, fish_colors(f), -1, shape=f.get("shape"))
+            draw_fish_side(canvas, cx, cy, length, 0.0, fish_colors(f), -1, shape=fish_shape(f))
             text(canvas, f["name"][:7], (cx, r.bottom - 9), RARITY_COL[f["rarity"]], 11, "center")
             badge = pygame.Rect(r.right - 14, r.y + 3, 11, 11)
             canvas.fill((16, 20, 36), badge)
@@ -290,7 +290,7 @@ class DexScene(Scene):
         else:
             seen = self.save.data["dex"].get(f["id"], {}).get("seen")
             draw_fish_side(canvas, cx, cy, length, 0.0, fish_colors(f), -1, silhouette=(8, 8, 14),
-                           shape=f.get("shape"))
+                           shape=fish_shape(f))
             if seen:
                 # 목격 (엘드라시온에서 도망친 물고기): 실루엣 + 이름
                 text(canvas, f["name"][:7], (cx, r.bottom - 9), ui.DIM, 11, "center")

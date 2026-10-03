@@ -14,7 +14,7 @@ from src.render.screen import opaque as _opaque
 
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 from src.render.chest import draw_chest, draw_glow
-from src.render.fish_draw import catch_length, draw_fish_side, fish_colors
+from src.render.fish_draw import catch_length, draw_fish_side, fish_colors, fish_shape
 from src.ui.fight_fx import big_text
 
 T_HIT = 0.22      # 뜰채가 물고기에 닿음
@@ -71,7 +71,7 @@ class LandingCinematic:
             from src.save.treasure import grade_info
             self.chest_color = tuple(grade_info(chest)["color"])
         self.colors = fish_colors(fish)
-        self.shape = fish.get("shape")
+        self.shape = fish_shape(fish)
         # 크기에 비례 (획득 컷과 같은 눈금), 튀어 오를 때 화면을 넘지 않게 340px까지
         self.size_cm = size_cm
         self.cls, (self.t_hit, self.t_scoop, self.t_lift, self.hit_stop, self.n_splash, net_r, self.heaves) = \
