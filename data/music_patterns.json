@@ -22,7 +22,7 @@
  "fight_music": {"_설명": "Z4 파이팅 음악 흐름 (adaptive_music). enter_delay = 챔질 뒤 기본 층이 들어오기까지(초), fade = 그 상황으로 바뀔 때 페이드(초), crisis = 위기 층 음량. 위기 = 장력 빨강 red_sec 초 이상 또는 줄 내구도 line_frac 이하 → 다음 마디에 들어가고, 해소 뒤 hold_sec 지나 다음 마디에 빠짐.",
   "enter_delay": 0.3, "fade": {"fight": 0.5, "fight_big": 0.5, "tired": 1.5, "win": 1.0, "fail": 1.5},
   "crisis": 0.9, "red_sec": 2.0, "line_frac": 0.3, "hold_sec": 1.5},
- "sting_rarity": ["rare", "legend"],
+ "sting_rarity": ["rare"],
  "state_gain": {"_설명": "N4: 음악 기본 배율(adaptive_music.GAIN 0.35)은 낚시터에서 환경음 바탕보다 약 1.5dB 작게. 메뉴·지도 테마, 전설 보스 테마, 희귀 포획 스팅은 음악이 주인공이라 예전 크기 쪽으로 곱함.", "menu": 2.0, "fight": 1.0, "legend": 1.7, "legend_tired": 1.7, "sting": 1.7},
  "quantize": {"_설명": "전환 시점: bar = 다음 마디 경계, beat = 다음 박 (긴급), now = 바로 (포획·실패 페이드 아웃)", "menu": "bar", "idle": "bar", "bite": "beat", "fight": "beat", "fight_big": "beat", "fight_calm": "beat", "tired": "beat", "legend": "beat", "legend_tired": "beat", "win": "now", "fail": "now"},
  "night_shimmer": 0.25,

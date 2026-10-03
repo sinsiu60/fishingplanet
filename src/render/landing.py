@@ -18,6 +18,7 @@ from src.render.fish_draw import catch_length, draw_fish_side, fish_colors
 from src.ui.fight_fx import big_text
 
 T_HIT = 0.22      # 뜰채가 물고기에 닿음
+FANFARE_LEAD = 0.4   # 전설 팡파르 sfx_legend_fanfare: 시작 → 큰 화음까지
 T_SCOOP = 0.5     # 퍼 담기 끝
 T_LIFT = 1.25     # 끌어올리기 끝 → 튀어 오름 시작
 HIT_STOP = 0.07   # 닿는 순간 잠깐 멈춤
@@ -119,6 +120,8 @@ class LandingCinematic:
         # 큰 물고기: 끌어올리는 중간에 '영차' (잠깐 처졌다가 다시 들어 올림)
         for i in range(self.heaves):
             keys.append((f"heave{i}", self._heave_at(i)))
+        if self.tier >= 3:   # 전설 팡파르: 큰 화음(소리 시작 +0.4초)이 정점(전설! 배너)에 떨어지게
+            keys.append(("fanfare", max(self.t_hit, self.t_apex - FANFARE_LEAD)))
         for key, at in keys:
             if self.t >= at and key not in self.fired:
                 self.fired.add(key)

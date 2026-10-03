@@ -207,7 +207,7 @@
   "debug_keys": false,
   "_debug_설명": "debug_keys: F3 물고기 고정 / F4 낚시터 / F5 날씨 테스트 키 (배포 전 false). debug_force_fish: 항상 이 물고기.",
   "legend": {
-    "_설명": "전설: 조건(시간·날씨·전용 미끼·거리)이 맞으면 캐스트당 chance 확률로 등장. phase_at = 페이즈 전환 체력 비율.",
+    "_설명": "전설: 조건(시간·날씨·전용 미끼·거리)이 맞으면 캐스트당 chance 확률로 등장. phase_at = 페이즈 전환 체력 비율. phase3_heal = 3페이즈 진입 회복.",
     "chance": 0.25,
     "min_distance": 25,
     "approach_mult": 1.6,
@@ -219,7 +219,9 @@
     "phase_pause_sec": 1.4,
     "phase_slowmo_real": 0.6,
     "phase_slowmo_scale": 0.35,
-    "dragon_extra_pause_sec": 1.2
+    "dragon_extra_pause_sec": 1.2,
+    "phase3_heal": 0.5,
+    "_phase3_heal_설명": "3페이즈에 들어서는 순간 체력을 최대의 이 비율까지 회복 (이미 더 높으면 그대로). 용등(용 변신 페이즈)은 1.0."
   },
   "flick": {
     "_설명": "슬라이드(마우스를 좌우로 확 휘두르기) 판정. 방향 전환 꺾기 + 몸털기 점프.",

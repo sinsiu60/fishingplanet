@@ -631,6 +631,11 @@ class Fight:
         b = self.brain
         b.busy = self.response_slots()
         b.update(dt, self.stamina <= 0, self.stamina_frac)
+        heal = getattr(b, "heal_to", None)
+        if heal:   # 전설 3페이즈 진입 회복 (fishing_config legend.phase3_heal, 용등 100%)
+            b.heal_to = None
+            self.stamina = max(self.stamina, self.stamina_max * heal)
+            self.events.append("phase_heal")
         for ev in b.events:
             if ev == "action:jump" and self.pre_judged:
                 b.jump_judged = True

@@ -1241,23 +1241,24 @@ class FishingScene(Scene):
                 self.shake_kick = 3.0 if self.landing.cls == "big" else 4.0
                 self.game.haptics.vibrate("lose", 0.5)
             elif ev == "lift":
-                if self.landing.tier >= 3:  # N3: 들어 올림 상승음은 전설만
+                if self.landing.tier >= 3:  # N3: 들어 올림 상승음은 전설만 (화음은 팡파르가)
                     self.sfx.play("sfx_rise", 0.9)
-                    self.sfx.play("sfx_chord_legend", 0.9)   # 하늘이 어두워지며 금빛 기둥
                     self.shake_kick = 1.5
+            elif ev == "fanfare":
+                # 전설을 건져 올리는 순간: 팀파니 롤·금관 → 정점에 큰 화음 (음악 승리 스팅 대신)
+                self.sfx.play("sfx_legend_fanfare", 1.0)
+                self.sfx.duck("perfect", hold=2.2, release=0.6)
+                self.game.haptics.vibrate("perfect", 1.0, delay=0.4)
             elif ev == "launch":
                 self.sfx.play("sfx_launch", 0.9)
                 self.sfx.play("sfx_splash_small", 0.6)
             elif ev == "apex":
-                if self.landing.tier >= 2:  # N3: 정점 '챙'은 희귀 이상만 (일반 포획은 자연음만)
+                if self.landing.tier == 2:  # N3: 정점 '챙'·화음은 희귀만 (전설은 팡파르 안에 쿵·화음·반짝임)
                     self.sfx.play("sfx_perfect", 0.45)
+                    self.sfx.play("sfx_chord_rare", 0.9)
                 if self.landing.chest:
                     self.sfx.play("sfx_coin", 0.9)  # 물고기가 상자를 물고 나왔다
-                if self.landing.tier == 2:
-                    self.sfx.play("sfx_chord_rare", 0.9)
-                elif self.landing.tier >= 3:
-                    self.sfx.play("sfx_impact", 1.0)
-                    self.sfx.play("sfx_chord_rare", 0.8)
+                if self.landing.tier >= 3:
                     self.shake_kick = 3.0
         if self.landing.done:
             chest = self.landing.chest
@@ -1788,6 +1789,10 @@ class FishingScene(Scene):
                 self.toasts.items.clear()  # 배너가 대신 알림
                 self.dragon_fx = DragonTransform(self.screen_fx.map(pos))
                 self.game.slowmo(1.2, 0.4)
+        elif ev == "phase_heal":
+            # 전설 3페이즈: 기운을 되찾는다 (체력 50%, 용등 100%) — 용 변신은 배너가 대신 알림
+            if not f.brain.dragon:
+                self.toasts.show(f"기운을 되찾았다! 체력 {f.stamina_frac * 100:.0f}%", (255, 140, 120), 2.6, 11)
         elif ev == "telegraph:turn":
             self.sfx.play("sfx_scrape", 0.8)
         elif ev == "action:rush":

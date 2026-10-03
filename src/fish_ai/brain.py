@@ -177,6 +177,8 @@ class FishBrain:
         for ph in self.phases[: self.phase + 1]:
             merged.update(ph)
         self._load_params(merged)
+        if self.phase == 2:   # 3페이즈 진입: 체력 회복 (용등 변신은 전부) — Fight 가 heal_to 를 읽어 적용
+            self.heal_to = 1.0 if self.dragon else self.legend_cfg.get("phase3_heal", 0.5)
         self.pending = None
         self.chain_left = 0
         self.chain_action = None
