@@ -111,12 +111,18 @@ jobs:
           done
           echo "pygame 모듈 $(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)개 검사"
           # 최적화 확인: -O0 이면 반투명 blit 함수가 거의 스택 ldr/str 뿐이라 폰에서 수십 배 느리다 (v0.8.11 파이팅 렉)
-          OBJDUMP=$(command -v llvm-objdump || find ~/.buildozer -name llvm-objdump -type f | head -1)
+          OBJDUMP=$(command -v llvm-objdump || ls /usr/bin/llvm-objdump-* 2>/dev/null | sort -V | tail -1 || true)
+          [ -n "$OBJDUMP" ] || OBJDUMP=$(find ~/.buildozer -name 'llvm-objdump' 2>/dev/null | head -1)
+          [ -n "$OBJDUMP" ] || { echo "::error::llvm-objdump 을 못 찾음"; exit 1; }
           SURF=$(find "$T/pb" -path '*site-packages/pygame/surface*.so' | head -1)
-          share=$("$OBJDUMP" -d --disassemble-symbols=alphablit_alpha_sse2_argb_surf_alpha "$SURF" | \
-                  awk 'NF>2{n++; if($3~/^(ldr|str|ldur|stur)$/) m++} END{print (n ? int(100*m/n) : 100)}')
-          echo "alphablit_alpha_sse2_argb_surf_alpha: 스택 ldr/str 비율 ${share}%"
-          if [ "$share" -gt 60 ]; then echo "::error::pygame 이 최적화 없이(-O0) 컴파일됨 (ldr/str ${share}%)"; bad=1; fi
+          echo "objdump: $OBJDUMP / $SURF"
+          readelf -Ws "$SURF" | grep -E 'alphablit_alpha' || true
+          # 모듈 전체 명령 중 메모리 ldr/str 비율: -O0 빌드(v0.8.11) 49%, 최적화되면 30% 안팎
+          share=$("$OBJDUMP" -d "$SURF" | awk 'NF>2{n++; if($3~/^(ldr|str|ldur|stur)$/) m++} END{print (n ? int(100*m/n) : 100)}')
+          fn=$("$OBJDUMP" -d --disassemble-symbols=alphablit_alpha_sse2_argb_surf_alpha "$SURF" 2>&1 | \
+               awk 'NF>2{n++; if($3~/^(ldr|str|ldur|stur)$/) m++} END{print n+0, (n ? int(100*m/n) : -1)}' || true)
+          echo "surface 모듈 ldr/str ${share}% · alphablit_alpha_sse2_argb_surf_alpha (명령 수, %): ${fn}  (-O0 이던 v0.8.11: 49% · 3400, 86%)"
+          if [ "$share" -gt 40 ]; then echo "::error::pygame 이 최적화 없이(-O0) 컴파일된 것 같음 (surface ldr/str ${share}%, 함수 ${fn})"; bad=1; fi
           exit $bad
       - name: APK 화면 방향이 가로인지 (매니페스트 screenOrientation 0 = landscape, 6 = sensorLandscape)
         run: |
