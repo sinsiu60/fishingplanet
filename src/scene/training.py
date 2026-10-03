@@ -49,6 +49,9 @@ class TrainingTank:
                 fams.append(f)
         # 고를 것: 패턴 하나씩 + 계열 (그 계열의 해금 패턴을 섞어서)
         self.entries = [("pat", p) for p in pats] + [("fam", f) for f in fams]
+        # 환상어 고유 패턴: 잡아 본 환상어만 (33장 P4)
+        from src.fishing import phantom
+        self.entries += [("ph", fid) for fid in phantom.caught_ids(scene.save)]
         self.pats = pats
         self.index = 0
         self.speed = 1
@@ -64,6 +67,9 @@ class TrainingTank:
         kind, v = self.entries[self.index]
         if kind == "fam":
             return f"계열: {ss.cfg()['families'][v]['name']}"
+        if kind == "ph":
+            from src.fishing.phantom import by_id
+            return f"환상: {by_id(v)['sig_title']}"
         return load_json("patterns.json")["names"].get(v) or {"rush": "돌진", "rush_big": "돌진 (대형)", "jump": "점프",
                                                                  "turn": "방향 전환", "leap": "몸털기 점프"}[v]
 
@@ -71,6 +77,10 @@ class TrainingTank:
         kind, v = self.entries[self.index]
         if kind == "pat":
             return [v]
+        if kind == "ph":
+            from src.fishing.phantom import by_id
+            f = by_id(v)
+            return list(f["phases"][-1].get("actions") or f["actions"])
         return [p for p in self.pats if ss.family_of(p) == v and p != "rush_big"]
 
     def _pick(self, d: int) -> None:
@@ -88,6 +98,20 @@ class TrainingTank:
         """훈련용 물고기로 파이팅 시작 (변이·의뢰·기믹·위협 구역 없음)."""
         sc = self.scene
         acts = self.actions()
+        kind, v = self.entries[self.index]
+        if kind == "ph":
+            # 잡아 본 환상어의 2페이즈(고유 패턴) 그대로 — 보라 연출·보상 없음
+            from src.fishing.phantom import by_id
+            src = by_id(v)
+            fish = copy.deepcopy({**src, **{k: x for k, x in src["phases"][-1].items() if k != "desc"}})
+            fish.pop("phases", None)
+            fish.pop("phase_at", None)
+            fish["rarity"] = "uncommon"
+            fish["id"] = "training"
+            fish["stamina"] = 99999
+            fish["spot"] = src["spot"]
+            self._begin(fish)
+            return
         base = next(f for f in all_fish() if f["id"] == BASE_FISH[acts[0]])
         fish = copy.deepcopy(base)
         fish.pop("phases", None)
@@ -99,6 +123,10 @@ class TrainingTank:
         fish["spot"] = "world_tree" if "dual" in acts else sc.spot_id
         fish["id"] = "training"
         fish["stamina"] = 99999
+        self._begin(fish)
+
+    def _begin(self, fish: dict) -> None:
+        sc = self.scene
         sc.fight = None
         sc.cast.reset()
         sc.bite.fish = fish

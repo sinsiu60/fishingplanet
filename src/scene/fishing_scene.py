@@ -1523,6 +1523,10 @@ class FishingScene(Scene):
                 self.toasts.show("미끼만 먹고 도망갔다... (우클릭: 회수)", BAD, 2.6)
         elif ev == "phantom_approach":
             self.ripples.spawn(c.bx, c.bz, size=0.6, life=1.6, rings=2)
+            fish = self.bite.fish
+            need = self.save.float_need(fish, self.spot) if fish else 0
+            if need > self.save.float_tier() and self.save.data["flags"].get("eldra_escape_tutorial"):
+                self.toasts.show(f"이 물고기를 잡으려면 [{float_name(need)}] 이상 필요", BAD, 3.0, 11)
 
     def _on_pattern_event(self, ev: str, kind: str, pid: str) -> None:
         """신규 패턴(U3): 예고 소리·진동·첫 만남 안내, 판정 결과 연출."""
@@ -1863,6 +1867,9 @@ class FishingScene(Scene):
             n = int(ev.split(":")[1])
             if f.fish.get("rarity") == "phantom":
                 self.phantom_fx.pulse()  # 2페이즈: 보라 강도 100% 맥박 → 60%
+                key = f"phantom:{f.fish['id']}"
+                if self.card is None and self.tutorial.want(key) and self.settings.get("signal_cards"):
+                    self._open_card(key, "fish")  # 고유 패턴 첫 만남: 정지 카드
             pos = self._fish_screen()
             self.toasts.show("거세짐!", (255, 214, 90), 3.2, 11)
             self.sfx.play("sfx_roar", 1.0)

@@ -1,7 +1,7 @@
 """파이팅 로그 분석 (DESIGN.md 31장 C2).
 
   python tools/fight_log.py sim [N] [낚시터,...]   봇이 물고기마다 N번(기본 5) 파이팅 → 낚시터별 부하·휴식·패턴 성공률
-  (봇 실력: 환경 변수 FIGHTLOG_SKILL=skilled|average, 기본 skilled)
+  (봇 실력: 환경 변수 FIGHTLOG_SKILL=skilled|average, 기본 skilled / FIGHTLOG_FISH=normal|phantom|all — 환상어 포함, 기본 normal)
   python tools/fight_log.py read [폴더]            디버그 빌드가 남긴 fight_logs/*.jsonl 분석 (기본: 세이브 폴더/fight_logs)
 
 출력: 3초 부하 예산 초과(파이팅 수·0.1초 창 수·최대 부하), 휴식 < 1.5초, 부하 3 이상 뒤 < 2.5초, 같은 고부하 연속, 휴식 중앙값,
@@ -33,10 +33,13 @@ def run_sim(n: int, only: list | None) -> list[dict]:
     F.Fight.__init__ = init
     spots = {s["id"]: s for s in load_json("spots.json")["spots"]}
     rnd = random.Random(7)
-    for fish in all_fish():
+    which = os.environ.get("FIGHTLOG_FISH", "normal")
+    from src.fishing.phantom import all_phantoms
+    pool = (all_fish() if which != "phantom" else []) + (all_phantoms() if which in ("phantom", "all") else [])
+    for fish in pool:
         if only and fish["spot"] not in only:
             continue
-        gear = gear_for_tier(SPOT_TIER[fish["spot"]] + (1 if fish["rarity"] == "legend" else 0))
+        gear = gear_for_tier(SPOT_TIER[fish["spot"]] + (1 if fish["rarity"] in ("legend", "phantom") else 0))
         for _ in range(n):
             bot_fight(fish, spots[fish["spot"]], gear, SKILLS[os.environ.get("FIGHTLOG_SKILL", "skilled")], rnd)
     F.Fight.__init__ = orig

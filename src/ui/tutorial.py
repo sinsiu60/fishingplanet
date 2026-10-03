@@ -95,6 +95,9 @@ CARDS = {
 # 신규 패턴·루어 카드 (움직이는 시범 그림 포함, src/ui/pattern_guide.py)
 from src.ui import pattern_guide as _pg  # noqa: E402
 CARDS.update(_pg.CARDS)
+# 환상어 고유 패턴 (33장 P4): 2페이즈 첫 진입 때 한 번 — 물고기 이름은 쓰지 않는다
+from src.fishing.phantom import all_phantoms as _phantoms  # noqa: E402
+CARDS.update({f"phantom:{_f['id']}": (f"고유 패턴: {_f['sig_title']}", [_f["sig_tip"]]) for _f in _phantoms()})
 
 GUIDES = {
     "guide_cast": "좌클릭을 누르고 있으면 파워가 차요. 원하는 거리에서 놓으면 던집니다! (마우스: 방향)",
