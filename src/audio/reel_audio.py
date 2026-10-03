@@ -5,6 +5,7 @@ tools/audio/bake_reel_audio.py → assets/sfx_generated/reel/ (+ manifest.json).
          소리 재생 속도는 바꾸지 않는다 (음색 유지). 티어 음색: manifest tier_of_equipment (T1 나무 / T2~T5 보통 / T6~T8 수정).
          감기 시작 = start 원샷 + 루프 페이드 인, 손 떼면 = stop 원샷.
   드랙   줄이 풀려나갈 때: 풀리는 속도 → 초당 드랙 클릭 150~850 → 가까운 두 루프 섞기 (빨라지면 음이 올라가고 지치면 내려감).
+         돌진 예고(자연음 신호)도 드랙: 줄 펄스 동안 tease 0→1 → 클릭 150→550회/초로 점점 빠르고 크게, 돌진 직전 무음.
   공간   낚시터 공간(N5: out/cave/deep)이면 미리 구운 '~공간' 버전 (space/ 폴더).
   한도   동시에 섞는 루프 최대 4개 (모바일) — 넘으면 가장 작은 것부터 뺀다.
 
@@ -99,6 +100,8 @@ class ReelPlayer:
         self.voices: dict[str, dict] = {}   # 이름 → {ch, vol, q}
         self.reeling_t = 0.0       # 감기 시작 뒤 시간 (0 = 멈춤)
         self.tier = "mid"
+        self.tease = 0.0           # 돌진 예고 0~1 (장면이 줄 펄스 동안 넣음) — 드랙이 슬금슬금 풀리는 소리
+        self.surge_t = 0.0         # 돌진 순간 드랙이 확 풀리는 남은 시간
         self.max_voices = 0        # 검증용: 동시에 쓴 루프 채널 최대
 
     # ── 파일 ──
@@ -186,6 +189,12 @@ class ReelPlayer:
                 v["ch"].play(self.snd[name], loops=-1)
         self.max_voices = max(self.max_voices, len(self.voices))
 
+    SURGE = 0.5
+
+    def surge(self) -> None:
+        """돌진 순간: 드랙이 최고 속도로 확 풀렸다가 0.5초에 걸쳐 실제 줄 풀림 속도로 넘어감."""
+        self.surge_t = self.SURGE
+
     @staticmethod
     def drag_rate(payout: float) -> float:
         """줄 풀리는 속도 0~1 (0.12 넘을 때만 소리) → 초당 드랙 클릭 150~850."""
@@ -198,6 +207,10 @@ class ReelPlayer:
         if not self.sfx.enabled or not self.snd:
             return
         goals: dict[str, float] = {}
+        if self.surge_t > 0:
+            self.surge_t = max(0.0, self.surge_t - dt)
+            payout = max(payout, 0.4 + 0.6 * self.surge_t / self.SURGE)
+            drag_gain = max(drag_gain, 1.0)   # 신호 — 연속음 주인공 배율과 상관없이
         if reel > 0.05:
             if self.reeling_t == 0.0:
                 self._one("start", 0.6 * reel_gain)
@@ -215,6 +228,11 @@ class ReelPlayer:
         if payout > 0.12 and self.drag_rates:
             level = (0.15 + 0.5 * payout) * drag_gain
             for k, w in _bracket(self.drag_rate(payout), self.drag_rates):
+                goals[f"drag_{k}"] = level * w
+        elif self.tease > 0 and self.drag_rates:
+            # 돌진 예고(신호): 연속음 주인공 배율과 상관없이 들리게, 클릭 150 → 550회/초로 점점 빠르고 크게
+            level = 0.2 + 0.4 * self.tease
+            for k, w in _bracket(DRAG_RATE[0] + 400.0 * self.tease, self.drag_rates):
                 goals[f"drag_{k}"] = level * w
         self._set(goals, dt)
 

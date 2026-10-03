@@ -2619,7 +2619,7 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
 7. 직접 들어볼 체크리스트: `SOUND_CHECKLIST.md` 'Z5'.
 
 ### 릴 녹음 재합성으로 교체 (REEL_AUDIO_INTEGRATE.md) — Z2 합성 릴·Z3 지잉을 **대체**
-- **재료**: 실제 릴 녹음 `tools/audio/source/reel_recording.wav` (모노 44.1kHz 41.8초, 출처·라이선스는 CREDITS.md — 아직 빈칸).
+- **재료**: 실제 릴 녹음 `tools/audio/source/reel_recording.wav` (모노 44.1kHz 41.8초, Pixabay — CREDITS.md).
   `reel_from_recording.py` 가 녹음에서 클릭 그레인(약 5ms) 2065개 + 클릭 사이 바탕 질감을 잘라 내고, 원하는 속도·부하로 다시 배치. `drag_zing.py` = 드랙(줄 풀리는 속도 = 클릭 속도 = 음 높이)·지잉.
 - **굽기** `python tools/audio/bake_reel_audio.py` (numpy + scipy — `requirements-dev.txt`, 게임 실행엔 불필요) → `assets/sfx_generated/reel/`
   102개 .wav (감기 루프 54 = 속도 1.0~3.5회/초 6 × 부하 0/0.5/0.9 × 나무·보통·수정, 드랙 루프 12 = 클릭 150/300/550/850회/초 × 티어,
@@ -2635,4 +2635,7 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
   체감 크기(A 가중): 새 릴 −26.4dB ≈ 옛 합성 릴 −25.2dB (옛 것은 낮은 웅웅 때문에 RMS만 컸음), 파이팅 음악(−39~−41dB)보다 한참 위.
   실제 시간 파이팅 동시 재생 한도 초과 0, 최악 상황(전설·대형+위기) 찢어짐 0, 옛 세이브·모바일 미리보기 정상.
 - 옛 합성 릴(`tools/bake_reel.py`, `tools/audio/reel_synth.py`, 옛 `assets/sfx_generated/reel/` 292개, `tools/audio/reference/zing/`)은 삭제, 새 소리를 `reel/` 로 옮김.
-  돌진 예고음은 v0.8.15 롤백 소리 그대로 (돌진 중 줄이 풀리는 소리는 새 드랙).
+- **돌진 = 새 드랙** (v0.8.15 롤백 소리 대체): 줄 펄스 동안 드랙이 슬금슬금 풀리기 시작 — `ReelPlayer.tease` 0→1 = 클릭 150→550회/초로 점점 빠르고 크게(신호라 주인공 배율 무관),
+  돌진 silence_sec 전 무음 → 돌진 순간 `surge()` = 최고 속도(850회/초)로 확 풀렸다가 0.5초에 걸쳐 실제 줄 풀림 속도로 넘어감 + 물보라·진동 '툭'.
+  신호음 '강조' 모드만 예전 legacy_rush_hum0~7·legacy_rush_go 도 같이. '소리 신호' 끔이면 예고 드랙 없음(진동만).
+- 출처: Pixabay (audiopapkin, 302355) · Pixabay Content License — CREDITS.md.

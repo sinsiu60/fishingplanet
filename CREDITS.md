@@ -15,6 +15,6 @@
 
 | 게임 안 이름 | 파일 | 원본 제목 | 만든 사람 | 출처 URL | 라이선스 | 수정 내용 | 추가한 날 |
 |---|---|---|---|---|---|---|---|
-| reel_* · drag_* · zing_* (assets/sfx_generated/reel) | tools/audio/source/reel_recording.wav | audiopapkin-fishing-reel-302355.mp3 | (audiopapkin?) | | | 모노 44.1kHz 변환 → 클릭 그레인 추출·재배치 (속도·부하·티어·드랙·지잉) | 2026-10-03 |
+| reel_* · drag_* · zing_* (assets/sfx_generated/reel) | tools/audio/source/reel_recording.wav | fishing reel (audiopapkin-fishing-reel-302355.mp3) | audiopapkin | Pixabay — https://pixabay.com/sound-effects/ (음원 번호 302355) | Pixabay Content License (상업 이용·수정 허용, 표기 의무 없음) | 모노 44.1kHz 변환 → 클릭 그레인 추출·재배치 (속도·부하·티어·드랙·지잉) | 2026-10-03 |
 
-> ⚠ 출처 URL·라이선스는 아직 비어 있다. 위 '허용 라이선스' 기준을 확인해 채우기 전에는 출처 불명 상태 (파일명으로 보아 Pixabay 'audiopapkin' 음원일 가능성이 높음).
+> 출처: Pixabay (사용자 확인, 2026-10-03). 개별 페이지 주소는 이 작업 환경에서 Pixabay 접속이 막혀 확인하지 못함 — 파일명 기준 'audiopapkin' 의 음원 302355.

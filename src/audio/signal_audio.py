@@ -16,8 +16,9 @@
   강조    예전처럼 또렷한 인공 신호음 (sig_release_hum·sig_timing 등, 행동 직전 무음은 항상).
 시각·진동은 세 모드 모두 같다.
 
-v0.8.14 롤백: 돌진(rush)은 여기서 소리를 내지 않는다 — 사운드 개편 전과 똑같이 fishing_scene._rush_audio 가
-줄 펄스 동안 legacy_rush_hum0~7 과 'pump' 진동을, 돌진 순간 legacy_rush_go 를 낸다.
+돌진(rush)은 여기서 소리를 내지 않는다 — fishing_scene._rush_audio 가 줄 펄스 동안 새 드랙 소리(reel_audio tease:
+드랙이 슬금슬금 풀리며 점점 빠르고 크게)와 'pump' 진동을, 돌진 순간 드랙 '확 풀림'(surge)을 낸다 (REEL_AUDIO_INTEGRATE 4).
+'강조' 모드만 예전 legacy_rush_hum0~7 · legacy_rush_go 도 같이.
 
 시각 보정: 정해진 시각에 내는 소리(빌드업·틱·쉬익·띵)는 설정 '오디오 지연 보정'만큼 일찍 낸다 → 들리는 순간 = 화면 순간.
 진동은 Sfx.play(haptic=)가 소리 어택에 맞춘다. 펌핑(박자 북)은 판정 박자와 같은 틱에 따로 낸다 (fishing_scene).

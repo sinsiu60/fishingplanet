@@ -1757,8 +1757,11 @@ class FishingScene(Scene):
         elif ev == "telegraph:turn":
             self.sfx.play("sfx_scrape", 0.8)
         elif ev == "action:rush":
-            # 펄스가 손에 닿음 = 돌진: 쉬익 + 물보라 + 툭 (v0.8.14 롤백: 사운드 개편 전 그대로)
-            self.sfx.play("legacy_rush_go", 1.0)
+            # 펄스가 손에 닿음 = 돌진: 드랙이 확 풀리는 '지이이잉' + 물보라 + 툭 (REEL_AUDIO_INTEGRATE 4 —
+            # 줄이 실제로 풀리면 그 속도가 이어받음). 신호음 '강조' 모드만 예전 '쉬익'(legacy_rush_go)도 같이.
+            self.fight_audio.reel.surge()
+            if self.settings.get("signal_mode") == 2:
+                self.sfx.play("legacy_rush_go", 1.0)
             self.sfx.play("legacy_splash_small", 0.8)
             self.game.haptics.vibrate("bite", 1.0)
             self._splash_at(x, z, 0.9)
@@ -2205,8 +2208,11 @@ class FishingScene(Scene):
         return out
 
     def _rush_audio(self) -> None:
-        """v0.8.14 롤백 (사운드 개편 전 그대로): 줄 펄스 동안 울림 음이 단계마다 높아지고 돌진 silence_sec 전 무음,
-        진동은 약하게 시작해 점점 세게."""
+        """돌진 예고 소리 (REEL_AUDIO_INTEGRATE 4 — 자연음 신호 = 드랙): 줄 펄스 동안 드랙이 슬금슬금 풀리기 시작해
+        클릭이 점점 빨라지고(음이 높아짐) 커지다가 돌진 silence_sec 전 무음 → 돌진 = 실제 줄 풀림 드랙.
+        신호음 '강조' 모드만 예전 울림 음(legacy_rush_hum, v0.8.14 롤백 소리)을 같이. 진동은 약하게 시작해 점점 세게."""
+        reel = self.fight_audio.reel
+        reel.tease = 0.0
         ph = self._rush_ph(visual=False)
         if ph is None or ph["stage"] != "pulse":
             return
@@ -2214,11 +2220,13 @@ class FishingScene(Scene):
         c = rush_cue.cfg()
         if ph["left"] <= c["silence_sec"]:
             return
+        if self.settings.get("signal_sound"):
+            reel.tease = max(0.05, ph["q"])
         steps = 8
         i = min(steps - 1, int(ph["q"] * steps))
         if i > getattr(self, "rush_hum_i", -1):
             self.rush_hum_i = i
-            if self.settings.get("signal_sound"):
+            if self.settings.get("signal_sound") and self.settings.get("signal_mode") == 2:
                 self.sfx.play(f"legacy_rush_hum{i}", 0.55 + 0.35 * ph["q"])
             self.game.haptics.vibrate("pump", c["haptic_min"] + (c["haptic_max"] - c["haptic_min"]) * ph["q"])
 
