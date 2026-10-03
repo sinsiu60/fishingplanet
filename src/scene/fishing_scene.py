@@ -2359,9 +2359,9 @@ class FishingScene(Scene):
             fight_hud.draw_catch_info(canvas, f.result, self.end_t, self.catch_news)
             if qr is not None and qr.items and self.end_t > 1.0:
                 fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)  # 의뢰 상세는 결과 화면에
-            if self.end_t > 1.2:
-                signal_slots.draw_result_icons(canvas, self.missed_signals, self.mastery_ups,
-                                               (12 + (self.hud_inset if self.touch else 0), 214), self.t)
+            if self.end_t > 1.2:   # 왼쪽 위 기록 배지(최대 4줄) 아래 세로 — 가운데 글자를 가리지 않게
+                signal_slots.draw_result_icons_column(canvas, self.missed_signals, self.mastery_ups,
+                                                      (12 + (self.hud_inset if self.touch else 0), 96), self.t)
             self._draw_access_mark(canvas)
             return
         if f.phase == "lost":

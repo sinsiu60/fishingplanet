@@ -90,8 +90,12 @@ class DexScene(Scene):
         self._make_tabs()
         self.sel = 0
 
+    RARITY_ORDER = {"common": 0, "uncommon": 1, "rare": 2, "legend": 3}
+
     def spot_fish(self) -> list[dict]:
-        return [f for f in self.fish if f["spot"] == CONT_TABS[self.cont][self.tabs.index][0]]
+        """그 낚시터 물고기: 일반 → 고급 → 희귀 → 전설 (왼쪽 위부터, 같은 등급은 fish.json 순서)."""
+        lst = [f for f in self.fish if f["spot"] == CONT_TABS[self.cont][self.tabs.index][0]]
+        return sorted(lst, key=lambda f: self.RARITY_ORDER.get(f["rarity"], 9))
 
     def card_rect(self, i: int) -> pygame.Rect:
         return pygame.Rect(GRID_X + (i % 3) * (CARD_W + 4), GRID_Y + (i // 3) * (CARD_H + 4), CARD_W, CARD_H)

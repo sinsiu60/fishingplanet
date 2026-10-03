@@ -402,6 +402,29 @@ def _mini_box(canvas, action: str, x: int, y: int, t: float) -> None:
     family_icon(canvas, fam, x, y, col, t, small=True, dir=dirv)
 
 
+def draw_result_icons_column(canvas, missed: list, ups: list, pos, t: float, per_row: int = 5) -> int:
+    """포획 결과 화면용: 왼쪽 위 기록 배지 아래에 세로로 — '놓친 신호' 줄, 그 아래 '숙련' 줄 (한 줄 최대 per_row 개,
+    가운데 글자(가치·랭크 보너스)를 가리지 않게). 그린 높이를 돌려준다."""
+    from src.ui.hud import text
+    x, y = pos
+    y0 = y
+    for label, col, lst, up in (("놓친 신호", (255, 150, 130), missed, False), ("숙련 상승", GOOD, ups, True)):
+        if not lst:
+            continue
+        text(canvas, label, (x, y), col, 11, "midleft")
+        y += 22
+        for i, a in enumerate(lst[:per_row * 2]):
+            cx, cy = x + 12 + (i % per_row) * 28, y + (i // per_row) * 28
+            _mini_box(canvas, a, cx, cy, t)
+            if up:
+                _tri(canvas, cx + 10, cy - 9, -1, 4, GOOD)
+            else:
+                pygame.draw.line(canvas, BAD, (cx + 6, cy + 4), (cx + 12, cy + 10), 2)
+                pygame.draw.line(canvas, BAD, (cx + 12, cy + 4), (cx + 6, cy + 10), 2)
+        y += 28 * ((min(len(lst), per_row * 2) - 1) // per_row + 1) - 2
+    return y - y0
+
+
 def draw_result_icons(canvas, missed: list, ups: list, pos, t: float) -> int:
     """놓친 신호(빨간 X) · 숙련도 상승(초록 ▲)을 아이콘으로. 그린 너비를 돌려준다."""
     from src.ui.hud import text
