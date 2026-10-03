@@ -19,6 +19,27 @@ FADE = 0.12        # 루프 섞기 비율이 따라가는 시간 (초)
 START_FADE = 0.25  # 감기 시작 때 루프가 올라오는 시간
 
 
+ZING_GRADES = ("small", "mid", "big", "double")
+
+
+def load_zings(sfx, tier: str) -> None:
+    """패턴 성공 지잉(Z3)을 믹서 소리표에 'zing_<등급>_<연속>' 이름으로 넣는다 (장착 릴 티어 음색)."""
+    if not sfx.enabled:
+        return
+    from src.core.paths import asset_path
+    for g in ZING_GRADES:
+        for st in range(3):
+            p = asset_path("sfx_generated", "reel", f"zing_{g}_{tier}_{st}.ogg")
+            if p.exists():
+                try:
+                    sfx.sounds[f"zing_{g}_{st}"] = pygame.mixer.Sound(str(p))
+                except Exception:
+                    pass
+    for cache in (sfx.slowed, sfx.muffled):  # 예전 티어로 만든 변형은 버림
+        for k in [k for k in cache if str(k[0] if isinstance(k, tuple) else k).startswith("zing_")]:
+            del cache[k]
+
+
 def tier_of(gear_tier: int) -> str:
     return "wood" if gear_tier <= 1 else "mid" if gear_tier <= 5 else "crystal"
 
@@ -60,6 +81,8 @@ class ReelPlayer:
         if key == self.key:
             return
         self.stop()
+        if self.key is None or self.key[0] != self.tier:
+            load_zings(self.sfx, self.tier)
         self.key = key
         self.snd = {}
         from src.core.paths import asset_path

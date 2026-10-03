@@ -18,7 +18,7 @@ sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
-NEW = ("sfx_", "sig_", "mus_", "amb_", "ui_", "legacy_")  # legacy_ = 사운드 개편 전 소리로 일부러 되돌린 것 (v0.8.14)
+NEW = ("sfx_", "sig_", "mus_", "amb_", "ui_", "legacy_", "zing_")  # legacy_ = 사운드 개편 전 소리로 일부러 되돌린 것 (v0.8.14)
 CALL = re.compile(r"""\.(play|loop)\(\s*(f?)(["'])(.+?)\3""")
 COND = re.compile(r"""\.(play|loop)\(\s*["']([\w#]+)["']\s+if\s+.+?\s+else\s+["']([\w#]+)["']""")
 SKIP = {"src/scene/sound_test.py"}  # 목록에서 고른 이름을 그대로 재생
@@ -46,7 +46,7 @@ def scan() -> list[tuple[str, int, str]]:
     return out
 
 
-LIT = re.compile(r"""(f?)(["'])((?:sfx|sig|mus|amb|ui|legacy)_[^"']*)\2""")
+LIT = re.compile(r"""(f?)(["'])((?:sfx|sig|mus|amb|ui|legacy|zing)_[^"']*)\2""")
 
 
 def literals() -> set[str]:

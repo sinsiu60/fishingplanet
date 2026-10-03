@@ -73,6 +73,8 @@ CAPTIONS = {"telegraph:rush": "웅— 줄이 울린다 (돌진)", "telegraph:jum
             "telegraph:hide": "꿀렁 — 물을 빨아들임 (숨기)", "telegraph:pump": "끼익 끼익 — 낚싯대 박자 (펌핑)",
             "telegraph:thrash": "보글보글보글 — 큰 기포 (공중 몸부림)", "telegraph:bite": "꿀렁 — 물을 빨아들임 (물어뜯기)",
             "telegraph:dual": "두 소리가 겹친다 — 이중 패턴", "hide_peek": "뽀글 — 고개를 내밀었다 (지금 감기)"}
+ZING_RESET = ("miss_early", "miss_late", "miss_none", "flick_miss", "rush_fail", "combo_fail", "combo_break", "pump_miss")
+ZING_MID = ("hide", "reverse", "twist")  # 지이잉 (Z3): 숨기 기습·역주행 회수·꼬임 완전 해소 — 그 밖의 패턴 성공은 작은 지잉
 FORCE_PATTERNS = ("shake", "dive", "surface", "reverse", "twist", "chain", "hide", "pump", "thrash", "bite", "fake", "dual")
 PATTERN_EVENTS = ("twist_snap", "twist_turn", "combo_break", "combo_ok", "pump_hit", "pump_miss", "hide_peek",
                   "double_perfect", "thrash_second_miss", "stiff", "dual_ok", "fake_tired")
@@ -608,6 +610,7 @@ class FishingScene(Scene):
 
     # ───────────────────────── 파이팅 시작·끝 ─────────────────────────
     def _start_fight(self) -> None:
+        self.zing_streak = 0  # 성공 지잉 연속 단계 (Z3)
         from src.core import gcwatch
         gcwatch.settle()  # 낚시터 장면 객체를 얼려 파이팅 중 GC 부담을 줄인다 (v0.8.10)
         c = self.cast
@@ -1229,7 +1232,7 @@ class FishingScene(Scene):
                 self.sfx.play("sfx_splash_small", 0.6)
             elif ev == "apex":
                 if self.landing.tier >= 2:  # N3: 정점 '챙'은 희귀 이상만 (일반 포획은 자연음만)
-                    self.sfx.play("sfx_perfect#0", 0.45)
+                    self.sfx.play("sfx_perfect", 0.45)
                 if self.landing.chest:
                     self.sfx.play("sfx_coin", 0.9)  # 물고기가 상자를 물고 나왔다
                 if self.landing.tier == 2:
@@ -1283,7 +1286,7 @@ class FishingScene(Scene):
             self.game.slowmo(0.18, 0.25)  # 히트스톱
             self.shake_kick = 2.5
         else:
-            self.sfx.play("sfx_great", 0.7)
+            self._zing("small")  # 방향 전환 성공 (Z3)
             self.shake_kick = 1.4
 
 
@@ -1454,7 +1457,7 @@ class FishingScene(Scene):
             # 퍼펙트·그레잇과 같은 급: 공통 섬광·충격파·반짝임 + 패턴마다 다른 연출 (깔끔하면 PERFECT)
             perfect = getattr(f, "last_grade", "good") == "perfect"
             col = self._pattern_col(pid)
-            self._judge_burst(pos, perfect, col)
+            self._judge_burst(pos, perfect, col, "mid" if pid in ZING_MID else "small")
             self.pvfx.success(pid, pos[0], pos[1], perfect, col)
             self.popups.pattern(pid, perfect, pos, col)
         elif kind == "pattern_fail":
@@ -1510,7 +1513,8 @@ class FishingScene(Scene):
             self.pvfx.ring(pos[0], pos[1], (255, 214, 90), 40, 0.4, 2)
             self.pvfx.star(pos[0], pos[1] - 6, (255, 240, 170), 12, 0.35)
         elif ev == "double_perfect":
-            self.sfx.play("sfx_double_perfect", 1.0, haptic="double_perfect")
+            self.sfx.play("sfx_perfect_low", 1.0)  # Z3: '챙' 대신 저음 '쿵' + 더블 지이이이잉
+            self._zing("double")
             self.sfx.duck("perfect")
             self.popups.add("double_perfect", pos)
             self.screen_fx.perfect(self.screen_fx.map(pos))
@@ -1541,7 +1545,7 @@ class FishingScene(Scene):
         fam = signal_slots.family_of(pid)
         return signal_slots.color_of(fam) if fam in signal_slots.cfg()["families"] else (255, 214, 90)
 
-    def _judge_burst(self, pos, perfect: bool, col) -> None:
+    def _judge_burst(self, pos, perfect: bool, col, grade: str = "small") -> None:
         """판정 성공 공통 연출: 원래 PERFECT / GREAT 와 같은 급 (섬광·충격파·빛줄기·줌 펀치·반짝임·소리·진동)."""
         mp = self.screen_fx.map(pos)
         if perfect:
@@ -1554,19 +1558,40 @@ class FishingScene(Scene):
             fc = self.fish_cfg["fight"]
             self.game.slowmo(fc["slowmo_real_sec"] * 0.6, fc["slowmo_scale"])
         else:
-            self.game.haptics.vibrate("perfect", 0.5)
-            self.sfx.play("sfx_great")
+            self._zing(grade)  # 성공 지잉 (Z3, GREAT '팅' 대신)
             self.sparkles.burst(*pos, count=16, speed=1.0)
             self.screen_fx.great(mp)
             self.screen_fx.shockwaves.append([mp[0], mp[1], -0.06, col, 0.4, 1])
             self.shake_kick = max(self.shake_kick, 1.2)
 
     def _perfect_sound(self, vol: float = 1.0) -> None:
-        """퍼펙트: 주변 먹먹(덕킹) + '챙!' + 저음 '쿵', 연속 퍼펙트일수록 한 단계씩 높게 (32장 S5)."""
-        f = self.fight
-        n = max(0, min(4, (f.perfect_streak if f is not None else 1) - 1))
-        self.sfx.play(f"sfx_perfect#{n}", vol, haptic="perfect")
+        """퍼펙트: 주변 먹먹(덕킹) + 저음 '쿵' + 지이이이잉 (32-16 Z3 — 예전 '챙'은 뺌)."""
+        self.sfx.play("sfx_perfect_low", vol)
+        self._zing("big", vol)
         self.sfx.duck("perfect")
+
+    ZING_SEC = {"small": 0.35, "mid": 0.5, "big": 0.7, "double": 1.27}  # 정점 시각 (tools/audio/reel_synth.py)
+
+    def _zing(self, grade: str, vol: float = 1.0) -> None:
+        """패턴 성공 '지이이잉!' (32-16 Z3): 성공 판정 순간에만. 작은 지잉은 1.5초 쿨다운(겹치면 생략),
+        같은 파이팅에서 연속 성공할수록 시작 피치 한 단계 위(최대 3단계, 실패하면 처음으로).
+        울리는 동안 주인공: 릴·환경음·음악 −3dB. 진동은 피치와 함께 세지다 정점에서 '툭'."""
+        if grade == "small" and self.t - getattr(self, "zing_small_t", -9.0) < 1.5:
+            return
+        if grade == "small":
+            self.zing_small_t = self.t
+        st = min(2, getattr(self, "zing_streak", 0))
+        self.zing_streak = getattr(self, "zing_streak", 0) + 1
+        if not self.settings.get("success_sfx"):
+            return
+        sec = self.ZING_SEC[grade]
+        self.sfx.play(f"zing_{grade}_{st}", vol)
+        self.sfx.duck("zing")
+        hp = self.game.haptics
+        top = {"small": 0.45, "mid": 0.65}.get(grade, 0.9)
+        hp.vibrate("pump", 0.2 * top / 0.9)
+        hp.vibrate("pump", 0.45 * top / 0.9, delay=sec * 0.6)
+        hp.vibrate("bite", top, delay=sec)  # 정점 '툭'
 
     def _tip(self, key: str) -> None:
         n = self.tip_counts.get(key, 0)
@@ -1636,7 +1661,10 @@ class FishingScene(Scene):
         self._mastery_event(ev)
         self.signal_audio.on_event(ev)
         self.sfx.boost = 2 if "clear" in f.mutations and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
+        if ev in ZING_RESET or ev.startswith(("pattern_fail", "lost:")):
+            self.zing_streak = 0  # 연속 성공 끊김 (Z3)
         if ev == "rush_ok":
+            self._zing("small")  # 돌진 버팀 (Z3)
             p = self._fish_screen()
             self.pvfx.success("rush", p[0], p[1], False, (255, 170, 90))  # 돌진을 버텼다: 작은 반짝
         if ev.startswith("telegraph:"):
@@ -1781,7 +1809,7 @@ class FishingScene(Scene):
         elif ev == "good":
             # 그레잇: 작은 섬광 + 충격파 + 반짝임
             pos = self._fish_screen()
-            self.sfx.play("sfx_great")
+            self._zing("small")  # GREAT: 작은 지잉 (Z3)
             self.sparkles.burst(*pos, count=16, speed=1.0)
             self.screen_fx.great(self.screen_fx.map(pos))
             self.popups.add("good", pos)

@@ -4,6 +4,9 @@
   시작·멈춤  reel_<티어>_start (가속 0.3초) · reel_<티어>_stop ('딸깍')
   드랙 풀림  drag_<0~3>   (느림 / 보통 / 빠름 / 질주 루프)
   공간 버전  위 모두 + '~out' '~cave' '~deep' (N5 공간 프리셋, 낚시터마다 그 공간 것만 읽음)
+  성공 지잉  zing_<small|mid|big|double>_<티어>_<연속 0~2>   (Z3, 36개 — 손 근처 소리라 공간 버전 없음)
+
+  python tools/bake_reel.py --reference   지잉 샘플 몇 개를 tools/audio/reference/zing/*.wav 로 (들어보기용)
 
   python tools/bake_reel.py            바뀐 것만 (manifest 해시)
   python tools/bake_reel.py --all      전부
@@ -45,6 +48,10 @@ def recipes() -> dict:
     for k in range(DRAGS):
         base[f"drag_{k}"] = {"kind": "drag", "k": k}
     out = dict(base)
+    for g in ("small", "mid", "big", "double"):
+        for tier in TIERS:
+            for st in range(3):
+                out[f"zing_{g}_{tier}_{st}"] = {"kind": "zing", "grade": g, "tier": tier, "streak": st}
     for name, rec in base.items():
         for sp, cfg in spaces.items():
             out[f"{name}~{sp}"] = dict(rec, space=cfg)
@@ -100,6 +107,8 @@ def render(rec: dict, seed: int = 1):
         x, loop = fin(pre(rs.reel_start_raw(rec["tier"])), ref(rec["tier"])[0]), False
     elif k == "stop":
         x, loop = fin(pre(rs.stop_click_sound(rec["tier"])), ref(rec["tier"])[0]) * STOP_GAIN, False
+    elif k == "zing":
+        x, loop = rs.reel_zing(rec["grade"], rec["tier"], rec["streak"])[0], False
     else:
         x, loop = fin(rs.drag_loop_raw(rs.DRAG_RATES[rec["k"]], pre), ref("drag")), True
     st = np.stack([x, x], axis=1)
@@ -125,7 +134,24 @@ def render(rec: dict, seed: int = 1):
     return np.clip(st, -1, 1).astype(np.float32)
 
 
+def reference() -> None:
+    """지잉 샘플을 wav 로 (게임에 넣기 전에 소리만 들어보기)."""
+    from src.audio import synth
+    d = os.path.join(ROOT, "tools", "audio", "reference", "zing")
+    os.makedirs(d, exist_ok=True)
+    rec = recipes()
+    picks = [f"zing_{g}_mid_0" for g in ("small", "mid", "big", "double")] + \
+            ["zing_big_wood_0", "zing_big_crystal_0", "zing_small_mid_2", "zing_big_mid_2"]
+    for n in picks:
+        p = os.path.join(d, n + ".wav")
+        synth.write_wav(p, render(rec[n], seed=int(hashlib.sha1(n.encode()).hexdigest()[:6], 16)))
+        print(os.path.relpath(p, ROOT))
+
+
 def main(argv) -> int:
+    if "--reference" in argv:
+        reference()
+        return 0
     return bake_sfx.main(argv, rec=recipes(), out_dir=OUT, quality="3", hash_fn=reel_hash, render=render)
 
 

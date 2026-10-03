@@ -108,6 +108,8 @@ class Sfx:
             except Exception as e:
                 if len(self.missing_baked) == 1:
                     bootlog.mark(f"  {name} 합성 실패: {e!r}")
+        from src.audio.reel_audio import load_zings
+        load_zings(self, "mid")  # 패턴 성공 지잉 (Z3) — 낚시 화면이 장착 릴 티어로 바꿈
 
     def _to_pcm_stereo(self, st: np.ndarray) -> np.ndarray:
         """합성 엔진의 스테레오 float → 믹서 형식 (샘플레이트 맞춤, 모노 믹서면 섞음)."""

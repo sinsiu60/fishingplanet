@@ -169,6 +169,71 @@ def drag_loop_raw(peak_rate, post=None):
     return _loop_cut(post(x) if post else x, n)
 
 
+# ───────── 패턴 성공 '지이이잉!' (DESIGN.md 32-16 Z3) ─────────
+ZING_GRADES = {"small": (0.35, 1.5, 0.55), "mid": (0.5, 2.0, 0.75), "big": (0.7, 3.0, 0.95)}  # 길이, 피치 상승 배, 세기
+WHINE_F0 = {"wood": 380.0, "mid": 560.0, "crystal": 760.0}
+RING_DECAY = {"wood": 0.04, "mid": 0.08, "crystal": 0.14}
+
+
+def _zing_one(dur, mult, tier, f0):
+    """스풀이 확 돌아가는 한 번: 틱 간격이 촘촘해져 한 음으로 뭉치고, 기어 웅웅 피치가 곡선으로 치솟는다 (끝에서 급하게)."""
+    cfg = TIER_CFG[tier]
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    u = t / dur
+    f = f0 * mult ** (u ** 2.6)                       # 처음 천천히 → 끝에서 급하게
+    rate = 18 * (600 / 18) ** (u ** 1.6)              # 틱 18회/초 → 600회/초 (뭉침)
+    idx = np.where(np.diff(np.floor(np.cumsum(rate) / SR)) > 0)[0]
+    imp = np.zeros(n)
+    imp[idx] = np.clip(1 + cfg["jitter"] * RNG.standard_normal(len(idx)), 0.2, 2.0)
+    ticks = fftconvolve(imp, tick_kernel(cfg["res"], cfg["decay"], tier == "wood"))[:n] * cfg["tick"] * (1 - 0.6 * u)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    whine = np.sin(ph) + 0.45 * np.sin(2 * ph) + 0.22 * np.sin(3 * ph) + 0.1 * np.sin(5 * ph)
+    whine = lp(whine, 4500)
+    env = 0.15 + 0.85 * u ** 1.3
+    sig = ticks + whine * env * 0.55
+    if tier == "wood":   # 거칠고 덜컥이는
+        sig += bp(RNG.standard_normal(n), 300, 1500) * 0.25 * env
+        sig *= 1 + 0.25 * np.sign(np.sin(2 * np.pi * np.cumsum(rate * 0.25) / SR))
+    if tier == "crystal":  # 맑게 울리는
+        sig += np.sin(ph * 6.03) * 0.18 * env
+    return sig, f[-1], ph[-1]
+
+
+def _zing_peak(f_end, ph_end, tier):
+    """정점: 아주 짧은 맑은 금속 울림 + 빠르게 잦아드는 꼬리 (질질 끌지 않음)."""
+    n = int(0.16 * SR)
+    t = np.arange(n) / SR
+    d = RING_DECAY[tier]
+    ring = sum(a * np.sin(2 * np.pi * f_end * k * t) for k, a in ((2.0, 0.5), (2.76, 0.35), (5.4, 0.18))) * np.exp(-t / d)
+    tail = np.sin(ph_end + 2 * np.pi * f_end * t) * np.exp(-t / 0.025) * 0.55
+    if tier == "wood":
+        ring += bp(RNG.standard_normal(n), 200, 900) * np.exp(-t / 0.02) * 0.6
+    return ring * 0.7 + tail
+
+
+def reel_zing(grade, tier="mid", streak=0):
+    """grade: small / mid / big / double, streak 0~2 (연속 성공 → 시작 피치 반음씩 위). 반환: (소리, 정점 시각 초)."""
+    f0 = WHINE_F0[tier] * 1.06 ** streak
+    if grade == "double":
+        a, fa, pa = _zing_one(0.7, 3.0, tier, f0)
+        f1 = f0 * 1.122                                   # 한 음 높은 두 번째: ×3 → ×4
+        b, fb, pb = _zing_one(0.45, 4.0 / 1.122, tier, f1)
+        pk_a, pk_b = _zing_peak(fa, pa, tier), _zing_peak(fb, pb, tier)
+        gap = int(0.04 * SR)
+        out = np.zeros(len(a) + len(pk_a) // 2 + gap + len(b) + len(pk_b))
+        out[:len(a)] += a
+        out[len(a):len(a) + len(pk_a)] += pk_a
+        o = len(a) + len(pk_a) // 2 + gap
+        out[o:o + len(b)] += b
+        out[o + len(b):o + len(b) + len(pk_b)] += pk_b * 1.2
+        return finish(out) * 0.95, (o + len(b)) / SR
+    dur, mult, gain = ZING_GRADES[grade]
+    a, fa, pa = _zing_one(dur, mult, tier, f0)
+    out = np.concatenate([a, _zing_peak(fa, pa, tier)])
+    return finish(out) * gain, dur
+
+
 def reel(dur=3.0, rps=2.0, load=0.0, tier="mid", stop_click=True):
     """
     rps: 핸들 회전/초 (느림 1.2, 보통 2.0, 빠름 3.2)
