@@ -5,6 +5,8 @@
 오프라인으로 다시 만들어** 찢어짐(1.0 넘는 샘플)·최대 음량·끊긴 소리(채널을 못 얻은 재생)를 잰다.
 
   python tools/sound_stress.py [초=20] [--wav 파일]     (오디오 장치 없이 돌아감: SDL_AUDIODRIVER=dummy)
+  --normal   전설 대신 일반 대형 물고기(참다랑어) + 파이팅 음악 무거운 층 + 위기 층 + 지잉 연타 (32-16 Z5)
+합에는 릴·드랙 루프(ReelPlayer, 32-16 Z2 — 믹서 목록 밖 채널)도 들어간다.
 """
 import os
 import random
@@ -55,7 +57,12 @@ def main(argv) -> int:
     g.scenes.push(sc)
     for k in list(tut.CARDS) + list(tut.GUIDES):
         sc.tutorial.seen.add(k)
-    legend = next(f for f in sc.all_fish if f["rarity"] == "legend" and f.get("phases"))
+    normal = "--normal" in argv
+    if normal:
+        legend = dict(next(f for f in sc.all_fish if f["id"] == "bluefin"))
+        legend["size_cm"] = [200, 240]   # 대형 (100cm+) → 무거운 파이팅 층
+    else:
+        legend = next(f for f in sc.all_fish if f["rarity"] == "legend" and f.get("phases"))
     sc._set_spot(legend["spot"])
     sc.weather_sys.current = "storm"
     sc.weather_sys.next_change = 9e9
@@ -65,7 +72,8 @@ def main(argv) -> int:
     sc.cast.state = CastState.HOOKED
     sc._start_fight()
     f = sc.fight
-    f.brain.phase = len(f.brain.phases) - 1   # 마지막 페이즈 = 보스 층 3개 모두
+    if not normal:
+        f.brain.phase = len(f.brain.phases) - 1   # 마지막 페이즈 = 보스 층 3개 모두
     sfx, am = g.sfx, g.adaptive
     rate = sfx.rate
     frames: list[tuple] = []   # (시계, [(소리 배열, 시작 샘플 위치, L, R, 반복)])
@@ -91,6 +99,7 @@ def main(argv) -> int:
         f.stamina = f.stamina_max   # 끝까지 파이팅 (잡히지 않게)
         f.distance = max(f.distance, 12.0)
         f.tension = max(f.tension, f.green_high + 8)
+        f.line = f.line_max   # 빨강 장력이어도 줄은 안 끊기게 (예전엔 2초 만에 끊겨 나머지가 '놓친 뒤'였음)
         if i % 90 == 0:  # 1.5초마다 예고 (이중 패턴이 있으면 이중, 없으면 계열을 돌아가며)
             b = sc.fight.brain
             acts = ["dual"] if getattr(b, "dual_pairs", None) else []
@@ -104,6 +113,10 @@ def main(argv) -> int:
             sc._perfect_sound()
         if i % 200 == 50:
             sc._on_fight_event("double_perfect")
+        if normal and i % 25 == 5:
+            sc._zing("small")      # 작은 지잉 연타 (쿨다운 1.5초가 거름)
+        if normal and i % 120 == 60:
+            sc._zing("mid")
         if i % 150 == 30:
             sc.lightning.strike(sc.cam.horizon, sc.cam.width)
         if i % 40 == 0:
@@ -133,6 +146,14 @@ def main(argv) -> int:
                 ang = (max(-1.0, min(1.0, e["pan"])) + 1) * np.pi / 4
                 L, R = min(1.0, v * np.cos(ang) * 1.41), min(1.0, v * np.sin(ang) * 1.41)
             snap.append((a, pos, L, R, e["loop"]))
+        for name, v in sc.fight_audio.reel.voices.items():   # 릴·드랙 루프 (믹서 목록 밖)
+            key = id(v)
+            if key not in started:
+                started[key] = (v["ch"].get_sound(), sfx.clock - dt)
+            snd, t0 = started[key]
+            if snd is not None and v["q"]:
+                vv = v["q"] / 128
+                snap.append((arr(snd), int((sfx.clock - t0) * rate), vv, vv, True))
         for k, snd in am.sounds.items():
             v = am.ch[k].get_volume()
             if v > 0:
@@ -163,7 +184,10 @@ def main(argv) -> int:
     clipped = int((np.abs(out) > 1.0).sum())
     rms = float(np.sqrt((out ** 2).mean()))
     busy = max(len(s) for s in frames)
-    print(f"최악 상황 {sec:.0f}초 (전설 {legend['name']} 마지막 페이즈 · 폭풍 · 이중 패턴 · 퍼펙트 연타 · 빨강 장력)")
+    what = f"대형 {legend['name']} · 파이팅 음악 {sorted(k for k in am.sounds if am.level.get(k, 0) > 0.05)} · 지잉 연타" if normal \
+        else f"전설 {legend['name']} 마지막 페이즈"
+    print(f"최악 상황 {sec:.0f}초 ({what} · 폭풍 · 이중 패턴 · 퍼펙트 연타 · 빨강 장력)")
+    print(f"  릴 루프 동시 최대 {sc.fight_audio.reel.max_voices}개 · 음악 상황 {am.applied}")
     print(f"  동시 재생 최대 {busy}개 (채널 {pygame.mixer.get_num_channels()}, 신호 예약 {sfx.n_sig}, 음악 예약 {sfx.n_mus})")
     print(f"  최대 {20 * np.log10(max(peak, 1e-9)):+.1f} dBFS · 평균 {20 * np.log10(max(rms, 1e-9)):.1f} dBFS · 찢어진 샘플 {clipped} ({clipped / out.size * 100:.3f}%)")
     print(f"  재생 요청 {asked} / 채널 못 얻음 {fails}")
