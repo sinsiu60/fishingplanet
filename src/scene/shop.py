@@ -18,7 +18,7 @@ ROW_H = 17
 LIST = pygame.Rect(16, 52, 236, 186)
 DETAIL = pygame.Rect(260, 52, 204, 186)
 RARITY_COL = {"common": (230, 230, 230), "uncommon": (130, 230, 150), "rare": (130, 190, 255),
-              "legend": (255, 214, 90)}
+              "phantom": (190, 120, 255), "legend": (255, 214, 90)}
 
 
 def stat_lines(kind: str, item: dict) -> list[str]:
@@ -123,7 +123,8 @@ class ShopScene(Scene):
         return sorted(equipment()[self.kind], key=lambda g: g["tier"])
 
     def fish_by_id(self, fid: str) -> dict:
-        return next(f for f in load_json("fish.json")["fish"] if f["id"] == fid)
+        from src.save.save_game import fish_by_id
+        return fish_by_id(fid)  # 환상어(data/phantom.json)도
 
     def _say(self, msg: str, col=ui.TEXT) -> None:
         self.msg, self.msg_col, self.msg_t = msg, col, 2.0

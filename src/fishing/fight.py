@@ -29,7 +29,7 @@ LOSE_REASONS = {
 def fish_gear_tier(fish: dict) -> int:
     """이 물고기에 맞는 낚싯대 티어 = 그 낚시터 gear_tier (전설 +1, 최대 8)."""
     spot = next((sp for sp in load_json("spots.json")["spots"] if sp["id"] == fish.get("spot")), {})
-    return min(8, spot.get("gear_tier", 1) + (1 if fish.get("rarity") == "legend" else 0))
+    return min(8, spot.get("gear_tier", 1) + (1 if fish.get("rarity") in ("legend", "phantom") else 0))
 
 
 def heave_amp(fish: dict, cfg: dict, rod_tier: int | None = None) -> float:
@@ -623,6 +623,7 @@ class Fight:
         self.rod_aim = rod_aim
 
         b.cover_dir = self._cover_dir()
+        b.cur_gimmick = next(iter(sorted(self.gim.kinds(b))), None)  # 정령의 꿈잉어: 지금 기믹에 맞는 이중 패턴 짝
         b.cover_from_gimmick = False
         if b.cover_dir == 0 and b.gimmick_bias > 0 and self.gim.kinds(b) & {"tangle", "ice", "current"}:
             b.cover_dir = 1 if self.angle - self.yaw >= 0 else -1  # 기믹 쪽(바깥)으로 끌고 간다
@@ -809,7 +810,7 @@ class Fight:
             self.escape_t = 0.0
             self.events.append("escape_start")  # 눈이 번쩍 + 물보라 폭발
         elif self.distance <= cfg["net_distance"] and b.state not in ("jump", "telegraph") + PATTERN_IDS:
-            need = cfg["net_min_stamina_legend"] if self.fish["rarity"] == "legend" else cfg["net_min_stamina"]
+            need = cfg["net_min_stamina_legend"] if self.fish["rarity"] in ("legend", "phantom") else cfg["net_min_stamina"]
             if self.stamina_frac > need and b.state not in ("rush",) and b.can_start("rush"):
                 # 아직 힘이 남았으면 뜰채 앞에서 다시 도망친다 (예고 후 돌진)
                 b.chain_left = 0
@@ -824,7 +825,7 @@ class Fight:
         if not self.float_need or self.float_tier >= self.float_need:
             return False
         cfg = self.cfg
-        need = cfg["net_min_stamina_legend"] if self.fish["rarity"] == "legend" else cfg["net_min_stamina"]
+        need = cfg["net_min_stamina_legend"] if self.fish["rarity"] in ("legend", "phantom") else cfg["net_min_stamina"]
         near = max(cfg["net_distance"] + 1.5, self.cast_distance * self.escape_frac)
         return self.distance <= near and self.stamina_frac <= need and self.brain.state not in ("jump",)
 

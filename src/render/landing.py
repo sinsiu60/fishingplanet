@@ -24,8 +24,8 @@ T_LIFT = 1.25     # 끌어올리기 끝 → 튀어 오름 시작
 HIT_STOP = 0.07   # 닿는 순간 잠깐 멈춤
 
 RARITY_GLOW = {"common": (255, 245, 210), "uncommon": (150, 255, 170), "rare": (140, 200, 255),
-               "legend": (255, 210, 90)}
-TIER = {"common": 0, "uncommon": 1, "rare": 2, "legend": 3}
+               "phantom": (210, 150, 255), "legend": (255, 210, 90)}
+TIER = {"common": 0, "uncommon": 1, "rare": 2, "phantom": 2, "legend": 3}
 # 희귀도가 높을수록: 오르는 시간·정점 머무는 시간·회전 수가 늘어난다
 RISE_SEC = (0.45, 0.48, 0.55, 0.7)
 APEX_HOLD = (0.22, 0.27, 0.45, 0.95)

@@ -23,6 +23,8 @@ from src.render.fish_draw import draw_catch_cut, draw_jump, draw_net_scene
 from src.render.dragon import DragonTransform, Embers, draw_dragon_jump, draw_dragon_shadow
 from src.render.landing import LandingCinematic
 from src.render.palette import Palette
+from src.render.phantom_fx import PhantomFx, phantom_palette
+from src.fishing import phantom
 from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
 from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
@@ -49,7 +51,7 @@ BAD = (255, 150, 130)
 INFO = (255, 235, 170)
 LOOK_STATES = (CastState.READY, CastState.LANDED)
 WEATHERS = ["clear", "rain", "storm", "fog"]
-GLOW = {"rare": (150, 210, 255), "legend": (255, 215, 100)}
+GLOW = {"rare": (150, 210, 255), "legend": (255, 215, 100), "phantom": (210, 150, 255)}
 DRAGON_LOOK = {"colors": {"body": [200, 40, 40], "belly": [255, 214, 110], "fin": [255, 170, 40],
                           "stripe": [255, 230, 140]},
                "shape": {"height": 0.13, "whiskers": True, "dorsal": "crest", "tail": "fork", "pattern": "spots"}}
@@ -143,6 +145,9 @@ class FishingScene(Scene):
         self.legend_k = 0.0
         self.red_t = self.crisis_hold = 0.0  # Z4 파이팅 음악 위기 판정 (빨강 지속·해소 뒤 유지)
         self.dragon_k = 0.0      # '등용' 3페이즈: 진홍빛 하늘
+        self.phantom_fx = PhantomFx(phantom.spawn_cfg())  # 환상의 물고기 보랏빛 파장 (33장)
+        self.force_phantom = False   # 디버그 F7: 다음 착수 환상 강제
+        self.show_pity = False       # 디버그 F8: 낚시터별 천장 카운트
         self.dragon_fx: DragonTransform | None = None
         self.embers = Embers()
         self.flick_hist: list[tuple[float, int]] = []   # (시간, 마우스 x) — 슬라이드 감지
@@ -453,6 +458,13 @@ class FishingScene(Scene):
             elif a.value == "F9":
                 if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
                     self._force_pattern()
+            elif a.value == "F7":
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    self.force_phantom = not self.force_phantom
+                    self.toasts.show(f"[테스트] 다음 착수 환상 강제: {'켬' if self.force_phantom else '끔'}", INFO, 1.5, 11)
+            elif a.value == "F8":
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    self.show_pity = not self.show_pity
             elif a.value == "F1":
                 self.debug = not self.debug
             elif a.value == "F2":
@@ -563,8 +575,18 @@ class FishingScene(Scene):
         self.shake_on = self.settings.get("screen_shake")
         self.screen_fx.enabled = self.shake_on
 
+    def _phantom_retreat(self, x: float, z: float) -> None:
+        """환상어가 떠났다 (놓침·직접 회수·챔질 놓침): 사라진 지점으로 보라가 빨려 들어감 + 한 줄."""
+        p = self.cam.project(x, z)
+        self.phantom_fx.retreat((p[0], p[1]) if p else self.phantom_fx.center)
+        self.phantom_lost_t = 3.2
+        self.toasts.show(phantom.LOST_LINE, phantom.COLOR_LIGHT, 3.2, 11)
+        self.sfx.set_base_duck("fight" if self.fight is not None else None)
+
     def _left_click(self) -> None:
         c, f = self.cast, self.fight
+        if self.phantom_fx.locked():
+            return  # 파장이 퍼지는 동안 입력 무시
         if self.landing is not None:
             self.landing.skip()
             return
@@ -607,7 +629,12 @@ class FishingScene(Scene):
                 self.sfx.play("sfx_cast_swing", 0.35)
                 self.fight.dip()
             return
+        if self.phantom_fx.locked():
+            return  # 파장이 퍼지는 동안 회수 무시
         if self.cast.state == CastState.LANDED:
+            if self.bite.phantom is not None and self.bite.state != BiteState.HOOKED:
+                # 대사 이후 직접 회수: 보라가 찌로 빨려 들어감 (천장 카운트는 유지)
+                self._phantom_retreat(self.cast.bx, self.cast.bz)
             self.bite.stop()
         self.cast.cancel_or_retrieve()
 
@@ -665,6 +692,10 @@ class FishingScene(Scene):
         if not train and self.save.gear_tier("rod") < need_rod and fish["rarity"] != "common":
             # 낚싯대가 약하면 울렁임이 커진다 — 왜 어려운지 알려 준다
             self.toasts.show("버겁다!", BAD, 2.6, 11)
+        if fish["rarity"] == "phantom":
+            phantom.reset_pity(self.save, self.spot_id)  # 환상어와 파이팅까지 갔다 → 천장 카운트 0
+            self.phantom_fx.to_fight()
+            self.game.haptics.vibrate("bite", 0.6)
         if fish["rarity"] == "legend":
             self.toasts.show("전설!", (255, 214, 90), 3.0)
             self.sfx.play("sfx_legend_appear", 1.0, haptic="legend")  # 깊은 드론 + 심장박동 + 수면 울림
@@ -701,6 +732,8 @@ class FishingScene(Scene):
             from src.scene.ending import EndingScene
             self.game.scenes.push(EndingScene(self.game, self, kind="final"))
         self.screen_fx.reset()
+        if last and phantom.is_phantom(last["fish"]):
+            self.phantom_fx.restore()  # 포획 컷이 끝나면 1.5초에 걸쳐 원래 색
         self.bite.stop()
         self.cast.reset()
         self.game.screen.shake = (0, 0)
@@ -804,6 +837,7 @@ class FishingScene(Scene):
         self._maybe_escape_tutorial()
         self._update_shake(dt)
         self._update_legend(dt)
+        self._update_phantom(dt)
         f = self.fight
         fighting = f is not None and f.phase == "fight"
         fish_pos = self._fish_screen() if fighting else None
@@ -845,6 +879,26 @@ class FishingScene(Scene):
             if self.dragon_fx.done:
                 self.dragon_fx = None
 
+    def _update_phantom(self, dt: float) -> None:
+        """환상의 물고기 파장 (33-5): 시간·진동·환경음/음악 잦아듦."""
+        fx = self.phantom_fx
+        fx.update(dt)
+        for ev in fx.events:
+            if ev == "bloom_start":
+                self.game.haptics.vibrate("nibble", 0.3)   # 파장 시작: 아주 약하게
+                self.sfx.play("sfx_phantom_hum", 0.35)     # 아주 낮고 부드러운 울림 (작게)
+            elif ev == "bloom_line":
+                self.game.haptics.vibrate("nibble", 0.7)   # 대사 등장 한 번
+        fx.events.clear()
+        if fx.mode == "bloom" and self.bite.phantom is not None:
+            # 환경음 0.2초부터 잦아듦 → 음악 2.2초에 완전히 (정적이 신호)
+            b = fx.cfg["bloom"]
+            u = clamp((fx.t - b["start"]) / (b["full"] - b["start"]), 0, 1)
+            self.sfx.duck_levels({"amb": -30 * u, "mus": -45 * u}, hold=0.3, release=1.5)
+        elif fx.mode == "bloom" and self.bite.phantom is None and self.fight is None:
+            fx.retreat(fx.center)  # 줄을 걷는 등 다른 길로 끝남
+        self.phantom_lost_t = max(0.0, getattr(self, "phantom_lost_t", 0.0) - dt)
+
     def _update_legend(self, dt: float) -> None:
         self._update_dragon(dt)
         f = self.fight
@@ -866,7 +920,11 @@ class FishingScene(Scene):
             music.play(f"spot_{self.spot_id}")
         self.legend_on = on
         self._update_music(on, dt)
-        self.screen_fx.legend = on
+        ph_on = f is not None and f.phase in ("fight", "net") and f.fish.get("rarity") == "phantom"
+        self.screen_fx.legend = on or ph_on
+        self.screen_fx.legend_alpha = 0.35 if ph_on else 1.0  # 환상: 화면 가장자리 아주 옅은 보라
+        if ph_on:
+            self.screen_fx.legend_color = phantom.COLOR
         self.legend_k += ((1.0 if on else 0.0) - self.legend_k) * min(1.0, dt / 0.8)
 
     def _update_music(self, legend: bool, dt: float = 0.0) -> None:
@@ -939,7 +997,7 @@ class FishingScene(Scene):
         self.bite.bait = self.save.equipped("bait")
         self.bite.force_fish = self.all_fish[self.force_i] if self.force_i >= 0 else None
         landed = self.cast.state == CastState.LANDED
-        if landed and self.bite.state == BiteState.WAIT:
+        if landed and self.bite.state == BiteState.WAIT and self.bite.phantom is None:
             # 루어 (U7): 짧은 클릭·탭 = 저킹, 누르고 있기 = 리트리브, 가만히 = 멈춤
             self.ctl.update_lure(dt, self.t, self.game.input.held("press"))
             jerk = "lure_jerk" in self.ctl.events
@@ -1406,7 +1464,19 @@ class FishingScene(Scene):
         if buffs.get("lucky_casts", 0) > 0:
             buffs["lucky_casts"] -= 1
         self.bite.window_extra = 0.95 if self.save.charm_on("pinwheel_float") else 1.0
-        self.bite.start((c.bx, c.bz), c.current_distance())
+        ph = None
+        if self.training is None and self.force_i < 0:
+            ph = phantom.roll(self.save, self.spot_id, force=self.force_phantom)
+            self.force_phantom = False
+        if ph is not None:
+            # 환상어: 착수 지점에서 보랏빛 파장 → 대사 → 가짜 입질 없이 진짜 입질 (33-5)
+            sc = phantom.spawn_cfg()
+            self.bite.start_phantom((c.bx, c.bz), c.current_distance(), ph, sc["bite_delay_sec"], sc["approach_sec"])
+            p = self.cam.project(c.bx, c.bz)
+            self.phantom_fx.bloom((p[0], p[1]) if p else (self.cam.cx, self.cam.horizon + 20),
+                                  reduce=self.settings.get("reduce_fx"))
+        else:
+            self.bite.start((c.bx, c.bz), c.current_distance())
         self.idle_ripple_t = 0.0
 
     def _splash_at(self, x: float, z: float, big: float) -> None:
@@ -1437,7 +1507,12 @@ class FishingScene(Scene):
                 self.droplets.burst(p[0], p[1], max(0.6, p[2] / 20), count=10)
         elif ev == "missed":
             self.sfx.play("sfx_flee", 0.6)
-            self.toasts.show("미끼만 먹고 도망갔다... (우클릭: 회수)", BAD, 2.6)
+            if self.bite.phantom is not None:
+                self._phantom_retreat(self.cast.bx, self.cast.bz)
+            else:
+                self.toasts.show("미끼만 먹고 도망갔다... (우클릭: 회수)", BAD, 2.6)
+        elif ev == "phantom_approach":
+            self.ripples.spawn(c.bx, c.bz, size=0.6, life=1.6, rings=2)
 
     def _on_pattern_event(self, ev: str, kind: str, pid: str) -> None:
         """신규 패턴(U3): 예고 소리·진동·첫 만남 안내, 판정 결과 연출."""
@@ -1776,6 +1851,8 @@ class FishingScene(Scene):
                 self.lightning.strike(self.cam.horizon, self.cam.width)
         elif ev.startswith("phase:"):
             n = int(ev.split(":")[1])
+            if f.fish.get("rarity") == "phantom":
+                self.phantom_fx.pulse()  # 2페이즈: 보라 강도 100% 맥박 → 60%
             pos = self._fish_screen()
             self.toasts.show("거세짐!", (255, 214, 90), 3.2, 11)
             self.sfx.play("sfx_roar", 1.0)
@@ -1951,11 +2028,15 @@ class FishingScene(Scene):
             self.save.data["flags"]["eldra_escape_tutorial"] = True
             self.save.data["flags"]["float_highlight"] = True
             self.save.record_seen(f.fish["id"])
+            if phantom.is_phantom(f.fish):
+                self._phantom_retreat(*f.fish_xz())
             self.game.save_now()  # N3: 놓침 하강음 없음
             self.end_t = 0.0
             self.escape_tutorial_pending = True
         elif ev.startswith("lost:"):
             self.save.record_loss()
+            if phantom.is_phantom(f.fish):
+                self._phantom_retreat(*f.fish_xz())
             if ev == "lost:escape":
                 self.save.record_seen(f.fish["id"])
                 self.toasts.show(f"이 물고기를 붙잡으려면 [{float_name(f.float_need)}] 이상이 필요합니다.", BAD, 3.5, 11)
@@ -1969,6 +2050,25 @@ class FishingScene(Scene):
             self.shake_kick = 4.0 if ev == "lost:snap" else 0.0
 
     # ───────────────────────── 그리기 ─────────────────────────
+    def _draw_world(self, canvas, pal: dict) -> None:
+        """하늘·별·해달·구름·산·물 (환상 파장은 이걸 두 번 그려 마스크로 합성)."""
+        cam, t, hour, theme, weather = self.cam, self.t, self.clock.hour, self.theme, self.weather
+        world.draw_sky(canvas, pal, cam)
+        self.stars.draw(canvas, pal, cam, t)
+        world.draw_celestial(canvas, pal, cam, hour, t, visible=weather == "clear" and theme["terrain"] != "cave")
+        if theme.get("aurora"):
+            from src.render.eldra_world import draw_aurora
+            draw_aurora(canvas, pal, cam, t)
+        self.clouds.draw(canvas, pal, cam)
+        self.lightning.draw(canvas)
+        world.draw_mountains(canvas, pal, cam, theme["terrain"], t)
+        amp = {"clear": 1.0, "rain": 1.25, "storm": 1.9, "fog": 0.8}[weather] * (1.3 if theme.get("sea") else 1.0)
+        amp *= 1.0 - 0.8 * self.phantom_fx.calm()  # 환상: 물결이 숨을 죽인다
+        self.water.draw(canvas, pal, t, hour, amp_mult=amp,
+                        show_reflection=weather == "clear" and theme["terrain"] != "cave")
+        if theme.get("lamp"):
+            world.draw_ship_lamp(canvas, pal, cam)
+
     def draw(self, canvas: pygame.Surface) -> None:
         self._run_rt_fx()   # 슬로우모션 중엔 update 가 드물게 불리므로 그리기에서도 (타격 시점 정확히)
         hour = self.clock.hour
@@ -1980,21 +2080,20 @@ class FishingScene(Scene):
                 if isinstance(v, tuple) and key not in ("text", "bobber", "bobber_base"):
                     pal[key] = lerp_color(v, (120, 16, 26), 0.28 * self.dragon_k)
         cam, c, t, f = self.cam, self.cast, self.t, self.fight
-
-        world.draw_sky(canvas, pal, cam)
-        self.stars.draw(canvas, pal, cam, t)
-        world.draw_celestial(canvas, pal, cam, hour, t, visible=weather == "clear" and theme["terrain"] != "cave")
-        if theme.get("aurora"):
-            from src.render.eldra_world import draw_aurora
-            draw_aurora(canvas, pal, cam, t)
-        self.clouds.draw(canvas, pal, cam)
-        self.lightning.draw(canvas)
-        world.draw_mountains(canvas, pal, cam, theme["terrain"], t)
-        amp = {"clear": 1.0, "rain": 1.25, "storm": 1.9, "fog": 0.8}[weather] * (1.3 if theme.get("sea") else 1.0)
-        self.water.draw(canvas, pal, t, hour, amp_mult=amp,
-                        show_reflection=weather == "clear" and theme["terrain"] != "cave")
-        if theme.get("lamp"):
-            world.draw_ship_lamp(canvas, pal, cam)
+        pfx = self.phantom_fx
+        base_pal = pal
+        if pfx.active:
+            pal = phantom_palette(base_pal, pfx.k)   # 환상 팔레트 덧입히기 (UI·HUD·신호 슬롯 제외)
+        self._draw_world(canvas, pal)
+        if pfx.active:
+            m = pfx.mask(canvas.get_width(), canvas.get_height(), int(cam.horizon))
+            if m is not None:
+                # 파장이 지나간 자리만 환상 팔레트로 한 번 더 그려 합성 (지나간 자리는 0.3초에 걸쳐 보라로)
+                layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+                self._draw_world(layer, phantom_palette(base_pal, pfx.inner_k()))
+                layer.blit(m, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+                canvas.blit(layer, (0, 0))
+            pfx.draw_ring(canvas, int(cam.horizon))
         if self.landing is not None:
             self.landing.draw(canvas, pal)
             return
@@ -2009,7 +2108,8 @@ class FishingScene(Scene):
                 p = cam.project(sh["x"], sh["z"])
                 if p and sh.get("alpha", 1) > 0.2:
                     fish = self.bite.fish
-                    name = fish["name"] if self.save.caught(fish["id"]) else "???"
+                    known = self.save.caught(fish["id"]) if not phantom.is_phantom(fish) else phantom.caught(self.save, fish["id"])
+                    name = fish["name"] if known else "???"
                     hud.text(canvas, name, (p[0], p[1] - 10), (190, 170, 255), anchor="center")
         elif f.phase == "fight":
             if self.ink_t > 0:
@@ -2137,6 +2237,21 @@ class FishingScene(Scene):
                 chests = sum(self.save.data.get("chests", {}).values())
                 side_menu.draw(canvas, self._side_menu_rects(), self.mouse, t, {"chest": chests})
         self.toasts.draw(canvas)
+        la = self.phantom_fx.line_alpha()
+        if la > 0:
+            # 환상 등장 대사 (위쪽 가운데, 연보라 페이드)
+            img = get_font(16).render(phantom.LINE, False, phantom.COLOR_LIGHT)
+            sh = get_font(16).render(phantom.LINE, False, (30, 10, 50))
+            img.set_alpha(int(255 * la))
+            sh.set_alpha(int(200 * la))
+            x = self.cam.cx - img.get_width() // 2
+            canvas.blit(sh, (x + 1, 47))
+            canvas.blit(img, (x, 46))
+        if self.show_pity:
+            ph = phantom.state(self.save)
+            lines = [f"[환상 천장] {sid} {n}회 · {phantom.chance(self.save, sid) * 100:.2f}%"
+                     for sid, n in sorted(ph["casts"].items())] or ["[환상 천장] 기록 없음"]
+            fight_hud.draw_debug_lines(canvas, lines)
         if self.captions:
             cap, left = self.captions
             w = get_font(11).size(cap)[0] + 12
@@ -2754,7 +2869,8 @@ class FishingScene(Scene):
         draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5 * (1 - dip)), sag, bias=0.6)
         draw_bobber(canvas, self._bobber_pal(pal), sx, sy + bob, size, floating=True, dip=dip)
         self._draw_float_mark(canvas, sx, sy + bob, size, dip)
-        if c.state == CastState.LANDED and self.fight is None and self.settings.get("bobber_zoom"):
+        pfx_hide = self.phantom_fx.mode == "bloom" and self.phantom_fx.t < self.phantom_fx.cfg["bloom"]["line_out"] + 0.4
+        if c.state == CastState.LANDED and self.fight is None and self.settings.get("bobber_zoom") and not pfx_hide:
             self._draw_bobber_zoom(canvas, pal, sx, sy, size, dip)
 
     ZOOM_W, ZOOM_H = 84, 58

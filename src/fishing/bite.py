@@ -128,6 +128,7 @@ class BiteController:
         self.rare_bonus = 0.0                # 행운의 떡밥 (+%p)
         self.window_extra = 1.0              # 바람개비 찌: 0.95
         self.legend = False                  # 이번 입질이 전설인지
+        self.phantom: dict | None = None     # 환상어 (33장): 착수 순간 판정 → 연출 동안 대기 → 가짜 입질 없이 진짜 입질
         # 루어 (U7)
         from src.fishing.lure import LureRhythm, cfg as lure_cfg
         self.lcfg = lure_cfg()
@@ -151,14 +152,23 @@ class BiteController:
     def start(self, bobber_xz, cast_distance: float) -> None:
         """찌가 착수했을 때."""
         self.active = True
+        self.phantom = None
         self.bobber = bobber_xz
         self.cast_distance = cast_distance
         self._to_wait()
+
+    def start_phantom(self, bobber_xz, cast_distance: float, fish: dict, delay: float, approach: float) -> None:
+        """환상어 착수: delay(파장·대사) 동안 아무것도 오지 않다가 approach 초 그림자 접근 → 가짜 입질 없이 BITE."""
+        self.start(bobber_xz, cast_distance)
+        self.phantom = fish
+        self.phantom_approach = approach
+        self.timer = delay
 
     def stop(self) -> None:
         """줄 회수 등으로 대기 종료."""
         self.active = False
         self.legend = False
+        self.phantom = None
         self.state = BiteState.WAIT
         self.shadow = None
         self.dip = 0.0
@@ -171,6 +181,8 @@ class BiteController:
         """좌클릭(챔질). 결과: 'hooked' / 'scared' / 'empty'."""
         if not self.active:
             return "empty"
+        if self.phantom is not None and self.state in (BiteState.WAIT, BiteState.APPROACH, BiteState.NIBBLE):
+            return "empty"  # 환상어: 진짜 입질 전 클릭은 놀래지 않는다 (가짜 입질이 없으니 기다리면 된다)
         if self.state == BiteState.BITE:
             self.state = BiteState.HOOKED
             self.events.append("hooked")
@@ -313,7 +325,20 @@ class BiteController:
         bx, bz = self.bobber
         self.tip_pull = lerp(self.tip_pull, 0.0, 0.12)
 
-        if self.state == BiteState.WAIT:
+        if self.state == BiteState.WAIT and self.phantom is not None:
+            self.dip = lerp(self.dip, 0.0, 0.2)  # 물결이 숨을 죽인다: 루어·다른 물고기 없음
+            if self.timer <= 0:
+                self.fish = self.phantom
+                self.state = BiteState.APPROACH
+                self.approach_dur = self.timer = self.phantom_approach
+                ang = self.rnd.uniform(0, math.tau)
+                d0 = cfg["approach_start_distance_m"]
+                self.shadow = {"x0": bx + math.sin(ang) * d0, "z0": bz + math.cos(ang) * d0,
+                               "x": bx + math.sin(ang) * d0, "z": bz + math.cos(ang) * d0,
+                               "heading": ang + math.pi, "alpha": 0.0, "len": self.fish["shadow_len_m"],
+                               "vx": 0.0, "vz": 0.0, "scale": 1.3}
+                self.events.append("phantom_approach")
+        elif self.state == BiteState.WAIT:
             self.dip = lerp(self.dip, 0.0, 0.2)
             self._update_lure(dt)
             if self.timer <= 0:
@@ -376,6 +401,8 @@ class BiteController:
                 delta = self.bait.get("nibble_delta", 0) if self.bait else 0
                 self.nibbles_left = max(0, self.rnd.randint(lo, hi) + delta)
                 self.timer = self._rand(cfg["nibble_interval_sec"])
+                if self.phantom is not None:
+                    self.nibbles_left, self.timer = 0, 0.15  # 가짜 입질 없이 바로 진짜 입질
 
         elif self.state == BiteState.NIBBLE:
             sh = self.shadow

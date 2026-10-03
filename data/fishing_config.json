@@ -135,6 +135,7 @@
       "common": 0.6,
       "uncommon": 0.8,
       "rare": 1.0,
+      "phantom": 1.0,
       "legend": 1.0
     },
     "heave_deficit_mult": 0.5

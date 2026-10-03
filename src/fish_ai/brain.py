@@ -111,6 +111,10 @@ class FishBrain:
         self.sig = load_json("signals.json")
         self.clock = 0.0
         self.load_budget = self.sig["budget_3s"].get(fish.get("spot"), 99)  # 낚시터가 없으면(테스트) 제한 없음
+        self.phantom = fish.get("rarity") == "phantom"
+        if self.phantom:
+            self.load_budget = min(5, self.load_budget + 1)  # 환상어 (33장): 낚시터 예산 +1, 최대 5
+        self.cur_gimmick: str | None = None  # Fight 가 매 틱: 지금 기믹 (정령의 꿈잉어 이중 패턴 짝)
         self.starts: list[tuple] = []   # (시각, 부하, 그때 예산) — 3초 창 부하
         self.ep_start: float | None = None          # 지금 에피소드(쉬지 않고 이어지는 행동 묶음) 시작
         self.ep_action: str | None = None
@@ -159,6 +163,7 @@ class FishBrain:
             self.dark = True
         self.chain_seq = src.get("chain_seq") or self.pcfg["chain"]["default_seq"]
         self.dual_pairs = src.get("dual_pairs") or self.pcfg["dual"]["allowed"]
+        self.dual_by_gimmick = src.get("dual_by_gimmick")  # 기믹 순환에 맞춰 이중 패턴 짝이 바뀜 (정령의 꿈잉어)
 
     @property
     def phase_desc(self) -> str:
@@ -357,7 +362,7 @@ class FishBrain:
 
     def budget(self) -> int:
         """3초 부하 예산: 낚시터 값, 전설 마지막 페이즈는 legend_last_phase."""
-        if len(self.phases) > 1 and self.phase == len(self.phases) - 1:
+        if len(self.phases) > 1 and self.phase == len(self.phases) - 1 and not self.phantom:
             return max(self.load_budget, self.sig["legend_last_phase"])
         return self.load_budget
 
@@ -457,7 +462,10 @@ class FishBrain:
     def _begin_telegraph(self, action: str, duration: float | None = None, turn_dir: int | None = None,
                          penalty: bool = False) -> None:
         if action == "dual":
-            self.dual_pair = tuple(self.rnd.choice(self.dual_pairs))
+            pairs = self.dual_pairs
+            if self.dual_by_gimmick and self.cur_gimmick in self.dual_by_gimmick:
+                pairs = [self.dual_by_gimmick[self.cur_gimmick]]
+            self.dual_pair = tuple(self.rnd.choice(pairs))
         if action == "pump" or (action == "dual" and "pump" in self.dual_pair):
             duration = None  # 박자 예고는 길이가 정해져 있다
         if duration is None and action in NEW_ACTIONS:

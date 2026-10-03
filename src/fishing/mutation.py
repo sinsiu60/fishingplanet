@@ -30,7 +30,7 @@ def roll(save, fish: dict, weather: str, rnd=_RNG, force: list | None = None, ch
     if force is not None:
         return [m for m in force if m in ORDER]
     c = cfg()
-    if fish.get("rarity") == "legend" or not unlocked(save):
+    if fish.get("rarity") in ("legend", "phantom") or not unlocked(save):
         return []
     k = (c["storm_mult"] if weather == "storm" else 1.0) * chance_mult
     r = rnd.random()

@@ -1,0 +1,1146 @@
+{
+ "_설명": "환상의 물고기 (DESIGN.md 33장, PHANTOM_FISH.md). fish.json 과 따로 둬서 도감 %·해금·의뢰·변이 집계에 안 들어간다. spawn = 착수 순간 판정. reward = 보상(P5). fish = 12종 (rarity phantom, 2페이즈 phase_at 0.5).",
+ "spawn": {
+  "base_chance": 0.005,
+  "legend_chance": 0.02,
+  "pity_after": 300,
+  "pity_after_legend": 100,
+  "pity_step": 0.0005,
+  "pity_max": 0.05,
+  "approach_sec": 1.6,
+  "bite_delay_sec": 4.4,
+  "bloom": {
+   "start": 0.2,
+   "horizon": 2.0,
+   "sky_start": 1.2,
+   "full": 2.2,
+   "line_in": 2.4,
+   "line_out": 4.4,
+   "fade": 0.3
+  },
+  "fight_k": 0.6,
+  "phase_pulse_sec": 0.8,
+  "restore_sec": 1.5,
+  "retreat_sec": 1.2,
+  "reduce_fx_fade_sec": 0.8
+ },
+ "fish": [
+  {
+   "id": "moon_shadow_carp",
+   "name": "달그림자 잉어",
+   "spot": "reservoir",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    60,
+    90
+   ],
+   "base_price": 190,
+   "difficulty": 9,
+   "telegraph_sec": 0.85,
+   "power": 1.28,
+   "stamina": 230,
+   "actions": {
+    "turn": 40,
+    "rush": 30,
+    "charge": 20,
+    "jump": 10
+   },
+   "shadow_len_m": 0.8,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     120,
+     90,
+     170
+    ],
+    "belly": [
+     220,
+     205,
+     245
+    ],
+    "fin": [
+     160,
+     120,
+     220
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.25,
+    "whiskers": true,
+    "form": "hump"
+   },
+   "skill": "지친 척",
+   "desc": "달빛이 물에 비치는 밤에만 그림자가 보인다는 잉어.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.85
+    },
+    {
+     "desc": "지친 척하며 천천히 물러선다 — 기포를 보라",
+     "telegraph_sec": 0.75,
+     "actions": {
+      "turn": 35,
+      "rush": 30,
+      "charge": 25,
+      "jump": 10
+     },
+     "fake_tired": 0.8,
+     "tired_sec": [
+      2.4,
+      3.4
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mist_mandarin",
+   "name": "안개비늘 쏘가리",
+   "spot": "valley",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    40,
+    65
+   ],
+   "base_price": 380,
+   "difficulty": 9,
+   "telegraph_sec": 0.8,
+   "power": 1.3,
+   "stamina": 240,
+   "actions": {
+    "turn": 40,
+    "rush": 30,
+    "shake": 20,
+    "jump": 10
+   },
+   "shadow_len_m": 0.62,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     150,
+     120,
+     190
+    ],
+    "belly": [
+     230,
+     220,
+     245
+    ],
+    "fin": [
+     120,
+     90,
+     170
+    ],
+    "stripe": [
+     70,
+     50,
+     110
+    ]
+   },
+   "shape": {
+    "height": 0.22,
+    "pattern": "spots",
+    "form": "bass"
+   },
+   "skill": "흔들고 도주",
+   "desc": "안개 낀 계곡 바위 틈에서 비늘만 반짝이고 사라진다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.8
+    },
+    {
+     "desc": "머리를 털자마자 바위 쪽으로 내달린다",
+     "telegraph_sec": 0.7,
+     "actions": {
+      "shake": 35,
+      "turn": 30,
+      "rush": 25,
+      "jump": 10
+     },
+     "combo": {
+      "shake": [
+       "rush",
+       0.85
+      ]
+     },
+     "cover_bias": 0.95
+    }
+   ],
+   "cover_bias": 0.85
+  },
+  {
+   "id": "dusk_bass",
+   "name": "노을빛 농어",
+   "spot": "breakwater",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    60,
+    110
+   ],
+   "base_price": 570,
+   "difficulty": 9,
+   "telegraph_sec": 0.7,
+   "power": 1.4,
+   "stamina": 260,
+   "actions": {
+    "jump": 30,
+    "turn": 25,
+    "rush": 20,
+    "dive": 15,
+    "surface": 15
+   },
+   "shadow_len_m": 0.9,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     200,
+     110,
+     170
+    ],
+    "belly": [
+     250,
+     220,
+     240
+    ],
+    "fin": [
+     150,
+     90,
+     200
+    ],
+    "stripe": [
+     120,
+     60,
+     150
+    ]
+   },
+   "shape": {
+    "height": 0.21,
+    "pattern": "stripe",
+    "form": "bass"
+   },
+   "skill": "잠수↔질주",
+   "desc": "해 질 녘 방파제 끝, 노을빛 비늘이 물속으로 잠긴다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.7
+    },
+    {
+     "desc": "잠수와 수면 질주를 번갈아 한다",
+     "telegraph_sec": 0.65,
+     "actions": {
+      "dive": 30,
+      "surface": 30,
+      "jump": 20,
+      "turn": 20
+     },
+     "combo": {
+      "dive": [
+       "surface",
+       0.85
+      ],
+      "surface": [
+       "dive",
+       0.85
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "meteor_tuna",
+   "name": "유성 다랑어",
+   "spot": "offshore",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    120,
+    260
+   ],
+   "base_price": 800,
+   "difficulty": 9,
+   "telegraph_sec": 0.6,
+   "power": 1.62,
+   "stamina": 270,
+   "actions": {
+    "rush": 45,
+    "turn": 20,
+    "reverse": 20,
+    "charge": 15
+   },
+   "shadow_len_m": 1.6,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     60,
+     40,
+     130
+    ],
+    "belly": [
+     220,
+     210,
+     250
+    ],
+    "fin": [
+     200,
+     160,
+     255
+    ],
+    "stripe": [
+     255,
+     230,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.24,
+    "tail": "lunate",
+    "finlets": true,
+    "form": "tuna"
+   },
+   "skill": "역주행→돌진",
+   "desc": "밤바다를 가르는 보랏빛 꼬리. 별똥별을 쫓는다는 말이 있다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.6
+    },
+    {
+     "desc": "줄이 느슨해지면 — 별똥별처럼 다시 내달린다",
+     "telegraph_sec": 0.55,
+     "actions": {
+      "reverse": 40,
+      "rush": 35,
+      "turn": 25
+     },
+     "combo": {
+      "reverse": [
+       "rush",
+       0.9
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "abyss_lantern",
+   "name": "심연의 등불고기",
+   "spot": "deep",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    60,
+    120
+   ],
+   "base_price": 3000,
+   "difficulty": 9,
+   "telegraph_sec": 0.55,
+   "power": 1.5,
+   "stamina": 280,
+   "actions": {
+    "turn": 40,
+    "rush": 25,
+    "charge": 15,
+    "twist": 20
+   },
+   "shadow_len_m": 0.9,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     50,
+     30,
+     90
+    ],
+    "belly": [
+     140,
+     110,
+     190
+    ],
+    "fin": [
+     110,
+     70,
+     170
+    ],
+    "stripe": [
+     220,
+     180,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.3,
+    "tail": "round",
+    "lure": true,
+    "eye_big": true,
+    "form": "disk"
+   },
+   "skill": "가짜 몸짓",
+   "desc": "심해의 어둠 속, 보랏빛 등불만 떠다닌다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.55
+    },
+    {
+     "desc": "등불이 흔들린다 — 진짜 신호만 믿어라",
+     "telegraph_sec": 0.5,
+     "actions": {
+      "twist": 35,
+      "turn": 30,
+      "rush": 20,
+      "charge": 15
+     },
+     "fake_cue": 0.35
+    }
+   ]
+  },
+  {
+   "id": "echo_fish",
+   "name": "잔향어",
+   "spot": "secret",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    50,
+    90
+   ],
+   "base_price": 4500,
+   "difficulty": 9,
+   "telegraph_sec": 0.5,
+   "power": 1.5,
+   "stamina": 300,
+   "actions": {
+    "rush": 25,
+    "turn": 25,
+    "jump": 20,
+    "charge": 10,
+    "chain": 20
+   },
+   "shadow_len_m": 0.75,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     170,
+     140,
+     230
+    ],
+    "belly": [
+     240,
+     235,
+     255
+    ],
+    "fin": [
+     210,
+     180,
+     255
+    ],
+    "stripe": [
+     255,
+     255,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "pattern": "spots",
+    "form": "trout"
+   },
+   "skill": "4연속 콤보",
+   "desc": "폭포 소리 사이로 한 번 더 울리는 물소리. 그게 잔향어다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.5
+    },
+    {
+     "desc": "메아리처럼 네 번 이어진다",
+     "telegraph_sec": 0.5,
+     "actions": {
+      "chain": 40,
+      "rush": 20,
+      "turn": 25,
+      "jump": 15
+     },
+     "chain_seq": [
+      "turn",
+      "shake",
+      "dive",
+      "jump"
+     ]
+    }
+   ],
+   "chain_seq": [
+    "shake",
+    "dive",
+    "rush"
+   ]
+  },
+  {
+   "id": "violet_reed_carp",
+   "name": "보랏빛 갈대잉어",
+   "spot": "marsh",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    70,
+    120
+   ],
+   "base_price": 6750,
+   "difficulty": 9,
+   "telegraph_sec": 0.6,
+   "power": 1.68,
+   "stamina": 320,
+   "actions": {
+    "turn": 40,
+    "rush": 30,
+    "charge": 15,
+    "hide": 20
+   },
+   "shadow_len_m": 0.95,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     140,
+     100,
+     190
+    ],
+    "belly": [
+     235,
+     225,
+     250
+    ],
+    "fin": [
+     180,
+     140,
+     230
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.24,
+    "whiskers": true,
+    "dorsal": "long",
+    "form": "hump"
+   },
+   "skill": "숨기+엉킴",
+   "desc": "은빛 갈대가 보랏빛으로 물드는 밤에만 보인다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.6
+    },
+    {
+     "desc": "갈대 속에 숨었다가 줄을 감는다",
+     "telegraph_sec": 0.55,
+     "actions": {
+      "hide": 40,
+      "turn": 25,
+      "rush": 20,
+      "dive": 15
+     },
+     "combo": {
+      "hide": [
+       "turn",
+       0.6
+      ]
+     },
+     "gimmick_mult": 1.4
+    }
+   ]
+  },
+  {
+   "id": "amethyst_blindfish",
+   "name": "자수정 장님어",
+   "spot": "crystal_cave",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    50,
+    90
+   ],
+   "base_price": 10150,
+   "difficulty": 9,
+   "telegraph_sec": 0.6,
+   "power": 1.68,
+   "stamina": 320,
+   "actions": {
+    "jump": 30,
+    "rush": 25,
+    "turn": 20,
+    "pump": 25
+   },
+   "shadow_len_m": 0.7,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     160,
+     110,
+     220
+    ],
+    "belly": [
+     235,
+     220,
+     255
+    ],
+    "fin": [
+     200,
+     160,
+     255
+    ],
+    "stripe": [
+     255,
+     240,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "eye_big": false,
+    "form": "trout"
+   },
+   "skill": "어둠 펌핑",
+   "desc": "눈이 없는 대신 수정처럼 빛나는 몸을 가졌다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.6
+    },
+    {
+     "desc": "어둠 속의 리듬 — 수정 반사를 읽어라",
+     "telegraph_sec": 0.55,
+     "actions": {
+      "pump": 45,
+      "jump": 20,
+      "turn": 20,
+      "rush": 15
+     },
+     "dark": true
+    }
+   ]
+  },
+  {
+   "id": "sky_butterfly",
+   "name": "천공의 나비고기",
+   "spot": "sky_falls",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    40,
+    80
+   ],
+   "base_price": 13350,
+   "difficulty": 9,
+   "telegraph_sec": 0.55,
+   "power": 1.7,
+   "stamina": 320,
+   "actions": {
+    "jump": 35,
+    "rush": 25,
+    "turn": 20,
+    "thrash": 20
+   },
+   "shadow_len_m": 0.6,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     190,
+     150,
+     255
+    ],
+    "belly": [
+     250,
+     240,
+     255
+    ],
+    "fin": [
+     255,
+     180,
+     240
+    ],
+    "stripe": [
+     255,
+     255,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.16,
+    "form": "flyer"
+   },
+   "skill": "더블 저스트 연속",
+   "desc": "폭포 물보라 사이를 나비처럼 날아다닌다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.55
+    },
+    {
+     "desc": "공중에서 두 번, 또 두 번 몸부림친다",
+     "telegraph_sec": 0.5,
+     "actions": {
+      "thrash": 50,
+      "jump": 25,
+      "turn": 15,
+      "rush": 10
+     },
+     "combo": {
+      "thrash": [
+       "thrash",
+       0.7
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "ember_moray",
+   "name": "잿불 곰치",
+   "spot": "volcano",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    120,
+    200
+   ],
+   "base_price": 18750,
+   "difficulty": 9,
+   "telegraph_sec": 0.5,
+   "power": 1.72,
+   "stamina": 300,
+   "actions": {
+    "rush": 40,
+    "turn": 25,
+    "charge": 15,
+    "bite": 20
+   },
+   "shadow_len_m": 1.4,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     90,
+     30,
+     80
+    ],
+    "belly": [
+     220,
+     110,
+     170
+    ],
+    "fin": [
+     255,
+     120,
+     200
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.08,
+    "tail": "ribbon",
+    "dorsal": "crest"
+   },
+   "skill": "물어뜯기 반복",
+   "desc": "꺼지지 않는 잿불 속에 사는 곰치. 오래 끌면 줄이 녹는다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.5
+    },
+    {
+     "desc": "줄을 물고 또 문다 — 열기가 줄을 녹인다",
+     "telegraph_sec": 0.5,
+     "actions": {
+      "bite": 45,
+      "rush": 30,
+      "turn": 25
+     },
+     "combo": {
+      "bite": [
+       "bite",
+       0.6
+      ]
+     },
+     "gimmick_mult": 1.5
+    }
+   ]
+  },
+  {
+   "id": "aurora_smelt",
+   "name": "오로라 은빙어",
+   "spot": "ice_sea",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    40,
+    80
+   ],
+   "base_price": 26000,
+   "difficulty": 9,
+   "telegraph_sec": 0.5,
+   "power": 1.72,
+   "stamina": 340,
+   "actions": {
+    "turn": 35,
+    "jump": 25,
+    "rush": 20,
+    "leap": 20
+   },
+   "shadow_len_m": 0.7,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     170,
+     170,
+     255
+    ],
+    "belly": [
+     245,
+     245,
+     255
+    ],
+    "fin": [
+     200,
+     150,
+     255
+    ],
+    "stripe": [
+     150,
+     255,
+     220
+    ]
+   },
+   "shape": {
+    "height": 0.17,
+    "pattern": "stripe",
+    "form": "trout"
+   },
+   "skill": "가짜 지침+얼음",
+   "desc": "극광이 물에 비칠 때만 은빛 비늘이 보랏빛이 된다.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.5
+    },
+    {
+     "desc": "지친 척 얼음 구멍 쪽으로 — 속지 마라",
+     "telegraph_sec": 0.5,
+     "actions": {
+      "turn": 40,
+      "leap": 30,
+      "rush": 30
+     },
+     "fake_tired": 0.7,
+     "gimmick_mult": 1.4
+    }
+   ],
+   "fake_tired": 0.3
+  },
+  {
+   "id": "dream_carp",
+   "name": "정령의 꿈잉어",
+   "spot": "world_tree",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "phantom",
+   "size_cm": [
+    90,
+    160
+   ],
+   "base_price": 37500,
+   "difficulty": 9,
+   "telegraph_sec": 0.45,
+   "power": 1.8,
+   "stamina": 380,
+   "actions": {
+    "rush": 25,
+    "jump": 20,
+    "turn": 25,
+    "leap": 15,
+    "charge": 15
+   },
+   "shadow_len_m": 1.1,
+   "nibbles": [
+    0,
+    0
+   ],
+   "colors": {
+    "body": [
+     200,
+     170,
+     255
+    ],
+    "belly": [
+     250,
+     245,
+     255
+    ],
+    "fin": [
+     255,
+     220,
+     255
+    ],
+    "stripe": [
+     255,
+     255,
+     255
+    ]
+   },
+   "shape": {
+    "height": 0.26,
+    "whiskers": true,
+    "pattern": "spots",
+    "form": "hump"
+   },
+   "skill": "이중 패턴",
+   "desc": "세계수가 꾸는 꿈속에서 헤엄친다는 잉어.",
+   "phase_at": [
+    0.5
+   ],
+   "phases": [
+    {
+     "desc": "보랏빛 물결 속에서 몸을 뒤튼다",
+     "telegraph_sec": 0.45
+    },
+    {
+     "desc": "꿈이 바뀌면 춤도 바뀐다 — 두 손으로",
+     "telegraph_sec": 0.45,
+     "actions": {
+      "dual": 45,
+      "turn": 20,
+      "rush": 20,
+      "jump": 15
+     },
+     "dual_pairs": [
+      [
+       "twist",
+       "hide"
+      ]
+     ],
+     "dual_by_gimmick": {
+      "tangle": [
+       "twist",
+       "hide"
+      ],
+      "dark": [
+       "pump",
+       "bite"
+      ],
+      "current": [
+       "surface",
+       "bite"
+      ],
+      "heat": [
+       "dive",
+       "bite"
+      ],
+      "ice": [
+       "shake",
+       "bite"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -22,9 +22,9 @@ ELDRA_TABS = [("marsh", "습지"), ("crystal_cave", "동굴"), ("sky_falls", "�
               ("ice_sea", "빙해"), ("world_tree", "세계수")]
 CONT_TABS = {"sharmion": SPOT_TABS, "eldrasion": ELDRA_TABS}
 TIME_KO = {"morning": "아침", "day": "낮", "evening": "저녁", "night": "밤"}
-RARITY_KO = {"common": "일반", "uncommon": "고급", "rare": "희귀", "legend": "전설"}
+RARITY_KO = {"common": "일반", "uncommon": "고급", "rare": "희귀", "phantom": "환상", "legend": "전설"}
 RARITY_COL = {"common": (230, 230, 230), "uncommon": (130, 230, 150), "rare": (130, 190, 255),
-              "legend": (255, 214, 90)}
+              "phantom": (190, 120, 255), "legend": (255, 214, 90)}
 GOLD = (255, 214, 90)
 CARD_W, CARD_H = 69, 46          # 일반·고급·희귀 (4열 × 2줄)
 COLS = 4

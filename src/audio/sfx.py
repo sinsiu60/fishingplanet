@@ -330,6 +330,17 @@ class Sfx:
             self.duck_hold[bus] = max(self.duck_hold.get(bus, 0.0), hold if hold is not None else d.get("sec", 0.3))
             self.duck_rate[bus] = 30.0 if not release else max(1.0, -db / release)
 
+    def duck_levels(self, levels: dict, hold: float = 0.3, release: float = 1.0) -> None:
+        """버스별 dB 를 직접 (환상 파장처럼 서서히 잦아드는 덕킹 — 매 틱 부른다)."""
+        if not self.enabled:
+            return
+        for bus, db in levels.items():
+            if db >= 0:
+                continue
+            self.duck_db[bus] = min(self.duck_db.get(bus, 0.0), db)
+            self.duck_hold[bus] = max(self.duck_hold.get(bus, 0.0), hold)
+            self.duck_rate[bus] = max(1.0, -db / release)
+
     def set_base_duck(self, kind: str | None) -> None:
         """계속 낮춤 (예: 파이팅 중 환경음 −4dB). None이면 해제."""
         if not self.enabled:

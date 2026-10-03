@@ -13,7 +13,7 @@ import random
 
 from src.core.config import load_json
 
-RARITY_KO = {"common": "일반", "uncommon": "고급", "rare": "희귀", "legend": "전설"}
+RARITY_KO = {"common": "일반", "uncommon": "고급", "rare": "희귀", "phantom": "환상", "legend": "전설"}
 WEATHER_KO = {"clear": "맑은 날", "rain": "비 오는 날", "storm": "폭풍 치는 날"}
 LURE_KO = {"jerk": "저킹만으", "retrieve": "리트리브만으", "pause": "멈춤으"}
 PERIOD_KO = {"morning": "아침", "day": "낮", "evening": "저녁", "night": "밤"}

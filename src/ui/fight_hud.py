@@ -10,7 +10,7 @@ from src.ui import icons
 from src.ui.hud import SHADOW, text
 
 RARITY_COLOR = {"common": (230, 230, 230), "uncommon": (130, 230, 150), "rare": (130, 190, 255),
-                "legend": (255, 214, 90)}
+                "phantom": (190, 120, 255), "legend": (255, 214, 90)}
 GREEN, RED, SLACK = (70, 180, 95), (205, 62, 58), (80, 98, 130)
 PANEL = (24, 30, 50)
 

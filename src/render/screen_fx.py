@@ -281,7 +281,7 @@ class ScreenFX:
         w, h = self.w, self.h
         if self.v_legend > 0.02:
             pulse = 0.55 + 0.45 * math.sin(t * 2.2)
-            self._blit_vignette(canvas, self.legend_color, self.v_legend * 0.45 * pulse)
+            self._blit_vignette(canvas, self.legend_color, self.v_legend * 0.45 * pulse * getattr(self, "legend_alpha", 1.0))
         if self.v_red > 0.02:
             pulse = 0.75 + 0.25 * math.sin(t * 14)
             self._blit_vignette(canvas, COL_RED, self.v_red * pulse)

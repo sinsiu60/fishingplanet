@@ -10,7 +10,7 @@ from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 DEFAULT_COLORS = {"body": [120, 130, 120], "belly": [220, 220, 210], "fin": [90, 100, 90], "stripe": None, "eye": None}
 RANK_COLORS = {"S": (255, 214, 90), "A": (150, 200, 255), "B": (140, 220, 150), "C": (190, 190, 190)}
 RARITY_GLOW = {"common": (255, 245, 210), "uncommon": (150, 255, 170), "rare": (140, 200, 255),
-               "legend": (255, 210, 90)}
+               "phantom": (210, 150, 255), "legend": (255, 210, 90)}
 
 
 def fish_colors(fish: dict) -> dict:

@@ -110,7 +110,13 @@ def all_fish() -> list[dict]:
 
 
 def fish_by_id(fid: str) -> dict:
-    return next(f for f in all_fish() if f["id"] == fid)
+    f = next((f for f in all_fish() if f["id"] == fid), None)
+    if f is None:  # 환상어 (data/phantom.json — 도감 %·해금 집계 밖)
+        from src.fishing.phantom import by_id
+        f = by_id(fid)
+    if f is None:
+        raise StopIteration(fid)
+    return f
 
 
 def spot_continent(spot_id: str) -> str:
@@ -191,8 +197,11 @@ def new_data() -> dict:
         "float": {"owned": [], "equipped": None},
         "treasure_dex": {},
         "flags": {"eldra_escape_tutorial": False},
-        "buffs": {"lucky_casts": 0, "lunch_until": 0.0},
-        "legend_sales": {"day": "", "counts": {}},       # 오늘(실제 날짜) 전설 종별 판매 수 → 반복 판매 감가  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
+        "buffs": {"lucky_casts": 0, "lunch_until": 0.0, "blessing_until": 0.0},
+        "legend_sales": {"day": "", "counts": {}},
+        # 환상의 물고기 (33장): 낚시터별 착수 천장 카운트, 환상 도감, 첫 포획 튜토리얼, 수첩, 환상 비늘, 받은 수집 보상, 칭호 보라 테두리
+        "phantom": {"casts": {}, "caught": {}, "tutorial": False, "notes": [], "scales": 0, "rewards": [],
+                    "title_frame": False},       # 오늘(실제 날짜) 전설 종별 판매 수 → 반복 판매 감가  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
         # ── 콘텐츠 업데이트 (DESIGN.md 27-8) ──
         "patterns_seen": [],                             # 만나 본 신규 패턴 (첫 만남 안내·도감 힌트)
         "pattern_mastery": {},                           # 패턴별 성공 횟수 → 예고 배율 (31장 C5)
@@ -319,7 +328,7 @@ class SaveGame:
         """이 물고기를 끝까지 잡는 데 필요한 찌 티어 (샤르미온 = 0)."""
         if spot.get("continent", "sharmion") != "eldrasion":
             return 0
-        need = spot.get("float_req", 0) + (1 if fish["rarity"] == "legend" else 0)
+        need = spot.get("float_req", 0) + (1 if fish["rarity"] in ("legend", "phantom") else 0)
         return min(5, need)
 
     def float_scales_needed(self) -> int:
@@ -353,7 +362,9 @@ class SaveGame:
         return "ok"
 
     def record_seen(self, fish_id: str) -> None:
-        """도감에 '목격'으로 등록 (잡은 것은 아님)."""
+        """도감에 '목격'으로 등록 (잡은 것은 아님). 환상어는 기록하지 않는다 (33장)."""
+        if not any(f["id"] == fish_id for f in all_fish()):
+            return
         self.data["dex"].setdefault(fish_id, {"count": 0, "max_size": 0.0, "best_rank": "C", "seen": True})
 
     def charm_slots(self) -> int:
@@ -538,6 +549,8 @@ class SaveGame:
         """획득 기록. 돌려주는 값: 새로 등록 / 최대 크기 경신 / 힌트 해금 / S 금테 등."""
         fish = result["fish"]
         fid = fish["id"]
+        if fish.get("rarity") == "phantom":
+            return self._record_phantom(result)
         dex = self.data["dex"]
         entry = dex.get(fid)
         news = {"new": entry is None, "record": False, "hint": 0, "gold": False}
@@ -574,6 +587,21 @@ class SaveGame:
             st["s_ranks"] += 1
             if spot_continent(fish["spot"]) == "eldrasion":
                 st["s_ranks_eldra"] = st.get("s_ranks_eldra", 0) + 1
+        return news
+
+    def _record_phantom(self, result: dict) -> dict:
+        """환상어: 일반 도감(dex)·도감 % 에 넣지 않고 환상 도감에만 (33장). 살림망·통계는 같게."""
+        from src.fishing import phantom
+        got = phantom.record(self, result)
+        news = {"new": False, "record": False, "hint": 0, "gold": False, "phantom": True,
+                "phantom_new": got["new"], "phantom_first_ever": got["first_ever"]}
+        self.data["keepnet"].append({"id": result["fish"]["id"], "size": result["size"], "rank": result["rank"],
+                                     "price": result["price"]})
+        st = self.data["stats"]
+        st["catches"] += 1
+        st["perfects"] += result.get("perfects", 0)
+        if result["rank"] == "S":
+            st["s_ranks"] += 1
         return news
 
     def record_loss(self) -> None:
