@@ -106,7 +106,17 @@ def give_item(save, item_id: str) -> dict:
 
 
 def open_chest(save, grade: str, spot: str, rnd=random) -> dict | None:
-    """상자 1개 개봉 → 보상 dict (type: gold / materials / item)."""
+    """상자 1개 개봉 → 보상 dict (type: gold / materials / item). 낮은 확률로 '낡은 어부의 수첩' 한 장이 끼어 있다 (diary)."""
+    out = _open_chest(save, grade, spot, rnd)
+    if out is not None:
+        from src.fishing.phantom import roll_diary
+        d = roll_diary(save, rnd)
+        if d is not None:
+            out["diary"] = d
+    return out
+
+
+def _open_chest(save, grade: str, spot: str, rnd=random) -> dict | None:
     chests = save.data["chests"]
     if chests.get(grade, 0) <= 0:
         return None

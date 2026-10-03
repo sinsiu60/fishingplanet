@@ -15,7 +15,7 @@ from src.ui import widgets as ui
 from src.ui.fight_fx import big_text
 from src.ui.hud import draw_cursor, text, wrap_text
 
-TABS = [("open", "상자"), ("exchange", "조각 교환소"), ("items", "보유 아이템"), ("dex", "보물 도감")]
+TABS = [("open", "상자"), ("exchange", "조각 교환소"), ("items", "보유 아이템"), ("dex", "보물 도감"), ("diary", "어부의 수첩")]
 KIND_KO = {"consumable": "소모품", "charm": "부적", "cosmetic": "외형", "rod": "낚싯대", "reel": "릴", "net": "뜰채", "phantom_x": "환상 비늘"}
 MAT_KO = {"sharmion": "샤르미온 소재", "eldrasion": "엘드라시온 소재"}
 LIST = pygame.Rect(16, 52, 236, 186)
@@ -69,6 +69,10 @@ class ChestScene(Scene):
         if reward is None:
             return
         self.anim = {"grade": grade, "t": 0.0, "reward": reward, "fired": set()}
+        d = reward.get("diary")
+        if d is not None:  # 낡은 어부의 수첩 (33장 P6) — 중복은 환상 비늘 1개
+            self._say("낡은 어부의 수첩 한 장이 끼어 있었다 (수첩 탭)" if not d["dup"] else
+                      "또 같은 수첩 한 장… 보라빛 비늘 1개로", (210, 160, 255))
         self.particles.clear()
         # 등급 소리 하나가 처음부터 열리는 순간(OPEN_AT)까지 다 맡는다 (32장 S5):
         # 일반 삐걱→딸깍 / 희귀 상승→차임 / 특별 덜컹→폭발 / 전설 빌드업→0.1초 무음→웅장한 터짐
@@ -227,6 +231,10 @@ class ChestScene(Scene):
                 return
             if self.kind in ("exchange", "items") and self.action_btn.click(m):
                 return
+            if self.kind == "diary":
+                self.diary_page = getattr(self, "diary_page", 0) + 1  # 클릭하면 다음 장
+                self.game.sfx.play("ui_click")
+                return
             if self.kind == "dex":
                 return
             if LIST.collidepoint(m):
@@ -271,6 +279,8 @@ class ChestScene(Scene):
             self._draw_open(canvas)
         elif self.kind == "dex":
             self._draw_dex(canvas)
+        elif self.kind == "diary":
+            self._draw_diary(canvas)
         else:
             self._draw_list(canvas)
         if self.msg_t > 0:
@@ -407,6 +417,31 @@ class ChestScene(Scene):
             text(canvas, msg[:46], (240, 241), ui.TEXT if known else ui.DIM, 11, "center")
         else:
             text(canvas, "얻은 상자 아이템이 기록돼요 (못 얻은 건 ???)", (240, 241), ui.DIM, 11, "center")
+
+    def _draw_diary(self, canvas) -> None:
+        """낡은 어부의 수첩 보관함 (도감과 별개): 찾은 장만 읽을 수 있다."""
+        from src.core.config import load_json
+        from src.fishing import phantom
+        h = load_json("phantom_hints.json")
+        got = phantom.state(self.save)["notes"]
+        text(canvas, f"찾은 장 {len(got)}/{len(h['diary'])}", (240, 16), (210, 160, 255), 11, "center")
+        y = 52
+        shown = [fid for fid in h["diary"] if fid in got]
+        if not shown:
+            text(canvas, "보물상자에서 가끔 낡은 수첩이 나온다고 한다…", (240, 140), ui.DIM, 11, "center")
+            return
+        spots = {s["id"]: s["name"] for s in load_json("spots.json")["spots"]}
+        pages = (len(shown) + 5) // 6
+        page = getattr(self, "diary_page", 0) % pages
+        for fid in shown[page * 6:page * 6 + 6]:
+            sp = phantom.by_id(fid)["spot"]
+            text(canvas, f"— {spots.get(sp, '')}에서", (20, y), (190, 150, 240), 11, "midleft")
+            for ln in wrap_text(h["diary"][fid], 430)[:2]:
+                y += 13
+                text(canvas, ln, (30, y), (225, 220, 235), 11, "midleft")
+            y += 18
+        if pages > 1:
+            text(canvas, f"{page + 1}/{pages}쪽 (클릭: 다음 쪽)", (20, 236), ui.DIM, 11, "midleft")
 
     # ── 개봉 연출 ──
     def _draw_anim(self, canvas) -> None:

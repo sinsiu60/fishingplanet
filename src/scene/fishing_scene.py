@@ -147,6 +147,7 @@ class FishingScene(Scene):
         self.dragon_k = 0.0      # '등용' 3페이즈: 진홍빛 하늘
         self.phantom_fx = PhantomFx(phantom.spawn_cfg())  # 환상의 물고기 보랏빛 파장 (33장)
         self.force_phantom = False   # 디버그 F7: 다음 착수 환상 강제
+        self.glints: list[list[float]] = []  # 먼 수면 보라빛 물결 (x, z, t)
         self.show_pity = False       # 디버그 F8: 낚시터별 천장 카운트
         self.dragon_fx: DragonTransform | None = None
         self.embers = Embers()
@@ -227,6 +228,9 @@ class FishingScene(Scene):
         self._advance_hours(1.0)
         self.weather_sys.reroll_upcoming(self.spot["weather"])
         self.toasts.show(f"{self.spot['name']}에 도착했다", GOOD, 2.0)
+        line = phantom.rumor()  # 가끔 소문 한 줄 (로딩 문구 풀, 33장 P6)
+        if line:
+            self.toasts.show(line, (190, 160, 235), 3.2, 11)
         if self.float_warning():
             self.toasts.show(self.float_warning(), BAD, 3.0, 11)
         self.game.save_now()
@@ -735,6 +739,10 @@ class FishingScene(Scene):
         self.screen_fx.reset()
         if last and phantom.is_phantom(last["fish"]):
             self.phantom_fx.restore()  # 포획 컷이 끝나면 1.5초에 걸쳐 원래 색
+            if not phantom.state(self.save)["tutorial"]:
+                # 첫 환상어 포획: 안내 1회 + 도감 [환상] 탭이 이때 생김 (33장 P6)
+                from src.scene.phantom_intro import PhantomIntroScene
+                self.game.scenes.push(PhantomIntroScene(self.game, self))
         self.bite.stop()
         self.cast.reset()
         self.game.screen.shake = (0, 0)
@@ -900,6 +908,9 @@ class FishingScene(Scene):
         elif fx.mode == "bloom" and self.bite.phantom is None and self.fight is None:
             fx.retreat(fx.center)  # 줄을 걷는 등 다른 길로 끝남
         self.phantom_lost_t = max(0.0, getattr(self, "phantom_lost_t", 0.0) - dt)
+        for g in self.glints:
+            g[2] += dt
+        self.glints = [g for g in self.glints if g[2] < 1.6]
 
     def _update_legend(self, dt: float) -> None:
         self._update_dragon(dt)
@@ -1018,6 +1029,12 @@ class FishingScene(Scene):
         for ev in self.bite.events:
             self._on_bite_event(ev)
         self.bite.events.clear()
+        if (landed and self.bite.state == BiteState.WAIT and self.bite.phantom is None and self.training is None
+                and random.random() < phantom.glint_rate(self.save, self.spot_id) * dt):
+            # 존재 힌트: 먼 수면에 보라빛 물결이 한 번 (화면은 물들지 않는다 — 진짜 등장 파장과 구분)
+            ang = random.uniform(-0.6, 0.6) + self.cam.yaw
+            d = random.uniform(40, 70)
+            self.glints.append([math.sin(ang) * d, math.cos(ang) * d, 0.0])
         if self.cast.state == CastState.LANDED and self.bite.state != BiteState.BITE:
             self.idle_ripple_t += dt
             if self.idle_ripple_t > 2.2:
@@ -2018,6 +2035,8 @@ class FishingScene(Scene):
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
             self.catch_news["chest"] = self.chest_drop
             self.catch_news["title_frame"] = phantom.state(self.save)["title_frame"]
+            if f.fish["rarity"] == "legend" and self.catch_news.get("new"):
+                self.catch_news["legend_line"] = phantom.hints()["legend_line"]
             if phantom.is_phantom(f.fish):
                 self.catch_news.update(phantom.on_catch(self.save, f.fish, ph_first))
             if muts:
@@ -2128,6 +2147,14 @@ class FishingScene(Scene):
                 sh = dict(sh, glow=GLOW.get(self.bite.fish["rarity"]))
             draw_fish_shadow(canvas, pal, cam, sh, t)
             self._draw_lure_mark(canvas, sh, t)
+            for gx, gz, gt in self.glints:
+                # 먼 수면 보라빛 물결 한 번: 납작한 고리가 퍼지며 사라짐
+                p = cam.project(gx, gz)
+                if p:
+                    k = gt / 1.6
+                    rw, rh = 4 + 26 * k * p[2] / 10, 1 + 5 * k * p[2] / 10
+                    col = lerp_color(pal["water_top"], (215, 170, 255), (1 - k) * 0.9)
+                    pygame.draw.ellipse(canvas, col, (p[0] - rw, p[1] - rh, rw * 2, rh * 2), 1)
             if sh is not None and self.bite.fish is not None and self.save.charm_on("abyss_eye"):
                 # 심연의 눈: 도감에 등록된 물고기면 이름이 보인다
                 p = cam.project(sh["x"], sh["z"])

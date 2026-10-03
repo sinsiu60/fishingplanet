@@ -43,7 +43,7 @@ MUT_COL = (255, 190, 120)
 class DexScene(Scene):
     UI_FRAME = True
 
-    def __init__(self, game, fishing):
+    def __init__(self, game, fishing, phantom_tab: bool = False):
         super().__init__(game)
         self.fishing = fishing
         self.save = game.save
@@ -64,14 +64,30 @@ class DexScene(Scene):
         self.pat_mode = False
         self.pat_btn = ui.Button((120, 9, 64, 15), "패턴 사전", self._toggle_pat)
         self.pat_card = None  # 열어 둔 카드 {"key", "t"}
+        # 환상 도감 (33장 P6): 첫 환상어 포획 튜토리얼 뒤에만 탭이 생긴다 — 잡은 환상어만 보인다
+        from src.fishing import phantom
+        self.ph_on = phantom.state(self.save)["tutorial"]
+        self.ph_mode = phantom_tab and self.ph_on
+        self.ph_btn = ui.Button((188, 9, 52, 15), "환상", self._toggle_ph)
+        self.ph_sel = 0
 
     def _toggle_mut(self) -> None:
         self.mut_mode = not self.mut_mode
         self.pat_mode = False
+        self.ph_mode = False
+
+    def _toggle_ph(self) -> None:
+        self.ph_mode = not self.ph_mode
+        self.pat_mode = self.mut_mode = False
+
+    def _ph_list(self) -> list[dict]:
+        from src.fishing import phantom
+        return [f for f in phantom.all_phantoms() if phantom.caught(self.save, f["id"])]
 
     def _toggle_pat(self) -> None:
         self.pat_mode = not self.pat_mode
         self.mut_mode = False
+        self.ph_mode = False
 
     PAT_KEYS = ("telegraph:rush", "telegraph:jump", "telegraph:turn", "telegraph:leap", "pattern:shake", "pattern:dive",
                 "pattern:surface", "pattern:reverse", "pattern:twist", "pattern:chain", "pattern:hide", "pattern:pump",
@@ -121,6 +137,16 @@ class DexScene(Scene):
                 return
             if self.pat_btn.click(m):
                 self.game.sfx.play("ui_click")
+                return
+            if self.ph_on and self.ph_btn.click(m):
+                self.game.sfx.play("ui_click")
+                return
+            if self.ph_mode:
+                for i in range(len(self._ph_list())):
+                    if self.card_rect_ph(i).collidepoint(m):
+                        self.ph_sel = i
+                        self.game.sfx.play("ui_click")
+                self.close_btn.click(m)
                 return
             if self.pat_mode:
                 for i, key in enumerate(self.PAT_KEYS):
@@ -175,6 +201,14 @@ class DexScene(Scene):
             self.mut_btn.draw(canvas, self.mouse)
         self.pat_btn.label = "기본 도감" if self.pat_mode else "패턴 사전"
         self.pat_btn.draw(canvas, self.mouse)
+        if self.ph_on:
+            self.ph_btn.label = "기본 도감" if self.ph_mode else "환상"
+            self.ph_btn.draw(canvas, self.mouse)
+        if self.ph_mode:
+            self._draw_phantoms(canvas)
+            self.close_btn.draw(canvas, self.mouse)
+            draw_cursor(canvas, self.mouse)
+            return
         if self.pat_mode:
             self._draw_patterns(canvas)
             self.close_btn.draw(canvas, self.mouse)
@@ -271,6 +305,41 @@ class DexScene(Scene):
             text(canvas, f"{'v' if done else '·'} {rw['count']}종: {rw['name']}", (x, y), ui.GOOD if done else ui.DIM, 11,
                  "midleft")
             y += 12
+
+    def card_rect_ph(self, i: int) -> pygame.Rect:
+        return pygame.Rect(GRID_X + (i % COLS) * (CARD_W + 4), GRID_Y + (i // COLS) * (CARD_H + 4) + 8, CARD_W, CARD_H)
+
+    def _draw_phantoms(self, canvas) -> None:
+        """환상 도감: 잡은 환상어만 (보라 칸) + 진행도 n / 12. 못 잡은 건 칸 자체가 없다."""
+        from src.fishing import phantom
+        col = phantom.COLOR
+        fl = self._ph_list()
+        text(canvas, f"환상  {len(fl)} / {len(phantom.all_phantoms())}", (GRID_X + 2, 40), col, 11, "midleft")
+        for i, f in enumerate(fl):
+            r = self.card_rect_ph(i)
+            sel = i == self.ph_sel
+            ui.panel(canvas, r, col if sel else (110, 70, 160), (40, 20, 60) if sel or r.collidepoint(self.mouse) else (24, 14, 40))
+            draw_fish_fit(canvas, pygame.Rect(r.x + 3, r.y + 3, r.w - 6, r.h - 19), f, 52)
+            text(canvas, fit(f["name"], r.w - 6), (r.centerx, r.bottom - 8), phantom.COLOR_LIGHT, 11, "center")
+        d = DETAIL
+        ui.panel(canvas, d, (110, 70, 160), (16, 12, 30))
+        if not fl:
+            return
+        self.ph_sel = min(self.ph_sel, len(fl) - 1)
+        f = fl[self.ph_sel]
+        e = phantom.state(self.save)["caught"][f["id"]]
+        y = d.y + 10
+        text(canvas, f["name"], (d.centerx, y), phantom.COLOR_LIGHT, 11, "center")
+        draw_fish_fit(canvas, pygame.Rect(d.x + 8, y + 8, d.w - 16, 48), f, 120)
+        y += 64
+        spot = next((s for s in load_json("spots.json")["spots"] if s["id"] == f["spot"]), {})
+        for ln, c in ((f"환상 · {spot.get('name', '')}", col),
+                      (f"최대 {e['max_size']:.1f}cm · 최고 {e['best_rank']} · {e['count']}회", ui.ACCENT)):
+            text(canvas, ln, (d.x + 6, y), c, 11, "midleft")
+            y += 14
+        for ln in wrap_text(f["desc"], d.w - 12)[:4]:
+            text(canvas, ln, (d.x + 6, y), ui.DIM, 11, "midleft")
+            y += 13
 
     def _draw_card(self, canvas, i: int, f: dict) -> None:
         if f["rarity"] == "legend":

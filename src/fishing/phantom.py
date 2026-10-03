@@ -245,3 +245,38 @@ def exchange(save, it: dict) -> bool:
 def revealed(save) -> bool:
     """환상 관련 목록(도감 탭·업적·칭호·교환소)이 보이는지 — 첫 포획 튜토리얼 이후."""
     return state(save)["tutorial"] or bool(caught_ids(save))
+
+
+# ───────────────────────── 존재 힌트 (P6) ─────────────────────────
+
+def hints() -> dict:
+    return load_json("phantom_hints.json")
+
+
+def rumor(rnd=random) -> str | None:
+    """로딩·이동 화면 소문 (가끔)."""
+    h = hints()
+    return rnd.choice(h["rumors"]) if rnd.random() < h["rumor_chance"] else None
+
+
+def roll_diary(save, rnd=random) -> dict | None:
+    """보물상자를 열 때 낮은 확률로 '낡은 어부의 수첩' 한 장. 이미 가진 장이면 환상 비늘 1개로."""
+    h = hints()
+    if rnd.random() >= h["diary_chance"]:
+        return None
+    fid = rnd.choice(list(h["diary"]))
+    ph = state(save)
+    if fid in ph["notes"]:
+        ph["scales"] += 1
+        return {"dup": True}
+    ph["notes"].append(fid)
+    return {"id": fid, "dup": False}
+
+
+def glint_rate(save, spot: str) -> float:
+    """대기 중 먼 수면 보라빛 물결이 한 번 반짝일 초당 확률 (천장에 가까울수록·전설 포획 낚시터일수록 자주)."""
+    g = hints()["glint"]
+    k = g["base_per_sec"] * (1 + g["pity_mult"] * pity_frac(save, spot))
+    if legend_caught(save, spot):
+        k *= g["legend_mult"]
+    return k

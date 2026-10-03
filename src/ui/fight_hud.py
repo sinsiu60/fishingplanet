@@ -267,6 +267,11 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
         for i, (label, col) in enumerate(badges):
             if t > 1.0 + i * 0.15:
                 text(canvas, label, (12, 24 + i * 15), col, 11, "midleft")
+    if news and news.get("legend_line") and t > 1.6:
+        # 전설 첫 포획: 환상의 물고기 암시 한 줄 (33장 P6)
+        k = clamp((t - 1.6) / 0.8, 0, 1)
+        col = lerp_color((40, 30, 60), (210, 170, 255), k)
+        text(canvas, news["legend_line"], (w // 2, 160), col, 11, "center")
     if news and news.get("title") and t > 0.6:
         if news.get("title_frame"):  # 환상 비늘 교환: 칭호 보라 테두리
             tw = get_font(11).size(f"「{news['title']}」")[0] + 10

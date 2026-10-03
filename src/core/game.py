@@ -166,6 +166,13 @@ class Game:
         c = self.screen.canvas
         c.fill((12, 16, 30))
         text(c, "준비 중...", (c.get_width() // 2, c.get_height() // 2), (220, 226, 240), 16, "center")
+        try:  # 가끔 환상의 물고기 소문 한 줄 (33장 P6)
+            from src.fishing.phantom import rumor
+            line = rumor()
+            if line:
+                text(c, line, (c.get_width() // 2, c.get_height() // 2 + 26), (190, 160, 235), 11, "center")
+        except Exception:
+            pass
         self.screen.present()
 
     def frame_cap(self) -> int:

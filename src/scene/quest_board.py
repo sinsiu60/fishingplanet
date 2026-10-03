@@ -35,8 +35,21 @@ class QuestBoardScene(Scene):
         self.scroll = 0
         self.sel = 0
         self.msg, self.msg_t = "", 0.0
+        # 게시판 구석 낡은 쪽지 (33장 P6): 해금된 낚시터마다 한 장, 읽기 전용
+        self.note_btn = ui.Button((262, 30, 70, 16), "낡은 쪽지", self._toggle_notes)
+        self.notes_open = False
 
     # ── 동작 ──
+    def _toggle_notes(self) -> None:
+        self.notes_open = not self.notes_open
+
+    def _notes(self) -> list[tuple[str, str]]:
+        from src.core.config import load_json
+        notes = load_json("phantom_hints.json")["notes"]
+        spots = [sp for sp in load_json("spots.json")["spots"] if sp.get("continent", "sharmion") == self.cont]
+        unlocked = self.save.data.get("unlocked_spots", [])
+        return [(sp["name"], notes[sp["id"]]) for sp in spots if sp["id"] in unlocked and sp["id"] in notes]
+
     def _close(self) -> None:
         self.game.scenes.pop()
 
@@ -88,6 +101,12 @@ class QuestBoardScene(Scene):
             self.scroll = max(0, min(self._max_scroll(), self.scroll - a.value))
         elif a.name == "primary":
             m = a.pos
+            if self.notes_open:
+                self.notes_open = False  # 쪽지는 아무 데나 누르면 닫힘
+                return
+            if self.tabs.index == 0 and self.note_btn.click(m):
+                self.game.sfx.play("ui_click")
+                return
             if self.tabs.click(m):
                 self.game.sfx.play("ui_tab")
                 return
@@ -127,7 +146,28 @@ class QuestBoardScene(Scene):
         if self.msg_t > 0:
             text(canvas, self.msg, (240, 257), ui.GOOD, 11, "center")
         self.close_btn.draw(canvas, self.mouse)
+        if self.tabs.index == 0:
+            self.note_btn.draw(canvas, self.mouse)
+        if self.notes_open:
+            self._draw_notes(canvas)
         draw_cursor(canvas, self.mouse)
+
+    def _draw_notes(self, canvas) -> None:
+        """누렇게 바랜 쪽지들 (분위기 문장만 — 도감·공략 정보 없음)."""
+        from src.ui.hud import wrap_text
+        box = pygame.Rect(40, 44, 400, 200)
+        canvas.fill((58, 50, 36), box)
+        pygame.draw.rect(canvas, (150, 130, 90), box, 1)
+        text(canvas, "게시판 구석에 붙은 낡은 쪽지들", (box.centerx, box.y + 12), (230, 214, 170), 11, "center")
+        y = box.y + 30
+        for name, line in self._notes():
+            for i, ln in enumerate(wrap_text(f"[{name}] {line}", box.w - 20)[:2]):
+                text(canvas, ln, (box.x + 10, y), (225, 212, 180) if i == 0 else (200, 188, 160), 11, "midleft")
+                y += 13
+            y += 3
+            if y > box.bottom - 16:
+                break
+        text(canvas, "(아무 데나 누르면 닫기)", (box.centerx, box.bottom - 8), (160, 146, 112), 11, "center")
 
     def _draw_quests(self, canvas) -> None:
         b = quests.board(self.save, self.cont)
