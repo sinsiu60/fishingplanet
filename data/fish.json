@@ -375,7 +375,8 @@
    "shape": {
     "height": 0.13,
     "tail": "round",
-    "whiskers": true
+    "whiskers": true,
+    "form": "flathead"
    },
    "skill": "지구력 (멈춤에 감기)",
    "desc": "비 오는 밤의 주인. 바닥에 붙어 오래 버틴다.",
@@ -508,7 +509,8 @@
     "height": 0.15,
     "pattern": "spots",
     "tail": "round",
-    "dorsal": "long"
+    "dorsal": "long",
+    "form": "arrow"
    },
    "skill": "첫 돌진 대응",
    "desc": "비 오는 저녁의 폭군. 물자마자 있는 힘을 다해 달린다.",
@@ -573,7 +575,8 @@
    },
    "shape": {
     "height": 0.24,
-    "whiskers": true
+    "whiskers": true,
+    "form": "hump"
    },
    "skill": "속임수 간파",
    "desc": "저수지의 전설. 비 오는 저녁, 황금 떡밥에만 반응한다고 한다.",
@@ -862,7 +865,8 @@
    },
    "shape": {
     "height": 0.21,
-    "pattern": "spots"
+    "pattern": "spots",
+    "form": "bass"
    },
    "skill": "환경 위협 (바위 도주)",
    "desc": "표범 무늬의 계곡 왕. 바위 쪽으로 사납게 도망친다.",
@@ -928,7 +932,8 @@
    },
    "shape": {
     "height": 0.18,
-    "pattern": "spots"
+    "pattern": "spots",
+    "form": "trout"
    },
    "skill": "방향 전환 → 점프 콤보",
    "desc": "차가운 물에 사는 귀한 물고기. 몸을 틀고 바로 뛴다.",
@@ -998,7 +1003,8 @@
    },
    "shape": {
     "height": 0.19,
-    "pattern": "spots"
+    "pattern": "spots",
+    "form": "trout"
    },
    "skill": "점프 → 방향 전환",
    "desc": "천연기념물처럼 귀한 계곡 물고기. 뛰어오르자마자 몸을 튼다.",
@@ -1061,7 +1067,8 @@
    "shape": {
     "height": 0.14,
     "tail": "round",
-    "whiskers": true
+    "whiskers": true,
+    "form": "flathead"
    },
    "skill": "바위 틈 공략",
    "desc": "밤 계곡 바위 밑에 사는 작은 메기. 작지만 바위 틈으로 끝까지 파고든다.",
@@ -1127,7 +1134,8 @@
    },
    "shape": {
     "height": 0.22,
-    "pattern": "bars"
+    "pattern": "bars",
+    "form": "bass"
    },
    "skill": "환경 위협 + 점프",
    "desc": "폭풍 치는 밤 계곡에 나타난다는 호랑이 무늬 쏘가리.",
@@ -1419,8 +1427,9 @@
     ]
    },
    "shape": {
-    "height": 0.3,
-    "pattern": "bars"
+    "height": 0.33,
+    "pattern": "bars",
+    "form": "disk"
    },
    "skill": "빠른 챔질",
    "desc": "바다낚시꾼의 로망. 입질이 아주 예민하다.",
@@ -1486,7 +1495,8 @@
    },
    "shape": {
     "height": 0.2,
-    "pattern": "stripe"
+    "pattern": "stripe",
+    "form": "bass"
    },
    "skill": "점프 + 방향 전환",
    "desc": "궂은 날 수면을 박차고 아가미를 터는 바다의 사냥꾼.",
@@ -1559,7 +1569,8 @@
    },
    "shape": {
     "height": 0.19,
-    "pattern": "stripe"
+    "pattern": "stripe",
+    "form": "trout"
    },
    "skill": "연속 저스트",
    "desc": "수면 위로 연달아 뛰어오르는 방파제의 점프왕.",
@@ -1691,7 +1702,8 @@
    },
    "shape": {
     "height": 0.2,
-    "pattern": "stripe"
+    "pattern": "stripe",
+    "form": "bass"
    },
    "skill": "이중 점프",
    "desc": "번개가 칠 때마다 뛰어오른다는 은빛 농어.",
@@ -1854,10 +1866,11 @@
     ]
    },
    "shape": {
-    "height": 0.25,
+    "height": 0.22,
     "pattern": "spots",
     "dorsal": "long",
-    "tail": "lunate"
+    "tail": "lunate",
+    "form": "blunthead"
    },
    "skill": "연속 점프 리듬",
    "desc": "초록·황금빛으로 빛나며 연달아 뛰어오른다.",
@@ -2058,7 +2071,8 @@
    "shape": {
     "height": 0.2,
     "pattern": "stripe",
-    "tail": "lunate"
+    "tail": "lunate",
+    "form": "tuna"
    },
    "skill": "질주 + 급방향전환",
    "desc": "방어보다 빠르고 거칠다. 질주하다 급히 꺾는다.",
@@ -2132,7 +2146,8 @@
    "shape": {
     "height": 0.24,
     "tail": "lunate",
-    "finlets": true
+    "finlets": true,
+    "form": "tuna"
    },
    "skill": "드랙 조절 시험",
    "desc": "바다의 탄환. 예고는 짧고 질주는 길다.",
@@ -2904,9 +2919,10 @@
     ]
    },
    "shape": {
-    "height": 0.22,
+    "height": 0.2,
     "pattern": "spots",
-    "tail": "round"
+    "tail": "round",
+    "form": "lobe"
    },
    "skill": "지구력 + 속임수",
    "desc": "살아있는 화석. 심연에서 올라온다.",
@@ -2999,7 +3015,8 @@
    },
    "shape": {
     "height": 0.18,
-    "pattern": "spots"
+    "pattern": "spots",
+    "form": "trout"
    },
    "skill": "모든 기술",
    "desc": "별빛을 품은 송어. 모든 기술을 섞어 쓴다.",
@@ -3073,7 +3090,8 @@
    "shape": {
     "height": 0.13,
     "tail": "round",
-    "whiskers": true
+    "whiskers": true,
+    "form": "flathead"
    },
    "skill": "속임수 간파",
    "desc": "폭풍 속 폭포 아래 떠도는 창백한 메기. 지친 척을 한다.",
@@ -3138,7 +3156,8 @@
    },
    "shape": {
     "height": 0.23,
-    "whiskers": true
+    "whiskers": true,
+    "form": "hump"
    },
    "skill": "청각 예고 읽기",
    "desc": "안개 속에서만 나타나는 잉어. 모습은 보이지 않고 소리만 들린다.",
@@ -3243,7 +3262,8 @@
    "shape": {
     "height": 0.25,
     "whiskers": true,
-    "pattern": "spots"
+    "pattern": "spots",
+    "form": "hump"
    },
    "skill": "페이즈 대응",
    "desc": "폭포 아래를 지키는 늙은 잉어. 용이 되지 못한 비늘의 왕.",
@@ -3307,7 +3327,8 @@
    },
    "shape": {
     "height": 0.24,
-    "whiskers": true
+    "whiskers": true,
+    "form": "hump"
    },
    "skill": "모든 것",
    "desc": "폭포를 거슬러 올라 용이 된다는 전설의 잉어.",
@@ -3665,7 +3686,8 @@
    "shape": {
     "height": 0.13,
     "tail": "round",
-    "whiskers": true
+    "whiskers": true,
+    "form": "flathead"
    },
    "skill": "갈대 엉킴 관리",
    "desc": "안개처럼 희미한 습지의 주인.",
@@ -3738,7 +3760,8 @@
     "height": 0.15,
     "pattern": "spots",
     "tail": "round",
-    "dorsal": "long"
+    "dorsal": "long",
+    "form": "arrow"
    },
    "skill": "갈대 엉킴 관리",
    "desc": "은빛으로 번쩍이는 습지의 폭군.",
@@ -3796,7 +3819,8 @@
    "shape": {
     "height": 0.24,
     "whiskers": true,
-    "dorsal": "long"
+    "dorsal": "long",
+    "form": "hump"
    },
    "skill": "전설: 갈대 엉킴 관리",
    "desc": "은빛 갈대 습지를 다스리는 거대한 잉어.",
@@ -4160,7 +4184,8 @@
    "shape": {
     "height": 0.23,
     "whiskers": true,
-    "pattern": "spots"
+    "pattern": "spots",
+    "form": "hump"
    },
    "skill": "반사광 읽기",
    "desc": "빛을 받으면 일곱 빛깔로 갈라진다.",
@@ -4233,7 +4258,8 @@
    },
    "shape": {
     "height": 0.2,
-    "pattern": "stripe"
+    "pattern": "stripe",
+    "form": "bass"
    },
    "skill": "반사광 읽기",
    "desc": "자수정빛 비늘의 동굴 사냥꾼.",
@@ -4296,8 +4322,9 @@
     ]
    },
    "shape": {
-    "height": 0.24,
-    "pattern": "spots"
+    "height": 0.34,
+    "pattern": "spots",
+    "form": "disk"
    },
    "skill": "전설: 반사광 읽기",
    "desc": "동굴 수정을 비늘로 두른 결정의 왕.",
@@ -4655,7 +4682,8 @@
    "shape": {
     "height": 0.17,
     "tail": "lunate",
-    "finlets": true
+    "finlets": true,
+    "form": "tuna"
    },
    "skill": "물살 박자 맞추기",
    "desc": "바람을 가르며 질주하는 하늘의 화살.",
@@ -4725,7 +4753,8 @@
    "shape": {
     "height": 0.15,
     "pattern": "stripe",
-    "dorsal": "crest"
+    "dorsal": "crest",
+    "form": "flyer"
    },
    "skill": "물살 박자 맞추기",
    "desc": "번개를 타고 날아오르는 날치.",
@@ -4789,7 +4818,8 @@
     "height": 0.2,
     "tail": "lunate",
     "dorsal": "crest",
-    "finlets": true
+    "finlets": true,
+    "form": "tuna"
    },
    "skill": "전설: 물살 박자 맞추기",
    "desc": "하늘섬 위 구름을 헤엄치는 날개 달린 물고기.",
@@ -5273,7 +5303,8 @@
    "shape": {
     "height": 0.2,
     "tail": "lunate",
-    "dorsal": "crest"
+    "dorsal": "crest",
+    "form": "shark"
    },
    "skill": "전설: 빠른 결판",
    "desc": "용암 속을 헤엄치는 불꽃의 상어.",
@@ -5622,7 +5653,8 @@
    },
    "shape": {
     "height": 0.2,
-    "pattern": "stripe"
+    "pattern": "stripe",
+    "form": "salmon"
    },
    "skill": "구멍 안에서 버티기",
    "desc": "오로라를 비늘에 담은 연어.",
@@ -5684,7 +5716,8 @@
    "shape": {
     "height": 0.18,
     "tail": "lunate",
-    "dorsal": "crest"
+    "dorsal": "crest",
+    "form": "shark"
    },
    "skill": "구멍 안에서 버티기",
    "desc": "얼음 이빨을 가진 빙해의 상어.",
@@ -5747,7 +5780,8 @@
    "shape": {
     "height": 0.2,
     "pattern": "stripe",
-    "dorsal": "long"
+    "dorsal": "long",
+    "form": "salmon"
    },
    "skill": "전설: 구멍 안에서 버티기",
    "desc": "오로라를 몸에 두른 빙해의 전설.",
@@ -6111,7 +6145,8 @@
    "shape": {
     "height": 0.15,
     "dorsal": "crest",
-    "pattern": "spots"
+    "pattern": "spots",
+    "form": "flyer"
    },
    "skill": "모든 기술",
    "desc": "꽃잎처럼 흩날리며 날아오른다.",
@@ -6183,8 +6218,9 @@
     ]
    },
    "shape": {
-    "height": 0.22,
-    "pattern": "spots"
+    "height": 0.32,
+    "pattern": "spots",
+    "form": "disk"
    },
    "skill": "모든 기술",
    "desc": "세계수를 지키는 정령이 물고기가 되었다.",
@@ -6253,10 +6289,11 @@
     ]
    },
    "shape": {
-    "height": 0.22,
+    "height": 0.13,
     "tail": "lunate",
     "dorsal": "crest",
-    "whiskers": true
+    "whiskers": true,
+    "form": "serpent"
    },
    "skill": "전설: 모든 기술",
    "desc": "하늘과 바다를 다스리는 천해의 왕.",

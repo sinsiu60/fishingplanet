@@ -24,6 +24,70 @@ def fish_shape(fish: dict) -> dict:
     return dict(fish.get("shape") or {}, rarity=fish.get("rarity", "common"))
 
 
+# 몸 기본 도형 (fish.json shape.form). 일반·고급은 spindle, 희귀·전설은 저마다 다른 틀.
+FORM_TAIL = {"shark": "hetero", "lobe": "tri", "flyer": "flyer"}
+
+
+def _profile(form: str, u: float, ribbon: bool = False) -> tuple[float, float]:
+    """몸 윤곽. u: 0 = 주둥이 → 1 = 꼬리 자루. (등 쪽, 배 쪽) 높이 (H 단위)."""
+    def tap(start, end=0.35):
+        return lerp(1.0, end, smoothstep(clamp((u - start) / (1 - start), 0, 1)))
+    if ribbon:
+        k = min(1.0, u * 6) ** 0.6 * lerp(1.0, 0.25, clamp((u - 0.6) / 0.4, 0, 1))
+        return max(0.2, k), max(0.2, k) * 1.08
+    if form == "flathead":   # 메기: 넓적한 머리 → 쐐기처럼 가늘어짐
+        s = min(1.0, u / 0.07) ** 0.5
+        return s * lerp(0.75, 0.2, u ** 0.85), s * lerp(0.85, 0.2, u ** 0.85)
+    if form == "arrow":      # 가물치: 뾰족한 머리 + 통나무 같은 긴 몸
+        s = min(1.0, u / 0.24) ** 0.9
+        return s * 0.75 * tap(0.72, 0.5), s * 0.75 * tap(0.72, 0.5)
+    if form == "bass":       # 쏘가리·농어: 큰 머리, 솟은 등, 곧은 배, 튀어나온 아래턱
+        return min(1.0, u / 0.3) ** 0.55 * 1.1 * tap(0.4, 0.3), min(1.0, u / 0.1) ** 0.7 * 0.85 * tap(0.5, 0.3)
+    if form == "trout":      # 열목어·송어: 둥근 주둥이, 길고 고른 원통
+        s = min(1.0, u / 0.14) ** 0.45
+        return s * 0.7 * tap(0.62, 0.5), s * 0.75 * tap(0.62, 0.5)
+    if form == "salmon":     # 연어: 송어 + 머리 뒤 혹
+        s = min(1.0, u / 0.16) ** 0.5
+        hump = 0.4 * math.exp(-((u - 0.32) / 0.16) ** 2)
+        return s * (0.85 + hump) * tap(0.55, 0.38), s * 0.9 * tap(0.55, 0.38)
+    if form == "disk":       # 감성돔·정령어: 동그란 원반
+        s = math.sin(math.pi * clamp(u * 0.9 + 0.05, 0, 1)) ** 0.42
+        return s * tap(0.72, 0.22), s * tap(0.72, 0.22)
+    if form == "hump":       # 잉어왕: 오목한 이마 → 높은 혹 → 처지는 등
+        tp = (u / 0.32) ** 1.5 * 1.3 if u < 0.32 else lerp(1.3, 0.32, smoothstep((u - 0.32) / 0.68))
+        b = math.sin(math.pi * clamp(u * 0.92 + 0.06, 0, 1)) ** 0.7 * tap(0.55)
+        return max(0.12, tp), b * 0.95
+    if form == "blunthead":  # 만새기: 깎아지른 이마
+        return min(1.0, u / 0.04) * lerp(1.25, 0.3, u ** 1.25), min(1.0, u / 0.16) ** 0.6 * lerp(0.8, 0.3, u ** 1.1)
+    if form == "tuna":       # 참치: 총알 몸 + 아주 가는 꼬리 자루
+        s = min(1.0, u / 0.32) ** 0.5
+        return s * tap(0.4, 0.1), s * 1.05 * tap(0.4, 0.1)
+    if form == "shark":      # 상어: 뾰족한 코가 위로, 배는 코 뒤에서 시작
+        tp = min(1.0, u / 0.32) ** 0.75 * tap(0.35, 0.22)
+        b = lerp(-0.12, 0.9, min(1.0, u / 0.3) ** 0.6) * tap(0.4, 0.22)
+        return max(0.1, tp), b
+    if form == "lobe":       # 실러캔스: 두툼하고 고른 통
+        s = min(1.0, u / 0.2) ** 0.6
+        k = s * lerp(1.0, 0.42, clamp(u, 0, 1) ** 1.4)
+        return k, k
+    if form == "flyer":      # 날치: 가는 몸
+        s = min(1.0, u / 0.2) ** 0.6
+        return s * 0.8 * tap(0.5), s * 0.9 * tap(0.5)
+    if form == "serpent":    # 천해왕: 길고 고른 용 같은 몸
+        s = min(1.0, u / 0.1) ** 0.6
+        return s * lerp(1.0, 0.6, u), s * lerp(1.0, 0.6, u)
+    prof = math.sin(math.pi * clamp(u * 0.92 + 0.06, 0, 1)) ** 0.75
+    k = max(0.2, prof) * tap(0.55)
+    return k, k * 1.08
+
+
+def _wave(form: str, u: float, ph: float, wag: float) -> float:
+    """몸 중심선 출렁임 (H 단위). 용 같은 몸만."""
+    if form != "serpent":
+        return 0.0
+    return math.sin(u * 5.5 - ph * 4.0) * 0.45 * u
+
+
 def _xf(points, cx, cy, angle, facing):
     """회전 + 좌우 반전 + 이동. facing=-1이면 머리가 왼쪽."""
     ca, sa = math.cos(angle), math.sin(angle)
@@ -50,29 +114,34 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
         return
     L = length
     H = L * shape.get("height", 0.17)
-    tail_type = shape.get("tail", "fork")
+    form = shape.get("form", "spindle")
+    tail_type = FORM_TAIL.get(form, shape.get("tail", "fork"))
     ribbon = tail_type == "ribbon"
-    body_frac = 0.92 if ribbon else 0.82 if tail_type == "round" else 0.8
+    body_frac = 0.92 if ribbon else 0.84 if form in ("serpent", "lobe") else 0.82 if tail_type in ("round", "tri") else 0.8
     top, bot = [], []
-    n = 12
+    n = 14
     tail_base = -L / 2 + L * body_frac
+    ph = pygame.time.get_ticks() / 1000.0
     for i in range(n + 1):
         u = i / n
         x = -L / 2 + u * L * body_frac
-        if ribbon:
-            prof = min(1.0, u * 6) ** 0.6
-            taper = lerp(1.0, 0.25, clamp((u - 0.6) / 0.4, 0, 1))
-        else:
-            prof = math.sin(math.pi * clamp(u * 0.92 + 0.06, 0, 1)) ** 0.75
-            taper = lerp(1.0, 0.35, clamp((u - 0.55) / 0.45, 0, 1))
-        h = H * max(0.2, prof) * taper
-        top.append((x, -h))
-        bot.append((x, h * 1.08))
-    wag = tail_wag * H * 0.6
+        t_k, b_k = _profile(form, u, ribbon)
+        off = _wave(form, u, ph, tail_wag) * H
+        top.append((x, -H * t_k + off))
+        bot.append((x, H * b_k + off))
+    wag = tail_wag * H * 0.6 + _wave(form, 1.0, ph, tail_wag) * H
     tx = L / 2
     if tail_type == "round":
         tail = [(tail_base + L * 0.1, -H * 0.55 + wag), (tx, -H * 0.2 + wag), (tx, H * 0.25 + wag),
                 (tail_base + L * 0.1, H * 0.6 + wag)]
+    elif tail_type == "tri":  # 실러캔스: 둥근 꼬리 + 가운데 작은 꼬리
+        tail = [(tail_base + L * 0.08, -H * 0.7 + wag), (tx - L * 0.03, -H * 0.3 + wag), (tx + L * 0.05, -H * 0.1 + wag),
+                (tx + L * 0.05, H * 0.1 + wag), (tx - L * 0.03, H * 0.3 + wag), (tail_base + L * 0.08, H * 0.7 + wag)]
+    elif tail_type == "hetero":  # 상어: 위쪽 꼬리가 길게
+        tail = [(tx + L * 0.03, -H * 1.55 + wag), (tail_base + L * 0.07, -H * 0.05 + wag * 0.5),
+                (tx - L * 0.04, H * 0.75 + wag)]
+    elif tail_type == "flyer":  # 날치: 아래 꼬리가 길게
+        tail = [(tx - L * 0.02, -H * 0.8 + wag), (tx - L * 0.07, wag * 0.5), (tx + L * 0.06, H * 1.35 + wag)]
     elif tail_type == "lunate":
         tail = [(tx + L * 0.02, -H * 1.05 + wag), (tail_base + L * 0.1, wag * 0.5), (tx + L * 0.02, H * 1.05 + wag)]
     elif ribbon:
@@ -84,36 +153,26 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
     tier = {"rare": 2, "legend": 3}.get(shape.get("rarity"), 0)
     xf = lambda pts: _xf(pts, cx, cy, angle, facing)  # noqa: E731
 
+    back, front = _fins(form, shape, L, H, top, bot, tail_base, ribbon, ph)
+
     if silhouette is not None:
-        if tier >= 2:
+        if tier >= 3:
             _rarity_back(canvas, xf, L, H, top, tail, tail_wag, tier, silhouette, silhouette, silhouette)
+        for poly in back:
+            pygame.draw.polygon(canvas, silhouette, xf(poly))
         pygame.draw.polygon(canvas, silhouette, pts_body)
-        fin = [(-L * 0.05, -H * 0.9), (L * 0.15, -H * 1.5), (L * 0.22, -H * 0.7)]
-        pygame.draw.polygon(canvas, silhouette, _xf(fin, cx, cy, angle, facing))
+        for poly in front:
+            pygame.draw.polygon(canvas, silhouette, xf(poly))
         if shape.get("bill"):
             pygame.draw.line(canvas, silhouette, *_xf([(-L / 2, 0), (-L / 2 - L * 0.22, -H * 0.1)], cx, cy, angle,
                                                       facing), max(1, int(L / 50)))
         return
 
     base, belly, fin_c, stripe = colors["body"], colors["belly"], colors["fin"], colors["stripe"]
-    # 등지느러미 (몸 뒤에)
-    dorsal_type = shape.get("dorsal", "normal")
-    if dorsal_type == "long":
-        dorsal = [(-L * 0.38, -H * 0.7), (-L * 0.3, -H * 1.45), (L * 0.1, -H * 1.3), (L * 0.28, -H * 0.9),
-                  (L * 0.3, -H * 0.4)]
-    elif dorsal_type == "crest":
-        dorsal = [(-L * 0.45, -H * 0.6), (-L * 0.4, -H * 3.2), (-L * 0.3, -H * 1.6), (L * 0.35, -H * 1.5),
-                  (L * 0.4, -H * 0.6)]
-    else:
-        dorsal = [(-L * 0.16, -H * 0.8), (-L * 0.07, -H * 1.3), (L * 0.06, -H * 1.05), (L * 0.16, -H * 1.25),
-                  (L * 0.25, -H * 0.55)]
-    if tier >= 2:
+    if tier >= 3:
         _rarity_back(canvas, xf, L, H, top, tail, tail_wag, tier, fin_c, base, stripe)
-    pygame.draw.polygon(canvas, fin_c, _xf(dorsal, cx, cy, angle, facing))
-    # 뒷지느러미
-    if not ribbon:
-        anal = [(L * 0.12, H * 0.7), (L * 0.19, H * 1.05), (L * 0.25, H * 0.5)]
-        pygame.draw.polygon(canvas, fin_c, _xf(anal, cx, cy, angle, facing))
+    for poly in back:  # 등·뒷지느러미 (몸 뒤에)
+        pygame.draw.polygon(canvas, fin_c, xf(poly))
     pygame.draw.polygon(canvas, base, pts_body)
     # 배
     belly_poly = [(p[0], -p[1] * 0.25) for p in top[1:-2]] + bot[1:-2][::-1]
@@ -144,9 +203,12 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
             for sgn in (-1, 1):
                 p = _xf([(x, sgn * H * 0.5)], cx, cy, angle, facing)[0]
                 canvas.fill((235, 210, 90), (int(p[0]), int(p[1]), 2, 2))
-    # 가슴지느러미
-    pec = [(-L * 0.26, H * 0.2), (-L * 0.17, H * 0.55), (-L * 0.13, H * 0.25)]
-    pygame.draw.polygon(canvas, fin_c, _xf(pec, cx, cy, angle, facing))
+    # 가슴지느러미 · 날개 (몸 앞에)
+    for poly in front:
+        pygame.draw.polygon(canvas, fin_c, xf(poly))
+        if len(poly) >= 4 and form == "flyer":  # 날개 살
+            for q in poly[1:3]:
+                pygame.draw.line(canvas, scale_color(fin_c, 0.75), xf([poly[0]])[0], xf([q])[0], 1)
     # 꼬리 색
     pygame.draw.polygon(canvas, fin_c, _xf(tail + [(tail_base + L * 0.02, 0)], cx, cy, angle, facing))
     # 주둥이 (청새치)
@@ -155,15 +217,12 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
         pygame.draw.line(canvas, scale_color(base, 0.7), bill[0], bill[1], max(1, int(L / 45)))
     # 눈
     eye_r = max(1, int(L / (22 if shape.get("eye_big") else 40)))
-    eye = _xf([(-L * 0.4, -H * 0.3)], cx, cy, angle, facing)[0]
+    ex, ey = EYE_AT.get(form, (-0.4, -0.3))
+    eye = xf([(L * ex, H * ey + _wave(form, 0.1, ph, 0) * H)])[0]
     ring = colors.get("eye") or ((255, 220, 90) if shape.get("eye_big") else (250, 250, 240))
     pygame.draw.circle(canvas, ring, eye, eye_r + 1)  # 광폭 변이: 붉은 눈
     pygame.draw.circle(canvas, (20, 20, 20), eye, eye_r)
-    mouth = _xf([(-L / 2 + L * 0.01, H * 0.05), (-L * 0.42, H * 0.25)], cx, cy, angle, facing)
-    pygame.draw.line(canvas, scale_color(base, 0.55), mouth[0], mouth[1], 1)
-    # 아가미 선
-    gill = _xf([(-L * 0.33, -H * 0.55), (-L * 0.3, 0), (-L * 0.33, H * 0.6)], cx, cy, angle, facing)
-    pygame.draw.lines(canvas, scale_color(base, 0.7), False, gill, 1)
+    _head(canvas, xf, form, L, H, top, bot, base)
     if tier >= 2:
         _rarity_front(canvas, xf, L, H, tail_base, pts_body, eye, eye_r, tier, base)
     # 수염 (잉어·메기)
@@ -181,10 +240,149 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
 
 
 GOLD = (255, 214, 90)
+EYE_AT = {"flathead": (-0.43, -0.25), "arrow": (-0.41, -0.3), "bass": (-0.39, -0.38), "shark": (-0.39, -0.32),
+          "blunthead": (-0.44, -0.55), "hump": (-0.42, -0.2), "lobe": (-0.4, -0.35), "tuna": (-0.38, -0.25)}
+
+
+def _surf(pts, x: float) -> float:
+    """윤곽선 pts(x 오름차순)에서 x 위치의 y."""
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        if x0 <= x <= x1:
+            return lerp(y0, y1, (x - x0) / max(1e-6, x1 - x0))
+    return pts[0][1] if x < pts[0][0] else pts[-1][1]
+
+
+def _strip(pts, x0: float, x1: float, h0: float, h1: float, sign: int = -1, k: int = 6) -> list:
+    """윤곽선을 따라 붙는 띠 지느러미: x0→x1, 높이 h0→h1 (sign -1 = 위로)."""
+    out = [(x0, _surf(pts, x0))]
+    for i in range(k + 1):
+        u = i / k
+        x = lerp(x0, x1, u)
+        out.append((x, _surf(pts, x) + sign * lerp(h0, h1, u) * min(1.0, u / 0.18) ** 0.6))
+    out.append((x1, _surf(pts, x1)))
+    return out
+
+
+def _fins(form, shape, L, H, top, bot, tail_base, ribbon, ph):
+    """도형별 지느러미 (몸 기준 좌표). (몸 뒤 polygons, 몸 앞 polygons)."""
+    T = lambda x: _surf(top, x)  # noqa: E731
+    B = lambda x: _surf(bot, x)  # noqa: E731
+    pec = [(-L * 0.26, H * 0.2), (-L * 0.17, H * 0.55), (-L * 0.13, H * 0.25)]
+    anal = [(L * 0.12, B(L * 0.12) - H * 0.2), (L * 0.19, B(L * 0.19) + H * 0.35), (L * 0.25, B(L * 0.25) - H * 0.1)]
+    if form == "flathead":
+        return ([[(-L * 0.24, T(-L * 0.24)), (-L * 0.2, T(-L * 0.2) - H * 0.55), (-L * 0.12, T(-L * 0.12))],
+                 _strip(bot, -L * 0.02, tail_base, H * 0.3, H * 0.25, 1)],
+                [[(-L * 0.3, H * 0.25), (-L * 0.12, H * 0.85), (-L * 0.16, H * 0.3)]])
+    if form == "arrow":
+        return ([_strip(top, -L * 0.18, tail_base - L * 0.01, H * 0.35, H * 0.45),
+                 _strip(bot, L * 0.02, tail_base - L * 0.01, H * 0.3, H * 0.4, 1)], [pec])
+    if form == "bass":
+        spiny = [(-L * 0.24, T(-L * 0.24))]
+        for i in range(6):
+            x = lerp(-L * 0.22, L * 0.0, i / 5)
+            spiny += [(x, T(x) - H * (0.85 - i * 0.07)), (x + L * 0.018, T(x + L * 0.018) - H * 0.4)]
+        spiny.append((L * 0.02, T(L * 0.02)))
+        soft = _strip(top, L * 0.02, L * 0.24, H * 0.55, H * 0.35)
+        return [spiny, soft, anal], [pec]
+    if form in ("trout", "salmon"):
+        dors = [(-L * 0.12, T(-L * 0.12)), (-L * 0.07, T(-L * 0.07) - H * 0.75), (L * 0.06, T(L * 0.06) - H * 0.35),
+                (L * 0.05, T(L * 0.05))]
+        adip = [(L * 0.22, T(L * 0.22)), (L * 0.25, T(L * 0.25) - H * 0.28), (L * 0.28, T(L * 0.28))]
+        return [dors, adip, anal], [pec]
+    if form == "disk":
+        dors = _strip(top, -L * 0.12, L * 0.22, H * 0.12, H * 0.32)
+        dors.insert(-1, (L * 0.33, T(L * 0.22) - H * 0.22))
+        an = _strip(bot, L * 0.02, L * 0.22, H * 0.1, H * 0.28, 1)
+        an.insert(-1, (L * 0.33, B(L * 0.22) + H * 0.2))
+        return [dors, an], [[(-L * 0.2, H * 0.1), (-L * 0.05, H * 0.45), (-L * 0.08, H * 0.12)]]
+    if form == "hump":
+        return [_strip(top, -L * 0.14, L * 0.22, H * 0.5, H * 0.3), anal], [pec]
+    if form == "blunthead":
+        return ([_strip(top, -L * 0.43, tail_base - L * 0.01, H * 0.3, H * 0.2),
+                 _strip(bot, L * 0.02, tail_base - L * 0.01, H * 0.25, H * 0.2, 1)], [pec])
+    if form == "tuna":
+        d1 = [(-L * 0.16, T(-L * 0.16)), (-L * 0.11, T(-L * 0.11) - H * 0.55), (L * 0.0, T(L * 0.0))]
+        d2 = [(L * 0.04, T(L * 0.04)), (L * 0.13, T(L * 0.04) - H * 1.1), (L * 0.11, T(L * 0.12))]
+        a2 = [(L * 0.05, B(L * 0.05)), (L * 0.14, B(L * 0.05) + H * 1.0), (L * 0.12, B(L * 0.13))]
+        return [d1, d2, a2], [[(-L * 0.27, H * 0.0), (-L * 0.05, H * 0.15), (-L * 0.22, H * 0.25)]]
+    if form == "shark":
+        d1 = [(-L * 0.08, T(-L * 0.08)), (L * 0.04, T(L * 0.0) - H * 1.45), (L * 0.1, T(L * 0.1) - H * 0.1),
+              (L * 0.14, T(L * 0.14))]
+        d2 = [(L * 0.24, T(L * 0.24)), (L * 0.28, T(L * 0.26) - H * 0.4), (L * 0.31, T(L * 0.31))]
+        a2 = [(L * 0.22, B(L * 0.22)), (L * 0.26, B(L * 0.24) + H * 0.35), (L * 0.29, B(L * 0.29))]
+        pect = [(-L * 0.24, B(-L * 0.24) - H * 0.2), (-L * 0.06, B(-L * 0.1) + H * 1.0), (-L * 0.13, B(-L * 0.13))]
+        return [d1, d2, a2], [pect]
+    if form == "lobe":
+        def leaf(x, y_surf, sign, h):
+            """살덩이 자루 + 뒤로 누운 둥근 잎 (실러캔스 지느러미)."""
+            out = [(x - L * 0.015, y_surf), (x - L * 0.01, y_surf + sign * h * 0.35)]
+            for i in range(9):
+                a = math.pi * i / 8
+                out.append((x + L * 0.03 - math.cos(a) * L * 0.045 + math.sin(a) * L * 0.02,
+                            y_surf + sign * (h * 0.35 + math.sin(a) * h * 0.65)))
+            out += [(x + L * 0.02, y_surf + sign * h * 0.3), (x + L * 0.02, y_surf)]
+            return out
+        return ([leaf(-L * 0.08, T(-L * 0.08), -1, H * 0.9), leaf(L * 0.18, T(L * 0.18), -1, H * 0.8),
+                 leaf(L * 0.18, B(L * 0.18), 1, H * 0.8), leaf(-L * 0.02, B(-L * 0.02), 1, H * 0.85)],
+                [leaf(-L * 0.24, H * 0.3, 1, H * 0.95)])
+    if form == "flyer":
+        w = math.sin(ph * 6.0) * H * 0.25
+        wing = [(-L * 0.24, -H * 0.05), (L * 0.18, -H * 2.3 + w), (L * 0.36, -H * 1.5 + w), (-L * 0.02, H * 0.2)]
+        dors = [(L * 0.14, T(L * 0.14)), (L * 0.18, T(L * 0.14) - H * 0.6), (L * 0.24, T(L * 0.24))]
+        return [dors, [(p[0], -p[1] * 0.6 + H * 0.4) for p in wing], anal], [wing]
+    if form == "serpent":
+        crest = [(-L * 0.36, T(-L * 0.36))]
+        k = 14
+        for i in range(k + 1):
+            x = lerp(-L * 0.34, tail_base - L * 0.01, i / k)
+            crest.append((x, T(x) - H * (0.9 if i % 2 == 0 else 0.45) * lerp(1.2, 0.6, i / k)))
+        crest.append((tail_base, T(tail_base)))
+        return [crest, _strip(bot, L * 0.05, tail_base - L * 0.01, H * 0.3, H * 0.25, 1)], [pec]
+    # spindle (일반·고급 기본 틀): fish.json dorsal 값
+    dorsal_type = shape.get("dorsal", "normal")
+    if dorsal_type == "long":
+        dorsal = [(-L * 0.38, -H * 0.7), (-L * 0.3, -H * 1.45), (L * 0.1, -H * 1.3), (L * 0.28, -H * 0.9),
+                  (L * 0.3, -H * 0.4)]
+    elif dorsal_type == "crest":
+        dorsal = [(-L * 0.45, -H * 0.6), (-L * 0.4, -H * 3.2), (-L * 0.3, -H * 1.6), (L * 0.35, -H * 1.5),
+                  (L * 0.4, -H * 0.6)]
+    else:
+        dorsal = [(-L * 0.16, -H * 0.8), (-L * 0.07, -H * 1.3), (L * 0.06, -H * 1.05), (L * 0.16, -H * 1.25),
+                  (L * 0.25, -H * 0.55)]
+    back = [dorsal] if ribbon else [dorsal, [(L * 0.12, H * 0.7), (L * 0.19, H * 1.05), (L * 0.25, H * 0.5)]]
+    return back, [pec]
+
+
+def _head(canvas, xf, form, L, H, top, bot, base) -> None:
+    """입·아가미 (도형별)."""
+    dark, line = scale_color(base, 0.55), scale_color(base, 0.7)
+    sx = -L / 2
+    if form == "shark":
+        for i in range(5):  # 아가미 구멍 다섯
+            x = -L * 0.3 + i * L * 0.025
+            pygame.draw.line(canvas, line, *xf([(x, -H * 0.25), (x - L * 0.01, H * 0.35)]), 1)
+        pygame.draw.lines(canvas, dark, False, xf([(sx + L * 0.06, H * 0.35), (-L * 0.38, H * 0.55), (-L * 0.34, H * 0.45)]), 1)
+        return
+    if form == "bass":  # 큰 입 + 튀어나온 아래턱
+        pygame.draw.lines(canvas, dark, False, xf([(sx - L * 0.01, -H * 0.05), (-L * 0.36, H * 0.05),
+                                                    (-L * 0.38, H * 0.2)]), 1)
+    elif form == "salmon":  # 갈고리 턱
+        pygame.draw.polygon(canvas, scale_color(base, 0.8), xf([(sx + L * 0.02, H * 0.15), (sx - L * 0.03, H * 0.0),
+                                                                 (sx - L * 0.02, -H * 0.25), (sx + L * 0.05, H * 0.1)]))
+        pygame.draw.line(canvas, dark, *xf([(sx + L * 0.01, H * 0.08), (-L * 0.4, H * 0.22)]), 1)
+    elif form == "flathead":  # 넓은 입
+        pygame.draw.line(canvas, dark, *xf([(sx, H * 0.15), (-L * 0.41, H * 0.3)]), max(1, int(L / 60)))
+    elif form == "hump":  # 아래로 향한 작은 입
+        pygame.draw.line(canvas, dark, *xf([(sx + L * 0.005, H * 0.12), (-L * 0.45, H * 0.3)]), 1)
+    else:
+        pygame.draw.line(canvas, dark, *xf([(sx + L * 0.01, H * 0.05), (-L * 0.42, H * 0.25)]), 1)
+    gx = -L * (0.26 if form in ("bass", "lobe") else 0.33)
+    gill = xf([(gx, _surf(top, gx) * 0.75), (gx + L * 0.03, 0), (gx, _surf(bot, gx) * 0.75)])
+    pygame.draw.lines(canvas, line, False, gill, 1)
 
 
 def _rarity_back(canvas, xf, L, H, top, tail, wag, tier, fin_c, base, stripe) -> None:
-    """몸 뒤 장식. 희귀: 길게 늘어진 배지느러미. 전설: + 머리 왕관 가시 + 꼬리 끝 긴 꼬리깃 (실루엣으로도 보임)."""
+    """전설 몸 뒤 장식: 늘어진 배지느러미 + 등 실 + 머리 왕관 가시 + 꼬리 끝 긴 꼬리깃 (실루엣으로도 보임)."""
     ph = pygame.time.get_ticks() / 1000.0
     w = math.sin(ph * 3.0) * H * 0.18
     streamer = [(-L * 0.13, H * 0.75), (L * 0.1, H * 1.4 + w), (L * 0.15, H * 1.25 + w), (-L * 0.02, H * 0.8)]
@@ -192,8 +390,6 @@ def _rarity_back(canvas, xf, L, H, top, tail, wag, tier, fin_c, base, stripe) ->
     # 등지느러미 끝에서 뒤로 흐르는 실 (희귀 이상)
     fil = [(L * 0.1, -H * 1.1), (L * 0.17, -H * 1.22), (L * 0.3, -H * 1.12 + w), (L * 0.42, -H * 0.9 + w * 1.6)]
     pygame.draw.lines(canvas, fin_c, False, xf(fil), max(1, int(L / 55)))
-    if tier < 3:
-        return
     crown = GOLD if fin_c != base else fin_c
     for i in (2, 3, 4):
         x, y = top[i]
