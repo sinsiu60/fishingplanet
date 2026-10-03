@@ -73,6 +73,9 @@ def hint_chip(canvas, x, y, s: str, col, t: float, urgent: bool = False) -> None
     canvas.blit(back, r.topleft)
     on = not urgent or int(t * 8) % 2 == 0
     pygame.draw.rect(canvas, col if on else (90, 96, 120), r, 2 if urgent else 1, border_radius=7)
+    from src.ui.signal_slots import white_edge
+    if white_edge(col):
+        pygame.draw.rect(canvas, WHITE, r.inflate(4, 4), 1, border_radius=8)
     big_text(canvas, s, r.center, col if on else WHITE, 1.0, outline=True)
 
 

@@ -67,7 +67,7 @@ SUCCESS_GRADES = ("small", "mid", "big", "big_pop")
 
 
 def success_name(grade: str, streak: int) -> str:
-    return f"succ_{grade}" if grade in ("double", "double_pop") else f"succ_{grade}_{max(0, min(2, streak))}"
+    return f"succ_{grade}" if grade in ("double", "double_pop", "phantom") else f"succ_{grade}_{max(0, min(2, streak))}"
 
 
 def success_info(grade: str, streak: int = 0) -> dict:
@@ -90,7 +90,7 @@ def register_success(sfx) -> None:
             snd = _sound(s.get(g, {}).get(f"streak{k}", {}).get("file"))
             if snd is not None:
                 sfx.sounds[success_name(g, k)] = snd
-    for g in ("double", "double_pop"):
+    for g in ("double", "double_pop", "phantom"):
         snd = _sound(s.get(g, {}).get("file"))
         if snd is not None:
             sfx.sounds[success_name(g, 0)] = snd

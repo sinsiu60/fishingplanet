@@ -95,6 +95,7 @@ class LandingCinematic:
         self.t_flash = self.t_apex + APEX_HOLD[self.tier]
         self.total = self.t_flash + 0.18
         self.trail: list[list[float]] = []
+        self.ghosts: list[tuple] = []   # 환상: 보랏빛 잔상
         self.rain = [[random.uniform(0, 480), random.uniform(-270, 0), random.uniform(40, 110), random.uniform(0, 6)]
                      for _ in range(70)] if self.tier >= 3 else []
         self.rings: list[float] = []
@@ -332,6 +333,15 @@ class LandingCinematic:
             grow = 0.0 if self.cls in ("big", "huge") else 0.2 + 0.05 * tier
             scale = lerp(1.0, 1.0 + grow, _ease_out(k))
             self._draw_net(canvas, pal, nx, ny, r, in_net=False, fish=None)
+            if self.fish.get("rarity") == "phantom":
+                # 환상: 보랏빛 잔상 (지나온 자리에 옅어지는 실루엣)
+                self.ghosts.append((fx, fy, spin, scale))
+                self.ghosts = self.ghosts[-14:]
+                back = lerp_color(pal["water_top"], pal["sky_bottom"], 0.5)
+                for i, (gx, gy, gs, gsc) in enumerate(self.ghosts[:-1:3]):
+                    a = 0.25 + 0.5 * i / max(1, len(self.ghosts) // 3)
+                    draw_fish_side(canvas, gx, gy, self.length * gsc, gs, self.colors, -1,
+                                   silhouette=lerp_color(back, (190, 120, 255), a), shape=self.shape)
             draw_fish_side(canvas, fx, fy, self.length * scale, spin, self.colors, -1,
                            tail_wag=math.sin(t * 20) * (1 - k * 0.7), shape=self.shape)
             if self.chest_color:

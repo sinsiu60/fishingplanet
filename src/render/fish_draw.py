@@ -150,7 +150,8 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
         tail = [(tx, -H * 0.85 + wag), (tx - L * 0.06, wag * 0.5), (tx, H * 0.85 + wag)]
     body = top + tail + bot[::-1]
     pts_body = _xf(body, cx, cy, angle, facing)
-    tier = {"rare": 2, "legend": 3}.get(shape.get("rarity"), 0)
+    tier = {"rare": 2, "phantom": 2, "legend": 3}.get(shape.get("rarity"), 0)
+    phantom = shape.get("rarity") == "phantom"  # 환상: 보랏빛 오라 + 보라 테두리
     xf = lambda pts: _xf(pts, cx, cy, angle, facing)  # noqa: E731
 
     back, front = _fins(form, shape, L, H, top, bot, tail_base, ribbon, ph)
@@ -169,6 +170,8 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
         return
 
     base, belly, fin_c, stripe = colors["body"], colors["belly"], colors["fin"], colors["stripe"]
+    if phantom:
+        _aura(canvas, pts_body, RARITY_GLOW["phantom"], 0.6 + 0.4 * math.sin(ph * 2.4))
     if tier >= 3:
         _aura(canvas, pts_body, RARITY_GLOW["legend"], 0.5 + 0.5 * math.sin(ph * 3.2))
         _rarity_back(canvas, xf, L, H, top, tail, tail_wag, tier, fin_c, base, stripe)
@@ -225,7 +228,8 @@ def draw_fish_side(canvas, cx: float, cy: float, length: float, angle: float, co
     pygame.draw.circle(canvas, (20, 20, 20), eye, eye_r)
     _head(canvas, xf, form, L, H, top, bot, base)
     if tier >= 2:
-        _rarity_front(canvas, xf, L, H, tail_base, pts_body, eye, eye_r, tier, base)
+        _rarity_front(canvas, xf, L, H, tail_base, pts_body, eye, eye_r, tier, base,
+                      RARITY_GLOW["phantom"] if phantom else None)
     # 수염 (잉어·메기)
     if shape.get("whiskers"):
         wc = scale_color(base, 0.6)
@@ -422,10 +426,10 @@ def _aura(canvas, pts_body, glow, k: float) -> None:
     canvas.blit(surf, (x0, y0), special_flags=pygame.BLEND_RGB_ADD)
 
 
-def _rarity_front(canvas, xf, L, H, tail_base, pts_body, eye, eye_r, tier, base) -> None:
+def _rarity_front(canvas, xf, L, H, tail_base, pts_body, eye, eye_r, tier, base, glow_override=None) -> None:
     """몸 위 장식. 희귀: 푸른 테 + 등 비늘 반짝임. 전설: 금빛 테(맥동) + 비늘 무늬 + 빛나는 눈."""
     ph = pygame.time.get_ticks() / 1000.0
-    glow = RARITY_GLOW["legend" if tier >= 3 else "rare"]
+    glow = glow_override or RARITY_GLOW["legend" if tier >= 3 else "rare"]
     if tier >= 3 and L >= 90:  # 작게 그릴 땐 비늘 무늬가 잡음이 돼서 뺌
         sc = lerp_color(base, (255, 255, 255), 0.22)
         step = L * 0.075
@@ -633,8 +637,20 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
     shade.fill((8, 10, 24, 190))
     canvas.blit(shade, (0, 0))
     cx, cy = w // 2, 112
-    tier = {"common": 0, "uncommon": 1, "rare": 2, "legend": 3}.get(fish["rarity"], 0)
+    tier = {"common": 0, "uncommon": 1, "rare": 2, "phantom": 2, "legend": 3}.get(fish["rarity"], 0)
     glow = RARITY_GLOW[fish["rarity"]]
+    phantom = fish["rarity"] == "phantom"
+    if phantom:
+        # 환상: 배경이 보랏빛으로 + 보라 테두리 카드 (두 겹, 맥동)
+        vio = _opaque((w, h))
+        vio.fill((60, 24, 96))
+        vio.set_alpha(120)
+        canvas.blit(vio, (0, 0))
+        k = 0.6 + 0.4 * math.sin(t * 3)
+        pygame.draw.rect(canvas, lerp_color((90, 50, 140), (210, 150, 255), k), (6, 6, w - 12, h - 12), 2)
+        pygame.draw.rect(canvas, (120, 70, 180), (10, 10, w - 20, h - 20), 1)
+        for x0, y0 in ((6, 6), (w - 7, 6), (6, h - 7), (w - 7, h - 7)):
+            pygame.draw.polygon(canvas, (225, 180, 255), [(x0, y0 - 4), (x0 + 4, y0), (x0, y0 + 4), (x0 - 4, y0)])
     if tier >= 3:
         # 전설: 배경 전체가 금빛으로 물듦
         gold = _opaque((w, h))
@@ -667,6 +683,13 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
         skin, shadow = (225, 175, 140), (180, 125, 100)
     rise = (1 - smoothstep(t / 0.28)) * 70
     fy = cy + bob + fall_y
+    if phantom:
+        # 보랏빛 잔상: 좌우로 흔들리며 옅어지는 실루엣 두 겹
+        for i, dx in enumerate((-1, 1)):
+            off = dx * (6 + 4 * math.sin(t * 2 + i))
+            draw_fish_side(canvas, cx + off, fy - 2, length * 1.04, 0.0, colors, facing=-1,
+                           silhouette=lerp_color((60, 30, 100), (190, 120, 255), 0.45 + 0.2 * math.sin(t * 3 + i)),
+                           shape=fish_shape(fish))
     if one_hand:
         # 한 손: 손바닥이 배를 받치고, 손가락이 몸통을 감싸 쥠 (엄지는 위쪽)
         body_h = length * (fish.get("shape") or {}).get("height", 0.17)

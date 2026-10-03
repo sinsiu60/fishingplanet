@@ -134,6 +134,12 @@
       "duration_sec": 1.37,
       "impact_ms": 41,
       "second_impact_ms": 461
+    },
+    "phantom": {
+      "file": "sfx/success/success_phantom.wav",
+      "duration_sec": 2.14,
+      "impact_ms": 41,
+      "note": "환상의 물고기 포획 전용 스팅 (tools/audio/make_phantom_sting.py — 퍼펙트 반짝임을 길게, 원본 유지)"
     }
   },
   "perfect_effect": {

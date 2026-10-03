@@ -131,14 +131,16 @@ def draw_boss_bar(canvas, pal, fight) -> None:
     fish = fight.fish
     name = fish["name"] if not fight.brain.dragon else "용 '등용'"
     rc = RARITY_COLOR.get(fish["rarity"], (255, 255, 255))
-    text(canvas, name, (x - 6, y + 3), rc, 11, "midright")
+    if fish.get("rarity") != "phantom":  # 환상어: 파이팅 중 이름·등급명 표시 안 함 (33장)
+        text(canvas, name, (x - 6, y + 3), rc, 11, "midright")
     phases = fight.brain.phases
     if phases:
         # 페이즈 표시: ◆◆◇
         for i in range(len(phases)):
             cx = x + bw // 2 - (len(phases) - 1) * 6 + i * 12
             cy = y + 13
-            col = (255, 214, 90) if i <= fight.brain.phase else (80, 70, 50)
+            on = (190, 120, 255) if fish.get("rarity") == "phantom" else (255, 214, 90)
+            col = on if i <= fight.brain.phase else (80, 70, 50)
             pygame.draw.polygon(canvas, col, [(cx, cy - 3), (cx + 3, cy), (cx, cy + 3), (cx - 3, cy)])
     canvas.fill(SHADOW, (x - 1, y - 1, bw + 2, bh + 2))
     canvas.fill((50, 30, 36), (x, y, bw, bh))
@@ -185,11 +187,12 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
     if t > 0.3:
         k = clamp((t - 0.3) / 0.15, 0, 1)
         dy = int((1 - k) * -10)
-        text(canvas, fish["name"], (w // 2, 24 + dy), RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 16, "center")
+        title = f"환상의 물고기, {fish['name']}" if fish["rarity"] == "phantom" else fish["name"]
+        text(canvas, title, (w // 2, 24 + dy), RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 16, "center")
         text(canvas, f"{result['size']:.1f}cm", (w // 2, 44 + dy), (255, 255, 255), 16, "center")
         # 희귀 이상: 희귀도 리본
-        if fish["rarity"] in ("rare", "legend"):
-            label = {"rare": "희귀", "legend": "★ 전설 ★"}[fish["rarity"]]
+        if fish["rarity"] in ("rare", "legend", "phantom"):
+            label = {"rare": "희귀", "legend": "★ 전설 ★", "phantom": "◆ 환상 ◆"}[fish["rarity"]]
             col = RARITY_COLOR[fish["rarity"]]
             rw = 44 if fish["rarity"] == "rare" else 70
             rect = pygame.Rect(0, 0, rw, 13)
@@ -267,8 +270,12 @@ def draw_lose_panel(canvas, fight, title_reason: tuple[str, str], t: float) -> N
     lines = _wrap(advice, 30)
     for i, ln in enumerate(lines[:2]):
         text(canvas, ln, (w // 2, y + 38 + i * 14), (230, 232, 240), 11, "center")
-    text(canvas, f"{fight.fish['name']} · 남은 체력 {fight.stamina_frac * 100:.0f}% · {fight.elapsed:.0f}초",
-         (w // 2, y + 72), (170, 178, 196), 11, "center")
+    if fight.fish.get("rarity") == "phantom":
+        # 환상어: 이름 대신 한 줄 (놓친 환상어는 도감에도 남지 않는다)
+        text(canvas, "보라빛 잔상이 깊은 곳으로 사라졌다", (w // 2, y + 72), (225, 180, 255), 11, "center")
+    else:
+        text(canvas, f"{fight.fish['name']} · 남은 체력 {fight.stamina_frac * 100:.0f}% · {fight.elapsed:.0f}초",
+             (w // 2, y + 72), (170, 178, 196), 11, "center")
     if t > 0.8 and int(t * 2) % 2 == 0:
         text(canvas, "클릭해서 계속", (w // 2, y + ph + 12), (170, 180, 200), 11, "center")
 

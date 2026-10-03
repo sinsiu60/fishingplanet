@@ -23,7 +23,8 @@ BAD = (255, 110, 95)
 
 
 # 접근성 (31장 C6): 낚시 화면이 설정을 넣어 준다 — 색약 팔레트, 칸 크기 배율, 소리 신호 끔 → 그림 강조
-OPTS = {"colorblind": False, "scale": 1.0, "strong": False}
+OPTS = {"colorblind": False, "scale": 1.0, "strong": False, "phantom": False}
+PHANTOM_GESTURE = (215, 170, 255)  # 환상 분위기(보라) 중 제스처(보라) 신호: 더 밝은 보라 + 흰 테두리
 
 
 def configure(settings) -> None:
@@ -49,7 +50,14 @@ def hand_of(action: str, family: str | None = None) -> str:
 
 def color_of(family: str):
     f = cfg()["families"][family]
+    if OPTS["phantom"] and family == "gesture" and not OPTS["colorblind"]:
+        return PHANTOM_GESTURE
     return tuple(f["cb_color"] if OPTS["colorblind"] else f["color"])
+
+
+def white_edge(col) -> bool:
+    """환상 분위기 중 제스처 신호면 흰 테두리를 한 겹 더 (보라 배경에 묻히지 않게)."""
+    return OPTS["phantom"] and tuple(col) == PHANTOM_GESTURE
 
 
 def slot_positions(w: int, h: int, touch: bool, left_handed: bool) -> tuple:
@@ -127,6 +135,8 @@ def _box(canvas, pos, col, lit: bool, ok: bool, size: int) -> pygame.Rect:
     canvas.blit(back, r.topleft)
     pygame.draw.rect(canvas, col if lit else tuple(int(c * 0.55) for c in col), r, 3 if OPTS["strong"] else 2,
                      border_radius=8)
+    if white_edge(col):
+        pygame.draw.rect(canvas, (255, 255, 255), r.inflate(4, 4), 1, border_radius=9)
     if ok:
         pygame.draw.rect(canvas, GOOD, r.inflate(-6, -6), 1, border_radius=6)
     return r

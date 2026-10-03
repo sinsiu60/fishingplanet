@@ -580,7 +580,8 @@ class FishingScene(Scene):
         p = self.cam.project(x, z)
         self.phantom_fx.retreat((p[0], p[1]) if p else self.phantom_fx.center)
         self.phantom_lost_t = 3.2
-        self.toasts.show(phantom.LOST_LINE, phantom.COLOR_LIGHT, 3.2, 11)
+        if self.fight is None:  # 파이팅에서 놓친 건 결과 화면에 같은 문장
+            self.toasts.show(phantom.LOST_LINE, phantom.COLOR_LIGHT, 3.2, 11)
         self.sfx.set_base_duck("fight" if self.fight is not None else None)
 
     def _left_click(self) -> None:
@@ -786,6 +787,7 @@ class FishingScene(Scene):
             self.sfx.set_budget(("legend" if legend else "fight") if fighting else None)
         self.drag_seen_t = max(0.0, getattr(self, "drag_seen_t", 0.0) - dt)
         signal_slots.configure(self.settings)
+        signal_slots.OPTS["phantom"] = self.phantom_fx.active and self.phantom_fx.k > 0.3
         if self.captions:
             self.captions[1] -= dt
             if self.captions[1] <= 0:
@@ -1310,6 +1312,14 @@ class FishingScene(Scene):
             elif ev == "launch":
                 self.sfx.play("sfx_launch", 0.9)
                 self.sfx.play("sfx_splash_small", 0.6)
+            elif ev == "apex" and phantom.is_phantom(self.landing.fish):
+                # 환상: 퍼펙트 '팽·팡' + 길게 늘어진 반짝임 (전용 스팅, 강조 '크게' 예외 허용) + 길게 진동
+                self.sfx.play("succ_phantom", 1.0)
+                self.sfx.duck("perfect", hold=2.0, release=0.6)
+                self.game.haptics.vibrate("legend", 1.0)
+                self.shake_kick = 2.0
+                if self.landing.chest:
+                    self.sfx.play("sfx_coin", 0.9)
             elif ev == "apex":
                 if self.landing.tier == 2:  # N3: 정점 '챙'·화음은 희귀만 (전설은 팡파르 안에 쿵·화음·반짝임)
                     self.sfx.play("sfx_perfect", 0.45)
