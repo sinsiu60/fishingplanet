@@ -1,0 +1,4 @@
+# 개발용 (게임 실행에는 필요 없음): 소리 미리 굽기
+# 릴 녹음 재합성 tools/audio/bake_reel_audio.py 에 scipy 가 필요 (tools/audio/requirements-dev.txt)
+-r requirements.txt
+scipy

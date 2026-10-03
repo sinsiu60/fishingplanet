@@ -33,6 +33,7 @@ jobs:
         run: |
           python tools/bake_sfx.py --check
           python tools/bake_reel.py --check
+          python tools/audio/bake_reel_audio.py --check
           python tools/bake_music.py --check
           python tools/sound_audit.py --strict
       - name: 아이콘
@@ -82,6 +83,7 @@ jobs:
         run: |
           python tools/bake_sfx.py --check
           python tools/bake_reel.py --check
+          python tools/audio/bake_reel_audio.py --check
           python tools/bake_music.py --check
       - name: 폰과 같은 pygame 2.6 에서 소리·장면 확인 (pygame-ce 전용 API 쓰면 여기서 실패)
         env:
@@ -118,6 +120,11 @@ jobs:
           want=$(ls assets/sfx_space/*.ogg | wc -l)
           echo "APK 공간 소리 ${nsp}/${want}개"
           [ "$nsp" -eq "$want" ] || { echo "::error::APK 에 공간 소리가 빠짐 (${nsp}/${want})"; exit 1; }
+          # 녹음 기반 릴 소리 (reel_rec: wav 102 + manifest + 공간 ogg) 가 다 들어갔는지
+          nrr=$(tar tf "$T/assets/private.tar" | grep -c 'sfx_generated/reel_rec/.*\.\(wav\|ogg\|json\)$' || true)
+          wrr=$(find assets/sfx_generated/reel_rec -type f \( -name '*.wav' -o -name '*.ogg' -o -name '*.json' \) | wc -l)
+          echo "APK 릴 소리 ${nrr}/${wrr}개"
+          [ "$nrr" -eq "$wrr" ] || { echo "::error::APK 에 릴 소리가 빠짐 (${nrr}/${wrr})"; exit 1; }
           cnt=$(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)
           echo "pygame 모듈 ${cnt}개 검사"
           [ "$cnt" -gt 10 ] || { echo "::error::APK 에서 pygame 모듈을 못 찾음 (${cnt}개)"; exit 1; }

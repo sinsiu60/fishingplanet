@@ -8,3 +8,13 @@
 | 게임 안 이름 | 파일 | 원본 제목 | 만든 사람 | 출처 URL | 라이선스 | 수정 내용 | 추가한 날 |
 |---|---|---|---|---|---|---|---|
 | (예) sfx_hook_success | assets/sfx/sfx_hook_success.ogg | Fishing Rod Snap | 이름 | https://… | CC0 | 길이 0.6초로 자름, 음량 −2dB | 2026-10-02 |
+
+## 릴 사운드 (실제 녹음 재합성 — REEL_AUDIO_INTEGRATE.md)
+게임의 릴 감기·드랙·패턴 성공 지잉은 아래 녹음에서 클릭 그레인(약 5ms)을 잘라 다시 배치해 만든다
+(`tools/audio/reel_from_recording.py`, `drag_zing.py`, `bake_reel_audio.py` → `assets/sfx_generated/reel_rec/`). 자세한 기록: `tools/audio/CREDITS_reel.md`.
+
+| 게임 안 이름 | 파일 | 원본 제목 | 만든 사람 | 출처 URL | 라이선스 | 수정 내용 | 추가한 날 |
+|---|---|---|---|---|---|---|---|
+| reel_* · drag_* · zing_* (reel_rec) | tools/audio/source/reel_recording.wav | audiopapkin-fishing-reel-302355.mp3 | (audiopapkin?) | | | 모노 44.1kHz 변환 → 클릭 그레인 추출·재배치 (속도·부하·티어·드랙·지잉) | 2026-10-03 |
+
+> ⚠ 출처 URL·라이선스는 아직 비어 있다. 위 '허용 라이선스' 기준을 확인해 채우기 전에는 출처 불명 상태 (파일명으로 보아 Pixabay 'audiopapkin' 음원일 가능성이 높음).

@@ -171,7 +171,7 @@ class FishingScene(Scene):
         self.shake_kick = 0.0
         from src.audio.fight_audio import FightAudio
         self.fight_audio = FightAudio(self.sfx)  # 상태 연동 연속음 (32장 S4)
-        self.fight_audio.reel.prepare(self._reel_tier())  # 합성 릴 루프 (32-16 Z2) — 이 낚시터 공간·장착 릴 티어
+        self.fight_audio.reel.prepare(self._reel_tier())  # 녹음 기반 릴 루프 (REEL_AUDIO_INTEGRATE) — 이 낚시터 공간·장착 릴 티어
         from src.audio.signal_audio import SignalAudio
         self.signal_audio = SignalAudio(self.sfx, lambda: self.settings.get("signal_sound"),
                                         lambda: self.settings.get("signal_mode"),
@@ -197,7 +197,7 @@ class FishingScene(Scene):
         self.screen_fx.sway = self.theme.get("sway", 0)
         self.game.sfx.set_space(spot_id)  # N5: 낚시터 잔향·먹먹함 (공간별로 미리 구운 소리)
         if hasattr(self, "fight_audio"):
-            self.fight_audio.reel.prepare(self._reel_tier())  # 합성 릴 루프도 이 공간 버전으로 (Z2)
+            self.fight_audio.reel.prepare(self._reel_tier())  # 릴 루프도 이 공간 버전으로
 
     def _reel_tier(self) -> str:
         """장착한 릴 티어 → 릴 소리 음색 (T1 나무 / T2~T5 보통 / T6~T8 수정)."""
@@ -1585,7 +1585,7 @@ class FishingScene(Scene):
         self._zing("big", vol)
         self.sfx.duck("perfect")
 
-    ZING_SEC = {"small": 0.35, "mid": 0.5, "big": 0.7, "double": 1.27}  # 정점 시각 (tools/audio/reel_synth.py)
+    ZING_SEC = {"small": 0.26, "mid": 0.4, "big": 0.53, "double": 1.15}  # 정점(드랙이 잡히는 순간) 시각 — assets/sfx_generated/reel_rec 지잉에서 잼
 
     def _zing(self, grade: str, vol: float = 1.0) -> None:
         """패턴 성공 '지이이잉!' (32-16 Z3): 성공 판정 순간에만. 작은 지잉은 1.5초 쿨다운(겹치면 생략),

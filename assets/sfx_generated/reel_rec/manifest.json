@@ -1,0 +1,988 @@
+{
+  "sample_rate": 44100,
+  "source_hash": "4fe0571522ef038e",
+  "spaces": [
+    "cave",
+    "deep",
+    "out"
+  ],
+  "tier_of_equipment": {
+    "T1": "wood",
+    "T2": "mid",
+    "T3": "mid",
+    "T4": "mid",
+    "T5": "mid",
+    "T6": "crystal",
+    "T7": "crystal",
+    "T8": "crystal"
+  },
+  "reel_loops": [
+    {
+      "file": "reel_wood_s1.0_l0.0.wav",
+      "tier": "wood",
+      "rps": 1.0,
+      "load": 0.0,
+      "space": {
+        "out": "reel_wood_s1.0_l0.0~out.ogg",
+        "cave": "reel_wood_s1.0_l0.0~cave.ogg",
+        "deep": "reel_wood_s1.0_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s1.0_l0.5.wav",
+      "tier": "wood",
+      "rps": 1.0,
+      "load": 0.5,
+      "space": {
+        "out": "reel_wood_s1.0_l0.5~out.ogg",
+        "cave": "reel_wood_s1.0_l0.5~cave.ogg",
+        "deep": "reel_wood_s1.0_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s1.0_l0.9.wav",
+      "tier": "wood",
+      "rps": 1.0,
+      "load": 0.9,
+      "space": {
+        "out": "reel_wood_s1.0_l0.9~out.ogg",
+        "cave": "reel_wood_s1.0_l0.9~cave.ogg",
+        "deep": "reel_wood_s1.0_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s1.5_l0.0.wav",
+      "tier": "wood",
+      "rps": 1.5,
+      "load": 0.0,
+      "space": {
+        "out": "reel_wood_s1.5_l0.0~out.ogg",
+        "cave": "reel_wood_s1.5_l0.0~cave.ogg",
+        "deep": "reel_wood_s1.5_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s1.5_l0.5.wav",
+      "tier": "wood",
+      "rps": 1.5,
+      "load": 0.5,
+      "space": {
+        "out": "reel_wood_s1.5_l0.5~out.ogg",
+        "cave": "reel_wood_s1.5_l0.5~cave.ogg",
+        "deep": "reel_wood_s1.5_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s1.5_l0.9.wav",
+      "tier": "wood",
+      "rps": 1.5,
+      "load": 0.9,
+      "space": {
+        "out": "reel_wood_s1.5_l0.9~out.ogg",
+        "cave": "reel_wood_s1.5_l0.9~cave.ogg",
+        "deep": "reel_wood_s1.5_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s2.0_l0.0.wav",
+      "tier": "wood",
+      "rps": 2.0,
+      "load": 0.0,
+      "space": {
+        "out": "reel_wood_s2.0_l0.0~out.ogg",
+        "cave": "reel_wood_s2.0_l0.0~cave.ogg",
+        "deep": "reel_wood_s2.0_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s2.0_l0.5.wav",
+      "tier": "wood",
+      "rps": 2.0,
+      "load": 0.5,
+      "space": {
+        "out": "reel_wood_s2.0_l0.5~out.ogg",
+        "cave": "reel_wood_s2.0_l0.5~cave.ogg",
+        "deep": "reel_wood_s2.0_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s2.0_l0.9.wav",
+      "tier": "wood",
+      "rps": 2.0,
+      "load": 0.9,
+      "space": {
+        "out": "reel_wood_s2.0_l0.9~out.ogg",
+        "cave": "reel_wood_s2.0_l0.9~cave.ogg",
+        "deep": "reel_wood_s2.0_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s2.5_l0.0.wav",
+      "tier": "wood",
+      "rps": 2.5,
+      "load": 0.0,
+      "space": {
+        "out": "reel_wood_s2.5_l0.0~out.ogg",
+        "cave": "reel_wood_s2.5_l0.0~cave.ogg",
+        "deep": "reel_wood_s2.5_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s2.5_l0.5.wav",
+      "tier": "wood",
+      "rps": 2.5,
+      "load": 0.5,
+      "space": {
+        "out": "reel_wood_s2.5_l0.5~out.ogg",
+        "cave": "reel_wood_s2.5_l0.5~cave.ogg",
+        "deep": "reel_wood_s2.5_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s2.5_l0.9.wav",
+      "tier": "wood",
+      "rps": 2.5,
+      "load": 0.9,
+      "space": {
+        "out": "reel_wood_s2.5_l0.9~out.ogg",
+        "cave": "reel_wood_s2.5_l0.9~cave.ogg",
+        "deep": "reel_wood_s2.5_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s3.0_l0.0.wav",
+      "tier": "wood",
+      "rps": 3.0,
+      "load": 0.0,
+      "space": {
+        "out": "reel_wood_s3.0_l0.0~out.ogg",
+        "cave": "reel_wood_s3.0_l0.0~cave.ogg",
+        "deep": "reel_wood_s3.0_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s3.0_l0.5.wav",
+      "tier": "wood",
+      "rps": 3.0,
+      "load": 0.5,
+      "space": {
+        "out": "reel_wood_s3.0_l0.5~out.ogg",
+        "cave": "reel_wood_s3.0_l0.5~cave.ogg",
+        "deep": "reel_wood_s3.0_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s3.0_l0.9.wav",
+      "tier": "wood",
+      "rps": 3.0,
+      "load": 0.9,
+      "space": {
+        "out": "reel_wood_s3.0_l0.9~out.ogg",
+        "cave": "reel_wood_s3.0_l0.9~cave.ogg",
+        "deep": "reel_wood_s3.0_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s3.5_l0.0.wav",
+      "tier": "wood",
+      "rps": 3.5,
+      "load": 0.0,
+      "space": {
+        "out": "reel_wood_s3.5_l0.0~out.ogg",
+        "cave": "reel_wood_s3.5_l0.0~cave.ogg",
+        "deep": "reel_wood_s3.5_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s3.5_l0.5.wav",
+      "tier": "wood",
+      "rps": 3.5,
+      "load": 0.5,
+      "space": {
+        "out": "reel_wood_s3.5_l0.5~out.ogg",
+        "cave": "reel_wood_s3.5_l0.5~cave.ogg",
+        "deep": "reel_wood_s3.5_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_s3.5_l0.9.wav",
+      "tier": "wood",
+      "rps": 3.5,
+      "load": 0.9,
+      "space": {
+        "out": "reel_wood_s3.5_l0.9~out.ogg",
+        "cave": "reel_wood_s3.5_l0.9~cave.ogg",
+        "deep": "reel_wood_s3.5_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s1.0_l0.0.wav",
+      "tier": "mid",
+      "rps": 1.0,
+      "load": 0.0,
+      "space": {
+        "out": "reel_mid_s1.0_l0.0~out.ogg",
+        "cave": "reel_mid_s1.0_l0.0~cave.ogg",
+        "deep": "reel_mid_s1.0_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s1.0_l0.5.wav",
+      "tier": "mid",
+      "rps": 1.0,
+      "load": 0.5,
+      "space": {
+        "out": "reel_mid_s1.0_l0.5~out.ogg",
+        "cave": "reel_mid_s1.0_l0.5~cave.ogg",
+        "deep": "reel_mid_s1.0_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s1.0_l0.9.wav",
+      "tier": "mid",
+      "rps": 1.0,
+      "load": 0.9,
+      "space": {
+        "out": "reel_mid_s1.0_l0.9~out.ogg",
+        "cave": "reel_mid_s1.0_l0.9~cave.ogg",
+        "deep": "reel_mid_s1.0_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s1.5_l0.0.wav",
+      "tier": "mid",
+      "rps": 1.5,
+      "load": 0.0,
+      "space": {
+        "out": "reel_mid_s1.5_l0.0~out.ogg",
+        "cave": "reel_mid_s1.5_l0.0~cave.ogg",
+        "deep": "reel_mid_s1.5_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s1.5_l0.5.wav",
+      "tier": "mid",
+      "rps": 1.5,
+      "load": 0.5,
+      "space": {
+        "out": "reel_mid_s1.5_l0.5~out.ogg",
+        "cave": "reel_mid_s1.5_l0.5~cave.ogg",
+        "deep": "reel_mid_s1.5_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s1.5_l0.9.wav",
+      "tier": "mid",
+      "rps": 1.5,
+      "load": 0.9,
+      "space": {
+        "out": "reel_mid_s1.5_l0.9~out.ogg",
+        "cave": "reel_mid_s1.5_l0.9~cave.ogg",
+        "deep": "reel_mid_s1.5_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s2.0_l0.0.wav",
+      "tier": "mid",
+      "rps": 2.0,
+      "load": 0.0,
+      "space": {
+        "out": "reel_mid_s2.0_l0.0~out.ogg",
+        "cave": "reel_mid_s2.0_l0.0~cave.ogg",
+        "deep": "reel_mid_s2.0_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s2.0_l0.5.wav",
+      "tier": "mid",
+      "rps": 2.0,
+      "load": 0.5,
+      "space": {
+        "out": "reel_mid_s2.0_l0.5~out.ogg",
+        "cave": "reel_mid_s2.0_l0.5~cave.ogg",
+        "deep": "reel_mid_s2.0_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s2.0_l0.9.wav",
+      "tier": "mid",
+      "rps": 2.0,
+      "load": 0.9,
+      "space": {
+        "out": "reel_mid_s2.0_l0.9~out.ogg",
+        "cave": "reel_mid_s2.0_l0.9~cave.ogg",
+        "deep": "reel_mid_s2.0_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s2.5_l0.0.wav",
+      "tier": "mid",
+      "rps": 2.5,
+      "load": 0.0,
+      "space": {
+        "out": "reel_mid_s2.5_l0.0~out.ogg",
+        "cave": "reel_mid_s2.5_l0.0~cave.ogg",
+        "deep": "reel_mid_s2.5_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s2.5_l0.5.wav",
+      "tier": "mid",
+      "rps": 2.5,
+      "load": 0.5,
+      "space": {
+        "out": "reel_mid_s2.5_l0.5~out.ogg",
+        "cave": "reel_mid_s2.5_l0.5~cave.ogg",
+        "deep": "reel_mid_s2.5_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s2.5_l0.9.wav",
+      "tier": "mid",
+      "rps": 2.5,
+      "load": 0.9,
+      "space": {
+        "out": "reel_mid_s2.5_l0.9~out.ogg",
+        "cave": "reel_mid_s2.5_l0.9~cave.ogg",
+        "deep": "reel_mid_s2.5_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s3.0_l0.0.wav",
+      "tier": "mid",
+      "rps": 3.0,
+      "load": 0.0,
+      "space": {
+        "out": "reel_mid_s3.0_l0.0~out.ogg",
+        "cave": "reel_mid_s3.0_l0.0~cave.ogg",
+        "deep": "reel_mid_s3.0_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s3.0_l0.5.wav",
+      "tier": "mid",
+      "rps": 3.0,
+      "load": 0.5,
+      "space": {
+        "out": "reel_mid_s3.0_l0.5~out.ogg",
+        "cave": "reel_mid_s3.0_l0.5~cave.ogg",
+        "deep": "reel_mid_s3.0_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s3.0_l0.9.wav",
+      "tier": "mid",
+      "rps": 3.0,
+      "load": 0.9,
+      "space": {
+        "out": "reel_mid_s3.0_l0.9~out.ogg",
+        "cave": "reel_mid_s3.0_l0.9~cave.ogg",
+        "deep": "reel_mid_s3.0_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s3.5_l0.0.wav",
+      "tier": "mid",
+      "rps": 3.5,
+      "load": 0.0,
+      "space": {
+        "out": "reel_mid_s3.5_l0.0~out.ogg",
+        "cave": "reel_mid_s3.5_l0.0~cave.ogg",
+        "deep": "reel_mid_s3.5_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s3.5_l0.5.wav",
+      "tier": "mid",
+      "rps": 3.5,
+      "load": 0.5,
+      "space": {
+        "out": "reel_mid_s3.5_l0.5~out.ogg",
+        "cave": "reel_mid_s3.5_l0.5~cave.ogg",
+        "deep": "reel_mid_s3.5_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_s3.5_l0.9.wav",
+      "tier": "mid",
+      "rps": 3.5,
+      "load": 0.9,
+      "space": {
+        "out": "reel_mid_s3.5_l0.9~out.ogg",
+        "cave": "reel_mid_s3.5_l0.9~cave.ogg",
+        "deep": "reel_mid_s3.5_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s1.0_l0.0.wav",
+      "tier": "crystal",
+      "rps": 1.0,
+      "load": 0.0,
+      "space": {
+        "out": "reel_crystal_s1.0_l0.0~out.ogg",
+        "cave": "reel_crystal_s1.0_l0.0~cave.ogg",
+        "deep": "reel_crystal_s1.0_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s1.0_l0.5.wav",
+      "tier": "crystal",
+      "rps": 1.0,
+      "load": 0.5,
+      "space": {
+        "out": "reel_crystal_s1.0_l0.5~out.ogg",
+        "cave": "reel_crystal_s1.0_l0.5~cave.ogg",
+        "deep": "reel_crystal_s1.0_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s1.0_l0.9.wav",
+      "tier": "crystal",
+      "rps": 1.0,
+      "load": 0.9,
+      "space": {
+        "out": "reel_crystal_s1.0_l0.9~out.ogg",
+        "cave": "reel_crystal_s1.0_l0.9~cave.ogg",
+        "deep": "reel_crystal_s1.0_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s1.5_l0.0.wav",
+      "tier": "crystal",
+      "rps": 1.5,
+      "load": 0.0,
+      "space": {
+        "out": "reel_crystal_s1.5_l0.0~out.ogg",
+        "cave": "reel_crystal_s1.5_l0.0~cave.ogg",
+        "deep": "reel_crystal_s1.5_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s1.5_l0.5.wav",
+      "tier": "crystal",
+      "rps": 1.5,
+      "load": 0.5,
+      "space": {
+        "out": "reel_crystal_s1.5_l0.5~out.ogg",
+        "cave": "reel_crystal_s1.5_l0.5~cave.ogg",
+        "deep": "reel_crystal_s1.5_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s1.5_l0.9.wav",
+      "tier": "crystal",
+      "rps": 1.5,
+      "load": 0.9,
+      "space": {
+        "out": "reel_crystal_s1.5_l0.9~out.ogg",
+        "cave": "reel_crystal_s1.5_l0.9~cave.ogg",
+        "deep": "reel_crystal_s1.5_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s2.0_l0.0.wav",
+      "tier": "crystal",
+      "rps": 2.0,
+      "load": 0.0,
+      "space": {
+        "out": "reel_crystal_s2.0_l0.0~out.ogg",
+        "cave": "reel_crystal_s2.0_l0.0~cave.ogg",
+        "deep": "reel_crystal_s2.0_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s2.0_l0.5.wav",
+      "tier": "crystal",
+      "rps": 2.0,
+      "load": 0.5,
+      "space": {
+        "out": "reel_crystal_s2.0_l0.5~out.ogg",
+        "cave": "reel_crystal_s2.0_l0.5~cave.ogg",
+        "deep": "reel_crystal_s2.0_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s2.0_l0.9.wav",
+      "tier": "crystal",
+      "rps": 2.0,
+      "load": 0.9,
+      "space": {
+        "out": "reel_crystal_s2.0_l0.9~out.ogg",
+        "cave": "reel_crystal_s2.0_l0.9~cave.ogg",
+        "deep": "reel_crystal_s2.0_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s2.5_l0.0.wav",
+      "tier": "crystal",
+      "rps": 2.5,
+      "load": 0.0,
+      "space": {
+        "out": "reel_crystal_s2.5_l0.0~out.ogg",
+        "cave": "reel_crystal_s2.5_l0.0~cave.ogg",
+        "deep": "reel_crystal_s2.5_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s2.5_l0.5.wav",
+      "tier": "crystal",
+      "rps": 2.5,
+      "load": 0.5,
+      "space": {
+        "out": "reel_crystal_s2.5_l0.5~out.ogg",
+        "cave": "reel_crystal_s2.5_l0.5~cave.ogg",
+        "deep": "reel_crystal_s2.5_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s2.5_l0.9.wav",
+      "tier": "crystal",
+      "rps": 2.5,
+      "load": 0.9,
+      "space": {
+        "out": "reel_crystal_s2.5_l0.9~out.ogg",
+        "cave": "reel_crystal_s2.5_l0.9~cave.ogg",
+        "deep": "reel_crystal_s2.5_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s3.0_l0.0.wav",
+      "tier": "crystal",
+      "rps": 3.0,
+      "load": 0.0,
+      "space": {
+        "out": "reel_crystal_s3.0_l0.0~out.ogg",
+        "cave": "reel_crystal_s3.0_l0.0~cave.ogg",
+        "deep": "reel_crystal_s3.0_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s3.0_l0.5.wav",
+      "tier": "crystal",
+      "rps": 3.0,
+      "load": 0.5,
+      "space": {
+        "out": "reel_crystal_s3.0_l0.5~out.ogg",
+        "cave": "reel_crystal_s3.0_l0.5~cave.ogg",
+        "deep": "reel_crystal_s3.0_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s3.0_l0.9.wav",
+      "tier": "crystal",
+      "rps": 3.0,
+      "load": 0.9,
+      "space": {
+        "out": "reel_crystal_s3.0_l0.9~out.ogg",
+        "cave": "reel_crystal_s3.0_l0.9~cave.ogg",
+        "deep": "reel_crystal_s3.0_l0.9~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s3.5_l0.0.wav",
+      "tier": "crystal",
+      "rps": 3.5,
+      "load": 0.0,
+      "space": {
+        "out": "reel_crystal_s3.5_l0.0~out.ogg",
+        "cave": "reel_crystal_s3.5_l0.0~cave.ogg",
+        "deep": "reel_crystal_s3.5_l0.0~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s3.5_l0.5.wav",
+      "tier": "crystal",
+      "rps": 3.5,
+      "load": 0.5,
+      "space": {
+        "out": "reel_crystal_s3.5_l0.5~out.ogg",
+        "cave": "reel_crystal_s3.5_l0.5~cave.ogg",
+        "deep": "reel_crystal_s3.5_l0.5~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_s3.5_l0.9.wav",
+      "tier": "crystal",
+      "rps": 3.5,
+      "load": 0.9,
+      "space": {
+        "out": "reel_crystal_s3.5_l0.9~out.ogg",
+        "cave": "reel_crystal_s3.5_l0.9~cave.ogg",
+        "deep": "reel_crystal_s3.5_l0.9~deep.ogg"
+      }
+    }
+  ],
+  "drag_loops": [
+    {
+      "file": "drag_wood_slow.wav",
+      "tier": "wood",
+      "clicks_per_sec": 150,
+      "space": {
+        "out": "drag_wood_slow~out.ogg",
+        "cave": "drag_wood_slow~cave.ogg",
+        "deep": "drag_wood_slow~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_wood_normal.wav",
+      "tier": "wood",
+      "clicks_per_sec": 300,
+      "space": {
+        "out": "drag_wood_normal~out.ogg",
+        "cave": "drag_wood_normal~cave.ogg",
+        "deep": "drag_wood_normal~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_wood_fast.wav",
+      "tier": "wood",
+      "clicks_per_sec": 550,
+      "space": {
+        "out": "drag_wood_fast~out.ogg",
+        "cave": "drag_wood_fast~cave.ogg",
+        "deep": "drag_wood_fast~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_wood_run.wav",
+      "tier": "wood",
+      "clicks_per_sec": 850,
+      "space": {
+        "out": "drag_wood_run~out.ogg",
+        "cave": "drag_wood_run~cave.ogg",
+        "deep": "drag_wood_run~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_mid_slow.wav",
+      "tier": "mid",
+      "clicks_per_sec": 150,
+      "space": {
+        "out": "drag_mid_slow~out.ogg",
+        "cave": "drag_mid_slow~cave.ogg",
+        "deep": "drag_mid_slow~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_mid_normal.wav",
+      "tier": "mid",
+      "clicks_per_sec": 300,
+      "space": {
+        "out": "drag_mid_normal~out.ogg",
+        "cave": "drag_mid_normal~cave.ogg",
+        "deep": "drag_mid_normal~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_mid_fast.wav",
+      "tier": "mid",
+      "clicks_per_sec": 550,
+      "space": {
+        "out": "drag_mid_fast~out.ogg",
+        "cave": "drag_mid_fast~cave.ogg",
+        "deep": "drag_mid_fast~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_mid_run.wav",
+      "tier": "mid",
+      "clicks_per_sec": 850,
+      "space": {
+        "out": "drag_mid_run~out.ogg",
+        "cave": "drag_mid_run~cave.ogg",
+        "deep": "drag_mid_run~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_crystal_slow.wav",
+      "tier": "crystal",
+      "clicks_per_sec": 150,
+      "space": {
+        "out": "drag_crystal_slow~out.ogg",
+        "cave": "drag_crystal_slow~cave.ogg",
+        "deep": "drag_crystal_slow~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_crystal_normal.wav",
+      "tier": "crystal",
+      "clicks_per_sec": 300,
+      "space": {
+        "out": "drag_crystal_normal~out.ogg",
+        "cave": "drag_crystal_normal~cave.ogg",
+        "deep": "drag_crystal_normal~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_crystal_fast.wav",
+      "tier": "crystal",
+      "clicks_per_sec": 550,
+      "space": {
+        "out": "drag_crystal_fast~out.ogg",
+        "cave": "drag_crystal_fast~cave.ogg",
+        "deep": "drag_crystal_fast~deep.ogg"
+      }
+    },
+    {
+      "file": "drag_crystal_run.wav",
+      "tier": "crystal",
+      "clicks_per_sec": 850,
+      "space": {
+        "out": "drag_crystal_run~out.ogg",
+        "cave": "drag_crystal_run~cave.ogg",
+        "deep": "drag_crystal_run~deep.ogg"
+      }
+    }
+  ],
+  "oneshots": [
+    {
+      "file": "reel_wood_start.wav",
+      "tier": "wood",
+      "kind": "start",
+      "space": {
+        "out": "reel_wood_start~out.ogg",
+        "cave": "reel_wood_start~cave.ogg",
+        "deep": "reel_wood_start~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_wood_stop.wav",
+      "tier": "wood",
+      "kind": "stop",
+      "space": {
+        "out": "reel_wood_stop~out.ogg",
+        "cave": "reel_wood_stop~cave.ogg",
+        "deep": "reel_wood_stop~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_start.wav",
+      "tier": "mid",
+      "kind": "start",
+      "space": {
+        "out": "reel_mid_start~out.ogg",
+        "cave": "reel_mid_start~cave.ogg",
+        "deep": "reel_mid_start~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_mid_stop.wav",
+      "tier": "mid",
+      "kind": "stop",
+      "space": {
+        "out": "reel_mid_stop~out.ogg",
+        "cave": "reel_mid_stop~cave.ogg",
+        "deep": "reel_mid_stop~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_start.wav",
+      "tier": "crystal",
+      "kind": "start",
+      "space": {
+        "out": "reel_crystal_start~out.ogg",
+        "cave": "reel_crystal_start~cave.ogg",
+        "deep": "reel_crystal_start~deep.ogg"
+      }
+    },
+    {
+      "file": "reel_crystal_stop.wav",
+      "tier": "crystal",
+      "kind": "stop",
+      "space": {
+        "out": "reel_crystal_stop~out.ogg",
+        "cave": "reel_crystal_stop~cave.ogg",
+        "deep": "reel_crystal_stop~deep.ogg"
+      }
+    }
+  ],
+  "zing": [
+    {
+      "file": "zing_wood_small_k0.wav",
+      "tier": "wood",
+      "grade": "small",
+      "streak": 0
+    },
+    {
+      "file": "zing_wood_small_k1.wav",
+      "tier": "wood",
+      "grade": "small",
+      "streak": 1
+    },
+    {
+      "file": "zing_wood_small_k2.wav",
+      "tier": "wood",
+      "grade": "small",
+      "streak": 2
+    },
+    {
+      "file": "zing_wood_mid_k0.wav",
+      "tier": "wood",
+      "grade": "mid",
+      "streak": 0
+    },
+    {
+      "file": "zing_wood_mid_k1.wav",
+      "tier": "wood",
+      "grade": "mid",
+      "streak": 1
+    },
+    {
+      "file": "zing_wood_mid_k2.wav",
+      "tier": "wood",
+      "grade": "mid",
+      "streak": 2
+    },
+    {
+      "file": "zing_wood_big_k0.wav",
+      "tier": "wood",
+      "grade": "big",
+      "streak": 0
+    },
+    {
+      "file": "zing_wood_big_k1.wav",
+      "tier": "wood",
+      "grade": "big",
+      "streak": 1
+    },
+    {
+      "file": "zing_wood_big_k2.wav",
+      "tier": "wood",
+      "grade": "big",
+      "streak": 2
+    },
+    {
+      "file": "zing_wood_double.wav",
+      "tier": "wood",
+      "grade": "double",
+      "streak": 0
+    },
+    {
+      "file": "zing_mid_small_k0.wav",
+      "tier": "mid",
+      "grade": "small",
+      "streak": 0
+    },
+    {
+      "file": "zing_mid_small_k1.wav",
+      "tier": "mid",
+      "grade": "small",
+      "streak": 1
+    },
+    {
+      "file": "zing_mid_small_k2.wav",
+      "tier": "mid",
+      "grade": "small",
+      "streak": 2
+    },
+    {
+      "file": "zing_mid_mid_k0.wav",
+      "tier": "mid",
+      "grade": "mid",
+      "streak": 0
+    },
+    {
+      "file": "zing_mid_mid_k1.wav",
+      "tier": "mid",
+      "grade": "mid",
+      "streak": 1
+    },
+    {
+      "file": "zing_mid_mid_k2.wav",
+      "tier": "mid",
+      "grade": "mid",
+      "streak": 2
+    },
+    {
+      "file": "zing_mid_big_k0.wav",
+      "tier": "mid",
+      "grade": "big",
+      "streak": 0
+    },
+    {
+      "file": "zing_mid_big_k1.wav",
+      "tier": "mid",
+      "grade": "big",
+      "streak": 1
+    },
+    {
+      "file": "zing_mid_big_k2.wav",
+      "tier": "mid",
+      "grade": "big",
+      "streak": 2
+    },
+    {
+      "file": "zing_mid_double.wav",
+      "tier": "mid",
+      "grade": "double",
+      "streak": 0
+    },
+    {
+      "file": "zing_crystal_small_k0.wav",
+      "tier": "crystal",
+      "grade": "small",
+      "streak": 0
+    },
+    {
+      "file": "zing_crystal_small_k1.wav",
+      "tier": "crystal",
+      "grade": "small",
+      "streak": 1
+    },
+    {
+      "file": "zing_crystal_small_k2.wav",
+      "tier": "crystal",
+      "grade": "small",
+      "streak": 2
+    },
+    {
+      "file": "zing_crystal_mid_k0.wav",
+      "tier": "crystal",
+      "grade": "mid",
+      "streak": 0
+    },
+    {
+      "file": "zing_crystal_mid_k1.wav",
+      "tier": "crystal",
+      "grade": "mid",
+      "streak": 1
+    },
+    {
+      "file": "zing_crystal_mid_k2.wav",
+      "tier": "crystal",
+      "grade": "mid",
+      "streak": 2
+    },
+    {
+      "file": "zing_crystal_big_k0.wav",
+      "tier": "crystal",
+      "grade": "big",
+      "streak": 0
+    },
+    {
+      "file": "zing_crystal_big_k1.wav",
+      "tier": "crystal",
+      "grade": "big",
+      "streak": 1
+    },
+    {
+      "file": "zing_crystal_big_k2.wav",
+      "tier": "crystal",
+      "grade": "big",
+      "streak": 2
+    },
+    {
+      "file": "zing_crystal_double.wav",
+      "tier": "crystal",
+      "grade": "double",
+      "streak": 0
+    }
+  ],
+  "usage": {
+    "reel_loops": "현재 감기 속도(rps)·부하(load)에 가장 가까운 루프 2~4개를 음량 비율로 섞어 반복 재생. 재생 속도 변경 금지",
+    "drag_loops": "줄 풀리는 속도(clicks_per_sec)에 가까운 두 루프를 섞어 재생 = 돌진 지이잉. 속도가 곧 피치",
+    "oneshots": "감기 시작 시 start, 손 뗄 때 stop",
+    "zing": "패턴 성공 판정 순간 1회 재생. grade·tier·streak로 선택",
+    "space": "장소 잔향 버전 (space/ 폴더, 낚시터 공간이 open 이 아니면 그 버전)"
+  }
+}
