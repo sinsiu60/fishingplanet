@@ -853,7 +853,8 @@ class FishingScene(Scene):
         am.set_context(self.spot.get("continent", "sharmion"), self.spot_id, legend)
         intensity, phase = 0.0, 0
         if f is not None and f.phase in ("fight", "net"):
-            tired = f.phase == "net" or f.brain.state in ("tired", "exhausted")
+            # v0.8.14 롤백: 지침(기회!) 동안 음악이 상승 멜로디로 바뀌지 않게 — 뜰채 단계에서만
+            tired = f.phase == "net"
             state = ("legend_tired" if tired else "legend") if legend else ("tired" if tired else "fight")
             intensity = (f.tension - 30) / max(1.0, f.green_high - 30)
             phase = f.brain.phase
@@ -1614,7 +1615,13 @@ class FishingScene(Scene):
         if ev.startswith("telegraph:"):
             self._signal_cue(ev.split(":", 1)[1])
             self.sig_dim_t = 0.9  # 신호가 뜨는 순간: 하위 HUD 잠깐 더 흐리게
-        elif ev in ("action:charge", "tired", "hide_peek"):
+        elif ev == "tired":
+            # v0.8.14 롤백: 지침(기회!)은 사운드 개편 전 '딸깍' 두 번 그대로
+            if self.settings.get("signal_sound"):
+                self.sfx.play("legacy_sig_reel", 0.8, haptic="sig_reel")
+            else:
+                self.game.haptics.vibrate("sig_reel", 1.0)
+        elif ev in ("action:charge", "hide_peek"):
             self._signal_cue("charge")  # 감기 계열 (빈틈·고개 내밂)
         qr = getattr(self, "quest_run", None)
         if qr is not None:
@@ -1655,7 +1662,7 @@ class FishingScene(Scene):
         elif ev == "action:charge" and sound_only:
             pass  # 소리 전용이어도 감기 계열 소리(sig_reel)가 이미 알림 (32장 S8: cue_charge 정리)
         elif ev in ("telegraph:rush", "telegraph:fake_rush"):
-            self.sfx.play("sfx_bubbles", 0.45)  # 웅크림: 물을 빨아들이는 소리
+            self.sfx.play("legacy_bubbles", 0.45)  # 웅크림: 물을 빨아들이는 소리 (v0.8.14 롤백: 예전 소리)
         elif ev == "telegraph:jump":
             self.sfx.play("sfx_bubbles", 0.8)
             if f.brain.lightning_cue:
@@ -1679,8 +1686,8 @@ class FishingScene(Scene):
         elif ev == "telegraph:turn":
             self.sfx.play("sfx_scrape", 0.8)
         elif ev == "action:rush":
-            # 펄스가 손에 닿음 = 돌진: 쉬익(신호 소리가 냄, signal_audio) + 물보라 + 툭
-            self.sfx.play("sfx_splash_small", 0.8)
+            # 펄스가 손에 닿음 = 돌진: 쉬익(신호 소리가 냄, signal_audio) + 물보라 + 툭 (v0.8.14 롤백: 예전 소리)
+            self.sfx.play("legacy_splash_small", 0.8)
             self._splash_at(x, z, 0.9)
             self.shake_kick = max(self.shake_kick, 1.5)
         elif ev == "action:jump":
@@ -1755,7 +1762,8 @@ class FishingScene(Scene):
             self.screen_fx.miss(self.screen_fx.map(pos))
             self.shake_kick = 3.0
         elif ev == "creak":
-            pass  # 줄 실금 소리는 fight_audio 가 내구도에 맞춰 낸다 (32장 S4)
+            # v0.8.14 롤백: 장력 소리는 예전처럼 빨강 + 줄 50% 아래에서만 가끔 '끼익' (상시 삐걱임 반복음 없앰)
+            self.sfx.play(random.choice(("legacy_creak", "legacy_creak2", "legacy_creak3")), random.uniform(0.45, 0.65))
         elif ev == "net_start":
             self.sfx.play("sfx_splash", 0.8)
             self.toasts.show("뜰채!", INFO, 1.6, 11)
