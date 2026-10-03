@@ -40,7 +40,7 @@ def phantom_palette(pal: dict, k: float) -> dict:
         v = pal.get(key)
         if not isinstance(v, tuple):
             continue
-        s = (_lum(v) / _lum(tgt)) ** 0.6
+        s = max(0.5, (_lum(v) / _lum(tgt)) ** 0.6)  # 아주 어두운 곳(동굴·밤)에서도 보라가 보이게 최소 밝기
         t2 = tuple(int(clamp(c * s, 0, 255)) for c in tgt)
         out[key] = lerp_color(v, t2, amt * k)
     for key, tgt in BOBBER.items():
