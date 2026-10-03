@@ -7,8 +7,6 @@ import pygame
 from src.render.screen import opaque as _opaque
 
 from src.core.mathutil import clamp, lerp, lerp_color
-from src.core.game_clock import PERIODS
-from src.core.weather import WEATHER_KO, Weather
 from src.render.chest import draw_chest, draw_glow, draw_item_icon
 from src.render.landing import draw_star
 from src.save import treasure as tr
@@ -107,33 +105,14 @@ class ChestScene(Scene):
         elif self.kind == "items":
             self._item_action()
 
-    # ── 보유 아이템: 장착·사용 ──
+    # ── 보유 아이템: 장착·사용 (src/save/item_use.py — 인벤토리와 같이 씀) ──
     def _item_state(self, it: dict) -> tuple[str, bool]:
         """(버튼 글자, 누를 수 있는지)."""
-        s = self.save
-        iid, kind = it["id"], it["kind"]
-        if kind in ("rod", "reel", "net"):
-            return ("장착 중", False) if s.data["gear"][kind] == iid else ("장착하기", True)
-        if kind == "charm":
-            if s.charm_on(iid):
-                return "부적 해제", True
-            used = sum(1 for c in s.charms() if c)
-            return f"부적 장착 ({used}/{s.charm_slots()}칸)", True
-        if kind == "cosmetic":
-            return ("외형 해제", True) if s.cosmetic_on(iid) else ("외형 적용", True)
-        if s.consumable_count(iid) <= 0:
-            return "없음", False
-        buffs = s.data["buffs"]
-        if iid in ("repair_spool", "calm_charm"):
-            return f"파이팅 중 {'1' if iid == 'repair_spool' else '2'}키로 사용", False
-        if iid == "lucky_paste" and buffs.get("lucky_casts", 0) > 0:
-            return f"효과 중 ({buffs['lucky_casts']}번 남음)", False
-        if iid == "fisher_lunch" and s.lunch_active():
-            left = (buffs["lunch_until"] - s.data["playtime"]) / 60
-            return f"효과 중 ({left:.0f}분 남음)", False
-        return "사용하기", True
+        from src.save import item_use
+        return item_use.item_state(self.save, it)
 
     def _item_action(self) -> None:
+        from src.save import item_use
         items = self._list()
         if not items:
             return
@@ -141,32 +120,13 @@ class ChestScene(Scene):
         label, ok = self._item_state(it)
         if not ok:
             return
-        s, iid, kind = self.save, it["id"], it["kind"]
-        sfx = self.game.sfx
-        if kind in ("rod", "reel", "net"):
-            s.equip(kind, iid)
-            self._say(f"{it['name']} 장착!", ui.GOOD)
-        elif kind == "charm":
-            on = s.toggle_charm(iid) == "on"
-            self._say(f"{it['name']} {'장착' if on else '해제'}", ui.GOOD)
-        elif kind == "cosmetic":
-            s.toggle_cosmetic(iid)
-            self._say(f"{it['name']} {'적용' if s.cosmetic_on(iid) else '해제'}", ui.GOOD)
-        elif iid == "lucky_paste":
-            s.use_consumable(iid)
-            s.data["buffs"]["lucky_casts"] = 5
-            self._say("다음 5번 캐스팅 동안 희귀 이상 +3%p", ui.GOOD)
-        elif iid == "fisher_lunch":
-            s.use_consumable(iid)
-            s.data["buffs"]["lunch_until"] = s.data["playtime"] + 600
-            self._say("10분 동안 판매가 +10%", ui.GOOD)
-        elif iid == "hourglass":
-            self._open_chooser(iid, [(name, start) for start, _, name in PERIODS])
+        msg, col, options = item_use.use(self.game, it)
+        if options:
+            self._open_chooser(it["id"], options)
             return
-        elif iid == "storm_conch":
-            self._open_chooser(iid, [(WEATHER_KO[w], w) for w in ("clear", "rain", "storm")])
-            return
-        sfx.play("ui_enhance", 0.8)  # 아이템 사용
+        if msg:
+            self._say(msg, col)
+        self.game.sfx.play("ui_enhance", 0.8)  # 아이템 사용
         self.game.save_now()
 
     def _open_chooser(self, iid: str, options: list) -> None:
@@ -176,17 +136,9 @@ class ChestScene(Scene):
                                       lambda v=value: self._choose(v)) for i, (label, value) in enumerate(options)]
 
     def _choose(self, value) -> None:
-        iid = self.chooser["item"]
-        f, s = self.fishing, self.save
-        s.use_consumable(iid)
-        if iid == "hourglass":
-            f.clock.hour = value + 0.01
-            self._say("시간이 흘러갔다...", ui.GOOD)
-        else:
-            ws = f.weather_sys
-            ws.current = value
-            ws.next_change = Weather.abs_time(f.clock.day, f.clock.hour) + 12  # 실제 10분 = 게임 12시간
-            self._say(f"날씨가 바뀌었다: {WEATHER_KO[value]}", ui.GOOD)
+        from src.save import item_use
+        msg, col = item_use.choose(self.game, self.fishing, self.chooser["item"], value)
+        self._say(msg, col)
         self.chooser = None
         self.choice_btns = []
         self.game.sfx.play("ui_enhance", 0.8)

@@ -1,6 +1,6 @@
-"""낚시 화면 오른쪽 가장자리 메뉴 버튼 (PC): 지도·상점·의뢰·도감·보물상자·도움말·설정.
+"""낚시 화면 오른쪽 가장자리 메뉴 버튼 (PC): 인벤토리·지도·상점·의뢰·도감·보물상자·도움말·설정.
 
-단축키(M·B·J·Tab·C·H·Esc)는 그대로 — 버튼은 그림 아이콘, 마우스를 올리면 '이름 (키)' 말풍선.
+단축키(I·M·B·J·Tab·C·H·Esc)는 그대로 — 버튼은 그림 아이콘, 마우스를 올리면 '이름 (키)' 말풍선.
 파이팅 중·던지는 중엔 숨긴다. 보물상자는 가진 개수 점, 의뢰는 받을 보상이 있으면 느낌표.
 모바일은 원래대로 '가방' 버튼 하나 (src/scene/quick_menu.py).
 """
@@ -10,7 +10,7 @@ import pygame
 
 from src.ui.hud import SHADOW, text
 
-ITEMS = (("map", "지도", "M"), ("shop", "상점", "B"), ("quests", "의뢰", "J"), ("dex", "도감", "Tab"),
+ITEMS = (("inventory", "인벤토리", "I"), ("map", "지도", "M"), ("shop", "상점", "B"), ("quests", "의뢰", "J"), ("dex", "도감", "Tab"),
          ("chest", "보물상자", "C"), ("help", "도움말", "H"), ("settings", "설정", "Esc"))
 SIZE = 22
 GAP = 4
@@ -129,6 +129,16 @@ def _chest(c, x, y, col, t):
         c.fill((255, 255, 255), (x + 4, y - 7, 1, 1))
 
 
+def _inventory(c, x, y, col, t):
+    """배낭 (위 고리 + 둥근 몸통 + 덮개 + 앞주머니) — 보물상자 아이콘과 헷갈리지 않게 청록."""
+    pygame.draw.arc(c, col, (x - 3, y - 9, 6, 5), 0, math.pi, 1)
+    pygame.draw.rect(c, (60, 128, 140), (x - 6, y - 6, 12, 13), border_radius=4)
+    pygame.draw.rect(c, (84, 160, 170), (x - 6, y - 6, 12, 6), border_top_left_radius=4, border_top_right_radius=4)
+    pygame.draw.rect(c, col, (x - 6, y - 6, 12, 13), 1, border_radius=4)
+    pygame.draw.rect(c, (40, 92, 104), (x - 3, y + 1, 6, 5), border_radius=1)
+    c.fill((255, 214, 90), (x - 1, y - 1, 2, 2))
+
+
 def _help(c, x, y, col, t):
     """물음표 원."""
     pygame.draw.circle(c, (60, 110, 180), (x, y), 7)
@@ -148,5 +158,5 @@ def _settings(c, x, y, col, t):
     pygame.draw.circle(c, BG, (x, y), 2)
 
 
-ICONS = {"map": _map, "shop": _shop, "quests": _quests, "dex": _dex, "chest": _chest, "help": _help,
+ICONS = {"inventory": _inventory, "map": _map, "shop": _shop, "quests": _quests, "dex": _dex, "chest": _chest, "help": _help,
          "settings": _settings}

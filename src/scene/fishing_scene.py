@@ -540,6 +540,11 @@ class FishingScene(Scene):
                 return
             from src.scene.chest_scene import ChestScene
             self.game.scenes.push(ChestScene(self.game, self))
+        elif which == "inventory":
+            if not self.can_open_menus():
+                return
+            from src.scene.inventory import InventoryScene
+            self.game.scenes.push(InventoryScene(self.game, self))
         elif which == "quests":
             if self.fight is not None:
                 return

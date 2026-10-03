@@ -31,6 +31,7 @@ KEY_ACTIONS = {
     pygame.K_TAB: ("menu", "dex"),
     pygame.K_m: ("menu", "map"),
     pygame.K_c: ("menu", "chest"),
+    pygame.K_i: ("menu", "inventory"),
     pygame.K_j: ("menu", "quests"),
     pygame.K_h: ("help", 0),
     pygame.K_t: ("time_fast", 0),
