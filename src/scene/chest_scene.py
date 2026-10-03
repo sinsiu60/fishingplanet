@@ -16,7 +16,7 @@ from src.ui.fight_fx import big_text
 from src.ui.hud import draw_cursor, text, wrap_text
 
 TABS = [("open", "상자"), ("exchange", "조각 교환소"), ("items", "보유 아이템"), ("dex", "보물 도감")]
-KIND_KO = {"consumable": "소모품", "charm": "부적", "cosmetic": "외형", "rod": "낚싯대", "reel": "릴", "net": "뜰채"}
+KIND_KO = {"consumable": "소모품", "charm": "부적", "cosmetic": "외형", "rod": "낚싯대", "reel": "릴", "net": "뜰채", "phantom_x": "환상 비늘"}
 MAT_KO = {"sharmion": "샤르미온 소재", "eldrasion": "엘드라시온 소재"}
 LIST = pygame.Rect(16, 52, 236, 186)
 DETAIL = pygame.Rect(260, 52, 204, 186)
@@ -152,6 +152,17 @@ class ChestScene(Scene):
         it = items[min(self.sel, len(items) - 1)]
         if self.kind != "exchange":
             return
+        if it["kind"] == "phantom_x":
+            from src.fishing import phantom
+            reason = phantom.can_exchange(self.save, it)
+            if reason:
+                self._say(reason, ui.BAD)
+                return
+            phantom.exchange(self.save, it)
+            self.game.sfx.play("ui_buy")
+            self._say(f"{it['name']} 교환!", ui.GOOD)
+            self.game.save_now()
+            return
         reason = tr.can_exchange(self.save, it["id"])
         if reason:
             self._say(reason, ui.BAD)
@@ -163,7 +174,12 @@ class ChestScene(Scene):
 
     def _list(self) -> list:
         if self.kind == "exchange":
-            return tr.cfg()["items"]
+            out = [i for i in tr.cfg()["items"] if not i.get("reward_only")]
+            from src.fishing import phantom
+            if phantom.revealed(self.save):
+                # 환상 비늘 교환 (33장 P5): 외형·칭호 테두리·특별 상자 (성능 아이템 없음)
+                out += [dict(x, grade="special", kind="phantom_x") for x in phantom.exchange_items()]
+            return out
         if self.kind == "items":
             items = self.save.data["items"]
             out = [tr.item_info(i) for i in items["owned"]]
@@ -307,7 +323,12 @@ class ChestScene(Scene):
                 canvas.fill(ui.PANEL_LIGHT, r)
             col = tuple(tr.grade_info(it["grade"])["color"])
             text(canvas, it["name"], (r.x + 4, r.centery), col, 11, "midleft")
-            if self.kind == "exchange":
+            if self.kind == "exchange" and it["kind"] == "phantom_x":
+                from src.fishing import phantom
+                have = phantom.exchange_owned(self.save, it)
+                status = "보유" if have else f"비늘 {it['cost']}"
+                scol = ui.GOOD if have else ((200, 150, 255) if phantom.state(self.save)["scales"] >= it["cost"] else ui.DIM)
+            elif self.kind == "exchange":
                 have = it["kind"] != "consumable" and it["id"] in owned["owned"]
                 status = "보유" if have else f"조각 {tr.exchange_cost(it['id'])}"
                 scol = ui.GOOD if have else (ui.ACCENT if self.save.data["shards"] >= tr.exchange_cost(it["id"])
@@ -332,7 +353,15 @@ class ChestScene(Scene):
                 for ln in wrap_text(f"{label}: {it[key]}", DETAIL.w - 16)[:3]:
                     text(canvas, ln, (x, yy), c, 11, "midleft")
                     yy += 13
-        if self.kind == "exchange":
+        if self.kind == "exchange" and it["kind"] == "phantom_x":
+            from src.fishing import phantom
+            reason = phantom.can_exchange(self.save, it)
+            self.action_btn.label = f"교환 (환상 비늘 {it['cost']} / 보유 {phantom.state(self.save)['scales']})"
+            self.action_btn.enabled = reason is None
+            if reason and reason != "환상 비늘이 부족해요":
+                self.action_btn.label = reason
+            self.action_btn.draw(canvas, self.mouse)
+        elif self.kind == "exchange":
             reason = tr.can_exchange(self.save, it["id"])
             self.action_btn.label = f"교환 (조각 {tr.exchange_cost(it['id'])})"
             self.action_btn.enabled = reason is None
@@ -351,7 +380,8 @@ class ChestScene(Scene):
 
     # ── 보물 도감 ──
     def _draw_dex(self, canvas) -> None:
-        allit = tr.cfg()["items"]
+        from src.fishing import phantom
+        allit = [i for i in tr.cfg()["items"] if not i.get("reward_only") or phantom.revealed(self.save)]
         tdex = self.save.data["treasure_dex"]
         got = sum(1 for it in allit if tdex.get(it["id"]))
         text(canvas, f"수집 {got}/{len(allit)}", (240, 16), ui.ACCENT, 11, "center")

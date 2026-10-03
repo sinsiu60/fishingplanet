@@ -35,6 +35,7 @@
     {"id": "dragon_scale_rod", "name": "용린 낚싯대", "grade": "legend", "kind": "rod", "desc": "퍼펙트 성공 시 줄 내구도 10% 회복.", "cost": "기본 성능이 대륙 최고 티어보다 5% 낮음"},
     {"id": "ancient_reel", "name": "고대 어부의 릴", "grade": "legend", "kind": "reel", "desc": "돌진 예고 때 드랙이 자동으로 1단계 내려가고, 돌진이 끝나면 돌아온다.", "cost": "감기 속도 -5%"},
     {"id": "abyss_eye", "name": "심연의 눈", "grade": "legend", "kind": "charm", "desc": "수면 아래 그림자에 도감에 등록된 물고기 이름이 보인다.", "limit": "미등록 물고기는 ???"},
+    {"id": "phantom_eye", "name": "환상의 눈", "grade": "legend", "kind": "charm", "reward_only": true, "desc": "지도에 낚시터마다 환상어를 잡았는지와, 보라 눈금 5칸으로 환상어가 가까워졌는지를 보여 준다.", "limit": "정보만 (성능 영향 없음) · 환상어 12종 수집 보상"},
     {"id": "golden_net", "name": "황금 뜰채", "grade": "legend", "kind": "net", "desc": "뜰채 성공 시 크기 +3%, 금빛 포획 연출.", "cost": "판정 창은 상점 최고 티어와 같음 (더 넓지 않음)"}
   ]
 }

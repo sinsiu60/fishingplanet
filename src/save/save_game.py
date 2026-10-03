@@ -207,8 +207,8 @@ def new_data() -> dict:
         "pattern_mastery": {},                           # 패턴별 성공 횟수 → 예고 배율 (31장 C5)
         "pattern_fail_streak": {},                       # 패턴별 연속 실패 (3번이면 다음 1번 예고 보조)
         "mutation_dex": {},                              # 물고기 id → 잡아 본 변이 목록
-        "cosmetics": {"titles": [], "float_skins": [], "rod_skins": []},
-        "equipped_cosmetic": {"title": None, "float_skin": None, "rod_skin": None},
+        "cosmetics": {"titles": [], "float_skins": [], "rod_skins": [], "net_skins": []},
+        "equipped_cosmetic": {"title": None, "float_skin": None, "rod_skin": None, "net_skin": None},
         "quests": {"points": 0, "done": 0, "boards": {}},  # 챌린지 의뢰 (대륙별 게시판, src/save/quests.py)
     }
 

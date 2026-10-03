@@ -119,3 +119,129 @@ def record(save, result: dict) -> dict:
 def continent_of(spot: str) -> str:
     sp = next((s for s in load_json("spots.json")["spots"] if s["id"] == spot), {})
     return sp.get("continent", "sharmion")
+
+
+# ───────────────────────── 보상 (P5) ─────────────────────────
+
+def reward_cfg() -> dict:
+    return cfg()["reward"]
+
+
+def blessing_left(save) -> float:
+    """물결의 축복 남은 초 (플레이 시간 기준)."""
+    return max(0.0, save.data["buffs"].get("blessing_until", 0.0) - save.data["playtime"])
+
+
+def blessing_active(save) -> bool:
+    return blessing_left(save) > 0
+
+
+def _next_gear_price(save) -> int:
+    """'그 시점 상점 장비 하나 가격': 아직 안 산 장비 중 가장 싼 것 (다 샀으면 가장 비싼 것)."""
+    from src.save.save_game import equipment
+    eq = equipment()
+    prices = [g["price"] for k in ("rod", "reel", "line", "net") for g in eq[k]
+              if g.get("price", 0) > 0 and not save.owns(k, g["id"])]
+    if not prices:
+        prices = [max(g.get("price", 0) for k in ("rod", "reel", "line", "net") for g in eq[k])]
+    return min(prices)
+
+
+def collected(save, cont: str | None) -> int:
+    ids = caught_ids(save)
+    if cont is None:
+        return len(ids)
+    return sum(1 for fid in ids if continent_of(by_id(fid)["spot"]) == cont)
+
+
+def on_catch(save, fish: dict, first_species: bool) -> dict:
+    """포획 보상 (상자는 treasure.roll_drop 이 따로). 돌려줌: 결과 화면 배지용 정보."""
+    rc = reward_cfg()
+    ph = state(save)
+    out = {}
+    n = rc["scales_first"] if first_species else rc["scales"]
+    ph["scales"] += n
+    out["phantom_scales"] = n
+    # 물결의 축복: 10분 (버프 중 또 잡으면 시간만 10분으로 초기화 — 효과 중첩 없음)
+    save.data["buffs"]["blessing_until"] = save.data["playtime"] + rc["blessing_sec"]
+    out["blessing"] = True
+    if first_species:
+        gold = int(round(_next_gear_price(save) * rc["gold_bonus_frac"], -1))
+        save.data["money"] += gold
+        save.data["stats"]["earned"] += gold
+        out["phantom_gold"] = gold
+    out["phantom_rewards"] = check_collection(save)
+    return out
+
+
+def check_collection(save) -> list[str]:
+    """수집 보상: 새로 달성한 것을 주고 이름 목록을 돌려준다."""
+    from src.save import quests
+    ph = state(save)
+    got = []
+    for r in reward_cfg()["collect"]:
+        if r["id"] in ph["rewards"] or collected(save, r["cont"]) < r["n"]:
+            continue
+        ph["rewards"].append(r["id"])
+        cos = quests.cosmetics(save)
+        if r.get("title"):
+            if r["title"] not in cos["titles"]:
+                cos["titles"].append(r["title"])
+            got.append(f"칭호 「{quests.shop_item(r['title'])['name']}」")
+        if r.get("skin"):
+            it = quests.shop_item(r["skin"])
+            slot = quests.KIND_SLOT[it["kind"]][0]
+            if r["skin"] not in cos[slot]:
+                cos[slot].append(r["skin"])
+            got.append(f"외형 {it['name']}")
+        if r.get("charm"):
+            owned = save.data["items"]["owned"]
+            if r["charm"] not in owned:
+                owned.append(r["charm"])
+            from src.save.treasure import item_info
+            got.append(f"부적 {item_info(r['charm'])['name']}")
+    return got
+
+
+def exchange_items() -> list[dict]:
+    return reward_cfg()["exchange"]
+
+
+def exchange_owned(save, it: dict) -> bool:
+    from src.save import quests
+    if it.get("skin"):
+        sk = quests.shop_item(it["skin"])
+        return it["skin"] in quests.cosmetics(save)[quests.KIND_SLOT[sk["kind"]][0]]
+    if it.get("frame"):
+        return state(save)["title_frame"]
+    return False
+
+
+def can_exchange(save, it: dict) -> str | None:
+    if exchange_owned(save, it):
+        return "이미 가지고 있어요"
+    if state(save)["scales"] < it["cost"]:
+        return "환상 비늘이 부족해요"
+    return None
+
+
+def exchange(save, it: dict) -> bool:
+    from src.save import quests
+    if can_exchange(save, it):
+        return False
+    ph = state(save)
+    ph["scales"] -= it["cost"]
+    if it.get("skin"):
+        sk = quests.shop_item(it["skin"])
+        quests.cosmetics(save)[quests.KIND_SLOT[sk["kind"]][0]].append(it["skin"])
+    elif it.get("frame"):
+        ph["title_frame"] = True
+    elif it.get("chest"):
+        from src.save.treasure import give_chest
+        give_chest(save, it["chest"])
+    return True
+
+
+def revealed(save) -> bool:
+    """환상 관련 목록(도감 탭·업적·칭호·교환소)이 보이는지 — 첫 포획 튜토리얼 이후."""
+    return state(save)["tutorial"] or bool(caught_ids(save))

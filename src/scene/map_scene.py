@@ -288,6 +288,25 @@ class MapScene(Scene):
             if current:
                 text(canvas, "현재", (x, y - 13), ui.ACCENT, 11, "center")
             text(canvas, sp["short"], (x, y + 13), col, 11, "center")
+            if unlocked and self.save.charm_on("phantom_eye"):
+                self._draw_phantom_eye(canvas, sp["id"], x + 10, y - 6)
+
+    def _draw_phantom_eye(self, canvas, spot_id: str, x: int, y: int) -> None:
+        """환상의 눈 (부적, 33장 P5): 그 낚시터 환상어를 잡았으면 채운 보라 점, 아니면 빈 점 +
+        천장 진행도 보라 눈금 5칸 (확률 숫자는 보여 주지 않는다)."""
+        from src.fishing import phantom
+        ph = phantom.for_spot(spot_id)
+        if ph is None:
+            return
+        col = (200, 140, 255)
+        if phantom.caught(self.save, ph["id"]):
+            pygame.draw.circle(canvas, col, (x, y), 3)
+        else:
+            pygame.draw.circle(canvas, col, (x, y), 3, 1)
+        n = int(round(phantom.pity_frac(self.save, spot_id) * 5))
+        for k in range(5):
+            r = (x + 5 + k * 3, y - 1, 2, 3)
+            canvas.fill(col if k < n else (60, 44, 90), r)
 
     def _draw_eldra_land(self, canvas, land_c, land_dark) -> None:
         """엘드라시온: 가운데 큰 섬 + 남쪽 얼음 + 하늘섬, 낚시터마다 기호."""

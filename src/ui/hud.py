@@ -1,4 +1,6 @@
 """HUD: 시계, 조작 안내, 파워 게이지, 둘러보기 화살표, 커서."""
+import math
+
 import pygame
 
 from src.core.fonts import get_font
@@ -143,3 +145,17 @@ def draw_catch_card(canvas, pal, fish_name: str, size_cm: float, rarity: str, t:
     text(canvas, f"{size_cm:.1f}cm  ·  {rarity_name}", (cx, y + 56), rarity_color, 11, "center")
     if int(t * 2) % 2 == 0:
         text(canvas, "클릭해서 계속", (cx, y + 73), (170, 180, 200), 11, "center")
+
+
+def draw_blessing(canvas, x: int, y: int, left_sec: float | None, t: float) -> None:
+    """물결의 축복 (환상 보상): 작은 보라 물결 아이콘 + 남은 시간 (파이팅 중엔 left_sec=None → 아이콘만)."""
+    col = (200, 150, 255)
+    k = 0.6 + 0.4 * math.sin(t * 2.5)
+    pygame.draw.circle(canvas, (30, 16, 52), (x, y), 6)
+    pygame.draw.circle(canvas, col, (x, y), 6, 1)
+    for i, r in enumerate((2, 4)):
+        pygame.draw.arc(canvas, lerp_color((90, 60, 140), (235, 210, 255), k if i else 1 - k),
+                        (x - r, y - r + 1, r * 2, r * 2), 0.3, 2.8, 1)
+    if left_sec is not None:
+        m, sec = divmod(int(left_sec), 60)
+        text(canvas, f"축복 {m}:{sec:02d}", (x + 9, y), col, 11, "midleft")

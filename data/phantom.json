@@ -1166,5 +1166,93 @@
    "sig_title": "기믹 따라 바뀌는 이중 패턴",
    "sig_tip": "지금 기믹에 맞춰 두 신호가 함께 — 왼손·오른손 각각"
   }
- ]
+ ],
+ "reward": {
+  "_설명": "P5 보상. chest_first = 그 종 첫 포획 상자 등급 가중치(특별 이상 확정), chest = 이후(희귀 이상 확정). blessing = 물결의 축복 (플레이 시간 초, 희귀 이상 +%p, 상자 드랍 +%p — 다시 잡으면 시간만 초기화). gold_bonus_frac = 종별 첫 포획 골드 = 상점의 다음 장비 가격 × 이 값. collect = 수집 보상. exchange = 환상 비늘 교환소 (성능 아이템 없음).",
+  "chest_first": {
+   "special": 7,
+   "legend": 1
+  },
+  "chest": {
+   "rare": 22,
+   "special": 7,
+   "legend": 1
+  },
+  "scales_first": 3,
+  "scales": 1,
+  "blessing_sec": 600,
+  "blessing_rare": 0.03,
+  "blessing_chest": 0.01,
+  "gold_bonus_frac": 0.5,
+  "collect": [
+   {
+    "id": "sharmion3",
+    "cont": "sharmion",
+    "n": 3,
+    "title": "phantom_reader"
+   },
+   {
+    "id": "sharmion6",
+    "cont": "sharmion",
+    "n": 6,
+    "skin": "phantom_float"
+   },
+   {
+    "id": "eldra3",
+    "cont": "eldrasion",
+    "n": 3,
+    "title": "phantom_calm"
+   },
+   {
+    "id": "eldra6",
+    "cont": "eldrasion",
+    "n": 6,
+    "skin": "phantom_rod"
+   },
+   {
+    "id": "all12",
+    "cont": null,
+    "n": 12,
+    "title": "phantom_master",
+    "charm": "phantom_eye"
+   }
+  ],
+  "exchange": [
+   {
+    "id": "phx_float",
+    "name": "잔광 찌",
+    "skin": "phx_float",
+    "cost": 2,
+    "desc": "보랏빛 잔광이 남는 찌 외형 (성능 없음)"
+   },
+   {
+    "id": "phx_rod",
+    "name": "보랏빛 낚싯대",
+    "skin": "phx_rod",
+    "cost": 3,
+    "desc": "휘두를 때 보랏빛 궤적이 남는 낚싯대 외형 (성능 없음)"
+   },
+   {
+    "id": "phx_net",
+    "name": "환상 뜰채",
+    "skin": "phx_net",
+    "cost": 4,
+    "desc": "보랏빛 그물 뜰채 외형 (성능 없음)"
+   },
+   {
+    "id": "phx_frame",
+    "name": "칭호 보라 테두리",
+    "frame": true,
+    "cost": 3,
+    "desc": "장착한 칭호를 보라 테두리로 꾸민다"
+   },
+   {
+    "id": "phx_chest",
+    "name": "특별 상자",
+    "chest": "special",
+    "cost": 2,
+    "desc": "특별 등급 보물상자 1개"
+   }
+  ]
+ }
 }

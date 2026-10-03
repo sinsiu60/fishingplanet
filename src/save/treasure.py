@@ -25,7 +25,8 @@ def item_info(item_id: str) -> dict:
 
 
 def items_of(grade: str) -> list[dict]:
-    return [i for i in cfg()["items"] if i["grade"] == grade]
+    """상자에서 나올 수 있는 것 (수집 보상 전용 reward_only 는 빼고)."""
+    return [i for i in cfg()["items"] if i["grade"] == grade and not i.get("reward_only")]
 
 
 def drop_chance(fish: dict, rank: str, bonus: float = 0.0) -> float:
@@ -58,8 +59,18 @@ def _roll_grade(save, rnd, legend_fish: bool) -> str:
     return grade
 
 
-def roll_drop(save, fish: dict, rank: str, rnd=random, bonus: float = 0.0) -> str | None:
-    """포획 1회의 상자 드랍. 얻으면 등급을 돌려주고 인벤토리에 넣는다. bonus = 광폭 변이 +2%p."""
+def roll_drop(save, fish: dict, rank: str, rnd=random, bonus: float = 0.0, first: bool = False) -> str | None:
+    """포획 1회의 상자 드랍. 얻으면 등급을 돌려주고 인벤토리에 넣는다. bonus = 광폭 변이 +2%p.
+    환상어 (33장): 상자 확정 — 그 종 첫 포획은 특별 이상, 이후 희귀 이상 (first = 그 종 첫 포획)."""
+    if fish.get("rarity") == "phantom":
+        from src.fishing.phantom import reward_cfg
+        w = reward_cfg()["chest_first" if first else "chest"]
+        grade = rnd.choices(list(w), list(w.values()))[0]
+        pity = save.data["pity"]
+        pity["special"] = 0 if grade in ("special", "legend") else pity["special"] + 1
+        pity["legend"] = 0 if grade == "legend" else pity["legend"] + 1
+        give_chest(save, grade)
+        return grade
     if rnd.random() >= drop_chance(fish, rank, bonus):
         return None
     grade = _roll_grade(save, rnd, fish["rarity"] == "legend")

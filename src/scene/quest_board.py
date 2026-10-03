@@ -12,7 +12,7 @@ from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
 
 STAR = (255, 214, 90)
-KIND_KO = {"title": "칭호", "float_skin": "찌", "rod_skin": "낚싯대"}
+KIND_KO = {"title": "칭호", "float_skin": "찌", "rod_skin": "낚싯대", "net_skin": "뜰채"}
 CONT_KO = {"sharmion": "샤르미온", "eldrasion": "엘드라시온"}
 ROW_H = 46
 SHOP_ROW = 17
@@ -54,9 +54,10 @@ class QuestBoardScene(Scene):
         for tid in cos["titles"]:
             if tid in c["titles_extra"]:
                 out.append(quests.shop_item(tid))
-        for sid in cos["float_skins"]:
-            if sid in c["skins_extra"]:
-                out.append(quests.shop_item(sid))
+        for key in ("float_skins", "rod_skins", "net_skins"):
+            for sid in cos[key]:
+                if sid in c["skins_extra"]:
+                    out.append(quests.shop_item(sid))
         return out
 
     def _buy(self) -> None:
@@ -199,6 +200,12 @@ class QuestBoardScene(Scene):
             pygame.draw.rect(canvas, base, (cx - 5, cy - 2, 10, 18), border_radius=4)
             pygame.draw.rect(canvas, top, (cx - 5, cy - 16, 10, 16), border_radius=4)
             canvas.fill((240, 240, 240), (cx - 1, cy - 26, 2, 10))
+        elif it["kind"] == "net_skin":
+            rim, mesh = [tuple(c) for c in it["colors"]]
+            pygame.draw.ellipse(canvas, rim, (cx - 26, cy - 10, 52, 20), 2)
+            for k in range(-2, 3):
+                pygame.draw.line(canvas, mesh, (cx + k * 9, cy + 6), (cx + k * 5, cy + 26), 1)
+            pygame.draw.line(canvas, mesh, (cx - 18, cy + 14), (cx + 18, cy + 14), 1)
         else:
             rod, hi, reel = [tuple(c) for c in it["colors"]]
             pygame.draw.line(canvas, rod, (cx - 50, cy + 30), (cx + 40, cy - 30), 3)

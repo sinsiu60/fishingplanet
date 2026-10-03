@@ -428,19 +428,20 @@ class QuestRun:
 
 def cosmetics(save) -> dict:
     cos = save.data.setdefault("cosmetics", {})
-    for k in ("titles", "float_skins", "rod_skins"):
+    for k in ("titles", "float_skins", "rod_skins", "net_skins"):
         cos.setdefault(k, [])
     return cos
 
 
 def equipped(save) -> dict:
     eq = save.data.setdefault("equipped_cosmetic", {})
-    for k in ("title", "float_skin", "rod_skin"):
+    for k in ("title", "float_skin", "rod_skin", "net_skin"):
         eq.setdefault(k, None)
     return eq
 
 
-KIND_SLOT = {"title": ("titles", "title"), "float_skin": ("float_skins", "float_skin"), "rod_skin": ("rod_skins", "rod_skin")}
+KIND_SLOT = {"title": ("titles", "title"), "float_skin": ("float_skins", "float_skin"), "rod_skin": ("rod_skins", "rod_skin"),
+             "net_skin": ("net_skins", "net_skin")}
 
 
 def shop_item(item_id: str) -> dict | None:
@@ -483,6 +484,13 @@ def title_name(save) -> str | None:
     tid = equipped(save)["title"]
     it = shop_item(tid) if tid else None
     return it["name"] if it else None
+
+
+def skin_trail(save, kind: str):
+    """환상 외형: 찌·낚싯대가 남기는 보랏빛 잔상 색 (없으면 None)."""
+    sid = equipped(save)[kind]
+    it = shop_item(sid) if sid else None
+    return tuple(it["trail"]) if it and it.get("trail") else None
 
 
 def skin_colors(save, kind: str):

@@ -179,6 +179,33 @@ STAMP_T = 0.6       # 랭크 도장이 찍히는 시각 (획득 컷 기준)
 CATCH_READY_T = 1.0  # 이후 클릭하면 계속
 
 
+def catch_badges(news: dict | None) -> list:
+    """획득 컷 왼쪽 위 기록 배지 [(글자, 색)] — 아래 숙련도 아이콘 줄이 이만큼 내려간다."""
+    badges = []
+    if not news:
+        return badges
+    if news.get("new"):
+        badges.append(("NEW! 도감 등록", (255, 230, 120)))
+    if news.get("record"):
+        badges.append(("최대 크기 경신!", (140, 240, 150)))
+    if news.get("gold"):
+        badges.append(("도감 금테 획득!", RANK_COLORS["S"]))
+    if news.get("hint"):
+        badges.append((f"힌트 해금 ({news['hint']}회) - 도감 확인", (150, 220, 255)))
+    if news.get("phantom_new"):
+        gold = f" +{news['phantom_gold']:,}원" if news.get("phantom_gold") else ""
+        badges.append((f"환상 도감 등록!{gold}", (225, 180, 255)))
+    if news.get("phantom_scales"):
+        badges.append((f"비늘 +{news['phantom_scales']} · 축복 10분", (210, 150, 255)))
+    for rw in news.get("phantom_rewards", []):
+        badges.append((f"수집 보상: {rw}", (255, 214, 90)))
+    if news.get("trophy"):
+        badges.append((f"전설 첫 포획 트로피 +{news['trophy']:,}원!", RANK_COLORS["S"]))
+    if news.get("resell"):
+        badges.append((f"다시 잡은 전설: 판매가 ×{news['resell']:g}", (200, 200, 210)))
+    return badges
+
+
 def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) -> None:
     """획득 컷 정보: 이름·크기 → 랭크 도장 쾅 → 기록 → 가치 숫자 올라감 (순서대로)."""
     w = canvas.get_width()
@@ -187,8 +214,11 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
     if t > 0.3:
         k = clamp((t - 0.3) / 0.15, 0, 1)
         dy = int((1 - k) * -10)
-        title = f"환상의 물고기, {fish['name']}" if fish["rarity"] == "phantom" else fish["name"]
-        text(canvas, title, (w // 2, 24 + dy), RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 16, "center")
+        if fish["rarity"] == "phantom":
+            # "환상의 물고기, ○○○" — 두 줄 (왼쪽 위 기록 배지와 겹치지 않게)
+            text(canvas, "환상의 물고기,", (w // 2, 12 + dy), (225, 180, 255), 11, "center")
+        text(canvas, fish["name"], (w // 2, 26 + dy) if fish["rarity"] == "phantom" else (w // 2, 24 + dy),
+             RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 16, "center")
         text(canvas, f"{result['size']:.1f}cm", (w // 2, 44 + dy), (255, 255, 255), 16, "center")
         # 희귀 이상: 희귀도 리본
         if fish["rarity"] in ("rare", "legend", "phantom"):
@@ -233,23 +263,15 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
         text(canvas, "S랭크 보너스: 크기 +10%, 판매가 ×2", (w // 2, y + 32), RANK_COLORS["S"], 11, "center")
     # 새 기록 배지 (왼쪽 위에 차례로)
     if news and t > 1.0:
-        badges = []
-        if news.get("new"):
-            badges.append(("NEW! 도감 등록", (255, 230, 120)))
-        if news.get("record"):
-            badges.append(("최대 크기 경신!", (140, 240, 150)))
-        if news.get("gold"):
-            badges.append(("도감 금테 획득!", RANK_COLORS["S"]))
-        if news.get("hint"):
-            badges.append((f"힌트 해금 ({news['hint']}회) - 도감 확인", (150, 220, 255)))
-        if news.get("trophy"):
-            badges.append((f"전설 첫 포획 트로피 +{news['trophy']:,}원!", RANK_COLORS["S"]))
-        if news.get("resell"):
-            badges.append((f"다시 잡은 전설: 판매가 ×{news['resell']:g}", (200, 200, 210)))
+        badges = catch_badges(news)
         for i, (label, col) in enumerate(badges):
             if t > 1.0 + i * 0.15:
                 text(canvas, label, (12, 24 + i * 15), col, 11, "midleft")
     if news and news.get("title") and t > 0.6:
+        if news.get("title_frame"):  # 환상 비늘 교환: 칭호 보라 테두리
+            tw = get_font(11).size(f"「{news['title']}」")[0] + 10
+            pygame.draw.rect(canvas, (190, 120, 255), (w // 2 - tw // 2, 168, tw, 16), 1, border_radius=4)
+            pygame.draw.rect(canvas, (90, 50, 140), (w // 2 - tw // 2 - 2, 166, tw + 4, 20), 1, border_radius=5)
         text(canvas, f"「{news['title']}」", (w // 2, 176), (255, 214, 90), 11, "center")  # 장착한 칭호
     if t > 1.2:
         text(canvas, "살림망에 보관했어요 (B: 상점에서 판매)", (w // 2, 240), (170, 180, 200), 11, "center")

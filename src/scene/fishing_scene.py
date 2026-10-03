@@ -1471,6 +1471,8 @@ class FishingScene(Scene):
         # 행운의 떡밥: 남은 캐스팅 동안 희귀 이상 +3%p
         buffs = self.save.data["buffs"]
         self.bite.rare_bonus = 0.03 if buffs.get("lucky_casts", 0) > 0 else 0.0
+        if phantom.blessing_active(self.save):
+            self.bite.rare_bonus += phantom.reward_cfg()["blessing_rare"]  # 물결의 축복: 희귀 이상 +3%p (떡밥과 더해짐)
         if buffs.get("lucky_casts", 0) > 0:
             buffs["lucky_casts"] -= 1
         self.bite.window_extra = 0.95 if self.save.charm_on("pinwheel_float") else 1.0
@@ -2000,7 +2002,10 @@ class FishingScene(Scene):
             from src.fishing import mutation
             mk = mutation.cfg()["kinds"]
             bonus = mk["frenzy"]["chest_bonus"] if "frenzy" in muts else 0.0  # 광폭: 상자 +2%p
-            self.chest_drop = treasure.roll_drop(self.save, f.fish, f.result["rank"], bonus=bonus)
+            if phantom.blessing_active(self.save):
+                bonus += phantom.reward_cfg()["blessing_chest"]  # 물결의 축복: 상자 +1%p
+            ph_first = phantom.is_phantom(f.fish) and not phantom.caught(self.save, f.fish["id"])
+            self.chest_drop = treasure.roll_drop(self.save, f.fish, f.result["rank"], bonus=bonus, first=ph_first)
             if f.fish["rarity"] == "legend" and self.spot.get("continent") == "eldrasion":
                 # 전설 비늘: 첫 포획 5개, 이후 2개 (T7·T8, 봉인 찌 재료)
                 n = 2 if self.save.caught(f.fish["id"]) else 5
@@ -2012,6 +2017,9 @@ class FishingScene(Scene):
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
             self.catch_news["chest"] = self.chest_drop
+            self.catch_news["title_frame"] = phantom.state(self.save)["title_frame"]
+            if phantom.is_phantom(f.fish):
+                self.catch_news.update(phantom.on_catch(self.save, f.fish, ph_first))
             if muts:
                 self._record_mutation(f, muts)
             qr = getattr(self, "quest_run", None)
@@ -2193,6 +2201,7 @@ class FishingScene(Scene):
         if skin:  # 의뢰 상점 낚싯대 외형이 색은 우선
             rod_l = dict(rod_l, rod=skin[0], hi=skin[1])
             reel_l = dict(reel_l, body=skin[2])
+        self._draw_trail(canvas, "rod_skin", geo["tip"], 2)
         draw_rod(canvas, pal, geo, c.reel_angle, rod_l, reel_l, t)
 
         if hanging:
@@ -2233,6 +2242,8 @@ class FishingScene(Scene):
                 from src.fishing.gimmick import KO
                 label += f" · {KO[g]}"
             hud.draw_clock(canvas, pal, label, self.clock.fast, self.clock.fast_mult, 6 + inset)
+            if phantom.blessing_active(self.save):
+                hud.draw_blessing(canvas, 12 + inset, 32, phantom.blessing_left(self.save), t)
             if c.state == CastState.CHARGING:
                 hud.draw_power_gauge(canvas, pal, c.power, c.distance_for_power(c.power))
             if c.state == CastState.LANDED:
@@ -2382,6 +2393,11 @@ class FishingScene(Scene):
         for key in ("frame", "mesh", "handle", "trim", "glow"):
             if nk.get(key):
                 out[f"net_{key}"] = tuple(nk[key])
+        from src.save.quests import skin_colors
+        ns = skin_colors(self.save, "net_skin")
+        if ns:  # 환상 뜰채 외형 (33장 P5): 테·그물 색
+            out["net_frame"], out["net_mesh"] = ns[0], ns[1]
+            out["net_trim"] = ns[1]
         return out
 
     def _rush_audio(self) -> None:
@@ -2509,7 +2525,9 @@ class FishingScene(Scene):
                 fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)  # 의뢰 상세는 결과 화면에
             if self.end_t > 1.2:   # 왼쪽 위 기록 배지(최대 4줄) 아래 세로 — 가운데 글자를 가리지 않게
                 signal_slots.draw_result_icons_column(canvas, self.missed_signals, self.mastery_ups,
-                                                      (12 + (self.hud_inset if self.touch else 0), 96), self.t)
+                                                      (12 + (self.hud_inset if self.touch else 0),
+                                                       max(96, 24 + len(fight_hud.catch_badges(self.catch_news)) * 15 + 12)),
+                                                      self.t)
             self._draw_access_mark(canvas)
             return
         if f.phase == "lost":
@@ -2548,6 +2566,8 @@ class FishingScene(Scene):
             self._faded(canvas, 255 if need else 120 * dim, lambda c: fight_hud.draw_drag(c, pal, f, need, t))
             self._faded(canvas, 200 * dim, lambda c: fight_hud.draw_distance(c, pal, f))
             self._faded(canvas, 150 * dim, lambda c: self._draw_fight_items(c, pal, f))
+        if phantom.blessing_active(self.save):
+            hud.draw_blessing(canvas, self.cam.width - 64 - (self.hud_inset if self.touch else 0), 12, None, t)  # 아이콘만
         if f.phase == "fight":
             self._draw_fish_cues(canvas)  # 물고기 자리 행동 UI — 가장 위 (가장 선명)
         if self.debug:
@@ -2601,6 +2621,24 @@ class FishingScene(Scene):
         if (self.save.charm_on("pinwheel_float") and self.bite.state == BiteState.NIBBLE and self.bite.dip > 0.03):
             out = dict(out, bobber=(90, 220, 255))
         return out
+
+    def _draw_trail(self, canvas, kind: str, pos, width: int) -> None:
+        """환상 외형 (33장 P5): 찌·낚싯대 끝이 지나간 자리에 보랏빛 잔상 (움직일 때만 보임)."""
+        from src.save.quests import skin_trail
+        col = skin_trail(self.save, kind)
+        trails = self.__dict__.setdefault("trails", {})
+        if col is None:
+            trails.pop(kind, None)
+            return
+        pts = trails.setdefault(kind, [])
+        pts.append((pos[0], pos[1], self.t))
+        while pts and self.t - pts[0][2] > 0.35:
+            pts.pop(0)
+        for (x0, y0, t0), (x1, y1, _) in zip(pts, pts[1:]):
+            if abs(x1 - x0) + abs(y1 - y0) < 0.6:
+                continue
+            a = 1 - (self.t - t0) / 0.35
+            pygame.draw.line(canvas, lerp_color((40, 20, 70), col, a), (x0, y0), (x1, y1), max(1, int(width * a + 0.5)))
 
     def _draw_lure_mark(self, canvas, sh, t: float) -> None:
         """루어로 꾀는 중인 그림자 위 반응: ? 관심 / ! 다가옴 / ♥ 곧 문다 / … 떠남 (관심도 숫자는 안 보인다)."""
@@ -2868,6 +2906,7 @@ class FishingScene(Scene):
             sy = lerp(start[1], sy, k)
             size = lerp(7, size, k)
             draw_line(canvas, pal, tip, (sx, sy), 3 * (1 - c.flight_s))
+            self._draw_trail(canvas, "float_skin", (sx, sy), max(1, int(size * 0.4)))
             draw_bobber(canvas, pal, sx, sy, size, floating=False)
             return
         bob = 0.0
@@ -2884,6 +2923,7 @@ class FishingScene(Scene):
         else:
             sag = 10 + abs(tip[0] - sx) * 0.04
         draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5 * (1 - dip)), sag, bias=0.6)
+        self._draw_trail(canvas, "float_skin", (sx, sy + bob), max(1, int(size * 0.3)))
         draw_bobber(canvas, self._bobber_pal(pal), sx, sy + bob, size, floating=True, dip=dip)
         self._draw_float_mark(canvas, sx, sy + bob, size, dip)
         pfx_hide = self.phantom_fx.mode == "bloom" and self.phantom_fx.t < self.phantom_fx.cfg["bloom"]["line_out"] + 0.4

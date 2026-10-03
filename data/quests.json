@@ -425,9 +425,17 @@
   "titles_extra": {
     "mutant_collector": "변이 수집가",
     "evolution_witness": "진화의 증인",
-    "weekly_master": "주간 의뢰 정복자"
+    "weekly_master": "주간 의뢰 정복자",
+    "phantom_reader": "물결을 읽는 자",
+    "phantom_calm": "고요의 낚시꾼",
+    "phantom_master": "환상을 낚은 자"
   },
   "skins_extra": {
+    "phantom_float": {"kind": "float_skin", "name": "환상 찌", "colors": [[190, 120, 255], [245, 235, 255]], "trail": [200, 140, 255]},
+    "phx_float": {"kind": "float_skin", "name": "잔광 찌", "colors": [[230, 160, 255], [60, 40, 90]], "trail": [230, 170, 255]},
+    "phantom_rod": {"kind": "rod_skin", "name": "환상 낚싯대", "colors": [[90, 50, 150], [200, 150, 255], [140, 90, 210]], "trail": [200, 140, 255]},
+    "phx_rod": {"kind": "rod_skin", "name": "보랏빛 낚싯대", "colors": [[60, 30, 100], [170, 110, 240], [110, 70, 170]], "trail": [170, 110, 240]},
+    "phx_net": {"kind": "net_skin", "name": "환상 뜰채", "colors": [[170, 110, 240], [225, 190, 255]]},
     "aurora": {
       "kind": "float_skin",
       "name": "오로라 찌",
