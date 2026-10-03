@@ -83,7 +83,7 @@ class SettingsScene(Scene):
         return [tele, cards, slot, cb, snd]
 
     def _sound_rows(self) -> list[tuple]:
-        """소리 (32장 S3): 버스 볼륨 4개, 신호음 모드(N2), 신호 때 배경 줄이기, 오디오 지연 보정, 사운드 테스트 룸."""
+        """소리 (32장 S3): 버스 볼륨 4개, 신호음 모드(N2), 성공 효과음·파이팅 음악(32-16), 신호 때 배경 줄이기, 오디오 지연 보정, 사운드 테스트 룸."""
         s = self.s
 
         def vol(label, key):
@@ -92,12 +92,14 @@ class SettingsScene(Scene):
                 (lambda: self._step("signal_mode", -1, 2), lambda: self._step("signal_mode", 1, 2)))
         zing = ("성공 효과음 (지이이잉)", "toggle", lambda: s.get("success_sfx"),
                 lambda: s.set("success_sfx", not s.get("success_sfx")))
+        fmus = ("파이팅 음악", "toggle", lambda: s.get("fight_music"),
+                lambda: s.set("fight_music", not s.get("fight_music")))
         boost = ("신호 때 배경 줄이기", "toggle", lambda: s.get("signal_boost"), self._toggle_boost)
         offset = ("오디오 지연 보정", "step", lambda: f"{s.get('audio_offset_ms'):+d}ms",
                   (lambda: self._offset(-10), lambda: self._offset(10)))
         test = ("사운드 테스트 룸", "button", lambda: "열기", self._open_sound_test)
         return [vol("전체 음량", "volume"), vol("음악", "vol_music"), vol("효과음", "vol_sfx"), vol("환경음", "vol_amb"),
-                mode, zing, boost, offset, test]
+                mode, zing, fmus, boost, offset, test]
 
     def _vol(self, key: str, d: float) -> None:
         self.s.set(key, round(min(1.0, max(0.0, self.s.get(key) + d)), 1))
@@ -122,14 +124,17 @@ class SettingsScene(Scene):
         self.rows = self._rows()
         y0, back_y = 86, 226
         step = 24 if len(self.rows) <= 6 else 19 if len(self.rows) <= 7 else 18 if len(self.rows) <= 8 else 16
+        bh = 16
+        if len(self.rows) > 9:   # 소리 탭 10줄: 조금 위에서 촘촘히
+            y0, step, bh = 82, 15, 14
         self.rows_y = [y0 + i * step for i in range(len(self.rows))]
         self.buttons = []
         for (label, kind, value, act), y in zip(self.rows, self.rows_y):
             if kind in ("volume", "step"):
-                self.buttons.append(ui.Button((x, y - 8, 18, 16), "-", act[0]))
-                self.buttons.append(ui.Button((x + 104, y - 8, 18, 16), "+", act[1]))
+                self.buttons.append(ui.Button((x, y - bh // 2, 18, bh), "-", act[0]))
+                self.buttons.append(ui.Button((x + 104, y - bh // 2, 18, bh), "+", act[1]))
             else:
-                self.buttons.append(ui.Button((x, y - 8, 122, 16), "", act))
+                self.buttons.append(ui.Button((x, y - bh // 2, 122, bh), "", act))
         self.back_btn = ui.Button((self.w // 2 - 40, back_y, 80, 18), "뒤로", self._back)
         self.buttons.append(self.back_btn)
 

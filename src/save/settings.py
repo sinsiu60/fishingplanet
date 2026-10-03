@@ -13,7 +13,8 @@ DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": N
             # 소리 (32장 S3): 버스 볼륨 0~1, 신호 강조, 오디오 지연 보정(ms, + = 소리가 늦게 들리는 기기)
             "vol_music": 0.8, "vol_sfx": 1.0, "vol_amb": 0.8, "signal_boost": False, "audio_offset_ms": 0,
             "signal_mode": 0,
-            "success_sfx": True,  # 패턴 성공 '지이이잉' (32-16 Z3)  # 신호음: 0 자연음 / 1 보조음 / 2 강조 (SOUND_CLEANUP N2)
+            "success_sfx": True,  # 패턴 성공 '지이이잉' (32-16 Z3)
+            "fight_music": True,  # 일반 파이팅 음악 (32-16 Z4) — 끄면 대기 층 낮추기만  # 신호음: 0 자연음 / 1 보조음 / 2 강조 (SOUND_CLEANUP N2)
             # 성능 표시 (FPS·단계별 처리 시간, v0.8.8)
             "perf_overlay": False}
 

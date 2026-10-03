@@ -139,6 +139,7 @@ class FishingScene(Scene):
         self.ambience = Ambience(self.sfx)  # 환경음: 바탕 + 무작위 조각 + 날씨 + 천둥 시간차 (32장 S7)
         self.legend_on = False   # 전설 등장 중 (BGM·색감·금빛 테두리)
         self.legend_k = 0.0
+        self.red_t = self.crisis_hold = 0.0  # Z4 파이팅 음악 위기 판정 (빨강 지속·해소 뒤 유지)
         self.dragon_k = 0.0      # '등용' 3페이즈: 진홍빛 하늘
         self.dragon_fx: DragonTransform | None = None
         self.embers = Embers()
@@ -861,24 +862,35 @@ class FishingScene(Scene):
         else:
             music.play(f"spot_{self.spot_id}")
         self.legend_on = on
-        self._update_music(on)
+        self._update_music(on, dt)
         self.screen_fx.legend = on
         self.legend_k += ((1.0 if on else 0.0) - self.legend_k) * min(1.0, dt / 0.8)
 
-    def _update_music(self, legend: bool) -> None:
-        """적응형 음악 층 (src/audio/adaptive_music.py, 32장 S6 + N4 음악 절제):
-        대기(간헐적 — 울림/정적) → 입질·일반 파이팅은 그대로 낮추기만 / 대형(100cm+)은 낮은 긴장 층 하나 / 전설은 보스 테마
-        (장력 타악은 전설만) → 포획 스팅은 희귀 이상만 / 실패 페이드. 낮 밝기만큼 높은 반짝임."""
+    def _update_music(self, legend: bool, dt: float = 0.0) -> None:
+        """적응형 음악 층 (src/audio/adaptive_music.py, 32장 S6 + N4 음악 절제 + 32-16 Z4 파이팅 음악):
+        대기(간헐적 — 울림/정적) → 입질은 그대로 낮추기만 → 일반 파이팅 = 대륙 파이팅 층 (대형 무겁게 / 지침·뜰채 밝게)
+        + 위기(빨강 2초 이상 또는 줄 내구도 30% 이하) 층 / 전설은 보스 테마 (장력 타악은 전설만)
+        → 포획 스팅은 희귀 이상만, 일반 1초 페이드 / 실패 1.5초 페이드. 낮 밝기만큼 높은 반짝임.
+        설정 '파이팅 음악' 끔 = fight_calm (대기 층 낮추기만)."""
         am = self.game.adaptive
         f = self.fight
         am.set_context(self.spot.get("continent", "sharmion"), self.spot_id, legend)
-        intensity, phase, rarity = 0.0, 0, None
+        intensity, phase, rarity, crisis = 0.0, 0, None, False
         if f is not None and f.phase in ("fight", "net"):
             if legend:
                 # v0.8.14 롤백: 지침(기회!) 동안 음악이 바뀌지 않게 — 전설만 뜰채 단계에서 상승 멜로디
                 state = "legend_tired" if f.phase == "net" else "legend"
+            elif not self.settings.get("fight_music"):
+                state = "fight_calm"
+            elif f.phase == "net" or f.brain.state in ("tired", "exhausted"):
+                state = "tired"   # 진짜 지침만 밝게 (가짜 지침은 그대로 — 속임수를 음악이 들키지 않게)
             else:
-                state = "fight_big" if f.size_cm >= 100 else "fight"  # 일반: 층 변화 없음 (뜰채 단계도 그대로)
+                state = "fight_big" if f.size_cm >= 100 else "fight"
+            fm = am.cfg.get("fight_music", {})
+            self.red_t = self.red_t + dt if f.phase == "fight" and f.zone() == "red" else 0.0
+            danger = self.red_t >= fm.get("red_sec", 2.0) or f.line_frac <= fm.get("line_frac", 0.3)
+            self.crisis_hold = fm.get("hold_sec", 1.5) if danger else max(0.0, self.crisis_hold - dt)
+            crisis = self.crisis_hold > 0 and f.phase == "fight"
             intensity = (f.tension - 30) / max(1.0, f.green_high - 30)
             phase = f.brain.phase
         elif f is not None and f.phase == "caught":
@@ -890,7 +902,10 @@ class FishingScene(Scene):
             state = "bite"
         else:
             state = "idle"
-        am.set(state, intensity, phase, am.daylight_of(self.clock.hour, tuple(am.cfg["night_hours"])), rarity=rarity)
+        if f is None or f.phase not in ("fight", "net"):
+            self.red_t = self.crisis_hold = 0.0
+        am.set(state, intensity, phase, am.daylight_of(self.clock.hour, tuple(am.cfg["night_hours"])), rarity=rarity,
+               crisis=crisis)
 
     def _update_weather(self, dt: float) -> None:
         w = self.weather_sys

@@ -7,7 +7,10 @@
   - 포획 win   층을 내리고 승리 스팅 → 스팅이 끝나면 대기로 / 실패 fail → 페이드 아웃 2.5초 뒤 대기로
   - 맥락(set_context) 대륙·낚시터·전설이 바뀌면 0.5초 페이드 아웃 → 새 층으로 처음부터 다시
 N4 음악 절제 (SOUND_CLEANUP 5번): 낚시터 대기 음악은 간헐적으로 (idle_cycle: 몇 바퀴 울리고 1~3분 정적),
-  입질·일반 파이팅은 그때 상태 그대로 낮추기만, 대형(fight_big)은 낮은 긴장 층 하나, 장력 타악은 전설만, 포획 스팅은 희귀 이상만.
+  입질은 그때 상태 그대로 낮추기만, 장력 타악은 전설만, 포획 스팅은 희귀 이상만.
+Z4 파이팅 음악 (DESIGN.md 32-16): 모든 파이팅에 대륙 파이팅 층 (대기 정적과 무관) — 챔질 enter_delay 뒤 페이드 인,
+  대형 = 무거운 층, 지침 = 밝은 층 (셋 중 하나만) + 위기 층(set crisis=True, 마디 맞춰) = 최대 2개. 상황별 페이드 fight_music.fade.
+  설정 '파이팅 음악' 끔 = fight_calm (예전처럼 대기 층 낮추기만).
 층 파일: assets/music/<이름>.ogg|wav (직접 만든 음악, 우선) → assets/music_generated/<이름>.ogg (미리 구운 합성) → 실행 중 합성 (경고).
 data/music/ 의 예전 스트리밍 곡(spot_/fight_/legend_/title)이 재생 중이면 층 음악은 조용히 비켜 준다.
 """
@@ -17,7 +20,9 @@ import pygame
 
 from src.audio import music_synth
 
-LAYERS = ("theme", "pad", "shimmer", "tension", "perc_lo", "perc_hi", "rise", "boss1", "boss2", "boss3")
+LAYERS = ("theme", "pad", "shimmer", "fight", "fight_heavy", "fight_bright", "crisis", "perc_lo", "perc_hi", "rise",
+          "boss1", "boss2", "boss3")   # 채널 = audio_config reserved_mus (층 + 스팅 1)
+FIGHT = ("fight", "fight_big", "tired")   # 파이팅 음악 상황 (위기 층이 붙을 수 있음)
 GAIN = 0.35          # 음악 전체 — N4: 낚시터에서 환경음 바탕보다 약 1.5dB 작게 (예전 0.75). 메뉴·전설·스팅은 state_gain 으로 키움
 CTX_FADE = 0.5
 FAIL_HOLD = 2.5
@@ -55,6 +60,8 @@ class AdaptiveMusic:
         self.idle_t = 0.0          # play: 울린 시간 / rest: 남은 정적
         self.cur_fade = self.cfg["fade_sec"]
         self.sgain = 1.0           # 상황별 음악 배율 (state_gain, 부드럽게 바뀜)
+        self.fm = self.cfg.get("fight_music", {})
+        self.crisis = False        # Z4 위기 (장면이 판정)
         if self.enabled:
             base = sfx.n_sig
             self.ch = {k: pygame.mixer.Channel(base + i) for i, k in enumerate(LAYERS)}
@@ -93,10 +100,13 @@ class AdaptiveMusic:
             return {"theme": "mus_ending"}
         if spot is None:
             return {"theme": f"mus_theme_{cont}"}  # 메뉴·지도: 대륙 테마만
-        out = dict(pad=f"mus_pad_{spot}", shimmer=f"mus_shimmer_{cont}", tension=f"mus_tension_{cont}",
-                   perc_lo=f"mus_perc_lo_{cont}", perc_hi=f"mus_perc_hi_{cont}", rise=f"mus_rise_{cont}")
-        if legend:
+        out = dict(pad=f"mus_pad_{spot}", shimmer=f"mus_shimmer_{cont}")
+        if legend:   # 전설 파이팅: 보스 테마 (일반 파이팅 층은 안 읽음 — 폰 메모리)
+            out.update(perc_lo=f"mus_perc_lo_{cont}", perc_hi=f"mus_perc_hi_{cont}", rise=f"mus_rise_{cont}")
             out.update({f"boss{i}": f"mus_boss{i}_{cont}" for i in (1, 2, 3)})
+        else:
+            out.update(fight=f"mus_fight_{cont}", fight_heavy=f"mus_fight_heavy_{cont}",
+                       fight_bright=f"mus_fight_bright_{cont}", crisis=f"mus_crisis_{cont}")
         return out
 
     # ── 바깥에서 부르는 것 ──
@@ -110,8 +120,10 @@ class AdaptiveMusic:
         self.ctx_fade = CTX_FADE if self.ctx is not None else 0.0
 
     def set(self, state: str, intensity: float = 0.0, phase: int = 0, daylight: float = 1.0,
-            rarity: str | None = None) -> None:
-        """rarity: 포획(win) 때 물고기 희귀도 — sting_rarity 에 있을 때만 승리 스팅 (N4)."""
+            rarity: str | None = None, crisis: bool = False) -> None:
+        """rarity: 포획(win) 때 물고기 희귀도 — sting_rarity 에 있을 때만 승리 스팅 (N4).
+        crisis: 일반 파이팅 위기 (Z4 — 위기 층을 다음 마디에 더하고, 풀리면 다음 마디에 뺀다)."""
+        self.crisis = bool(crisis) and state in FIGHT
         if state != self.state:
             self.state = state
             self.state_t = 0.0
@@ -167,6 +179,8 @@ class AdaptiveMusic:
         self.idle_phase, self.idle_t = "play", 0.0  # 새 낚시터에 오면 음악부터
 
     def _next_boundary(self, unit: str) -> float:
+        if unit == "now":
+            return self.clock
         step = self.bar if unit == "bar" else self.beat
         k = math.ceil((self.clock - self.t0) / step - 1e-6)
         return self.t0 + k * step
@@ -192,8 +206,8 @@ class AdaptiveMusic:
         return float(self.cfg.get("state_gain", {}).get(key, 1.0))
 
     def _effective(self) -> str:
-        if self.state == "win" and self.sting_left <= 0:
-            return "idle"
+        if self.state == "win" and self.sting_left <= 0 and self.state_t >= self.fm.get("fade", {}).get("win", 0.0) + 0.5:
+            return "idle"   # 스팅 없는 포획: 파이팅 층이 페이드 아웃된 뒤 대기로
         if self.state == "fail" and self.state_t >= FAIL_HOLD:
             return "idle"
         return self.state
@@ -226,23 +240,40 @@ class AdaptiveMusic:
         st = self._effective()
         if self.cyc and self.ctx[1] is not None and st == "idle":
             self._idle_tick(dt)
-        rest = self.resting() and st in ("idle", "bite", "fight", "tired")  # 정적이면 입질·일반 파이팅도 조용히
-        key = (st, self.phase, rest)
+        # 정적이면 입질도 조용히. 파이팅 음악(Z4)은 정적과 무관 — 끈 설정(fight_calm)만 예전처럼
+        rest = self.resting() and st in ("idle", "bite", "fight_calm")
+        crisis = self.crisis and st in FIGHT
+        key = (st, self.phase, rest, crisis)
         if key != self.applied and (self.pending is None or self.pending[1:] != key):
-            unit = self.cfg["quantize"].get(st, "bar")
-            at = self.clock if self.applied is None else self._next_boundary(unit)
-            self.pending = (at, st, self.phase, rest)
+            if self.applied is None:
+                at = self.clock
+            elif st in FIGHT and self.applied[0] not in FIGHT:
+                at = self.clock + self.fm.get("enter_delay", 0.0)   # 챔질 임팩트 뒤 잠깐 비우고 들어옴
+            elif st == self.applied[0] and crisis != self.applied[3]:
+                at = self._next_boundary("bar")                     # 위기 층은 마디 맞춰
+            else:
+                at = self._next_boundary(self.cfg["quantize"].get(st, "bar"))
+            if self.pending is not None and self.pending[1] == st and st in FIGHT and self.pending[0] > self.clock:
+                at = min(at, self.pending[0])   # 들어오는 중에 위기만 바뀐 경우 대기 시간을 늘리지 않음
+            self.pending = (at, st, self.phase, rest, crisis)
         if self.pending is not None and self.clock >= self.pending[0]:
-            _, st2, ph, rest2 = self.pending
-            was_rest = self.applied[2] if self.applied else False
-            self.applied = (st2, ph, rest2)
+            _, st2, ph, rest2, cr2 = self.pending
+            was = self.applied
+            was_rest = was[2] if was else False
+            self.applied = (st2, ph, rest2, cr2)
             self.pending = None
             lv = {} if rest2 else self.cfg["levels"].get(st2, {})
             self.goal = {k: lv.get(k, 0.0) for k in LAYERS}
+            if cr2:
+                self.goal["crisis"] = self.fm.get("crisis", 1.0)
             # 대기 음악이 끝날 땐 천천히 사라지고, 정적 뒤엔 천천히 들어온다
             self.cur_fade = (self.cyc["fade_out_sec"] if rest2 and not was_rest else
                              self.cyc["fade_in_sec"] if was_rest and not rest2 else self.cfg["fade_sec"]) \
                 if self.cyc else self.cfg["fade_sec"]
+            if not rest2 and not was_rest and (was is None or was[0] != st2):
+                self.cur_fade = self.fm.get("fade", {}).get(st2, self.cur_fade)  # Z4 상황별 (파이팅 0.5 · 포획 1 · 실패 1.5초)
+            elif was is not None and was[0] == st2 and was[3] != cr2:
+                self.cur_fade = self.cfg["fade_sec"]   # 위기 층 들어가고 빠짐
             if st2.startswith("legend"):
                 for i in (2, 3):  # 페이즈마다 보스 층 하나씩
                     if ph < i - 1:

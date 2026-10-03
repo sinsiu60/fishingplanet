@@ -4,9 +4,12 @@
   mus_theme_C      메뉴·지도 대륙 테마 (패드 + 멜로디 + 가벼운 타악)
   mus_pad_S        대기 패드 — 낚시터마다 음색·연주법 (대륙 화성)
   mus_shimmer_C    높은 종 반짝임 — 낮에만 크게 (밤에는 고음을 줄인 효과)
-  mus_tension_C    진짜 입질: 낮은 현 8분 펄스 + 높은 떨림
-  mus_perc_lo_C    파이팅 기본 타악 / mus_perc_hi_C 장력만큼 더해지는 타악 (스네어·하이햇·마지막 마디 탐)
-  mus_rise_C       물고기 지침: 상승 멜로디
+  mus_fight_C      Z4 파이팅 기본 층 — 샤르미온: 경쾌한 기타 긁기 + 튀는 베이스 + 나무 타악 / 엘드라시온: 넓은 신스 패드 + 펄스 + 낮은 베이스 + 프레임 드럼
+  mus_fight_heavy_C  대형 물고기: 기본 층 + 낮은 북·드라이브 베이스, 위쪽 필터를 조금 닫음
+  mus_fight_bright_C 지침: 기본 층의 필터를 연 밝은 버전
+  mus_crisis_C     위기 층: 빠른 하이햇 + 낮은 북 + 낮은 현 16분 펄스 (기본 층 위에 겹침)
+  mus_perc_lo_C    전설 타악 / mus_perc_hi_C 장력만큼 더해지는 타악 (스네어·하이햇·마지막 마디 탐)
+  mus_rise_C       전설 뜰채 단계: 상승 멜로디
   mus_boss1~3_C    전설 파이팅: 페이즈마다 한 층씩 (오스티나토 + 북 / 금관 화음 / 빠른 현 + 스네어)
   mus_sting_win    포획 승리 스팅 (반복 없음)
   mus_ending       엔딩 (공기 패드 + 하프 + 유리 멜로디)
@@ -63,6 +66,8 @@ def _drum(kind: str, start: float, gain: float, kit: str) -> list[dict]:
         return [{"wave": "noise", "start": start, "len": 0.05, "filter": {"type": "hp", "f": 7000}, "env": E(0.001, 0.015, 0, 0.02), "gain": 0.16 * gain}]
     if kind == "shaker":
         return [{"wave": "noise", "start": start, "len": 0.07, "filter": {"type": "bp", "f": 5000, "q": 1.5}, "env": E(0.015, 0.02, 0, 0.03), "gain": 0.1 * gain}]
+    if kind == "low":  # 위기·대형 층의 낮은 북
+        return [{"wave": "sine", "freq": [110, 42], "start": start, "len": 0.45, "env": E(0.002, 0.2, 0, 0.12), "dist": 0.25, "gain": 0.6 * gain}]
     if kind in ("tom", "tom_last"):
         return [{"wave": "sine", "freq": [180, 85], "start": start, "len": 0.3, "env": E(0.002, 0.12, 0, 0.1), "dist": 0.15, "gain": 0.5 * gain}]
     if kind == "crash_first":
@@ -130,6 +135,60 @@ def _melody(notes: list, inst: str, gain: float = 1.0) -> list[dict]:
     return [_note(inst, m, b * bar + at * beat, ln * beat, gain) for b, at, m, ln in notes]
 
 
+def _open(layers: list[dict], k: float) -> list[dict]:
+    """음 레이어의 저역 통과 필터를 k배 (지침 = 열림 > 1, 대형 = 닫힘 < 1). 타악(소음)은 그대로."""
+    out = []
+    for ly in layers:
+        f = ly.get("filter")
+        if f and f.get("type") == "lp" and ly.get("wave") != "noise":
+            f = dict(f)
+            f["f"] = [min(12000.0, x * k) for x in f["f"]] if isinstance(f["f"], list) else min(12000.0, f["f"] * k)
+            ly = dict(ly, filter=f)
+        out.append(ly)
+    return out
+
+
+def _fight(cid: str, cont: dict, kit: str) -> list[dict]:
+    """Z4 대륙 파이팅 기본 층 (같은 빠르기·길이 — 다른 층과 맞물려 돈다)."""
+    c = cfg()
+    beat, bar, total = timing()
+    s16 = bar / 16
+    out = []
+    if cid == "sharmion":
+        # 기타: 위 세 음을 엇박 리듬으로 긁기 (내려 긁기 12ms 간격, 박 머리 세게)
+        for b, chord in enumerate(cont["chords"]):
+            for i, ch in enumerate("x..x..x.x.x..x.."):
+                if ch == "x":
+                    up = i % 4 == 2
+                    for j, m in enumerate(chord[1:4][::-1] if up else chord[1:4]):
+                        out.append(_note("guitar", m, b * bar + i * s16 + j * 0.012, s16 * 1.6, 1.0 if i % 4 == 0 else 0.75,
+                                         pan=(j - 1) * 0.3))
+        # 튀는 베이스: 8분, 근음·옥타브·5도
+        for b, m in enumerate(cont["bass"]):
+            for i, off in ((0, 0), (2, 0), (4, 12), (6, 0), (8, 0), (10, 12), (12, 7), (14, 12)):
+                out.append(_note("bass_pick", m + off, b * bar + i * s16, s16 * 1.7, 1.0 if i in (0, 8) else 0.8))
+    else:
+        # 넓은 패드 (길게) + 16분 펄스 오스티나토 + 낮은 베이스
+        out += [dict(ly, gain=ly["gain"] * 0.8) for ly in _chord_style(cont, "pad_wide", "hold", 0, 5)]
+        for b, chord in enumerate(cont["chords"]):
+            seq = chord[1:] + chord[-2:1:-1]
+            for i in range(16):
+                out.append(_note("syn_pulse", seq[i % len(seq)] + 12, b * bar + i * s16, s16 * 0.9,
+                                 1.0 if i % 4 == 0 else 0.6, pan=((i % 4) / 3 - 0.5) * 0.6))
+        out += _bass(cont, "sub", rhythm=((0, 1.5), (1.5, 1), (2.5, 1.5)))
+    return out + _drums(c["drums"][f"fight_{cid}"], kit)
+
+
+def _crisis(cont: dict, kit: str) -> list[dict]:
+    beat, bar, total = timing()
+    s16 = bar / 16
+    out = _drums(cfg()["drums"]["crisis"], kit)
+    for b, m in enumerate(cont["bass"]):
+        for i in range(16):
+            out.append(_note("strings", m + 12, b * bar + i * s16, s16 * 0.7, 0.55 if i % 4 == 0 else 0.35))
+    return out
+
+
 def render(recipe: dict, seed: int = 1):
     """synth.render + 층마다 같은 크기로 (rms_db: 평균 음량 목표, 최대 −1dBFS를 넘지 않게)."""
     import numpy as np
@@ -173,18 +232,15 @@ def recipes() -> dict:
                 m = rnd.choice(chord[2:]) + 24
                 sh.append(_note("bell", m, b * bar + k * bar / 2 + beat * rnd.choice((0, 0.5, 1)), beat, 0.7, pan=rnd.uniform(-0.6, 0.6)))
         out[f"mus_shimmer_{cid}"] = _loop(sh, -27.0, echo={"delay": beat * 0.75, "fb": 0.35, "mix": 0.3})
-        # 긴장: 낮은 현 8분 펄스 (베이스 한 옥타브 위) + 높은 2도 떨림
-        tn = []
-        for b, m in enumerate(cont["bass"]):
-            for k in range(8):
-                tn.append(_note("strings", m + 12, b * bar + k * beat / 2, beat / 2 * 0.7, 1.0 if k % 2 == 0 else 0.7))
-            top = cont["chords"][b][-1] + 12
-            for mm in (top, top + 1):
-                ly = _note("strings", mm, b * bar, bar * 0.98, 0.25)
-                ly["trem"] = [11, 0.8]
-                ly["env"] = {"a": 0.4, "d": 0.5, "s": 0.8, "r": 0.3}
-                tn.append(ly)
-        out[f"mus_tension_{cid}"] = _loop(tn, -21.0, reverb={"mix": 0.12, "time": 0.8})
+        # Z4 파이팅: 기본 / 무겁게(대형) / 밝게(지침) / 위기
+        rv = {"mix": 0.12, "time": 0.8} if cid == "sharmion" else {"mix": 0.2, "time": 1.3}
+        fb = _fight(cid, cont, kit)
+        out[f"mus_fight_{cid}"] = _loop(fb, -21.0, reverb=rv)
+        hv = _open(fb, 0.7) + _drums(c["drums"]["fight_heavy"], kit) + \
+            _bass(cont, "bass_drive", rhythm=tuple((k, 0.9) for k in range(4)), gain=0.8)
+        out[f"mus_fight_heavy_{cid}"] = _loop(hv, -20.0, reverb=rv)
+        out[f"mus_fight_bright_{cid}"] = _loop(_open(fb, 2.2), -21.0, reverb=rv)
+        out[f"mus_crisis_{cid}"] = _loop(_crisis(cont, kit), -25.0, reverb={"mix": 0.1, "time": 0.7})
         out[f"mus_perc_lo_{cid}"] = _loop(_drums(c["drums"]["perc_lo"], kit) + _bass(cont, gain=0.8), -21.0)
         out[f"mus_perc_hi_{cid}"] = _loop(_drums(c["drums"]["perc_hi"], kit), -26.0)
         out[f"mus_rise_{cid}"] = _loop(_melody(cont["rise"], "lead", 1.0) + _melody(cont["rise"], "bell", 0.35),

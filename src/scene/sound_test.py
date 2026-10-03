@@ -14,7 +14,8 @@ from src.ui.hud import draw_cursor, text
 BUSES = ("전체", "sig", "자연", "sfx", "reward", "mus", "amb", "ui")  # 자연 = 자연음 신호·보조음 (SOUND_CLEANUP N2)
 ROWS = 12
 SPACES = (("breakwater", "바다"), ("reservoir", "야외"), ("crystal_cave", "동굴"), ("deep", "심해"))  # 릴 시뮬레이터 공간 (N5)
-MUS_STATES = ("끔", "idle", "bite", "fight", "fight_big", "legend", "legend_tired", "win", "fail", "menu")
+MUS_STATES = ("끔", "idle", "bite", "fight", "fight+위기", "fight_big", "tired", "fight_calm", "legend", "legend_tired",
+              "win", "fail", "menu")
 
 
 class SoundTestScene(Scene):
@@ -73,10 +74,12 @@ class SoundTestScene(Scene):
             return
         am = self.game.adaptive
         st = MUS_STATES[self.mus_i]
+        crisis = st.endswith("+위기")
+        st = st.split("+")[0]
         cont, spot = (am.ctx or am.ctx_next or ("sharmion", "reservoir", False))[:2]
         am.set_context(cont, None if st == "menu" else (spot or "reservoir"), st.startswith("legend"))
         ten = next((v["v"] for v in self.sliders if v["key"] == "tension"), 50.0)
-        am.set(st, (ten - 30) / 45, 2, 1.0)
+        am.set(st, (ten - 30) / 45, 2, 1.0, crisis=crisis)
 
     def _toggle_fa(self) -> None:
         self.fa_on = not self.fa_on
