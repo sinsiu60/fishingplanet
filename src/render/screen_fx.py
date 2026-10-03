@@ -33,6 +33,8 @@ COL_RED = (230, 40, 40)
 class ScreenFX:
     def __init__(self, width: int, height: int):
         self.w, self.h = width, height
+        from src.platform.detect import IS_ANDROID
+        self.mobile = IS_ANDROID
         # 카메라 상태 (부드럽게 목표로 이동)
         self.zoom = 1.0
         self.pan_x = 0.0
@@ -211,7 +213,7 @@ class ScreenFX:
     # ───────────────────────── 가짜 FOV ─────────────────────────
     def apply_camera(self, canvas: pygame.Surface) -> None:
         z = self.zoom + self.punch
-        tilt = self.tilt
+        tilt = self.tilt if not getattr(self, "mobile", False) else 0.0  # 폰: 화면 전체 회전은 무거워서 기울임 없이 (v0.8.7)
         pan = self.pan_x + (self.whip_x if self.enabled else 0.0)
         tilt += self.whip_x * 0.08 if self.enabled else 0.0
         if abs(z - 1.0) < 0.002 and abs(pan) < 0.3 and abs(tilt) < 0.05:
@@ -278,8 +280,10 @@ class ScreenFX:
             pulse = 0.55 + 0.45 * math.sin(t * 4)
             self._blit_vignette(canvas, COL_TIRED, self.v_tired * 0.55 * pulse)
 
+        busy = self.speed_lines or self.slashes or self.shockwaves or self.rays
         layer = self.layer
-        layer.fill((0, 0, 0, 0))
+        if busy:  # 그릴 것이 있을 때만 화면 크기 투명 레이어를 지우고 덮는다 (폰 렉, v0.8.7)
+            layer.fill((0, 0, 0, 0))
         cx, cy = w / 2, h / 2
         # 집중선
         for a, r0, ln, age, life in self.speed_lines:
@@ -319,10 +323,13 @@ class ScreenFX:
             p0 = (x + math.cos(a) * r0, y + math.sin(a) * r0)
             p1 = (x + math.cos(a) * (r0 + ln * (1 - k)), y + math.sin(a) * (r0 + ln * (1 - k)))
             pygame.draw.line(layer, (255, 240, 170, int(230 * (1 - k))), p0, p1, 2)
-        canvas.blit(layer, (0, 0))
+        if busy:
+            canvas.blit(layer, (0, 0))
         # 섬광
         if self.flash > 0.01:
-            fl = pygame.Surface((w, h))
+            fl = getattr(self, "_flash_surf", None)
+            if fl is None or fl.get_size() != (w, h):
+                fl = self._flash_surf = pygame.Surface((w, h))
             fl.fill(self.flash_color)
             fl.set_alpha(int(150 * self.flash))
             canvas.blit(fl, (0, 0))

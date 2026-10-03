@@ -46,11 +46,29 @@ def body_screen_pos(cam, body) -> tuple[float, float] | None:
 
 # ───────────────────────── 하늘 ─────────────────────────
 
+_GRAD: dict = {}  # 그라데이션 캐시: 색·크기가 같으면 줄마다 다시 칠하지 않고 한 번에 붙인다 (폰 렉, v0.8.7)
+
+
+def _cached(key, w: int, h: int, paint) -> pygame.Surface:
+    surf = _GRAD.get(key)
+    if surf is None:
+        if len(_GRAD) > 24:
+            _GRAD.clear()
+        surf = pygame.Surface((max(1, w), max(1, h)))
+        paint(surf)
+        _GRAD[key] = surf
+    return surf
+
+
 def draw_sky(canvas: pygame.Surface, pal: dict, cam) -> None:
-    band = 3
-    for y in range(0, cam.horizon, band):
-        t = (y / cam.horizon) ** 1.3
-        canvas.fill(lerp_color(pal["sky_top"], pal["sky_bottom"], t), (0, y, cam.width, band))
+    top, bottom = tuple(pal["sky_top"]), tuple(pal["sky_bottom"])
+
+    def paint(s):
+        band = 3
+        for y in range(0, cam.horizon, band):
+            t = (y / cam.horizon) ** 1.3
+            s.fill(lerp_color(top, bottom, t), (0, y, cam.width, band))
+    canvas.blit(_cached(("sky", top, bottom, cam.horizon, cam.width), cam.width, cam.horizon, paint), (0, 0))
 
 
 class StarField:
@@ -186,6 +204,9 @@ TERRAIN = {
 }
 
 
+_HEIGHTS: dict = {}
+
+
 def draw_mountains(canvas, pal, cam, terrain: str = "hills", t: float = 0.0) -> None:
     from src.render import eldra_world
     if eldra_world.draw_terrain(canvas, pal, cam, terrain, t):
@@ -197,9 +218,17 @@ def draw_mountains(canvas, pal, cam, terrain: str = "hills", t: float = 0.0) -> 
     for fn, factor, key in layers:
         color = pal[key]
         off = cam.parallax(factor)
+        memo = _HEIGHTS.setdefault(fn, {})
+        if len(memo) > 20000:
+            memo.clear()
+        base = int(round(off))
         pts = [(0, hz + 1)]
         for x in range(0, cam.width + 4, 3):
-            pts.append((x, hz - fn(x + off)))
+            u = x + base
+            h = memo.get(u)
+            if h is None:
+                h = memo[u] = fn(u)  # 지형 높이는 위치마다 늘 같다 → 한 번만 계산 (폰 렉, v0.8.7)
+            pts.append((x, hz - h))
         pts.append((cam.width, hz + 1))
         pygame.draw.polygon(canvas, color, pts)
     if terrain == "peaks":
@@ -277,12 +306,17 @@ class Water:
     def draw(self, canvas, pal, t: float, hour: float, amp_mult: float = 1.0, show_reflection: bool = True) -> None:
         cam = self.cam
         hz = cam.horizon
-        # 1) 바탕 그라데이션 (12단계로 끊어서 픽셀 느낌)
-        top, bottom = pal["water_top"], pal["water_bottom"]
-        for i, y in enumerate(range(hz + 1, cam.height)):
-            q = round(self.row_t[i] * 12) / 12
-            canvas.fill(lerp_color(top, bottom, q), (0, y, cam.width, 1))
-        canvas.fill(lerp_color(pal["sky_bottom"], top, 0.35), (0, hz, cam.width, 1))
+        # 1) 바탕 그라데이션 (12단계로 끊어서 픽셀 느낌) — 색이 바뀔 때만 다시 그린 것을 붙인다
+        top, bottom = tuple(pal["water_top"]), tuple(pal["water_bottom"])
+        edge = lerp_color(pal["sky_bottom"], top, 0.35)
+
+        def paint(s):
+            for i, y in enumerate(range(hz + 1, cam.height)):
+                q = round(self.row_t[i] * 12) / 12
+                s.fill(lerp_color(top, bottom, q), (0, y - hz, cam.width, 1))
+            s.fill(edge, (0, 0, cam.width, 1))
+        canvas.blit(_cached(("water", top, bottom, edge, hz, cam.width, cam.height), cam.width, cam.height - hz, paint),
+                    (0, hz))
 
         # 2) 해·달 반사광 띠 (아래로 갈수록 넓어짐)
         for body in celestial_bodies(hour) if show_reflection else []:

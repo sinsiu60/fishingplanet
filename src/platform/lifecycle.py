@@ -36,6 +36,7 @@ class Lifecycle:
                     pygame.mixer.pause()
             return True
         if t in FOREGROUND:
+            self.game.screen._bars_dirty = True  # 돌아오면 화면 버퍼가 비었을 수 있다 → 검은 띠 다시
             if self.in_background:
                 self.in_background = False
                 if pygame.mixer.get_init():

@@ -85,10 +85,19 @@ class PixelScreen:
 
     def present(self) -> None:
         if self.mobile:
-            self.window.fill((0, 0, 0))
-            scaled = pygame.transform.scale(self.canvas, self.dest.size)
+            # 폰은 창이 기기 해상도(예: 2400x1080)라 프레임마다 전체를 칠하고 새로 확대해 붙이면 무겁다 (v0.8.7):
+            # 흔들림이 없으면 화면 안 그 자리에 바로 확대해 쓰고, 검은 띠는 흔들림이 있었을 때만 다시 칠한다.
             sx, sy = int(self.shake[0] * self.fscale), int(self.shake[1] * self.fscale)
-            self.window.blit(scaled, (self.dest.x + sx, self.dest.y + sy))
+            if (sx, sy) == (0, 0) and self.window.get_rect().contains(self.dest):
+                if getattr(self, "_bars_dirty", True) or self.overlay is not None:  # 미리보기는 띠에 표시를 그린다
+                    self.window.fill((0, 0, 0))
+                    self._bars_dirty = False
+                pygame.transform.scale(self.canvas, self.dest.size, self.window.subsurface(self.dest))
+            else:
+                self.window.fill((0, 0, 0))
+                scaled = pygame.transform.scale(self.canvas, self.dest.size)
+                self.window.blit(scaled, (self.dest.x + sx, self.dest.y + sy))
+                self._bars_dirty = True
         elif self.shake == (0, 0):
             pygame.transform.scale(self.canvas, self.window.get_size(), self.window)
         else:

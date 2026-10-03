@@ -94,7 +94,10 @@ class Game:
         from src.scene.fishing_scene import FishingScene
         if not isinstance(self.scenes.current, FishingScene):
             return 30
-        return self.settings.get("fps")
+        fps = self.settings.get("fps")
+        if fps >= 60 and getattr(self, "slow_device", False):
+            return 30  # 60을 못 버티는 폰: 들쭉날쭉한 40fps 보다 고른 30fps 가 덜 끊겨 보인다 (v0.8.7)
+        return fps
 
     def switch_preset(self, name: str) -> None:
         """미리보기: 화면 프리셋을 바꾸고 지금 화면을 새 크기로 다시 연다 (낚시 중이면 낚시터 처음 상태로)."""
@@ -154,6 +157,14 @@ class Game:
         frames = 0
         while self.running:
             frame_time = min(self.clock.tick(self.frame_cap()) / 1000.0, MAX_FRAME_TIME)
+            if self.screen.mobile:
+                # 한 프레임 일한 시간(대기 제외) 평균: 20ms 넘으면 60fps 무리 → 30fps, 12ms 아래면 다시 60
+                work = getattr(self, "_work_ms", 10.0) * 0.95 + self.clock.get_rawtime() * 0.05
+                self._work_ms = work
+                if work > 20.0:
+                    self.slow_device = True
+                elif work < 12.0:
+                    self.slow_device = False
             if self.slow_timer > 0:
                 self.slow_timer -= frame_time
                 if self.slow_timer <= 0:
