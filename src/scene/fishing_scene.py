@@ -2253,23 +2253,34 @@ class FishingScene(Scene):
         return out
 
     def _rush_audio(self) -> None:
-        """돌진 소리 (오디오 최종 팩): 돌진이 끝나면 reel_stop. 예고(줄 펄스) 동안 감지 않고 있으면 loop_slow 가 점점 커짐
-        (드랙이 슬금슬금 — 자연음 신호), 돌진 silence_sec 전 무음 → 돌진 순간 zing_rise ('action:rush').
-        신호음 '강조' 모드만 예전 울림 음(legacy_rush_hum, v0.8.14 롤백 소리)을 같이. 진동은 약하게 시작해 점점 세게."""
+        """돌진 소리: 예고(줄 펄스)마다 '힘 모으는 소리'(sfx_rush_charge — 낮은 울림·바람이 커지며 올라감), 돌진 silence_sec 전에 끊김
+        → 돌진 순간 zing_rise ('action:rush', 오디오 최종 팩) → 돌진이 끝나면 reel_stop.
+        신호음 '강조' 모드만 예전 울림 음(legacy_rush_hum)도 같이. 진동은 약하게 시작해 점점 세게."""
         reel = self.fight_audio.reel
         reel.tease = 0.0
         f = self.fight
         if reel.rushing and (f is None or f.phase != "fight" or f.brain.state != "rush"):
             reel.rush_end()   # 돌진 끝 = reel_stop
         ph = self._rush_ph(visual=False)
-        if ph is None or ph["stage"] != "pulse":
-            return
         from src.ui import rush_cue
         c = rush_cue.cfg()
-        if ph["left"] <= c["silence_sec"]:
+        ch = getattr(self, "rush_charge_ch", None)
+        if ph is None or ph["stage"] != "pulse" or ph["left"] <= c["silence_sec"]:
+            if ch is not None:   # 돌진 직전 무음 (또는 예고가 끝남)
+                ch.fadeout(60)
+                self.rush_charge_ch = None
+            if ph is None or ph["stage"] != "pulse":
+                self.rush_charge_idx = -1
             return
-        if self.settings.get("signal_sound"):
-            reel.tease = max(0.05, ph["q"])
+        if ph["idx"] != getattr(self, "rush_charge_idx", -1):   # 펄스마다 (대형은 2번)
+            self.rush_charge_idx = ph["idx"]
+            if ch is not None:
+                ch.fadeout(40)
+            if self.settings.get("signal_sound"):   # 펄스 길이에 맞는 것 (짧으면 0.55초에 다 올라가는 버전)
+                pulse_left = ph["left"] / max(1, ph["n"] - ph["idx"])
+                self.rush_charge_ch = self.sfx.play("sfx_rush_charge" if pulse_left >= 0.8 else "sfx_rush_charge_short", 0.85)
+            else:
+                self.rush_charge_ch = None
         steps = 8
         i = min(steps - 1, int(ph["q"] * steps))
         if i > getattr(self, "rush_hum_i", -1):

@@ -1,8 +1,11 @@
 """돌진 예고 = 낚싯줄 펄스 (DESIGN.md 31-14). 수치는 data/signals.json "rush_pulse".
 
   1단계 웅크림 : 그림자가 짧게 압축 + 꼬리 S자, 바깥에서 안쪽으로 줄어드는 점선 타원, 줄이 살짝 느슨
-  2단계 줄 펄스 : 빛 펄스가 줄을 따라 물고기 → 손 (이동 시간 = 남은 예고), 배지가 아래부터 차오름,
-                 울림 음이 점점 높아지다 돌진 silence_sec 전 무음, 모바일은 약한 진동이 점점 세게
+  2단계 줄 펄스 : 빛 펄스가 줄을 따라 물고기 → 손 (이동 시간 = 남은 예고) — 힘을 모아 오는 느낌:
+                 줄 전체가 달아오르고(노랑 → 주황), 펄스 머리가 손에 가까울수록 커지며 십자 섬광·불꽃,
+                 물고기 쪽엔 빨려 드는 빛 알갱이, 도착 직전 손 쪽에 조여 드는 고리. 배지가 아래부터 차오름.
+                 소리: 힘 모으는 소리 sfx_rush_charge (낮은 울림·바람이 점점 커지며 올라감), 돌진 순간 끊김.
+                 모바일은 약한 진동이 점점 세게
   3단계 돌진   : 펄스가 손에 닿는 순간 돌진 — 그림자 길게 늘어나며 멀어짐, V자 물살·물보라, 줄이 팽팽히 튕김,
                  배지 꽉 차며 번쩍, '쉬익', 모바일 '툭'
   변주: 대형(big_fish_cm 이상) 펄스 2개(두 번째에 돌진) / 광폭 = 더 밝고 웅크림 짧게 / 교활 가짜 돌진 = 웅크림·물결만
@@ -95,35 +98,76 @@ def draw_ripples(canvas, pos, scale: float, ph: dict | None, t: float) -> None:
     _put(canvas, layer)
 
 
+def _at(pts: list, u: float) -> tuple[float, float]:
+    """줄 위 위치 u (0 = 손, 1 = 물고기)."""
+    n = len(pts) - 1
+    f = clamp(u, 0.0, 1.0) * n
+    i = min(n - 1, int(f))
+    return (pts[i][0] + (pts[i + 1][0] - pts[i][0]) * (f - i), pts[i][1] + (pts[i + 1][1] - pts[i][1]) * (f - i))
+
+
+HOT = (255, 150, 70)   # 손에 가까워질수록 펄스가 달아오르는 색
+
+
 def draw_pulse(canvas, pts: list, ph: dict | None, t: float) -> None:
-    """줄 위 빛 펄스: pts = 손(낚싯대 끝) → 물고기. 펄스는 물고기 쪽에서 손 쪽으로."""
+    """줄 위 빛 펄스 (힘을 모아 오는 느낌): pts = 손(낚싯대 끝) → 물고기. 펄스는 물고기 쪽에서 손 쪽으로.
+    - 줄 전체가 점점 달아오름 (노랑 → 주황, 지나온 구간은 굵고 밝게)
+    - 펄스 머리: 손에 가까울수록 커지는 후광 + 십자 섬광, 뒤로 튀는 불꽃
+    - 물고기 쪽: 사방에서 빨려 드는 빛 알갱이 (힘을 모음)
+    - 도착 직전: 손 쪽에 조여 드는 고리 (곧 돌진)"""
     if ph is None or ph["stage"] != "pulse" or not pts or len(pts) < 2:
         return
     bright = cfg()["frenzy_brightness"] if ph.get("frenzy") else 1.0
+    q = ph["q"]                                      # 예고 전체 진행 (0 → 1)
     u = 1 - ph["pk"]                                 # 1 = 물고기 끝, 0 = 손
+    heat = clamp(1 - u, 0.0, 1.0)                    # 손에 가까울수록 1
+    col = lerp_color(PULSE, HOT, heat)
     n = len(pts) - 1
     layer = _layer(canvas, "rush_pulse")
-    for tail in range(6, -1, -1):                    # 꼬리 잔상 (물고기 쪽)
-        uu = min(1.0, u + tail * 0.025)
-        f = uu * n
-        i = min(n - 1, int(f))
-        fx = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * (f - i)
-        fy = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * (f - i)
-        a = int(clamp(255 * (1 - tail / 7) * min(1.0, bright), 0, 255))
-        r = (3.5 if tail == 0 else 2.4 - tail * 0.25) * (1.35 if bright > 1 else 1.0)
-        if tail == 0:
-            pulse = 0.85 + 0.15 * math.sin(t * 40)
-            pygame.draw.circle(layer, (*PULSE, int(min(255, 70 * bright))), (int(fx), int(fy)), int(r * 3.4 * pulse))
-            pygame.draw.circle(layer, (*PULSE, int(min(255, 150 * bright))), (int(fx), int(fy)), int(r * 2))
-            pygame.draw.circle(layer, (255, 255, 255, 255), (int(fx), int(fy)), max(1, int(r)))
-        else:
-            pygame.draw.circle(layer, (*PULSE, a), (int(fx), int(fy)), max(1, int(r)))
-    # 지나온 줄(물고기~펄스)은 살짝 빛남
+    # 줄 전체가 달아오름 (힘이 실림)
+    pygame.draw.lines(layer, (*PULSE, int(min(255, (40 + 70 * q) * bright))), False, pts, 1)
     k = int(u * n)
-    if k < n:
-        seg = pts[k:]
-        if len(seg) >= 2:
-            pygame.draw.lines(layer, (*PULSE, int(120 * min(1.0, bright))), False, seg, 1)
+    seg = pts[k:] if k < n else []
+    if len(seg) >= 2:   # 지나온 구간(펄스 ~ 물고기): 굵고 밝게
+        pygame.draw.lines(layer, (*col, int(min(255, 90 * bright))), False, seg, 3)
+        pygame.draw.lines(layer, (*col, int(min(255, 200 * bright))), False, seg, 1)
+    # 물고기 쪽: 빨려 드는 빛 알갱이
+    fx, fy = pts[-1]
+    for j in range(12):
+        ph_ = (t * 1.6 + j / 12) % 1.0
+        r = 34 * (1 - ph_) + 3
+        a = j / 12 * math.tau + t * 0.8
+        px, py = fx + math.cos(a) * r, fy + math.sin(a) * r * 0.55
+        al = int(min(255, 220 * ph_ * (0.5 + 0.5 * q) * bright))
+        layer.fill((*PULSE, al), (int(px), int(py), 2, 2))
+    # 펄스 머리 + 꼬리 잔상
+    hx, hy = _at(pts, u)
+    grow = 1 + 0.9 * heat
+    for tail in range(9, 0, -1):
+        tx, ty = _at(pts, u + tail * 0.022)
+        a = int(clamp(230 * (1 - tail / 10) * min(1.0, bright), 0, 255))
+        pygame.draw.circle(layer, (*col, a), (int(tx), int(ty)), max(1, int((2.6 - tail * 0.22) * grow)))
+    pulse = 0.85 + 0.15 * math.sin(t * 40)
+    r = 3.5 * grow * (1.35 if bright > 1 else 1.0)
+    pygame.draw.circle(layer, (*col, int(min(255, 60 * bright))), (int(hx), int(hy)), int(r * 4.2 * pulse))
+    pygame.draw.circle(layer, (*col, int(min(255, 140 * bright))), (int(hx), int(hy)), int(r * 2.2))
+    pygame.draw.circle(layer, (255, 255, 255, 255), (int(hx), int(hy)), max(1, int(r)))
+    fl = int(r * (3.0 + 1.5 * math.sin(t * 25)))           # 십자 섬광
+    for dx, dy in ((fl, 0), (0, int(fl * 0.7))):
+        pygame.draw.line(layer, (255, 255, 255, 200), (hx - dx, hy - dy), (hx + dx, hy + dy), 1)
+    # 뒤로 튀는 불꽃 (줄을 따라 물고기 쪽으로 흩어짐)
+    for j in range(7):
+        life = (t * 3.0 + j / 7) % 1.0
+        sx, sy = _at(pts, u + life * 0.12)
+        off = math.sin(t * 31 + j * 2.3) * 6 * life
+        al = int(min(255, 230 * (1 - life) * bright))
+        layer.fill((*lerp_color((255, 255, 255), col, life), al), (int(sx), int(sy + off), 2, 2))
+    # 도착 직전: 손 쪽에 조여 드는 고리
+    if heat > 0.75:
+        hx0, hy0 = pts[0]
+        kk = (heat - 0.75) / 0.25
+        rr = int(4 + 18 * (1 - kk))
+        pygame.draw.circle(layer, (*HOT, int(200 * kk)), (int(hx0), int(hy0)), rr, 2)
     _put(canvas, layer)
 
 

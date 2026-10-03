@@ -42,7 +42,7 @@
  "grade": {
   "_설명": "N3 강조 등급 (SOUND_CLEANUP 3-3): big 크게 > signal 신호 > normal 보통 > small 작게(기본). 앞부분이 맞으면 그 등급 (이름 앞부분 규칙).",
   "big": ["sfx_hook_success", "sfx_hook_heavy", "sfx_perfect", "sfx_double_perfect", "sfx_line_snap", "sfx_chord_legend", "sfx_roar", "sfx_legend_appear", "sfx_legend_fanfare", "sfx_rank_s", "sfx_record", "succ_mid", "succ_big", "succ_double"],
-  "signal": ["sig_", "legacy_rush", "legacy_sig_reel", "legacy_bubbles"],
+  "signal": ["sig_", "sfx_rush_charge", "legacy_rush", "legacy_sig_reel", "legacy_bubbles"],
   "normal": ["sfx_jump_out", "sfx_jump_land", "sfx_net_success", "sfx_catch", "sfx_splash", "sfx_flee", "sfx_float_flee", "sfx_judge_miss", "sfx_great", "sfx_bite_real", "sfx_impact", "sfx_launch", "sfx_rise", "sfx_chord_rare", "sfx_twist_snap", "sfx_line_crack", "legacy_creak", "legacy_splash_small", "succ_small"]
  },
  "focus": {
