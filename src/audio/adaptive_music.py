@@ -53,22 +53,30 @@ class AdaptiveMusic:
 
     # ── 파일 ──
     def _load(self, name: str) -> pygame.mixer.Sound | None:
+        from src.core import bootlog
         from src.core.paths import asset_path
+        bootlog.mark(f"  음악 {name}")
         for d in ("music", "music_generated"):
             for ext in (".ogg", ".wav"):
                 p = asset_path(d, name + ext)
                 if p.exists():
                     try:
                         return pygame.mixer.Sound(str(p))
-                    except pygame.error:
-                        pass
+                    except Exception as e:
+                        bootlog.mark(f"  {name} 읽기 실패: {e!r}")
+        self.missing.append(name)
+        from src.platform.detect import IS_MOBILE
+        if IS_MOBILE:
+            return None  # 폰에서 음악을 실행 중 합성하면 너무 오래 걸린다 → 그 층은 조용히
         rec = music_synth.recipes().get(name)
         if rec is None:
             return None
         print(f"[music] 구운 파일 없음, 실행 중 합성: {name} (python tools/bake_music.py)")
-        self.missing.append(name)
-        st = music_synth.render(rec)
-        return pygame.sndarray.make_sound(self.sfx._to_pcm_stereo(st))
+        try:
+            st = music_synth.render(rec)
+            return pygame.sndarray.make_sound(self.sfx._to_pcm_stereo(st))
+        except Exception:
+            return None
 
     def _names(self, ctx: tuple) -> dict[str, str]:
         cont, spot, legend = ctx

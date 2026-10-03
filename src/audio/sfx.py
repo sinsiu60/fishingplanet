@@ -46,7 +46,11 @@ class Sfx:
             for p in d.iterdir():
                 if p.suffix.lower() in (".ogg", ".wav"):
                     override[p.stem.replace("__", "#")] = p
-        for name in sorted(set(rec) | set(override)):
+        from src.core import bootlog
+        self.load_errors: list[str] = []
+        for n_done, name in enumerate(sorted(set(rec) | set(override))):
+            if n_done % 30 == 0:
+                bootlog.mark(f"  효과음 {n_done} ({name})")
             path = override.get(name)
             if path is None:
                 for ext in (".ogg", ".wav"):
@@ -58,13 +62,21 @@ class Sfx:
                 if path is not None:
                     self.sounds[name] = pygame.mixer.Sound(str(path))
                     continue
-            except pygame.error:
-                pass
+            except Exception as e:  # 파일을 못 읽어도 게임은 계속 (그 소리만 대신 합성 또는 무음)
+                if not self.load_errors:
+                    bootlog.mark(f"  {name} 읽기 실패: {e!r}")
+                self.load_errors.append(name)
+            if name not in rec:
+                continue
             # 구운 파일이 없다: 지금 합성 (tools/bake_sfx.py 를 돌리면 사라지는 경고)
             self.missing_baked.append(name)
             print(f"[sfx] 구운 파일 없음, 실행 중 합성: {name} (python tools/bake_sfx.py)")
-            st = synth.render(rec[name])
-            self.sounds[name] = pygame.sndarray.make_sound(self._to_pcm_stereo(st))
+            try:
+                st = synth.render(rec[name])
+                self.sounds[name] = pygame.sndarray.make_sound(self._to_pcm_stereo(st))
+            except Exception as e:
+                if len(self.missing_baked) == 1:
+                    bootlog.mark(f"  {name} 합성 실패: {e!r}")
 
     def _to_pcm_stereo(self, st: np.ndarray) -> np.ndarray:
         """합성 엔진의 스테레오 float → 믹서 형식 (샘플레이트 맞춤, 모노 믹서면 섞음)."""

@@ -18,9 +18,11 @@ class Game:
         cfg = game_config()
         from src.platform.detect import IS_MOBILE as _mob
         from src.core.config import load_json as _lj
+        from src.core import bootlog
         _ac = _lj("audio_config.json")
         pygame.mixer.pre_init(44100, -16, 2, _ac["buffer_mobile"] if _mob else _ac["buffer_pc"])
         pygame.init()
+        bootlog.mark(f"pygame {pygame.version.ver} init · mixer {pygame.mixer.get_init()}")
         self.settings = Settings()
         self.tick_rate = cfg["tick_rate"]
         self.tick_dt = 1.0 / self.tick_rate
@@ -45,18 +47,22 @@ class Game:
             self.screen.overlay = self.preview.draw
             pygame.display.set_caption(self.preview.caption())
         self.clock = pygame.time.Clock()
+        bootlog.mark(f"화면 {self.screen.canvas.get_size()} · 입력 {self.input.kind}")
         if self.screen.mobile:
             self._loading_frame()
             from src.platform.detect import IS_ANDROID
             if IS_ANDROID:
                 from src.platform import android
                 android.keep_screen_on()
+        bootlog.mark("효과음 불러오기")
         self.sfx = Sfx()
+        bootlog.mark(f"효과음 {len(self.sfx.sounds)}개 (실행 중 합성 {len(getattr(self.sfx, 'missing_baked', []))})")
         self.sfx.haptics = self.haptics  # play(..., haptic=종류) → 소리 어택 순간에 진동
         self.apply_audio_settings()
         self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
         from src.audio.adaptive_music import AdaptiveMusic
         self.adaptive = AdaptiveMusic(self.sfx)  # 적응형 음악 층 (32장 S6)
+        bootlog.mark("음악 준비")
         self.save = None            # 현재 SaveGame (메뉴에선 None)
         self.autosave_t = 0.0
         self.scenes = SceneManager()
@@ -71,6 +77,7 @@ class Game:
             from src.scene.menu import TitleScene
             start_scene = TitleScene
         self.scenes.push(start_scene(self))
+        bootlog.mark("첫 장면")
 
     def _loading_frame(self) -> None:
         """모바일 첫 실행은 효과음을 만드느라 몇 초 걸려서 안내 화면을 먼저 보여 준다."""
@@ -187,6 +194,12 @@ class Game:
             self.screen.present()
 
             frames += 1
+            if frames in (1, 30):
+                from src.core import bootlog
+                bootlog.mark(f"프레임 {frames}")
+            elif frames == 90:
+                from src.core import bootlog
+                bootlog.done()  # 여기까지 오면 시작 성공
             if self.max_frames is not None and frames >= self.max_frames:
                 self.running = False
 

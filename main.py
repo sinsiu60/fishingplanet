@@ -18,7 +18,21 @@ def _write_crash_log() -> str | None:
         return None
 
 
+def _boot_tail() -> list[str]:
+    try:
+        from src.core.paths import save_dir
+        return (save_dir() / "boot.log").read_text(encoding="utf-8").splitlines()[-8:]
+    except Exception:
+        return []
+
+
 def main() -> None:
+    from src.core import bootlog
+    bootlog.start()
+    from src.platform.detect import IS_ANDROID
+    if IS_ANDROID and bootlog.previous:
+        # 지난번 시작이 끝까지 못 갔다 (앱이 통째로 죽음) → 어디서 멈췄는지 보여 주고 계속
+        bootlog.show_lines("지난번 실행이 시작 도중 꺼졌어요 (마지막 기록)", bootlog.previous)
     from src.core.game import Game
 
     # 자동 테스트: python main.py --frames 120
@@ -40,6 +54,13 @@ if __name__ == "__main__":
         log = _write_crash_log()
         if sys.stderr:
             traceback.print_exc()
+        from src.platform.detect import IS_ANDROID
+        if IS_ANDROID:
+            # 폰: 그냥 꺼지지 않고 에러를 화면에 보여 준다 (캡처해서 보내 주면 원인을 바로 앎)
+            from src.core import bootlog
+            tb = traceback.format_exc().strip().splitlines()
+            bootlog.mark("에러: " + (tb[-1] if tb else "?"))
+            bootlog.show_lines("에러로 멈췄어요", tb[-12:] + ["", "시작 기록:"] + _boot_tail())
         if sys.platform == "win32" and getattr(sys, "frozen", False):
             import ctypes
             ctypes.windll.user32.MessageBoxW(
