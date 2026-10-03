@@ -232,6 +232,7 @@ class Sfx:
         sc = self.cfg.get("space")
         if not sc:
             return
+        self.space_spot = spot_id
         sp = sc["spots"].get(spot_id, "open") if spot_id else "open"
         pre = sc["presets"].get(sp, {})
         self.space_mask = dict(pre.get("mask", {}))  # 폭포: 효과음을 살짝 덮는다 (버스 dB)

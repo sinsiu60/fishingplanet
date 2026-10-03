@@ -1,7 +1,7 @@
 """상태 연동 연속 사운드 (DESIGN.md 32장 S4): 숫자처럼 상태를 알려 주는 소리.
 
-  릴 감기     감기 속도 → 클릭 간격(빠를수록 촘촘)·피치(#0~4)
-  드랙 풀림   줄이 풀리는 속도 → 바람 '휘이잉' 반복음 높이(#0~3)·음량 (v0.8.13: 예전 '지이잉'은 거슬려서)
+  릴 감기     합성 릴 루프(src/audio/reel_audio.py) — 속도·부하(장력)·티어 음색, 가까운 루프를 섞음 (32-16 Z2)
+  드랙 풀림   풀리는 속도 → 실제 릴 드랙 '지이이잉' 4단계 루프 섞기 (Z1 결정 B), 살짝 풀릴 땐 무음
   장력 삐걱임 v0.8.14 롤백으로 없앰 — 예전처럼 빨강·줄 50% 아래에서 가끔 '끼익'(fight 'creak' 이벤트, fishing_scene)
   줄 실금     v0.8.14 롤백으로 없앰 (예전엔 그 구간에 '끼익'만)
   드랙 단계   단계가 바뀔 때마다 묵직한 '딸깍' (단계 = 피치)
@@ -24,7 +24,10 @@ SLIDERS = [
     {"key": "tension", "label": "장력", "min": 0.0, "max": 110.0, "default": 50.0},
     {"key": "drag", "label": "드랙 단계", "min": 0.0, "max": 4.0, "default": 2.0},
     {"key": "near", "label": "물고기 가까움", "min": 0.0, "max": 1.0, "default": 0.5},
+    {"key": "tier", "label": "릴 티어", "min": 0.0, "max": 2.0, "default": 1.0},
+    {"key": "space", "label": "공간", "min": 0.0, "max": 3.0, "default": 0.0},
 ]
+TIER_NAMES = ("wood", "mid", "crystal")
 RED = 75.0  # 테스트 룸에선 이 위가 빨강 (게임에선 물고기별 green_high)
 
 
@@ -36,23 +39,14 @@ class FightAudio:
         self.gain = {"reel": 1.0, "drag": 1.0, "thrash": 1.0}   # 지금 배율 (크로스페이드 중)
         self.since_thrash = 9.0
         self.focus_duck_t = 0.0
-        self.click_t = 0.0
         self.crack_t = 1.0
         self.thrash_t = 1.5
-        self.loops: dict[str, str | None] = {"drag": None}
+        from src.audio.reel_audio import ReelPlayer
+        self.reel = ReelPlayer(sfx)  # 합성 릴·드랙 루프 (32-16 Z2)
         self.last_drag = None
 
-    def _loop(self, slot: str, name: str | None, vol: float = 1.0) -> None:
-        cur = self.loops[slot]
-        if cur != name and cur is not None:
-            self.sfx.loop(cur, False)
-        if name is not None:
-            self.sfx.loop(name, True, vol)
-        self.loops[slot] = name
-
     def stop(self) -> None:
-        for slot in self.loops:
-            self._loop(slot, None)
+        self.reel.stop()
         self.last_drag = None
 
     def zone_of(self, v: dict, red_at: float) -> str:
@@ -95,19 +89,15 @@ class FightAudio:
         drag, near = v.get("drag"), v.get("near", 0.5)
         self.sfx.fish_dist = 1.0 - near  # N5: 물고기 쪽 소리는 믹서가 거리만큼 작고 둔하게
         self._update_focus(dt, v, red_at)
-        # 드랙 풀림: 바람 휘이잉 (풀리는 속도 → 높이 단계·음량). 살짝 풀릴 땐 안 내서 파이팅 내내 깔리지 않게
-        if payout > 0.12:
-            step = min(3, int(payout * 4))
-            self._loop("drag", f"sfx_drag_run#{step}", (0.12 + 0.45 * payout) * self.gain["drag"])
-        else:
-            self._loop("drag", None)
-        # 릴 감기: 클릭 간격·피치 (드랙이 크게 풀리면 클릭은 묻히니 줄인다)
-        if reel > 0.05 and payout < 0.6:
-            self.click_t -= dt
-            if self.click_t <= 0:
-                self.click_t = max(0.022, 0.16 / (0.4 + reel))
-                step = min(4, int(reel / 3.0 * 5))
-                self.sfx.play(f"sfx_reel_click#{step}", (0.35 + 0.1 * min(1.0, reel / 2)) * self.gain["reel"])
+        # 릴 감기·드랙 풀림: 합성 릴 루프 섞기 (32-16 Z2, reel_audio) — 부하 = 장력 / 빨강 기준, 티어 음색
+        tier = v.get("tier")
+        if tier is not None:
+            tier = TIER_NAMES[int(round(tier))] if not isinstance(tier, str) else tier
+            if tier != self.reel.tier:
+                self.reel.prepare(tier)
+        load = max(0.0, min(1.0, v.get("tension", 0.0) / max(1.0, red_at)))
+        self.reel.update(dt, reel if (reel > 0.05 and payout < 0.6) else 0.0, load, payout,
+                         self.gain["reel"], self.gain["drag"])
         # 드랙 단계 딸깍
         if drag is not None:
             d = int(round(drag))

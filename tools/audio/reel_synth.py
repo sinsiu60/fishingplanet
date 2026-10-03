@@ -48,24 +48,19 @@ def tick_kernel(res_freq, decay_ms, wood=False):
     return k / np.max(np.abs(k))
 
 
-def reel(dur=3.0, rps=2.0, load=0.0, tier="mid", stop_click=True):
-    """
-    rps: 핸들 회전/초 (느림 1.2, 보통 2.0, 빠름 3.2)
-    load: 0(빈 릴) ~ 1(대물 부하)
-    tier: "wood" (T1), "mid" (T2~T5), "crystal" (T6~T8)
-    """
-    cfg = {
-        "wood":    dict(teeth=14, res=950,  decay=2.2, jitter=0.35, tick=1.0, hum=0.35, rustle=0.5, creak=0.5, shimmer=0.0),
-        "mid":     dict(teeth=22, res=2600, decay=1.2, jitter=0.18, tick=0.7, hum=0.45, rustle=0.45, creak=0.0, shimmer=0.0),
-        "crystal": dict(teeth=30, res=3400, decay=0.8, jitter=0.08, tick=0.35, hum=0.55, rustle=0.35, creak=0.0, shimmer=0.25),
-    }[tier]
+TIER_CFG = {
+    "wood":    dict(teeth=14, res=950,  decay=2.2, jitter=0.35, tick=1.0, hum=0.35, rustle=0.5, creak=0.5, shimmer=0.0),
+    "mid":     dict(teeth=22, res=2600, decay=1.2, jitter=0.18, tick=0.7, hum=0.45, rustle=0.45, creak=0.0, shimmer=0.0),
+    "crystal": dict(teeth=30, res=3400, decay=0.8, jitter=0.08, tick=0.35, hum=0.55, rustle=0.35, creak=0.0, shimmer=0.25),
+}
 
-    v = speed_profile(dur, rps * (1 - 0.35 * load))
+
+def reel_core(v, rps, load, tier):
+    """핸들 회전수 곡선 v(회/초) → 감기 소리 (finish 전). reel()과 게임용 반복 루프가 같이 쓴다."""
+    cfg = TIER_CFG[tier]
     n = len(v)
     t = np.arange(n) / SR
     handle_phase = np.cumsum(v) / SR  # 핸들 누적 회전수
-
-    # 1) 기어 이빨 틱: 이빨이 지나갈 때마다 임펄스
     tooth_phase = handle_phase * cfg["teeth"]
     idx = np.where(np.diff(np.floor(tooth_phase)) > 0)[0]
     imp = np.zeros(n)
@@ -75,46 +70,115 @@ def reel(dur=3.0, rps=2.0, load=0.0, tier="mid", stop_click=True):
     imp[idx] = np.clip(amp, 0.2, 2.0)
     ticks = fftconvolve(imp, tick_kernel(cfg["res"] * (1 - 0.12 * load), cfg["decay"], tier == "wood"))[:n]
     ticks *= cfg["tick"]
-
-    # 2) 기어 웅웅거림: 이빨 주파수를 따라가는 톤 (음색 유지, 높이만 변화)
     f_hum = v * cfg["teeth"] * (1 - 0.15 * load)
     ph = 2 * np.pi * np.cumsum(f_hum) / SR
     hum = (np.sin(ph) + 0.5 * np.sin(2 * ph) + 0.25 * np.sin(3 * ph) + 0.12 * np.sin(5 * ph))
     hum = lp(hum, 1800 - 600 * load) * cfg["hum"] * 1.6
-    hum += bp(RNG.standard_normal(n), 300, 1200) * 0.15 * (v / max(rps, 1e-6)) * (1 + 1.5 * load)  # 부하 시 거칠게
-
-    # 3) 줄 감김 마찰
+    hum += bp(RNG.standard_normal(n), 300, 1200) * 0.15 * (v / max(rps, 1e-6)) * (1 + 1.5 * load)
     rustle = bp(RNG.standard_normal(n), 1200, 4200) * cfg["rustle"] * 0.45 * (v / max(rps, 1e-6)) * (0.4 + 0.5 * load)
     rustle *= 1 + 0.4 * lp(np.abs(RNG.standard_normal(n)), 30)
-
-    # 4) 나무 릴 삐걱임
     creak = 0
     if cfg["creak"]:
         cf = 180 + 40 * np.sin(2 * np.pi * 0.9 * t)
         creak = bp(np.sign(np.sin(2 * np.pi * np.cumsum(cf) / SR)) * RNG.random(n), 200, 1400) * cfg["creak"] * 0.3
-
-    # 5) 고티어 맑은 공명
     shimmer = 0
     if cfg["shimmer"]:
         shimmer = np.sin(2 * np.pi * np.cumsum(f_hum * 6.03) / SR) * cfg["shimmer"] * 0.15
-
     sig = ticks + hum + rustle + creak + shimmer
-
-    # 핸들 한 바퀴 주기 변조
     sig *= 1 + 0.18 * np.sin(2 * np.pi * handle_phase)
-    # 속도에 따른 전체 음량 (멈추면 잦아듦)
     sig *= np.clip(v / max(rps, 1e-6), 0, 1.2) ** 0.6
+    return sig
 
-    # 6) 멈춤 딸깍 (역회전 방지)
+
+def stop_click_sound(tier):
+    """멈춤 '딸깍' (역회전 방지)."""
+    cfg = TIER_CFG[tier]
+    click = np.zeros(int(0.15 * SR))
+    k = tick_kernel(cfg["res"] * 0.8, cfg["decay"] * 1.8, tier == "wood")
+    click[: len(k)] += k * 1.6
+    k2 = tick_kernel(cfg["res"] * 1.1, cfg["decay"], tier == "wood")
+    o = int(0.018 * SR)
+    click[o:o + len(k2)] += k2 * 0.7
+    return click
+
+
+# ───────── 게임용 미리 굽기 (DESIGN.md 32-16 Z2): 정규화 없이 같은 기준 배율로 → 속도·부하별 크기 차이가 남는다 ─────────
+LOOP_SPEEDS = (1.0, 1.5, 2.0, 2.5, 3.0, 3.5)
+LOOP_LOADS = (0.0, 0.5, 0.9)
+TIERS = ("wood", "mid", "crystal")
+DRAG_RATES = (90, 160, 240, 330)   # 드랙 풀림 클릭/초: 느림 / 보통 / 빠름 / 질주
+XF = int(0.05 * SR)                # 루프 끝 크로스페이드
+PRE = int(0.25 * SR)               # 필터 시작 과도음 버림
+
+
+def finish_fixed(x, ref):
+    """finish()와 같은 색(60Hz~8.5kHz, 짧은 잔향, 부드러운 포화)이되 파일마다 정규화하지 않고 ref 기준."""
+    x = hp(x, 60)
+    x = lp(x, 8500)
+    x = room(x)
+    return np.tanh(x / ref * 1.3) * 0.89 / np.tanh(1.3)
+
+
+def _loop_cut(x, n):
+    """x = [PRE 과도음][n 본체][XF 이어짐] → 이음매 없는 n 길이 루프."""
+    seg = x[PRE:PRE + n + XF]
+    out = seg[:n].copy()
+    a = np.linspace(0, 1, XF)
+    out[:XF] = out[:XF] * a + seg[n:n + XF] * (1 - a)
+    return out
+
+
+def reel_loop_raw(rps, load, tier, post=None):
+    """일정한 속도로 감는 구간만, 핸들 정수 바퀴 길이 (약 1~1.4초) — 이빨·웅웅·한 바퀴 변조가 모두 이음매에서 맞물린다."""
+    v_eff = rps * (1 - 0.35 * load)
+    revs = max(1, round(v_eff * 1.2))
+    n = int(round(revs / v_eff * SR))
+    v = np.full(PRE + n + XF, v_eff)
+    x = reel_core(v, v_eff, load, tier)
+    return _loop_cut(post(x) if post else x, n)  # 필터·잔향(post)은 자르기 전에 → 이음매에 시작 과도음이 안 남음
+
+
+def reel_start_raw(tier, rps=2.0):
+    """감기 시작 (가속 0.3초) — 루프가 페이드 인 하는 동안 겹쳐 낸다."""
+    n = int(0.3 * SR)
+    t = np.arange(PRE + n) / SR
+    v = rps * np.clip((t - PRE / SR) / 0.3, 0, 1) ** 0.7
+    x = reel_core(v, rps, 0.0, tier)[PRE:]
+    x[-int(0.06 * SR):] *= np.linspace(1, 0, int(0.06 * SR))
+    return x
+
+
+def drag_loop_raw(peak_rate, post=None):
+    """드랙 풀림 '지이이잉' 일정 구간: 흔들림 4주기(3.1Hz) 길이, 클릭·스풀 회전이 이음매에서 맞물리게 속도를 맞춤."""
+    L = 4 / 3.1
+    rate0 = round(peak_rate * L / 2) * 2 / L
+    n = int(round(L * SR))
+    N = PRE + n + XF
+    t = np.arange(N) / SR
+    rate = rate0 * (1 + 0.08 * np.sin(2 * np.pi * 3.1 * t))
+    phase = np.cumsum(rate) / SR
+    idx = np.where(np.diff(np.floor(phase)) > 0)[0]
+    imp = np.zeros(N)
+    imp[idx] = 1 + 0.15 * RNG.standard_normal(len(idx))
+    clicks = fftconvolve(imp, tick_kernel(4200, 0.7))[:N] * 0.55
+    spool = np.sin(2 * np.pi * np.cumsum(rate * 0.5) / SR)
+    k = rate0 / max(DRAG_RATES)
+    spool = lp(spool + 0.3 * np.sign(spool), 2500) * 0.35 * (0.6 + 0.4 * k)
+    hiss = bp(RNG.standard_normal(N), 2500, 7000) * 0.2 * (0.6 + 0.4 * k)
+    x = clicks + spool + hiss
+    return _loop_cut(post(x) if post else x, n)
+
+
+def reel(dur=3.0, rps=2.0, load=0.0, tier="mid", stop_click=True):
+    """
+    rps: 핸들 회전/초 (느림 1.2, 보통 2.0, 빠름 3.2)
+    load: 0(빈 릴) ~ 1(대물 부하)
+    tier: "wood" (T1), "mid" (T2~T5), "crystal" (T6~T8)
+    """
+    v = speed_profile(dur, rps * (1 - 0.35 * load))
+    sig = reel_core(v, rps, load, tier)
     if stop_click:
-        click = np.zeros(int(0.15 * SR))
-        k = tick_kernel(cfg["res"] * 0.8, cfg["decay"] * 1.8, tier == "wood")
-        click[: len(k)] += k * 1.6
-        k2 = tick_kernel(cfg["res"] * 1.1, cfg["decay"], tier == "wood")
-        o = int(0.018 * SR)
-        click[o:o + len(k2)] += k2 * 0.7
-        sig = np.concatenate([sig, click])
-
+        sig = np.concatenate([sig, stop_click_sound(tier)])
     return finish(sig)
 
 

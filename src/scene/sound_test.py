@@ -3,6 +3,7 @@
 - 왼쪽: 모든 소리 목록 (버스 탭으로 거르기, 휠·▲▼로 넘김). 누르면 재생, '×5'는 0.35초 간격 5번(변주 확인).
 - 오른쪽 위: 지금 믹서 상태 (버스별 재생 중 수, 리미터, 덕킹).
 - 오른쪽 아래: 상태 연동 소리 (src/audio/fight_audio.py) — 슬라이더로 값을 바꾸며 연속음 듣기.
+  릴 시뮬레이터(32-16 Z2): 감기 속도·장력(부하)·릴 티어·공간을 바꾸며 합성 릴 루프 섞기를 듣는다.
 - 맨 아래: 적응형 음악 상황 바꿔 듣기 (S6) — 장력 슬라이더 = 파이팅 타악 세기.
 설정 → 소리 → 사운드 테스트 룸.
 """
@@ -12,6 +13,7 @@ from src.ui.hud import draw_cursor, text
 
 BUSES = ("전체", "sig", "자연", "sfx", "reward", "mus", "amb", "ui")  # 자연 = 자연음 신호·보조음 (SOUND_CLEANUP N2)
 ROWS = 12
+SPACES = (("breakwater", "바다"), ("reservoir", "야외"), ("crystal_cave", "동굴"), ("deep", "심해"))  # 릴 시뮬레이터 공간 (N5)
 MUS_STATES = ("끔", "idle", "bite", "fight", "fight_big", "legend", "legend_tired", "win", "fail", "menu")
 
 
@@ -34,6 +36,7 @@ class SoundTestScene(Scene):
         except ImportError:
             self.fa, self.sliders = None, []
         self.fa_on = False
+        self._space0 = getattr(self.sfx, "space_spot", None)
         self.btn_back = ui.Button((404, 250, 64, 15), "뒤로", self._back)
         self.btn_up = ui.Button((212, 54, 18, 14), "▲", lambda: self._scroll(-ROWS))
         self.btn_dn = ui.Button((212, 236, 18, 14), "▼", lambda: self._scroll(ROWS))
@@ -56,6 +59,8 @@ class SoundTestScene(Scene):
     def _back(self) -> None:
         if self.fa is not None:
             self.fa.stop()
+        if getattr(self, "_space", None) is not None and self._space != self._space0:
+            self.sfx.set_space(self._space0)  # 릴 시뮬레이터에서 바꾼 공간을 낚시터 것으로 되돌림
         self.game.scenes.pop()
 
     def _next_mus(self) -> None:
@@ -119,7 +124,14 @@ class SoundTestScene(Scene):
         for _, n in due:
             self.sfx.play(n)
         if self.fa is not None and self.fa_on:
-            self.fa.update(dt, {s["key"]: s["v"] for s in self.sliders})
+            vals = {s["key"]: s["v"] for s in self.sliders}
+            sp = SPACES[int(round(vals.get("space", 0)))][0]
+            if sp != getattr(self, "_space", None):  # 공간 바꾸면 그 공간 버전으로 다시 읽음
+                self._space = sp
+                self.sfx.set_space(sp)
+                self.fa.reel.key = None
+                self.fa.reel.prepare()
+            self.fa.update(dt, vals)
         self._mus()
 
     def draw(self, canvas) -> None:
@@ -165,7 +177,7 @@ class SoundTestScene(Scene):
             self.btn_fa.label = "끄기" if self.fa_on else "켜고 슬라이더로 조절"
             self.btn_fa.draw(canvas, self.mouse)
             for i, s in enumerate(self.sliders):
-                y = 148 + i * 18
+                y = 143 + i * 13
                 x, w = 330, 110
                 s["rect"] = (x, y, w)
                 text(canvas, s["label"], (246, y), ui.TEXT, 11, "midleft")
@@ -174,6 +186,10 @@ class SoundTestScene(Scene):
                 text(canvas, f"{s['v']:.1f}", (x + w + 4, y), ui.DIM, 11, "midleft")
             if self.fa is not None and self.fa_on:  # 연속음 주인공 (N3) — 장력·줄 풀림 슬라이더로 바뀌는 것 확인
                 names = {"reel": "감기", "payout": "줄 풀림", "thrash": "첨벙", "yellow": "노란 구간", "red": "빨강"}
-                y = 148 + len(self.sliders) * 18
-                text(canvas, f"주인공: {names.get(self.fa.focus, self.fa.focus)}  (장력 64↑노랑 75↑빨강)", (246, y), ui.ACCENT, 11, "midleft")
+                y = 143 + len(self.sliders) * 13
+                sv = {x["key"]: x["v"] for x in self.sliders}
+                tier = ("나무", "보통", "수정")[int(round(sv.get("tier", 1)))]
+                space = SPACES[int(round(sv.get("space", 0)))][1]
+                text(canvas, f"주인공 {names.get(self.fa.focus, self.fa.focus)} · {tier} 릴 · {space}",
+                     (246, y), ui.ACCENT, 11, "midleft")
         draw_cursor(canvas, self.mouse)

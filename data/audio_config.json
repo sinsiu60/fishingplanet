@@ -23,7 +23,7 @@
  "sig_boost_gain": 1.3,
  "variation": {"pitch_pct": [-4, -2, 2, 4], "vol_db": 2.0,
                "names": ["sfx_splash", "sfx_splash_small", "sfx_nibble", "sfx_bubbles", "sfx_scrape", "sfx_judge_miss", "sfx_impact",
-                         "sfx_coin", "sfx_reel_click#0", "sfx_reel_click#1", "sfx_reel_click#2", "sfx_reel_click#3", "sfx_reel_click#4",
+                         "sfx_coin", "sfx_reel_click",
                          "sfx_land", "sfx_thrash", "sfx_line_crack", "sfx_jerk", "sfx_great", "sfx_whip", "sfx_twist_turn",
                          "ui_click", "ui_tab"]},
  "max_same": 3,
@@ -58,7 +58,7 @@
   "presets": {"open": {}, "out": {"reverb": [0.14, 0.6]}, "cave": {"reverb": [0.38, 2.2], "lowpass": 7000}, "deep": {"lowpass": 900, "reverb": [0.2, 1.0]}, "falls": {"use": "out", "mask": {"sfx": -2.5, "sig": -1.5, "amb": 2.0}}},
   "spots": {"reservoir": "out", "valley": "out", "marsh": "out", "world_tree": "out", "secret": "out", "volcano": "out", "breakwater": "open", "offshore": "open", "ice_sea": "open", "crystal_cave": "cave", "deep": "deep", "sky_falls": "falls"},
   "far": {"lowpass": 1600, "reverb_add": 0.12, "far_from": 0.55, "far_vol": 0.5},
-  "names": ["sfx_bite_real", "sfx_bubbles", "sfx_cast_charge", "sfx_cast_swing", "sfx_drag_run", "sfx_drag_step", "sfx_flee", "sfx_float_flee", "sfx_hook_heavy", "sfx_hook_success", "sfx_jerk", "sfx_judge_miss", "sfx_jump_land", "sfx_jump_out", "sfx_land", "sfx_launch", "sfx_line_crack", "sfx_line_out", "sfx_line_snap", "sfx_net_success", "sfx_nibble", "sfx_reel_click", "sfx_roar", "sfx_scrape", "sfx_splash", "sfx_splash_small", "sfx_thrash", "sfx_twist_snap", "sfx_twist_step", "sfx_twist_turn", "sfx_whip", "sig_nat_"],
+  "names": ["sfx_bite_real", "sfx_bubbles", "sfx_cast_charge", "sfx_cast_swing", "sfx_drag_step", "sfx_flee", "sfx_float_flee", "sfx_hook_heavy", "sfx_hook_success", "sfx_jerk", "sfx_judge_miss", "sfx_jump_land", "sfx_jump_out", "sfx_land", "sfx_launch", "sfx_line_crack", "sfx_line_out", "sfx_line_snap", "sfx_net_success", "sfx_nibble", "sfx_reel_click", "sfx_roar", "sfx_scrape", "sfx_splash", "sfx_splash_small", "sfx_thrash", "sfx_twist_snap", "sfx_twist_step", "sfx_twist_turn", "sfx_whip", "sig_nat_"],
   "fish": ["sfx_bite_real", "sfx_bubbles", "sfx_flee", "sfx_jump_land", "sfx_jump_out", "sfx_nibble", "sfx_splash", "sfx_splash_small", "sfx_thrash", "sig_nat_direction", "sig_nat_leap", "sig_nat_lure", "sig_nat_release_gulp", "sig_nat_timing_apex", "sig_nat_timing_boil"]
  }
 }

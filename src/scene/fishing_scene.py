@@ -168,6 +168,7 @@ class FishingScene(Scene):
         self.shake_kick = 0.0
         from src.audio.fight_audio import FightAudio
         self.fight_audio = FightAudio(self.sfx)  # 상태 연동 연속음 (32장 S4)
+        self.fight_audio.reel.prepare(self._reel_tier())  # 합성 릴 루프 (32-16 Z2) — 이 낚시터 공간·장착 릴 티어
         from src.audio.signal_audio import SignalAudio
         self.signal_audio = SignalAudio(self.sfx, lambda: self.settings.get("signal_sound"),
                                         lambda: self.settings.get("signal_mode"),
@@ -192,6 +193,14 @@ class FishingScene(Scene):
         self.hazard_decor = world.HazardDecor(self.spot["hazards"])
         self.screen_fx.sway = self.theme.get("sway", 0)
         self.game.sfx.set_space(spot_id)  # N5: 낚시터 잔향·먹먹함 (공간별로 미리 구운 소리)
+        if hasattr(self, "fight_audio"):
+            self.fight_audio.reel.prepare(self._reel_tier())  # 합성 릴 루프도 이 공간 버전으로 (Z2)
+
+    def _reel_tier(self) -> str:
+        """장착한 릴 티어 → 릴 소리 음색 (T1 나무 / T2~T5 보통 / T6~T8 수정)."""
+        from src.audio.reel_audio import tier_of
+        save = getattr(self, "save", None)
+        return tier_of(save.gear_tier("reel")) if save is not None else "mid"
 
     @property
     def weather(self) -> str:
@@ -1310,10 +1319,10 @@ class FishingScene(Scene):
             fa.update(dt, {"reel": f.reel_speed_now if f.reeling else 0.0,
                            "payout": min(1.0, f.payout_now / self.fish_cfg["fight"]["payout_max_speed"]),
                            "tension": f.tension, "line": f.line_frac, "drag": f.drag - 1,
-                           "near": max(0.0, 1 - f.distance / far), "zone": zone},
+                           "near": max(0.0, 1 - f.distance / far), "zone": zone, "tier": self._reel_tier()},
                       red_at=f.green_high, active=f.brain.is_active and not f.brain.sound_only)
         elif self.cast.state == CastState.RETRIEVE:
-            fa.update(dt, {"reel": 1.6}, active=False)  # 회수: 릴만 감김
+            fa.update(dt, {"reel": 1.6, "tier": self._reel_tier()}, active=False)  # 회수: 릴만 감김
         else:
             fa.stop()
 
@@ -1489,7 +1498,7 @@ class FishingScene(Scene):
             self.game.haptics.vibrate("pump")
             self.pump_flash = 0.15
         elif ev == "pump_hit":
-            self.sfx.play("sfx_reel_click#3", 0.35)
+            self.sfx.play("sfx_reel_click", 0.35)
             self.pvfx.tick(pos[0], pos[1], (255, 214, 90))
         elif ev == "pump_miss":
             self.sfx.play("sfx_judge_miss", 0.35)  # 박자 놓침

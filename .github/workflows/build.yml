@@ -32,6 +32,7 @@ jobs:
           SDL_AUDIODRIVER: dummy
         run: |
           python tools/bake_sfx.py --check
+          python tools/bake_reel.py --check
           python tools/bake_music.py --check
           python tools/sound_audit.py --strict
       - name: 아이콘
@@ -80,6 +81,7 @@ jobs:
       - name: 사운드 점검 (APK에 묶일 구운 파일이 최신인지)
         run: |
           python tools/bake_sfx.py --check
+          python tools/bake_reel.py --check
           python tools/bake_music.py --check
       - name: 폰과 같은 pygame 2.6 에서 소리·장면 확인 (pygame-ce 전용 API 쓰면 여기서 실패)
         env:
