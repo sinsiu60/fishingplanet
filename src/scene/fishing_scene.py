@@ -1585,7 +1585,7 @@ class FishingScene(Scene):
         self._zing("big", vol)
         self.sfx.duck("perfect")
 
-    ZING_SEC = {"small": 0.26, "mid": 0.4, "big": 0.53, "double": 1.15}  # 정점(드랙이 잡히는 순간) 시각 — assets/sfx_generated/reel_rec 지잉에서 잼
+    ZING_SEC = {"small": 0.26, "mid": 0.4, "big": 0.53, "double": 1.15}  # 정점(드랙이 잡히는 순간) 시각 — assets/sfx_generated/reel 지잉에서 잼
 
     def _zing(self, grade: str, vol: float = 1.0) -> None:
         """패턴 성공 '지이이잉!' (32-16 Z3): 성공 판정 순간에만. 작은 지잉은 1.5초 쿨다운(겹치면 생략),

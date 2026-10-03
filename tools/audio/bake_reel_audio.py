@@ -3,8 +3,8 @@
 실행 (프로젝트 루트에서):
     python tools/audio/bake_reel_audio.py           굽기 (numpy + scipy 필요: pip install -r requirements-dev.txt)
     python tools/audio/bake_reel_audio.py --check   확인만 (CI — scipy 필요 없음): 재료·스크립트가 바뀌었는데 안 구웠거나 파일이 빠졌으면 실패
-결과: assets/sfx_generated/reel_rec/   102개 (.wav) + manifest.json
-      assets/sfx_generated/reel_rec/space/   장소 잔향 버전 '<이름>~out|cave|deep.ogg' (루프·드랙·시작·멈춤 — 지잉은 손 근처라 없음)
+결과: assets/sfx_generated/reel/   102개 (.wav) + manifest.json
+      assets/sfx_generated/reel/space/   장소 잔향 버전 '<이름>~out|cave|deep.ogg' (루프·드랙·시작·멈춤 — 지잉은 손 근처라 없음)
 게임은 manifest.json 으로 파일을 찾는다 (src/audio/reel_audio.py). 결과는 저장소에 커밋 → 빌드 환경에 scipy 없어도 됨.
 """
 import hashlib
@@ -15,7 +15,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 SRC = os.path.join(HERE, "source", "reel_recording.wav")
-OUT = os.path.join(ROOT, "assets", "sfx_generated", "reel_rec")
+OUT = os.path.join(ROOT, "assets", "sfx_generated", "reel")
 SPACE_DIR = os.path.join(OUT, "space")
 HASHED = [os.path.join(HERE, n) for n in ("reel_from_recording.py", "drag_zing.py", "bake_reel_audio.py")] + \
     [SRC, os.path.join(ROOT, "src", "audio", "synth.py"), os.path.join(ROOT, "data", "audio_config.json")]

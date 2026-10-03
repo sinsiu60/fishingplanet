@@ -2547,7 +2547,7 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
    포획: 희귀 이상 스팅 / 일반 1초 페이드 아웃, 실패 1.5초 페이드 아웃. 대형은 기본 층 무겁게. 층은 최대 2개, 전설은 보스 테마 그대로.
    곡: 샤르미온 파이팅(경쾌·기타·베이스) / 엘드라시온 파이팅(신비·묵직·패드·타악) / 대륙별 위기 층(하이햇·낮은 북). 음악은 릴·물소리·지잉보다 아래, 챔질·퍼펙트·지잉·줄 끊김 때 −3dB. 설정 '파이팅 음악'.
 
-### Z2 구현 — 합성 릴 소리 (`tools/audio/reel_synth.py` → `tools/bake_reel.py` → `src/audio/reel_audio.py`)
+### Z2 구현 — 합성 릴 소리 (`tools/audio/reel_synth.py` → `tools/bake_reel.py` → `src/audio/reel_audio.py`) — ※ 아래 '릴 녹음 재합성'으로 대체, 파일 삭제됨
 - **미리 굽기** `tools/bake_reel.py` (scipy 필요 — 로컬에서만, CI는 `--check`): `assets/sfx_generated/reel/` 256개 4.7MB (OGG 품질 3).
   감기 루프 54(속도 1.0~3.5회/초 6 × 부하 0/0.5/0.9 × 나무·보통·수정) + 티어별 시작(가속 0.3초)·멈춤 '딸깍' 6 + 드랙 '지이이잉' 4단계(클릭 90/160/240/330회/초)
   = 64개, 각각 + 공간 버전 '~out/~cave/~deep'(N5 프리셋). 소리마다 시드 고정.
@@ -2562,7 +2562,7 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
 - 예전 감기 클릭 5단계·바람 드랙(sfx_drag_run)은 삭제, 클릭 한 개(sfx_reel_click)는 펌핑 박자 성공에만.
 - 사운드 테스트 룸 '상태 연동' = 릴 시뮬레이터: 감기 속도·줄 풀림·장력(부하)·릴 티어·공간(바다/야외/동굴/심해) 슬라이더 + '주인공 · 티어 · 공간' 표시. 나가면 낚시터 공간으로 되돌림.
 
-### Z3 구현 — 패턴 성공 '지이이잉!' (`reel_synth.reel_zing` → `bake_reel` → `fishing_scene._zing`)
+### Z3 구현 — 패턴 성공 '지이이잉!' (`reel_synth.reel_zing` → `bake_reel` → `fishing_scene._zing`) — ※ 소리는 '릴 녹음 재합성'으로 대체 (재생 규칙은 그대로)
 - **소리** (사용자 예시 `tools/audio/reference/user/reel_*.wav`·`drag_scream.wav`와 같은 엔진 `reel_core`로): 스풀이 한순간 확 가속 —
   핸들 회전이 `2.6회/초 × 배^(u^2.6)`로 치솟으며(처음 천천히·끝에서 급하게) 기어 웅웅·이빨 틱·줄 마찰이 함께 올라가고 틱이 촘촘해져 한 음으로 뭉침,
   위에 드랙 같은 스풀 회전음·'지이' 마찰음이 속도만큼. 정점 = 이빨 공명 금속 울림 + 웅웅거림 40ms 꼬리.
@@ -2621,11 +2621,11 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
 ### 릴 녹음 재합성으로 교체 (REEL_AUDIO_INTEGRATE.md) — Z2 합성 릴·Z3 지잉을 **대체**
 - **재료**: 실제 릴 녹음 `tools/audio/source/reel_recording.wav` (모노 44.1kHz 41.8초, 출처·라이선스는 CREDITS.md — 아직 빈칸).
   `reel_from_recording.py` 가 녹음에서 클릭 그레인(약 5ms) 2065개 + 클릭 사이 바탕 질감을 잘라 내고, 원하는 속도·부하로 다시 배치. `drag_zing.py` = 드랙(줄 풀리는 속도 = 클릭 속도 = 음 높이)·지잉.
-- **굽기** `python tools/audio/bake_reel_audio.py` (numpy + scipy — `requirements-dev.txt`, 게임 실행엔 불필요) → `assets/sfx_generated/reel_rec/`
+- **굽기** `python tools/audio/bake_reel_audio.py` (numpy + scipy — `requirements-dev.txt`, 게임 실행엔 불필요) → `assets/sfx_generated/reel/`
   102개 .wav (감기 루프 54 = 속도 1.0~3.5회/초 6 × 부하 0/0.5/0.9 × 나무·보통·수정, 드랙 루프 12 = 클릭 150/300/550/850회/초 × 티어,
   시작·멈춤 6, 지잉 30 = small/mid/big × 연속 0~2 + double × 티어) + `manifest.json` (파일·티어·속도·부하·클릭 속도·장비 티어 표·재료 해시) 11MB,
   + 장소 잔향 버전 `space/<이름>~out|cave|deep.ogg` 216개 7.3MB (루프·드랙·시작·멈춤, N5 프리셋 — 루프는 순환 저역 통과·꼬리 겹침으로 이음매 유지).
-  같은 재료면 같은 결과(시드 고정). CI `--check` (scipy 없이): 재료·스크립트 해시 + 파일 존재. APK 안에 reel_rec 파일이 다 들어갔는지도 CI에서 셈.
+  같은 재료면 같은 결과(시드 고정). CI `--check` (scipy 없이): 재료·스크립트 해시 + 파일 존재. APK 안에 릴 파일이 다 들어갔는지도 CI에서 셈.
 - **재생** `src/audio/reel_audio.py` (manifest 로 찾음): 감기 = 게임 감기 속도 0~3 → 핸들 1.0~3.5회/초 · 부하 = 장력/빨강 기준, 가까운 루프 비율 섞기(재생 속도 안 바꿈).
   드랙 = 줄 풀림 0.12~1 → 초당 클릭 150~850 → 가까운 두 루프. 티어 = manifest tier_of_equipment (T1 나무 / T2~5 보통 / T6~8 수정). 시작 원샷 / 0.25초 넘게 감다 떼면 멈춤 원샷.
   **섞는 루프 동시 최대 4개** (넘으면 가장 작은 것부터 뺌). 지잉 = 장착 티어의 `zing_<티어>_<등급>_k<연속>` 을 믹서 이름 `zing_<등급>_<연속>` 으로(더블은 한 파일).
@@ -2634,5 +2634,5 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
   드랙 줄 풀림 0→1→0: 소리에서 잰 클릭 150 → 300 → 544 → 848회/초 → 다시 내려감, 크기 −32 → −20dB.
   체감 크기(A 가중): 새 릴 −26.4dB ≈ 옛 합성 릴 −25.2dB (옛 것은 낮은 웅웅 때문에 RMS만 컸음), 파이팅 음악(−39~−41dB)보다 한참 위.
   실제 시간 파이팅 동시 재생 한도 초과 0, 최악 상황(전설·대형+위기) 찢어짐 0, 옛 세이브·모바일 미리보기 정상.
-- **남은 것**: 옛 합성 릴(`tools/bake_reel.py`, `tools/audio/reel_synth.py`, `assets/sfx_generated/reel/` 292개, `tools/audio/reference/zing/`)은 아직 지우지 않음(게임은 안 씀).
+- 옛 합성 릴(`tools/bake_reel.py`, `tools/audio/reel_synth.py`, 옛 `assets/sfx_generated/reel/` 292개, `tools/audio/reference/zing/`)은 삭제, 새 소리를 `reel/` 로 옮김.
   돌진 예고음은 v0.8.15 롤백 소리 그대로 (돌진 중 줄이 풀리는 소리는 새 드랙).

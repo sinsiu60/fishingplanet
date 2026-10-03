@@ -1,5 +1,5 @@
 """릴 소리 재생 — 실제 릴 녹음의 클릭 그레인을 재배치해 미리 구운 소리 (REEL_AUDIO_INTEGRATE.md).
-tools/audio/bake_reel_audio.py → assets/sfx_generated/reel_rec/ (+ manifest.json). 파일은 manifest 로 찾는다.
+tools/audio/bake_reel_audio.py → assets/sfx_generated/reel/ (+ manifest.json). 파일은 manifest 로 찾는다.
 
   감기   속도 6단계(핸들 1.0~3.5회/초) × 부하 3단계(0/0.5/0.9) 루프 중 지금 값에 가까운 것을 음량 비율로 섞는다.
          소리 재생 속도는 바꾸지 않는다 (음색 유지). 티어 음색: manifest tier_of_equipment (T1 나무 / T2~T5 보통 / T6~T8 수정).
@@ -21,7 +21,7 @@ DRAG_RATE = (150.0, 850.0)                # 초당 드랙 클릭 (manifest drag_
 MAX_LOOPS = 4
 FADE = 0.12        # 루프 섞기 비율이 따라가는 시간 (초)
 START_FADE = 0.25  # 감기 시작 때 루프가 올라오는 시간
-DIR = ("sfx_generated", "reel_rec")
+DIR = ("sfx_generated", "reel")
 
 _man: dict | None = None
 
