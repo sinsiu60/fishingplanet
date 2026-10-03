@@ -111,6 +111,13 @@ jobs:
           done
           echo "pygame 모듈 $(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)개 검사"
           exit $bad
+      - name: APK 화면 방향이 가로인지 (매니페스트 screenOrientation 0 = landscape, 6 = sensorLandscape)
+        run: |
+          AAPT=$(find ~/.buildozer -path '*build-tools*' -name aapt -type f | sort | tail -1)
+          line=$("$AAPT" dump xmltree bin/*.apk --file AndroidManifest.xml 2>/dev/null | grep -m1 screenOrientation || \
+                 "$AAPT" dump xmltree bin/*.apk AndroidManifest.xml | grep -m1 screenOrientation)
+          echo "$line"
+          echo "$line" | grep -Eq '\)0x(0|6)$' || { echo "::error::가로가 아님: $line"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: FishingGame-android

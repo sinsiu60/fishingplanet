@@ -10,7 +10,7 @@ source.dir = .
 source.include_exts = py,json,ttf,txt,png,ogg,wav,mp3
 source.exclude_dirs = tools, build, dist, bin, .venv, .github, .buildozer, android, __pycache__
 source.exclude_patterns = *.bat,*.md,requirements*.txt,dist_readme.txt
-version = 0.8.5
+version = 0.8.6
 
 # pygame-ce는 p4a 레시피가 없어서 pygame을 쓴다 — 로컬 레시피(android/recipes/pygame)로 2.6.1, 코드는 pygame 2.1.3·2.6.1 호환 확인 (DESIGN.md 26장)
 # numpy = 효과음 합성, pyjnius·android = 진동·화면 켜짐·공유 (src/platform/android.py)
@@ -20,8 +20,9 @@ presplash.filename = %(source.dir)s/android/presplash.png
 icon.filename = %(source.dir)s/android/icon.png
 android.presplash_color = #0C1020
 
-# 가로 화면 고정 (양쪽 가로 회전은 허용)
-orientation = landscape, landscape-reverse
+# 가로 화면 고정. 두 방향을 같이 적으면 p4a 가 매니페스트에 방향을 안 넣어(-1) 세로로 떴다 (v0.8.5) →
+# 매니페스트는 landscape 하나로 처음부터 가로, 뒤집힌 가로는 실행 중 '센서 가로'로 허용 (main.py / src/platform/android.py)
+orientation = landscape
 fullscreen = 1
 
 android.permissions = android.permission.VIBRATE, android.permission.WAKE_LOCK

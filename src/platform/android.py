@@ -51,6 +51,21 @@ def cutout_insets() -> tuple[int, int] | None:
         return None
 
 
+def lock_landscape() -> None:
+    """가로 고정 + 양쪽 가로(뒤집기) 허용 = SCREEN_ORIENTATION_SENSOR_LANDSCAPE. 자동 회전이 꺼져 있어도 가로."""
+    try:
+        from android.runnable import run_on_ui_thread
+        info = __import__("jnius").autoclass("android.content.pm.ActivityInfo")
+
+        @run_on_ui_thread
+        def _set():
+            _activity().setRequestedOrientation(info.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
+
+        _set()
+    except Exception:
+        pass
+
+
 def keep_screen_on() -> None:
     """게임 중 화면 꺼짐 방지 (SDL도 기본으로 막지만 확실히)."""
     try:

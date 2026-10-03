@@ -30,6 +30,11 @@ def main() -> None:
     from src.core import bootlog
     bootlog.start()
     from src.platform.detect import IS_ANDROID
+    if IS_ANDROID:
+        # 가로 고정: SDL 이 창을 만들 때 쓰는 방향 힌트 + 안드로이드에 직접 요청 (창 크기를 가로로 잡게 pygame 보다 먼저)
+        os.environ.setdefault("SDL_IOS_ORIENTATIONS", "LandscapeLeft LandscapeRight")
+        from src.platform import android
+        android.lock_landscape()
     audio = True
     if IS_ANDROID and (bootlog.previous or bootlog.fault):
         # 지난번 실행이 통째로 죽었다 → 어디서 멈췄는지 보여 주고, 이번엔 소리 없이(안전 모드) 시작
