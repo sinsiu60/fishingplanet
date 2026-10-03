@@ -5,7 +5,7 @@ import pygame
 
 from src.core.config import load_json
 from src.core.weather import WEATHER_KO
-from src.render.fish_draw import RANK_COLORS, draw_fish_side, fish_colors, fish_shape
+from src.render.fish_draw import RANK_COLORS, draw_fish_fit
 from src.save.save_game import baits
 from src.fishing.patterns import TIP_SHORT, fish_patterns
 from src.fishing import mutation
@@ -279,21 +279,21 @@ class DexScene(Scene):
             k = (self.t * 0.6 + i * 0.13) % 1.0
             px = r.x + int(k * r.w)
             canvas.fill((255, 255, 230), (px, r.y, 3, 1))
-        cx, cy = r.centerx, r.y + 24
+        cx = r.centerx
+        area = pygame.Rect(r.x + 4, r.y + 4, r.w - 8, r.h - 22)  # 이름 줄 위 (칸 밖으로 안 나감)
         length = 62 if f["rarity"] != "legend" else 70
         if entry:
-            draw_fish_side(canvas, cx, cy, length, 0.0, fish_colors(f), -1, shape=fish_shape(f))
-            text(canvas, f["name"][:7], (cx, r.bottom - 9), RARITY_COL[f["rarity"]], 11, "center")
+            draw_fish_fit(canvas, area, f, length)
+            text(canvas, f["name"].split(" '")[0][:7], (cx, r.bottom - 9), RARITY_COL[f["rarity"]], 11, "center")
             badge = pygame.Rect(r.right - 14, r.y + 3, 11, 11)
             canvas.fill((16, 20, 36), badge)
             text(canvas, entry["best_rank"], badge.center, RANK_COLORS[entry["best_rank"]], 11, "center")
         else:
             seen = self.save.data["dex"].get(f["id"], {}).get("seen")
-            draw_fish_side(canvas, cx, cy, length, 0.0, fish_colors(f), -1, silhouette=(8, 8, 14),
-                           shape=fish_shape(f))
+            draw_fish_fit(canvas, area, f, length, silhouette=(8, 8, 14))
             if seen:
                 # 목격 (엘드라시온에서 도망친 물고기): 실루엣 + 이름
-                text(canvas, f["name"][:7], (cx, r.bottom - 9), ui.DIM, 11, "center")
+                text(canvas, f["name"].split(" '")[0][:7], (cx, r.bottom - 9), ui.DIM, 11, "center")
                 text(canvas, "목격", (r.right - 16, r.y + 8), (200, 180, 255), 11, "center")
             else:
                 text(canvas, "???", (cx, r.bottom - 9), ui.DIM, 11, "center")

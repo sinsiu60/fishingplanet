@@ -2,7 +2,7 @@
 import pygame
 
 from src.core.config import load_json
-from src.render.fish_draw import RANK_COLORS, draw_fish_side, fish_colors, fish_shape
+from src.render.fish_draw import RANK_COLORS, draw_fish_fit
 from src.fishing.bite import bait_tier_mult
 from src.save.save_game import baits, enhanced, equipment, rules
 from src.fishing.mutation import label as mut_label
@@ -294,7 +294,7 @@ class ShopScene(Scene):
             text(canvas, f"{self.save.sale_price(it):,}", (r.right - 4, r.centery), ui.ACCENT, 11, "midright")
         it = items[self.sel]
         fish = self.fish_by_id(it["id"])
-        draw_fish_side(canvas, DETAIL.centerx, DETAIL.y + 40, 110, 0.0, fish_colors(fish), -1, shape=fish_shape(fish))
+        draw_fish_fit(canvas, (DETAIL.x + 6, DETAIL.y + 8, DETAIL.w - 12, 58), fish, 110)
         name = (mut_label(it["mut"]) + " " + fish["name"]) if it.get("mut") else fish["name"]
         text(canvas, name, (DETAIL.centerx, DETAIL.y + 76), RARITY_COL[fish["rarity"]], 11, "center")
         text(canvas, f"{it['size']:.1f}cm · {it['rank']}랭크", (DETAIL.centerx, DETAIL.y + 92), ui.TEXT, 11, "center")
