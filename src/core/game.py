@@ -79,6 +79,9 @@ class Game:
             from src.scene.menu import TitleScene
             start_scene = TitleScene
         self.scenes.push(start_scene(self))
+        from src.core import gcwatch
+        gcwatch.install()
+        gcwatch.settle(collect=True)  # 시작 때 만든 객체는 GC 가 다시 훑지 않게 (v0.8.10)
         bootlog.mark("첫 장면")
 
     def _perf_profile_draw(self) -> None:
@@ -103,7 +106,8 @@ class Game:
             import pstats
             stats = pstats.Stats(st["prof"]).stats
             rows = sorted(stats.items(), key=lambda kv: -kv[1][2])[:8]
-            st["lines"] = [f"{v[2] / st['n'] * 1000:6.2f}ms {v[1] // st['n']:5d}회 "
+            tot = sum(v[2] for v in stats.values()) / st["n"] * 1000
+            st["lines"] = [f"프로파일 합계 {tot:6.2f}ms/프레임 (그리기 시간과 차이 = 파이썬 함수 밖)"] + [f"{v[2] / st['n'] * 1000:6.2f}ms {v[1] // st['n']:5d}회 "
                            f"{k[0].replace(chr(92), '/').split('/')[-1]}:{k[1]} {k[2]}" for k, v in rows]
             st["prof"], st["next"] = None, now + 10.0
 
@@ -130,14 +134,24 @@ class Game:
         self._perf_tick = getattr(self, "_perf_tick", 0) + 1
         if self._perf_tick % 60 == 1:
             self._perf_objs = len(gc.get_objects())  # 파이썬 객체 수 (1초에 한 번) — 계속 늘면 무언가 쌓이는 중
-        extra = [f"메모리 {self._rss_mb():5.0f}MB  객체 {getattr(self, '_perf_objs', 0)}  GC {gc.get_count()}"]
+        from src.core import gcwatch
+        now = time.perf_counter()
+        g = getattr(self, "_gc_win", None)
+        if g is None or now - g[0] >= 1.0:  # 1초 창: GC 에 쓴 시간·횟수·가장 긴 한 번
+            if g is not None:
+                span = now - g[0]
+                self._gc_line = (f"GC {(gcwatch.total - g[1]) / span * 1000:5.1f}ms/초 {(gcwatch.count - g[2]) / span:4.1f}회/초 "
+                                 f"최장 {gcwatch.take_longest() * 1000:4.1f}ms")
+            self._gc_win = (now, gcwatch.total, gcwatch.count)
+        extra = [f"메모리 {self._rss_mb():5.0f}MB  객체 {getattr(self, '_perf_objs', 0)}  얼림 {gc.get_freeze_count()}  "
+                 f"{getattr(self, '_gc_line', 'GC -')}"]
         lines = [line] + extra + list(getattr(self, "_prof_state", {}).get("lines", []))
         from src.core.fonts import get_font
         font = get_font(11)
         for i, ln in enumerate(lines):
             w = font.size(ln)[0] + 6
             c.fill((0, 0, 0), (0, i * 12, min(c.get_width(), w), 12))
-            text(c, ln, (3, 6 + i * 12), (140, 255, 160) if i < 2 else (255, 220, 120), 11, "midleft")
+            text(c, ln, (3, 6 + i * 12), (140, 255, 160) if i < len(extra) + 1 else (255, 220, 120), 11, "midleft")
 
     def _loading_frame(self) -> None:
         """모바일 첫 실행은 효과음을 만드느라 몇 초 걸려서 안내 화면을 먼저 보여 준다."""

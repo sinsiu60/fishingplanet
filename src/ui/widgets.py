@@ -29,9 +29,8 @@ def panel(canvas, rect, border=BORDER, fill=PANEL) -> None:
 
 
 def dim(canvas, alpha: int = 150) -> None:
-    s = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
-    s.fill((6, 8, 20, alpha))
-    canvas.blit(s, (0, 0))
+    from src.ui.layers import solid
+    canvas.blit(solid(canvas, "dim", (6, 8, 20, alpha)), (0, 0))
 
 
 class Button:

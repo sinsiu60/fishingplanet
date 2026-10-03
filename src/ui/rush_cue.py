@@ -12,6 +12,7 @@ import math
 import pygame
 
 from src.core.config import load_json
+from src.ui.layers import layer as _layer
 from src.core.mathutil import clamp, lerp_color
 
 PULSE = (255, 236, 160)
@@ -78,7 +79,7 @@ def draw_ripples(canvas, pos, scale: float, ph: dict | None, t: float) -> None:
         return
     x, y = pos
     base = 30 * max(0.6, min(1.6, scale))
-    layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+    layer = _layer(canvas, "rush_ripples")
     for i in range(n):
         k = 1 - ((t / per + i / n) % 1.0)          # 1 → 0: 바깥에서 안으로
         rx, ry = base * (0.3 + 0.9 * k), base * (0.3 + 0.9 * k) * 0.32
@@ -101,7 +102,7 @@ def draw_pulse(canvas, pts: list, ph: dict | None, t: float) -> None:
     bright = cfg()["frenzy_brightness"] if ph.get("frenzy") else 1.0
     u = 1 - ph["pk"]                                 # 1 = 물고기 끝, 0 = 손
     n = len(pts) - 1
-    layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+    layer = _layer(canvas, "rush_pulse")
     for tail in range(6, -1, -1):                    # 꼬리 잔상 (물고기 쪽)
         uu = min(1.0, u + tail * 0.025)
         f = uu * n
@@ -149,7 +150,7 @@ def draw_wake(canvas, pos, heading_side: float, scale: float, ph: dict | None, t
     d = 1 if heading_side >= 0 else -1
     ln = 26 * max(0.6, min(1.6, scale)) * (0.5 + k)
     a = int(220 * (1 - k * 0.6))
-    layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+    layer = _layer(canvas, "rush_wake")
     for s in (-1, 1):
         for w in range(3):
             off = w * 4
@@ -187,7 +188,7 @@ def draw_light_pulse(canvas, pts: list, lph: dict | None, t: float) -> None:
     x = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * (f - i)
     y = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * (f - i)
     col = lph["col"]
-    layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+    layer = _layer(canvas, "rush_flash")
     pygame.draw.circle(layer, (*col, 70), (int(x), int(y)), 6)
     pygame.draw.circle(layer, (*col, 230), (int(x), int(y)), 2)
     for k in (1, 2):  # 짧은 꼬리

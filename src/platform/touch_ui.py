@@ -123,7 +123,8 @@ def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0
          pitch: float = 0.0) -> None:
     """버튼을 반투명으로 그린다. pressed = 지금 눌린 버튼 id."""
     a = cfg()["button_alpha"][settings.get("touch_alpha")]
-    layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+    from src.ui.layers import layer as _layer
+    layer = _layer(canvas, "touch_ui")
     for c in controls:
         on = c.id in pressed
         ca = a // 2 if c.id == "item" and not on else a  # 소모품(우선순위 5)은 더 옅게 (31장 C6)

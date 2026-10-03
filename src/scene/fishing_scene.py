@@ -598,6 +598,8 @@ class FishingScene(Scene):
 
     # ───────────────────────── 파이팅 시작·끝 ─────────────────────────
     def _start_fight(self) -> None:
+        from src.core import gcwatch
+        gcwatch.settle()  # 낚시터 장면 객체를 얼려 파이팅 중 GC 부담을 줄인다 (v0.8.10)
         c = self.cast
         fish = self.bite.fish
         size = roll_size(fish, self.bite.cast_distance)

@@ -181,7 +181,8 @@ class PatternVFX:
     def draw(self, canvas) -> None:
         if not (self.parts or self.rings or self.stars):
             return
-        layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+        from src.ui.layers import layer as _layer
+        layer = _layer(canvas, "pattern_vfx")
         for r in self.rings:
             if r["t"] < 0:
                 continue
