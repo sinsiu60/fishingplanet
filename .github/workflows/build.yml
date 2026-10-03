@@ -110,6 +110,13 @@ jobs:
             if [ -n "$und" ]; then echo "::error::$(basename $so) 에 정의 안 된 pygame 함수: $und"; bad=1; fi
           done
           echo "pygame 모듈 $(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)개 검사"
+          # 최적화 확인: -O0 이면 반투명 blit 함수가 거의 스택 ldr/str 뿐이라 폰에서 수십 배 느리다 (v0.8.11 파이팅 렉)
+          OBJDUMP=$(command -v llvm-objdump || find ~/.buildozer -name llvm-objdump -type f | head -1)
+          SURF=$(find "$T/pb" -path '*site-packages/pygame/surface*.so' | head -1)
+          share=$("$OBJDUMP" -d --disassemble-symbols=alphablit_alpha_sse2_argb_surf_alpha "$SURF" | \
+                  awk 'NF>2{n++; if($3~/^(ldr|str|ldur|stur)$/) m++} END{print (n ? int(100*m/n) : 100)}')
+          echo "alphablit_alpha_sse2_argb_surf_alpha: 스택 ldr/str 비율 ${share}%"
+          if [ "$share" -gt 60 ]; then echo "::error::pygame 이 최적화 없이(-O0) 컴파일됨 (ldr/str ${share}%)"; bad=1; fi
           exit $bad
       - name: APK 화면 방향이 가로인지 (매니페스트 screenOrientation 0 = landscape, 6 = sensorLandscape)
         run: |

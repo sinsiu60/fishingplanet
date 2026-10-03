@@ -80,6 +80,9 @@ class Pygame2Recipe(CompiledComponentsPythonRecipe):
         env['USE_SDL2'] = '1'
         env["PYGAME_CROSS_COMPILE"] = "TRUE"
         env["PYGAME_ANDROID"] = "TRUE"
+        # p4a 환경엔 최적화 옵션이 없어 pygame C 모듈이 -O0 으로 컴파일됐다 (v0.8.0~0.8.11):
+        # 반투명 blit 한 번(600x270)이 폰에서 20~80ms → 파이팅 FPS 5~20. -O2 를 끝에 붙여 이긴다 (뒤에 오는 -O 가 적용됨).
+        env["CFLAGS"] = env.get("CFLAGS", "") + " -O2"
         return env
 
 
