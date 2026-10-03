@@ -2754,3 +2754,70 @@ class FishingScene(Scene):
         draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5 * (1 - dip)), sag, bias=0.6)
         draw_bobber(canvas, self._bobber_pal(pal), sx, sy + bob, size, floating=True, dip=dip)
         self._draw_float_mark(canvas, sx, sy + bob, size, dip)
+        if c.state == CastState.LANDED and self.fight is None and self.settings.get("bobber_zoom"):
+            self._draw_bobber_zoom(canvas, pal, sx, sy, size, dip)
+
+    ZOOM_W, ZOOM_H = 84, 58
+
+    def _draw_bobber_zoom(self, canvas, pal, sx: float, sy: float, size: float, dip: float) -> None:
+        """찌 확대 말풍선: 화면이 작거나 어두워 찌가 잘 안 보일 때 — 찌에서 나온 말풍선 안에 확대한 찌 + 물고기 그림자.
+        그림자는 진짜 그림자와 같은 그리기(draw_fish_shadow)를 '확대 카메라'로: 찌 둘레의 실제 위치·방향 그대로 배율만 크게."""
+        W, H = self.ZOOM_W, self.ZOOM_H
+        cam = self.cam
+        bp = cam.project(self.cast.bx, self.cast.bz, 0.0)
+        if bp is None:
+            return
+        m = clamp(20.0 / max(1.0, size), 2.0, 7.0)          # 확대 배율 (찌가 약 20px 이 되게)
+        bcx, bcy = W / 2, H * 0.56                          # 말풍선 안 찌 위치 (수면)
+
+        class ZoomCam:
+            yaw, horizon, height = cam.yaw, -9999, H
+
+            def project(self, x, z, h=0.0):
+                p = cam.project(x, z, h)
+                if p is None:
+                    return None
+                return bcx + (p[0] - bp[0]) * m, bcy + (p[1] - bp[1]) * m, p[2] * m
+        surf = getattr(self, "_zoom_surf", None)
+        if surf is None:
+            surf = self._zoom_surf = pygame.Surface((W, H)).convert()
+        top, bot = pal["water_top"], pal["water_bottom"]
+        for y in range(0, H, 2):
+            surf.fill(lerp_color(top, bot, y / H), (0, y, W, 2))
+        t = self.t
+        for i in range(5):                                  # 잔물결
+            yy = int(6 + i * 11 + math.sin(t * 1.4 + i) * 2)
+            xx = int((t * 8 + i * 23) % (W + 30)) - 30
+            surf.fill(pal["wave_light"], (xx, yy, 14, 1))
+        sh = self.bite.shadow if self.weather != "fog" else None
+        if sh is not None and self.bite.fish is not None:
+            draw_fish_shadow(surf, pal, ZoomCam(), dict(sh, glow=GLOW.get(self.bite.fish["rarity"])), t)
+        if dip > 0.08:                                      # 입질 물결 (찌 둘레로 퍼짐)
+            for k in range(2):
+                ph = (t * 1.8 + k * 0.5) % 1.0
+                rw = 8 + ph * 26
+                col = lerp_color(pal["wave_light"], top, ph)
+                pygame.draw.ellipse(surf, col, (bcx - rw, bcy - rw * 0.28, rw * 2, rw * 0.56), 1)
+        bob = math.sin(t * 2.0) * 1.2
+        draw_bobber(surf, self._bobber_pal(pal), bcx, bcy + bob, 22, floating=True, dip=dip)
+        # 말풍선 자리: 찌 위 (위 HUD·오른쪽 메뉴를 피해), 자리가 없으면 아래
+        cw, ch = canvas.get_size()
+        x = clamp(sx - W / 2, 6, cw - W - 34)
+        y = sy - size - 14 - H
+        below = y < 26
+        if below:
+            y = sy + size + 14
+        x, y = int(x), int(y)
+        biting = self.bite.state == BiteState.BITE
+        edge = (255, 214, 90) if biting and int(t * 8) % 2 == 0 else (230, 236, 248)
+        tip_y = int(sy - size * 0.6) if not below else int(sy + size * 0.6)
+        base_y = y + H if not below else y
+        bx0 = int(clamp(sx, x + 10, x + W - 10))
+        tail = [(bx0 - 6, base_y), (bx0 + 6, base_y), (int(sx), tip_y)]
+        pygame.draw.polygon(canvas, (14, 18, 34), [(p[0] + 1, p[1] + 1) for p in tail])
+        pygame.draw.polygon(canvas, edge, tail)
+        canvas.fill((14, 18, 34), (x - 2, y - 2, W + 4, H + 4))
+        canvas.blit(surf, (x, y))
+        pygame.draw.rect(canvas, edge, (x - 2, y - 2, W + 4, H + 4), 2, border_radius=4)
+        if biting:
+            hud.text(canvas, "!", (x + W - 8, y + 8), (255, 214, 90), 16, "center")

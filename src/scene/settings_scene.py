@@ -38,6 +38,7 @@ class SettingsScene(Scene):
         s = self.s
         sound = [
             ("화면 연출 (흔들림·줌)", "toggle", lambda: s.get("screen_shake"), self._toggle_fx),
+            ("찌 확대 창 (말풍선)", "toggle", lambda: s.get("bobber_zoom"), lambda: s.set("bobber_zoom", not s.get("bobber_zoom"))),
         ]
         tutorial = ("튜토리얼", "button", lambda: "처음부터 다시 보기", self._reset_tutorial)
         captions = ("소리 자막 (예고음 글자로)", "toggle", lambda: s.get("sound_captions"), self._toggle_captions)
