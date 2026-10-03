@@ -4,6 +4,7 @@ import math
 import pygame
 
 from src.core.config import load_json
+from src.core.mathutil import lerp_color
 from src.core.weather import WEATHER_KO
 from src.render.fish_draw import RANK_COLORS, draw_fish_fit
 from src.save.save_game import baits
@@ -13,6 +14,7 @@ from src.fishing.lure import profile_of
 from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
+from src.scene.inventory import fit
 
 SPOT_TABS = [("reservoir", "저수지"), ("valley", "계곡"), ("breakwater", "방파제"), ("offshore", "먼바다"),
              ("deep", "심해"), ("secret", "비밀")]
@@ -24,8 +26,10 @@ RARITY_KO = {"common": "일반", "uncommon": "고급", "rare": "희귀", "legend
 RARITY_COL = {"common": (230, 230, 230), "uncommon": (130, 230, 150), "rare": (130, 190, 255),
               "legend": (255, 214, 90)}
 GOLD = (255, 214, 90)
-CARD_W, CARD_H = 92, 60
+CARD_W, CARD_H = 69, 46          # 일반·고급·희귀 (4열 × 2줄)
+COLS = 4
 GRID_X, GRID_Y = 14, 50
+BOSS = pygame.Rect(GRID_X, GRID_Y + 2 * (CARD_H + 4) + 2, 4 * CARD_W + 3 * 4, 94)  # 전설 = 이 낚시터의 보스 칸
 DETAIL = pygame.Rect(306, 50, 160, 196)
 
 
@@ -98,7 +102,10 @@ class DexScene(Scene):
         return sorted(lst, key=lambda f: self.RARITY_ORDER.get(f["rarity"], 9))
 
     def card_rect(self, i: int) -> pygame.Rect:
-        return pygame.Rect(GRID_X + (i % 3) * (CARD_W + 4), GRID_Y + (i // 3) * (CARD_H + 4), CARD_W, CARD_H)
+        fishes = self.spot_fish()
+        if 0 <= i < len(fishes) and fishes[i]["rarity"] == "legend":
+            return BOSS
+        return pygame.Rect(GRID_X + (i % COLS) * (CARD_W + 4), GRID_Y + (i // COLS) * (CARD_H + 4), CARD_W, CARD_H)
 
     def _close(self) -> None:
         self.game.scenes.pop()
@@ -266,6 +273,9 @@ class DexScene(Scene):
             y += 12
 
     def _draw_card(self, canvas, i: int, f: dict) -> None:
+        if f["rarity"] == "legend":
+            self._draw_boss(canvas, i, f)
+            return
         r = self.card_rect(i)
         entry = self.save.dex_entry(f["id"])
         gold = entry is not None and entry["best_rank"] == "S"
@@ -280,11 +290,12 @@ class DexScene(Scene):
             px = r.x + int(k * r.w)
             canvas.fill((255, 255, 230), (px, r.y, 3, 1))
         cx = r.centerx
-        area = pygame.Rect(r.x + 4, r.y + 4, r.w - 8, r.h - 22)  # 이름 줄 위 (칸 밖으로 안 나감)
-        length = 62 if f["rarity"] != "legend" else 70
+        area = pygame.Rect(r.x + 3, r.y + 3, r.w - 6, r.h - 19)  # 이름 줄 위 (칸 밖으로 안 나감)
+        length = 52
+        short = fit(f["name"].split(" '")[0], r.w - 6)
         if entry:
             draw_fish_fit(canvas, area, f, length)
-            text(canvas, f["name"].split(" '")[0][:7], (cx, r.bottom - 9), RARITY_COL[f["rarity"]], 11, "center")
+            text(canvas, short, (cx, r.bottom - 8), RARITY_COL[f["rarity"]], 11, "center")
             badge = pygame.Rect(r.right - 14, r.y + 3, 11, 11)
             canvas.fill((16, 20, 36), badge)
             text(canvas, entry["best_rank"], badge.center, RANK_COLORS[entry["best_rank"]], 11, "center")
@@ -293,10 +304,48 @@ class DexScene(Scene):
             draw_fish_fit(canvas, area, f, length, silhouette=(8, 8, 14))
             if seen:
                 # 목격 (엘드라시온에서 도망친 물고기): 실루엣 + 이름
-                text(canvas, f["name"].split(" '")[0][:7], (cx, r.bottom - 9), ui.DIM, 11, "center")
+                text(canvas, short, (cx, r.bottom - 8), ui.DIM, 11, "center")
                 text(canvas, "목격", (r.right - 16, r.y + 8), (200, 180, 255), 11, "center")
             else:
-                text(canvas, "???", (cx, r.bottom - 9), ui.DIM, 11, "center")
+                text(canvas, "???", (cx, r.bottom - 8), ui.DIM, 11, "center")
+
+    def _draw_boss(self, canvas, i: int, f: dict) -> None:
+        """전설 = 이 낚시터의 보스: 넓은 칸, 붉은 바탕, 금테 두 겹, 큰 그림, 별명까지 큰 글씨."""
+        r = self.card_rect(i)
+        entry = self.save.dex_entry(f["id"])
+        sel = i == self.sel
+        hov = r.collidepoint(self.mouse)
+        top, bot = ((70, 30, 34), (26, 14, 30)) if (sel or hov) else ((52, 22, 28), (18, 12, 26))
+        for y in range(r.h):
+            canvas.fill(lerp_color(top, bot, y / max(1, r.h - 1)), (r.x, r.y + y, r.w, 1))
+        pulse = 0.5 + 0.5 * math.sin(self.t * 3.0)
+        edge = lerp_color((150, 110, 40), GOLD, pulse if sel else 0.4)
+        pygame.draw.rect(canvas, edge, r, 1)
+        pygame.draw.rect(canvas, (120, 90, 36), r.inflate(-4, -4), 1)
+        for cx_, cy_ in (r.topleft, r.topright, r.bottomleft, r.bottomright):  # 모서리 금장식
+            pts = [(cx_, cy_ - 3), (cx_ + 3, cy_), (cx_, cy_ + 3), (cx_ - 3, cy_)]
+            pygame.draw.polygon(canvas, GOLD, pts)
+        k = (self.t * 0.35) % 1.4  # 금빛이 훑고 지나감
+        if k < 1.0:
+            px = r.x + int(k * r.w)
+            canvas.fill((255, 240, 190), (px, r.y, 6, 1))
+            canvas.fill((255, 240, 190), (px - 6, r.bottom - 1, 6, 1))
+        area = pygame.Rect(r.x + 8, r.y + 10, r.w - 16, r.h - 28)  # 글자는 그림 위에 얹음 (그림을 크게)
+        if entry:
+            draw_fish_fit(canvas, area, f, 160)
+            text(canvas, "★ 전설 · 이 낚시터의 주인", (r.x + 8, r.y + 9), GOLD, 11, "midleft")
+            text(canvas, f["name"], (r.centerx, r.bottom - 11), GOLD, 16, "center")
+            badge = pygame.Rect(r.right - 16, r.y + 4, 11, 11)
+            canvas.fill((16, 20, 36), badge)
+            text(canvas, entry["best_rank"], badge.center, RANK_COLORS[entry["best_rank"]], 11, "center")
+        else:
+            seen = self.save.data["dex"].get(f["id"], {}).get("seen")
+            draw_fish_fit(canvas, area, f, 160, silhouette=(6, 4, 10))
+            text(canvas, "★ 전설 · 이 낚시터의 주인", (r.x + 8, r.y + 9), GOLD, 11, "midleft")
+            label = f["name"] if seen else "???"
+            text(canvas, label, (r.centerx, r.bottom - 11), (170, 150, 120), 16, "center")
+            if seen:
+                text(canvas, "목격", (r.right - 18, r.y + 9), (200, 180, 255), 11, "center")
 
     def _draw_detail(self, canvas, f: dict) -> None:
         d = DETAIL
