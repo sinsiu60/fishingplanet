@@ -95,9 +95,22 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: buildozer-${{ hashFiles('buildozer.spec') }}-v1
+          key: buildozer-${{ hashFiles('buildozer.spec', 'android/recipes/**/*.py') }}-v2
       - name: APK 빌드 (debug)
         run: yes | buildozer android debug
+      - name: APK 안 pygame 모듈에 빠진 함수가 없는지 (폰에서 'cannot locate symbol' 로 꺼지는 것 방지)
+        run: |
+          set -e
+          T=$(mktemp -d)
+          unzip -q -o bin/*.apk 'lib/arm64-v8a/libpybundle.so' -d "$T"
+          mkdir -p "$T/pb" && tar xzf "$T/lib/arm64-v8a/libpybundle.so" -C "$T/pb"
+          bad=0
+          for so in $(find "$T/pb" -path '*site-packages/pygame/*.so'); do
+            und=$(readelf -Ws --dyn-syms "$so" | awk '$7=="UND"{print $8}' | grep -E '_(sse2|avx2|neon)|^alphablit_|^blit_blend_|^premul_surf|^pg_has_' || true)
+            if [ -n "$und" ]; then echo "::error::$(basename $so) 에 정의 안 된 pygame 함수: $und"; bad=1; fi
+          done
+          echo "pygame 모듈 $(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)개 검사"
+          exit $bad
       - uses: actions/upload-artifact@v4
         with:
           name: FishingGame-android

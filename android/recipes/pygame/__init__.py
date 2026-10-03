@@ -34,6 +34,15 @@ class Pygame2Recipe(CompiledComponentsPythonRecipe):
                     os.remove(c)
 
             setup_template = open(join("buildconfig", "Setup.Android.SDL2.in")).read()
+            # pygame 2.6.1 안드로이드 템플릿 버그: aarch64 에선 NEON(sse2neon)으로 SIMD 블리터를 켜는데
+            # surface 모듈에 simd_blitters_sse2.c / _avx2.c 가 빠져 있어 폰에서 'cannot locate symbol
+            # alphablit_alpha_sse2_argb_surf_alpha' 로 pygame.display 를 못 불러온다 (v0.8.0~0.8.4 시작 직후 종료).
+            # 데스크톱 템플릿(Setup.SDL2.in)과 같게 두 파일을 넣는다 (avx2 쪽은 ARM 에선 빈 대체 함수로 컴파일됨).
+            old = "surface src_c/surface.c"
+            if "simd_blitters_sse2.c" not in setup_template:
+                assert old in setup_template, "pygame Setup.Android.SDL2.in 의 surface 줄이 바뀜 — 레시피 확인"
+                setup_template = setup_template.replace(
+                    old, "surface src_c/simd_blitters_sse2.c src_c/simd_blitters_avx2.c src_c/surface.c")
             env = self.get_recipe_env(arch)
             env['ANDROID_ROOT'] = join(self.ctx.ndk.sysroot, 'usr')
 
