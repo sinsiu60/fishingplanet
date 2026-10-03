@@ -2,8 +2,10 @@
 
 - 왼쪽: 모든 소리 목록 (버스 탭으로 거르기, 휠·▲▼로 넘김). 누르면 재생, '×5'는 0.35초 간격 5번(변주 확인).
 - 오른쪽 위: 지금 믹서 상태 (버스별 재생 중 수, 리미터, 덕킹).
-- 오른쪽 아래: 상태 연동 소리 (src/audio/fight_audio.py) — 슬라이더로 값을 바꾸며 연속음 듣기.
-  릴 시뮬레이터(32-16 Z2): 감기 속도·장력(부하)·릴 티어·공간을 바꾸며 합성 릴 루프 섞기를 듣는다.
+- 오른쪽 아래 (페이지 버튼으로 바꿈):
+  연속음  상태 연동 소리 (src/audio/fight_audio.py) — 감기 속도·장력 슬라이더로 릴 루프 구간(slow/normal/fast, 장력 높으면 한 단계 느리게)
+          전환 확인, '돌진' = 돌진 시뮬레이션 (zing_rise → loop_fast → 정점 drag_fast → reel_stop).
+  성공음  등급(small·mid·big·퍼펙트)·연속 단계(0~2)별 재생, 퍼펙트·더블 퍼펙트는 노란 빛과 같이 (impact_ms 싱크 확인).
 - 맨 아래: 적응형 음악 상황 바꿔 듣기 (S6) — 장력 슬라이더 = 파이팅 타악 세기.
 설정 → 소리 → 사운드 테스트 룸.
 """
@@ -44,6 +46,19 @@ class SoundTestScene(Scene):
         self.btn_fa = ui.Button((246, 120, 222, 15), "", self._toggle_fa)
         self.mus_i = 0
         self.btn_mus = ui.Button((246, 250, 150, 15), "", self._next_mus)
+        self.page = 0   # 0 연속음 / 1 성공음
+        self.btn_page = ui.Button((380, 102, 88, 13), "", lambda: setattr(self, "page", 1 - self.page))
+        self.btn_rush = ui.Button((404, 222, 64, 13), "돌진", self._rush_sim)
+        self.rush_t = -1.0
+        self.glow: list[float] = []      # 노란 빛 미리보기 시작 시각 (self.t)
+        self.succ_btns = []
+        grades = (("small", "작은"), ("mid", "중간"), ("big", "큰"), ("big_pop", "퍼펙트"))
+        for r, (g, lab) in enumerate(grades):
+            for k in range(3):
+                self.succ_btns.append(ui.Button((300 + k * 42, 124 + r * 17, 40, 14), f"{k}", lambda g=g, k=k: self._succ(g, k)))
+        self.succ_btns.append(ui.Button((246, 196, 108, 14), "퍼펙트 + 노란 빛", lambda: self._succ("big_pop", 0)))
+        self.succ_btns.append(ui.Button((358, 196, 110, 14), "더블 퍼펙트 + 빛", lambda: self._succ("double_pop", 0)))
+        self.succ_labels = [lab for _, lab in grades]
 
     def names(self) -> list[str]:
         bus = BUSES[self.tabs.index]
@@ -81,6 +96,28 @@ class SoundTestScene(Scene):
         ten = next((v["v"] for v in self.sliders if v["key"] == "tension"), 50.0)
         am.set(st, (ten - 30) / 45, 2, 1.0, crisis=crisis)
 
+    def _rush_sim(self) -> None:
+        """돌진 시뮬레이션: 줄 풀림 0 → 1 (0.8초) → 유지 0.5초 → 0 (1초), 시작 zing_rise · 정점 drag_fast · 끝 reel_stop."""
+        if self.fa is None:
+            return
+        self.fa_on = True
+        self.rush_t = 0.0
+        self.fa.reel.rush_begin()
+
+    def _succ(self, grade: str, k: int) -> None:
+        """성공음 재생 + 퍼펙트·더블이면 노란 빛을 impact_ms(+ 오디오 지연 보정) 에 (게임과 같은 계산)."""
+        from src.audio import reel_audio
+        self.sfx.play(reel_audio.success_name(grade, k))
+        self.last = reel_audio.success_name(grade, k)
+        info = reel_audio.success_info(grade, k)
+        off = self.game.settings.get("audio_offset_ms") / 1000.0
+        if grade in ("big_pop", "double_pop"):
+            self.glow_sec = reel_audio.manifest().get("perfect_effect", {}).get("glow_duration_ms", 300) / 1000
+            self.glow.append(self.t + max(0.0, info["impact_ms"] / 1000 + off))
+            if grade == "double_pop":
+                self.glow.append(self.t + max(0.0, (info["second_impact_ms"] or 460) / 1000 + off))
+            self.game.haptics.vibrate("perfect", 1.0, delay=max(0.0, info["impact_ms"] / 1000 + off))
+
     def _toggle_fa(self) -> None:
         self.fa_on = not self.fa_on
         if not self.fa_on and self.fa is not None:
@@ -96,7 +133,10 @@ class SoundTestScene(Scene):
             if self.tabs.click(m):
                 self.top = 0
                 return
-            for b in (self.btn_back, self.btn_up, self.btn_dn, self.btn_fa, self.btn_mus):
+            for b in (self.btn_back, self.btn_up, self.btn_dn, self.btn_mus, self.btn_page):
+                if b.click(m):
+                    return
+            for b in ([self.btn_fa, self.btn_rush] if self.page == 0 else self.succ_btns):
                 if b.click(m):
                     return
             names = self.names()
@@ -113,7 +153,7 @@ class SoundTestScene(Scene):
                     self.queue = [(self.t + k * 0.35, names[n]) for k in range(5)]
                     self.last = names[n]
                     return
-            for s in self.sliders:
+            for s in (self.sliders if self.page == 0 else []):
                 x, y, w = s["rect"]
                 if x <= m[0] <= x + w and y - 5 <= m[1] <= y + 5:
                     s["v"] = s["min"] + (s["max"] - s["min"]) * (m[0] - x) / w
@@ -128,12 +168,18 @@ class SoundTestScene(Scene):
             self.sfx.play(n)
         if self.fa is not None and self.fa_on:
             vals = {s["key"]: s["v"] for s in self.sliders}
+            if self.rush_t >= 0:   # 돌진 시뮬레이션: 줄 풀림 곡선, 감기 멈춤
+                self.rush_t += dt
+                rt = self.rush_t
+                vals["payout"] = min(1.0, rt / 0.8) if rt < 1.3 else max(0.0, 1 - (rt - 1.3) / 1.0)
+                vals["reel"] = 0.0
+                if rt >= 2.3:
+                    self.rush_t = -1.0
+                    self.fa.reel.rush_end()
             sp = SPACES[int(round(vals.get("space", 0)))][0]
             if sp != getattr(self, "_space", None):  # 공간 바꾸면 그 공간 버전으로 다시 읽음
                 self._space = sp
                 self.sfx.set_space(sp)
-                self.fa.reel.key = None
-                self.fa.reel.prepare()
             self.fa.update(dt, vals)
         self._mus()
 
@@ -174,11 +220,32 @@ class SoundTestScene(Scene):
             text(canvas, f"리미터 ×{st['limiter']}  덕킹 {st['duck'] or '-'}", (246, 72), ui.TEXT, 11, "midleft")
             if self.last:
                 text(canvas, f"{self.last} → 버스 {self.sfx.bus_of(self.last)}", (246, 86), ui.DIM, 11, "midleft")
+        # 노란 빛 미리보기 (퍼펙트·더블 퍼펙트 — 게임과 같은 impact_ms·glow 시간)
+        for g0 in list(self.glow):
+            u = (self.t - g0) / getattr(self, "glow_sec", 0.3)
+            if u >= 1:
+                self.glow.remove(g0)
+            elif u >= 0:
+                a = 0.8 * (u / 0.2 if u < 0.2 else (1 - u) / 0.8)
+                import pygame
+                gl = pygame.Surface((222, 30), pygame.SRCALPHA)
+                gl.fill((255, 226, 110, int(220 * a)))
+                canvas.blit(gl, (246, 216))
+        self.btn_page.label = "▶ 성공음" if self.page == 0 else "▶ 연속음"
+        self.btn_page.draw(canvas, self.mouse)
+        if self.page == 1:
+            text(canvas, "성공음 (등급 × 연속 단계)", (246, 108), ui.ACCENT, 11, "midleft")
+            for r, lab in enumerate(self.succ_labels):
+                text(canvas, lab, (250, 131 + r * 17), ui.TEXT, 11, "midleft")
+            for b in self.succ_btns:
+                b.draw(canvas, self.mouse)
+            text(canvas, "노란 빛 = 소리의 '팡'과 같은 순간이어야 함", (246, 228), ui.DIM, 11, "midleft")
         # 상태 연동 소리
-        if self.sliders:
+        if self.sliders and self.page == 0:
             text(canvas, "상태 연동 (파이팅 연속음)", (246, 108), ui.ACCENT, 11, "midleft")
             self.btn_fa.label = "끄기" if self.fa_on else "켜고 슬라이더로 조절"
             self.btn_fa.draw(canvas, self.mouse)
+            self.btn_rush.draw(canvas, self.mouse)
             for i, s in enumerate(self.sliders):
                 y = 143 + i * 13
                 x, w = 330, 110
@@ -191,8 +258,11 @@ class SoundTestScene(Scene):
                 names = {"reel": "감기", "payout": "줄 풀림", "thrash": "첨벙", "yellow": "노란 구간", "red": "빨강"}
                 y = 143 + len(self.sliders) * 13
                 sv = {x["key"]: x["v"] for x in self.sliders}
-                tier = ("나무", "보통", "수정")[int(round(sv.get("tier", 1)))]
                 space = SPACES[int(round(sv.get("space", 0)))][1]
-                text(canvas, f"주인공 {names.get(self.fa.focus, self.fa.focus)} · {tier} 릴 · {space}",
+                r = self.fa.reel
+                band = {"slow": "느림", "normal": "보통", "fast": "빠름", "run": "줄 풀림", "tease": "예고"}.get(r.band, "-")
+                if r.band == "normal":
+                    band += " A" if r.ab == 0 else " B"
+                text(canvas, f"주인공 {names.get(self.fa.focus, self.fa.focus)} · 릴 {band}{' 무겁게' if r.heavy else ''} · {space}",
                      (246, y), ui.ACCENT, 11, "midleft")
         draw_cursor(canvas, self.mouse)

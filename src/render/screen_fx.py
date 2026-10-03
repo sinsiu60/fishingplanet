@@ -84,15 +84,36 @@ class ScreenFX:
         return self._vignettes[color]
 
     # ───────────────────────── 이벤트 ─────────────────────────
-    def perfect(self, pos) -> None:
+    def perfect(self, pos, glow: float | None = None) -> None:
+        """퍼펙트 섬광·충격파·빛줄기. glow = 노란 빛이 퍼졌다 사라지는 시간(초, 실제 시간 — 성공음 '팡'과 싱크,
+        오디오 최종 팩 perfect_effect.glow_duration_ms). 없으면 예전 흰 섬광."""
         self.punch = 0.09
-        self.flash = 0.75
-        self.flash_color = (255, 250, 220)
+        if glow:
+            self.glow(glow)
+        else:
+            self.flash = 0.75
+            self.flash_color = (255, 250, 220)
         for i in range(3):
-            self.shockwaves.append([pos[0], pos[1], -i * 0.06, (255, 220, 110), 0.5, 3])
+            self.shockwaves.append([pos[0], pos[1], -i * 0.06, (255, 220, 110), glow or 0.5, 3])
         for i in range(14):
             a = i / 14 * math.tau + random.uniform(-0.1, 0.1)
             self.rays.append([pos[0], pos[1], a, 0.0, random.uniform(70, 140)])
+
+    def glow(self, sec: float = 0.3) -> None:
+        """노란 빛: sec 초(실제 시간) 동안 빠르게 퍼졌다(첫 20%) 사라짐 — 슬로우모션이어도 소리와 같은 길이."""
+        import time
+        self.glow_rt = (time.perf_counter(), max(0.05, sec))
+
+    def _glow_amount(self) -> float:
+        g = getattr(self, "glow_rt", None)
+        if not g:
+            return 0.0
+        import time
+        u = (time.perf_counter() - g[0]) / g[1]
+        if u >= 1.0:
+            self.glow_rt = None
+            return 0.0
+        return 0.8 * (u / 0.2 if u < 0.2 else (1 - u) / 0.8)
 
     def great(self, pos) -> None:
         self.punch = 0.04
@@ -327,6 +348,15 @@ class ScreenFX:
             pygame.draw.line(layer, (255, 240, 170, int(230 * (1 - k))), p0, p1, 2)
         if busy:
             canvas.blit(layer, (0, 0))
+        # 퍼펙트 노란 빛 (실제 시간 glow 초)
+        ga = self._glow_amount()
+        if ga > 0.01:
+            gl = getattr(self, "_glow_surf", None)
+            if gl is None or gl.get_size() != (w, h):
+                gl = self._glow_surf = _opaque((w, h))
+                gl.fill((255, 226, 110))
+            gl.set_alpha(int(170 * ga))
+            canvas.blit(gl, (0, 0))
         # 섬광
         if self.flash > 0.01:
             fl = getattr(self, "_flash_surf", None)

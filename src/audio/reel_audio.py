@@ -1,28 +1,36 @@
-"""릴 소리 재생 — 실제 릴 녹음의 클릭 그레인을 재배치해 미리 구운 소리 (REEL_AUDIO_INTEGRATE.md).
-tools/audio/bake_reel_audio.py → assets/sfx_generated/reel/ (+ manifest.json). 파일은 manifest 로 찾는다.
+"""릴·돌진·챔질·패턴 성공 소리 — 오디오 최종 팩 (tools/audio/INTEGRATE.md, assets/sfx/audio_manifest.json).
 
-  감기   속도 6단계(핸들 1.0~3.5회/초) × 부하 3단계(0/0.5/0.9) 루프 중 지금 값에 가까운 것을 음량 비율로 섞는다.
-         소리 재생 속도는 바꾸지 않는다 (음색 유지). 티어 음색: manifest tier_of_equipment (T1 나무 / T2~T5 보통 / T6~T8 수정).
-         감기 시작 = start 원샷 + 루프 페이드 인, 손 떼면 = stop 원샷.
-  드랙   줄이 풀려나갈 때: 풀리는 속도 → 초당 드랙 클릭 150~850 → 가까운 두 루프 섞기 (빨라지면 음이 올라가고 지치면 내려감).
-         돌진 예고(자연음 신호)도 드랙: 줄 펄스 동안 tease 0→1 → 클릭 150→550회/초로 점점 빠르고 크게, 돌진 직전 무음.
-  공간   낚시터 공간(N5: out/cave/deep)이면 미리 구운 '~공간' 버전 (space/ 폴더).
-  한도   동시에 섞는 루프 최대 4개 (모바일) — 넘으면 가장 작은 것부터 뺀다.
+모든 클립은 원본 릴 녹음을 자르기만 했거나 미리 만든 파일 → 재생 속도·피치·필터를 바꾸지 않고 그대로 재생 (음량만 조절).
+manifest 경로 "sfx/..." 는 assets/sfx/... 기준.
 
-루프는 믹서의 동시 재생 한도(N3) 밖 — 연속음 자체가 '주인공'이고 배율은 fight_audio 의 focus 가 정한다.
-채널은 믹서의 빈 채널을 직접 쓰고, 음량은 버스(sfx) 배율·덕킹·리미터를 따르며 1/128 단위로 바뀔 때만 set_volume (폰 v0.8.8).
+  릴 감기  감기 속도 0~1 (게임 감기 0~3 → /3) 을 speed_bands 로 slow / normal / fast. 구간이 바뀌면 0.2초 크로스페이드.
+           normal 은 loop_normal_A·B 를 번갈아 (30ms 겹쳐 이어 붙임 — 끝·처음 샘플이 달라 바로 붙이면 '틱').
+           장력(부하) 높으면 한 단계 느린 구간 + 2dB. 감기 시작 reel_start, 0.25초 넘게 감다 떼면 reel_stop.
+           릴 루프는 크로스페이드 중에도 동시 최대 2개.
+  돌진     rush_begin() = zing_rise_C·A·B 중 무작위(같은 것 연속 금지) → 줄이 계속 풀리는 동안 loop_fast →
+           돌진 정점(줄 풀림이 최고에서 꺾이는 순간)에 drag_fast 한 번 → rush_end() = reel_stop. 돌진 중엔 감기 루프 정지.
+           돌진 예고(줄 펄스) 동안은 tease 0→1 만큼 loop_slow 가 커짐 (드랙이 슬금슬금 — 자연음 신호).
+  챔질     hook(size_cm) = reel_burst_heavy, 큰 물고기일수록 크게.
+  성공음   register_success(sfx) = 믹서 소리표에 'succ_<등급>_<연속 0~2>' (small·mid·big·big_pop), 'succ_double', 'succ_double_pop'.
+           타격 시점 impact_ms 등은 success_info().
+루프·원샷은 믹서의 빈 채널을 직접 쓰고(동시 재생 한도 밖 — 연속음 주인공), 음량은 버스(sfx) 배율·덕킹·리미터를 따른다.
 """
 import json
+import random
 
 import pygame
 
-SPEEDS = (1.0, 1.5, 2.0, 2.5, 3.0, 3.5)   # manifest reel_loops 의 rps
-LOADS = (0.0, 0.5, 0.9)
-DRAG_RATE = (150.0, 850.0)                # 초당 드랙 클릭 (manifest drag_loops clicks_per_sec 범위)
-MAX_LOOPS = 4
-FADE = 0.12        # 루프 섞기 비율이 따라가는 시간 (초)
-START_FADE = 0.25  # 감기 시작 때 루프가 올라오는 시간
-DIR = ("sfx_generated", "reel")
+MAN = ("sfx", "audio_manifest.json")
+BANDS = ("slow", "normal", "fast")
+BAND_XF = 0.2         # manifest band_crossfade_sec 이 우선
+AB_OVERLAP = 0.03     # normal A↔B 이어 붙일 때 겹침
+START_FADE = 0.25
+LOAD_HEAVY = (0.75, 0.65)   # 부하 '높음' 들어감 / 풀림 (떨림 방지)
+HEAVY_GAIN = 10 ** (2 / 20)
+RUN_PAYOUT = 0.3      # 돌진이 아니어도 줄이 이만큼 빨리 풀리면 loop_fast (줄이 계속 풀리는 소리)
+MAX_LOOPS = 2
+RELEASE_HOLD = 0.15   # 손을 이만큼 떼고 있어야 '멈춤' (짧게 끊었다 감는 것은 계속 감는 것으로 — 루프·'시작' 반복 방지)
+RESTART_GAP = 0.25    # 이만큼 쉬었다 다시 감을 때만 reel_start
 
 _man: dict | None = None
 
@@ -31,17 +39,22 @@ def manifest() -> dict:
     global _man
     if _man is None:
         from src.core.paths import asset_path
-        p = asset_path(*DIR, "manifest.json")
         try:
-            _man = json.loads(p.read_text(encoding="utf-8"))
+            _man = json.loads(asset_path(*MAN).read_text(encoding="utf-8"))
         except Exception:
-            _man = {"tier_of_equipment": {}, "reel_loops": [], "drag_loops": [], "oneshots": [], "zing": []}
+            _man = {}
     return _man
 
 
-def _sound(file: str) -> pygame.mixer.Sound | None:
+def _path(rel: str):
     from src.core.paths import asset_path
-    p = asset_path(*DIR, *file.split("/"))
+    return asset_path("sfx", *rel.split("/")[1:]) if rel.startswith("sfx/") else asset_path(*rel.split("/"))
+
+
+def _sound(rel: str | None) -> pygame.mixer.Sound | None:
+    if not rel:
+        return None
+    p = _path(rel)
     if p.exists():
         try:
             return pygame.mixer.Sound(str(p))
@@ -50,194 +63,260 @@ def _sound(file: str) -> pygame.mixer.Sound | None:
     return None
 
 
-ZING_GRADES = ("small", "mid", "big", "double")
+SUCCESS_GRADES = ("small", "mid", "big", "big_pop")
 
 
-def load_zings(sfx, tier: str) -> None:
-    """패턴 성공 지잉을 믹서 소리표에 'zing_<등급>_<연속 0~2>' 이름으로 넣는다 (장착 릴 티어 음색).
-    더블은 연속 단계 없이 한 파일 → 세 이름 모두 같은 소리."""
+def success_name(grade: str, streak: int) -> str:
+    return f"succ_{grade}" if grade in ("double", "double_pop") else f"succ_{grade}_{max(0, min(2, streak))}"
+
+
+def success_info(grade: str, streak: int = 0) -> dict:
+    """{'impact_ms', 'second_impact_ms'(더블만), 'duration_sec'} — manifest success."""
+    s = manifest().get("success", {})
+    e = s.get(grade, {})
+    if grade not in ("double", "double_pop"):
+        e = e.get(f"streak{max(0, min(2, streak))}", {})
+    return {"impact_ms": e.get("impact_ms", 40), "second_impact_ms": e.get("second_impact_ms"),
+            "duration_sec": e.get("duration_sec", 0.6)}
+
+
+def register_success(sfx) -> None:
+    """패턴 성공음 14개를 믹서 소리표에 넣는다 (보상 버스, 그대로 재생 — 변주·슬로우·먹먹 없음)."""
     if not sfx.enabled:
         return
-    for e in manifest()["zing"]:
-        if e["tier"] != tier:
-            continue
-        snd = _sound(e["file"])
-        if snd is None:
-            continue
-        for st in (range(3) if e["grade"] == "double" else (e["streak"],)):
-            sfx.sounds[f"zing_{e['grade']}_{st}"] = snd
-    for cache in (sfx.slowed, sfx.muffled):  # 예전 티어로 만든 변형은 버림
-        for k in [k for k in cache if str(k[0] if isinstance(k, tuple) else k).startswith("zing_")]:
-            del cache[k]
-
-
-def tier_of(gear_tier: int) -> str:
-    return manifest()["tier_of_equipment"].get(f"T{int(gear_tier)}") or \
-        ("wood" if gear_tier <= 1 else "mid" if gear_tier <= 5 else "crystal")
-
-
-def _bracket(x: float, grid: tuple) -> list[tuple[int, float]]:
-    """x 양옆 두 칸과 비율. 가운데(25~75%)에서만 섞고 그 밖은 가까운 하나만 — 클릭이 두 겹으로 들리는 구간을 줄인다."""
-    if x <= grid[0]:
-        return [(0, 1.0)]
-    if x >= grid[-1]:
-        return [(len(grid) - 1, 1.0)]
-    for i in range(len(grid) - 1):
-        if grid[i] <= x <= grid[i + 1]:
-            w = (x - grid[i]) / (grid[i + 1] - grid[i])
-            w = min(1.0, max(0.0, (w - 0.25) / 0.5))
-            w = w * w * (3 - 2 * w)
-            return [(i, 1 - w), (i + 1, w)]
-    return [(0, 1.0)]
+    s = manifest().get("success", {})
+    for g in SUCCESS_GRADES:
+        for k in range(3):
+            snd = _sound(s.get(g, {}).get(f"streak{k}", {}).get("file"))
+            if snd is not None:
+                sfx.sounds[success_name(g, k)] = snd
+    for g in ("double", "double_pop"):
+        snd = _sound(s.get(g, {}).get("file"))
+        if snd is not None:
+            sfx.sounds[success_name(g, 0)] = snd
 
 
 class ReelPlayer:
     def __init__(self, sfx):
         self.sfx = sfx
-        self.key = None            # 읽어 둔 (티어, 공간)
-        self.snd: dict[str, pygame.mixer.Sound] = {}   # 'loop_<속도>_<부하>' / 'drag_<k>' / 'start' / 'stop'
-        self.drag_rates: tuple = ()
-        self.voices: dict[str, dict] = {}   # 이름 → {ch, vol, q}
-        self.reeling_t = 0.0       # 감기 시작 뒤 시간 (0 = 멈춤)
-        self.tier = "mid"
-        self.tease = 0.0           # 돌진 예고 0~1 (장면이 줄 펄스 동안 넣음) — 드랙이 슬금슬금 풀리는 소리
-        self.surge_t = 0.0         # 돌진 순간 드랙이 확 풀리는 남은 시간
-        self.max_voices = 0        # 검증용: 동시에 쓴 루프 채널 최대
+        self.key = None
+        self.snd: dict[str, pygame.mixer.Sound] = {}
+        self.loops: list[dict] = []     # 릴 루프 채널 (최대 2): {ch, key, vol, goal, rate, t, dur, kind}
+        self.band: str | None = None    # 지금 감기 구간 (또는 'run' = 줄 풀림 loop_fast, 'tease')
+        self.ab = 0                     # normal 번갈이 (0 = A, 1 = B)
+        self.heavy = False
+        self.reeling_t = 0.0
+        self.idle_t = 9.0               # 손 뗀 뒤 시간
+        self.last_reel = 0.0
+        self.tease = 0.0                # 돌진 예고 0~1 (장면이 줄 펄스 동안 넣음)
+        self.rushing = False
+        self.rush_t = 0.0
+        self.rush_peak = 0.0
+        self.rush_peaked = False
+        self.last_rise = None
+        self.tier = "pack"              # (예전 티어 음색 — 이 팩은 녹음 하나라 티어 없음)
+        self.max_voices = 0             # 검증용: 동시에 쓴 릴 루프 채널 최대
+        self.voices = {}                # 검증용 (sound_stress): 이름 → {ch, q}
 
     # ── 파일 ──
     def prepare(self, tier: str | None = None) -> None:
-        """지금 티어·공간 소리를 읽어 둔다 (낚시터 들어올 때·파이팅 시작 때 — 바뀌었을 때만)."""
-        if tier:
-            self.tier = tier
-        if not self.sfx.enabled:
+        """팩 소리를 읽어 둔다 (한 번만). tier 는 예전 호출 호환용 (무시)."""
+        if not self.sfx.enabled or self.key:
             return
-        space = getattr(self.sfx, "space_name", "open")
-        key = (self.tier, space)
-        if key == self.key:
-            return
-        self.stop()
-        if self.key is None or self.key[0] != self.tier:
-            load_zings(self.sfx, self.tier)
-        self.key = key
-        self.snd = {}
-        man = manifest()
+        m = manifest()
+        r = m.get("reel", {})
+        for b in BANDS:
+            files = r.get("loops", {}).get(b, {}).get("files", [])
+            for i, rel in enumerate(files):
+                s = _sound(rel)
+                if s is not None:
+                    self.snd[f"{b}_{i}"] = s
+        fr = m.get("fish_run", {})
+        for i, rel in enumerate(fr.get("start_options", [])):
+            s = _sound(rel)
+            if s is not None:
+                self.snd[f"rise_{i}"] = s
+        for k, rel in (("start", r.get("start")), ("stop", r.get("stop")), ("run", fr.get("sustain_loop")),
+                       ("peak", fr.get("peak_accent")), ("run_end", fr.get("end")), ("burst", m.get("hookset_or_heavy"))):
+            s = _sound(rel)
+            if s is not None:
+                self.snd[k] = s
+        self.bands = {b: tuple(r.get("speed_bands", {}).get(b, (0, 1))) for b in BANDS}
+        self.xf = float(r.get("band_crossfade_sec", BAND_XF))
+        self.key = "pack"
 
-        def pick(e):
-            alt = e.get("space", {}).get(space)
-            return (alt and _sound("space/" + alt)) or _sound(e["file"])
-
-        for e in man["reel_loops"]:
-            if e["tier"] == self.tier and e["rps"] in SPEEDS and e["load"] in LOADS:
-                s = pick(e)
-                if s:
-                    self.snd[f"loop_{SPEEDS.index(e['rps'])}_{LOADS.index(e['load'])}"] = s
-        drags = sorted((e for e in man["drag_loops"] if e["tier"] == self.tier), key=lambda e: e["clicks_per_sec"])
-        self.drag_rates = tuple(float(e["clicks_per_sec"]) for e in drags)
-        for k, e in enumerate(drags):
-            s = pick(e)
-            if s:
-                self.snd[f"drag_{k}"] = s
-        for e in man["oneshots"]:
-            if e["tier"] == self.tier:
-                s = pick(e)
-                if s:
-                    self.snd[e["kind"]] = s
-
-    # ── 재생 ──
+    # ── 원샷 ──
     def _gain(self) -> float:
         return self.sfx.bus_gain("sfx")
 
-    def _one(self, name: str, vol: float) -> None:
-        snd = self.snd.get(name)
+    def _one(self, key: str, vol: float):
+        snd = self.snd.get(key)
         got = self.sfx._free() if snd else None
         if got:
             got[1].set_volume(min(1.0, vol * self._gain()))
             got[1].play(snd)
+            return got[1]
+        return None
 
-    def _set(self, goals: dict[str, float], dt: float) -> None:
-        goals = {n: g for n, g in goals.items() if g > 0.005 and n in self.snd}
-        if len(goals) > MAX_LOOPS:   # 가장 큰 것 4개만
-            goals = dict(sorted(goals.items(), key=lambda kv: -kv[1])[:MAX_LOOPS])
-        for name in list(self.voices) + [n for n in goals if n not in self.voices]:
-            v = self.voices.get(name)
-            goal = goals.get(name, 0.0)
-            if v is None:
-                if len(self.voices) >= MAX_LOOPS:   # 빠지는 중인 가장 작은 루프를 바로 내리고 자리를 낸다
-                    out = [n for n in self.voices if n not in goals]
-                    if not out:
-                        continue
-                    q = min(out, key=lambda n: self.voices[n]["vol"])
-                    self.voices[q]["ch"].fadeout(30)
-                    del self.voices[q]
-                got = self.sfx._free()
-                if not got:
-                    continue
-                v = self.voices[name] = {"ch": got[1], "vol": 0.0, "q": None}
-                got[1].set_volume(0.0)
-                got[1].play(self.snd[name], loops=-1)
-            step = dt / FADE
-            v["vol"] = min(goal, v["vol"] + step) if goal > v["vol"] else max(goal, v["vol"] - step)
-            if v["vol"] <= 0.003 and goal <= 0.003:
-                v["ch"].fadeout(30)
-                del self.voices[name]
-                continue
-            q = round(min(1.0, v["vol"] * self._gain()) * 128)
-            if q != v["q"]:
-                v["q"] = q
-                v["ch"].set_volume(q / 128)
-            if not v["ch"].get_busy():   # stop_all 등으로 멈췄으면 다시
-                v["ch"].play(self.snd[name], loops=-1)
-        self.max_voices = max(self.max_voices, len(self.voices))
+    def hook(self, size_cm: float) -> None:
+        """챔질 성공 임팩트: reel_burst_heavy (30cm 0.45 → 150cm 이상 1.0)."""
+        self.prepare()
+        k = max(0.0, min(1.0, (size_cm - 30) / 120))
+        self._one("burst", 0.45 + 0.55 * k)
 
-    SURGE = 0.5
+    def rush_begin(self) -> None:
+        """돌진 시작: zing_rise 셋 중 무작위 (같은 것 연속 금지). 감기 루프는 바로 내린다."""
+        rises = [k for k in self.snd if k.startswith("rise_")]
+        if not rises:
+            return
+        pick = random.choice([k for k in rises if k != self.last_rise] or rises)
+        self.last_rise = pick
+        self._one(pick, 1.0)
+        for v in self.loops:   # 돌진 중엔 감기 루프 정지 (겹치지 않게 바로)
+            v["ch"].fadeout(40)
+        self.loops = []
+        self.reeling_t = 0.0
+        self.rushing, self.rush_t, self.rush_peak, self.rush_peaked = True, 0.0, 0.0, False
+        self.pay_s = 0.0
+        self.rush_rise_len = self.snd[pick].get_length()
 
-    def surge(self) -> None:
-        """돌진 순간: 드랙이 최고 속도로 확 풀렸다가 0.5초에 걸쳐 실제 줄 풀림 속도로 넘어감."""
-        self.surge_t = self.SURGE
+    def rush_end(self) -> None:
+        if self.rushing:
+            self.rushing = False
+            self._one("run_end", 0.8)
 
-    @staticmethod
-    def drag_rate(payout: float) -> float:
-        """줄 풀리는 속도 0~1 (0.12 넘을 때만 소리) → 초당 드랙 클릭 150~850."""
-        k = max(0.0, min(1.0, (payout - 0.12) / 0.88))
-        return DRAG_RATE[0] + (DRAG_RATE[1] - DRAG_RATE[0]) * k
+    # ── 루프 ──
+    def _loop_key(self, band: str) -> str:
+        if band == "normal":
+            return f"normal_{self.ab}" if f"normal_{self.ab}" in self.snd else "normal_0"
+        if band == "run":
+            return "run"
+        if band == "tease":
+            return "slow_0"
+        return f"{band}_0"
+
+    def _start_voice(self, band: str, goal: float, fade_in: float):
+        key = self._loop_key(band)
+        snd = self.snd.get(key)
+        if snd is None:
+            return None
+        while len(self.loops) >= MAX_LOOPS:   # 동시 2개: 가장 조용한(빠지는 중인) 것부터 바로 내림
+            old = min(self.loops, key=lambda v: (v["goal"] > 0, v["vol"]))
+            old["ch"].fadeout(20)
+            self.loops.remove(old)
+        got = self.sfx._free()
+        if not got:
+            return None
+        ab = band == "normal"   # normal 은 한 번씩 재생하고 A↔B 로 이어 감
+        v = {"ch": got[1], "key": key, "band": band, "vol": 0.0 if fade_in > 0 else goal, "goal": goal,
+             "rate": 1.0 / max(0.02, fade_in), "t": 0.0, "dur": snd.get_length(), "ab": ab, "q": None}
+        got[1].set_volume(0.0)
+        got[1].play(snd, loops=0 if ab else -1, fade_ms=int(AB_OVERLAP * 1000) if fade_in == 0 else 0)
+        self.loops.append(v)
+        return v
+
+    def _set_volume(self, v) -> None:
+        q = round(min(1.0, v["vol"] * self._gain()) * 128)
+        if q != v["q"]:
+            v["q"] = q
+            v["ch"].set_volume(q / 128)
+
+    def _band_of(self, s: float) -> str:
+        for b in BANDS:
+            lo, hi = self.bands[b]
+            if lo <= s < hi or (b == "fast" and s >= hi):
+                return b
+        return "slow"
 
     def update(self, dt: float, reel: float, load: float, payout: float, reel_gain: float = 1.0,
                drag_gain: float = 1.0) -> None:
-        """reel: 게임 감기 속도 (0 = 안 감음, 최대 약 3 → 핸들 1.0~3.5회/초), load: 0~1 장력 부하, payout: 0~1 줄 풀리는 속도."""
-        if not self.sfx.enabled or not self.snd:
+        """reel: 게임 감기 속도 (0 = 안 감음, 최대 약 3), load: 0~1 장력 부하, payout: 0~1 줄 풀리는 속도."""
+        if not self.sfx.enabled:
             return
-        goals: dict[str, float] = {}
-        if self.surge_t > 0:
-            self.surge_t = max(0.0, self.surge_t - dt)
-            payout = max(payout, 0.4 + 0.6 * self.surge_t / self.SURGE)
-            drag_gain = max(drag_gain, 1.0)   # 신호 — 연속음 주인공 배율과 상관없이
-        if reel > 0.05:
-            if self.reeling_t == 0.0:
-                self._one("start", 0.6 * reel_gain)
+        self.prepare()
+        if not self.snd:
+            return
+        # 돌진: 정점(줄 풀림 최고에서 꺾임) drag_fast 한 번
+        if self.rushing:
+            self.rush_t += dt
+            self.pay_s += (payout - self.pay_s) * min(1.0, dt / 0.15)   # 줄 풀림 흔들림을 고른 값으로
+            if self.pay_s > self.rush_peak:
+                self.rush_peak = self.pay_s
+            elif (not self.rush_peaked and self.rush_t >= 0.4 and self.rush_peak >= 0.1
+                  and self.pay_s < self.rush_peak * 0.85):
+                self.rush_peaked = True
+                self._one("peak", 0.9 * max(drag_gain, 0.7))
+        # 무엇을 틀까
+        want, goal = None, 0.0
+        if self.rushing or payout >= RUN_PAYOUT:
+            # 돌진은 zing_rise 가 끝나 갈 때부터 loop_fast (줄이 계속 풀리는 동안), 감기 루프는 정지
+            if not self.rushing or self.rush_t >= getattr(self, "rush_rise_len", 0.0) - 0.15:
+                if payout >= 0.12:
+                    want, goal = "run", (0.35 + 0.5 * min(1.0, payout)) * max(drag_gain, 0.7 if self.rushing else 0.0)
+            if self.reeling_t > 0:
+                self.reeling_t = 0.0   # 감기 멈춤 (돌진·질주 중엔 '딸깍' 없이)
+        elif reel > 0.05 or (self.reeling_t > 0 and self.idle_t < RELEASE_HOLD):
+            if reel > 0.05:
+                if self.reeling_t == 0.0 and self.idle_t >= RESTART_GAP:
+                    self._one("start", 0.7 * reel_gain)
+                self.idle_t = 0.0
+                self.last_reel = reel
+            else:
+                self.idle_t += dt
+                reel = self.last_reel   # 잠깐 끊김: 같은 구간 유지
             self.reeling_t += dt
-            rps = 1.0 + 2.5 * min(1.0, reel / 3.0)
-            ramp = min(1.0, self.reeling_t / START_FADE)
-            level = 0.6 * reel_gain * ramp
-            for i, wi in _bracket(rps, SPEEDS):
-                for j, wj in _bracket(load * 0.9, LOADS):
-                    goals[f"loop_{i}_{j}"] = level * wi * wj
+            s = min(1.0, reel / 3.0)
+            self.heavy = load >= LOAD_HEAVY[0] or (self.heavy and load >= LOAD_HEAVY[1])
+            b = self._band_of(s)
+            if self.heavy:   # 장력 높으면 한 단계 느린 구간 + 2dB
+                b = BANDS[max(0, BANDS.index(b) - 1)]
+            want = b
+            goal = 0.6 * reel_gain * min(1.0, self.reeling_t / START_FADE) * (HEAVY_GAIN if self.heavy else 1.0)
         else:
-            if self.reeling_t > 0.25:
-                self._one("stop", 0.7 * reel_gain)  # 손 떼면 '딸깍'
+            if self.reeling_t > 0.25 + RELEASE_HOLD:
+                self._one("stop", 0.7 * reel_gain)
             self.reeling_t = 0.0
-        if payout > 0.12 and self.drag_rates:
-            level = (0.15 + 0.5 * payout) * drag_gain
-            for k, w in _bracket(self.drag_rate(payout), self.drag_rates):
-                goals[f"drag_{k}"] = level * w
-        elif self.tease > 0 and self.drag_rates:
-            # 돌진 예고(신호): 연속음 주인공 배율과 상관없이 들리게, 클릭 150 → 550회/초로 점점 빠르고 크게
-            level = 0.2 + 0.4 * self.tease
-            for k, w in _bracket(DRAG_RATE[0] + 400.0 * self.tease, self.drag_rates):
-                goals[f"drag_{k}"] = level * w
-        self._set(goals, dt)
+            self.idle_t += dt
+            if self.tease > 0:
+                want, goal = "tease", 0.15 + 0.45 * self.tease
+        # 루프 채널 관리
+        cur = next((v for v in self.loops if v["goal"] > 0 and v["band"] == want), None) if want else None
+        for v in self.loops:
+            if v is not cur:
+                v["goal"] = 0.0
+        if want and cur is None:
+            cur = self._start_voice(want, goal, self.xf if self.band not in (None,) else 0.12)
+        if cur is not None:
+            cur["goal"] = goal
+        self.band = want
+        for v in list(self.loops):
+            v["t"] += dt
+            # normal A↔B: 끝나기 30ms 전 다음 것을 30ms 페이드 인으로 이어 붙임 (그동안만 2개)
+            if v["ab"] and v["goal"] > 0 and v["t"] >= v["dur"] - AB_OVERLAP - dt and not v.get("next"):
+                v["next"] = True
+                self.ab ^= 1
+                nv = self._start_voice("normal", v["goal"], 0.0)
+                if nv is not None:
+                    nv["vol"] = v["vol"]
+                    v["goal"] = 0.0
+                    v["rate"] = 1.0 / AB_OVERLAP
+                    v["ch"].fadeout(int(AB_OVERLAP * 1000))
+            step = v["rate"] * dt
+            v["vol"] = min(v["goal"], v["vol"] + step) if v["goal"] > v["vol"] else max(v["goal"], v["vol"] - step)
+            done = (v["vol"] <= 0.003 and v["goal"] <= 0.003) or (v["ab"] and v["t"] >= v["dur"] + 0.05)
+            if done:
+                v["ch"].fadeout(20)
+                self.loops.remove(v)
+                continue
+            self._set_volume(v)
+        self.max_voices = max(self.max_voices, len(self.loops))
+        self.voices = {v["key"]: v for v in self.loops}
 
     def stop(self) -> None:
-        for v in self.voices.values():
+        for v in self.loops:
             v["ch"].fadeout(60)
+        self.loops = []
         self.voices = {}
         self.reeling_t = 0.0
+        self.rushing = False
+        self.band = None

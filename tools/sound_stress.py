@@ -110,13 +110,13 @@ def main(argv) -> int:
             sc.signal_audio.start(a1, f1, f)
             sc.signal_audio.start(a2, f2, f)
         if i % 70 == 10:
-            sc._perfect_sound()
+            sc._judge_burst(sc._fish_screen(), True, (255, 214, 90))   # 퍼펙트 '팡' (성공음 big_pop + 노란 빛)
         if i % 200 == 50:
             sc._on_fight_event("double_perfect")
         if normal and i % 25 == 5:
-            sc._zing("small")      # 작은 지잉 연타 (쿨다운 1.5초가 거름)
+            sc._success("small")   # 작은 성공음 연타 (쿨다운 1.5초가 거름)
         if normal and i % 120 == 60:
-            sc._zing("mid")
+            sc._success("mid")
         if i % 150 == 30:
             sc.lightning.strike(sc.cam.horizon, sc.cam.width)
         if i % 40 == 0:

@@ -9,12 +9,12 @@
 |---|---|---|---|---|---|---|---|
 | (예) sfx_hook_success | assets/sfx/sfx_hook_success.ogg | Fishing Rod Snap | 이름 | https://… | CC0 | 길이 0.6초로 자름, 음량 −2dB | 2026-10-02 |
 
-## 릴 사운드 (실제 녹음 재합성 — REEL_AUDIO_INTEGRATE.md)
-게임의 릴 감기·드랙·패턴 성공 지잉은 아래 녹음에서 클릭 그레인(약 5ms)을 잘라 다시 배치해 만든다
-(`tools/audio/reel_from_recording.py`, `drag_zing.py`, `bake_reel_audio.py` → `assets/sfx_generated/reel/`). 자세한 기록: `tools/audio/CREDITS_reel.md`.
+## 릴 사운드 · 패턴 성공음 (오디오 최종 팩 — tools/audio/INTEGRATE.md)
+릴 감기·돌진·챔질 소리(`assets/sfx/reel/` 11개)는 아래 녹음을 **자르기만** 한 것 (구간 자르기·짧은 페이드·공통 음량 1회·반복 이음새 크로스페이드, 피치·필터·재합성 없음 — `tools/audio/cut_reel_clips.py`).
+패턴 성공음(`assets/sfx/success/` 14개)과 퍼펙트 '팡'·'반짝임'(`assets/sfx/success_stems/`)은 원본 릴 꼬리 + **직접 합성한 보조 레이어**
+(팽팽한 낚싯줄 울림 · 줄이 물을 가르는 소리 · 물고기가 끌려오는 물소리 · 낚싯대에 힘이 실리는 저음 · 퍼펙트 '팡') — `tools/audio/make_success_sfx.py`, `make_perfect_pop.py`.
 
 | 게임 안 이름 | 파일 | 원본 제목 | 만든 사람 | 출처 URL | 라이선스 | 수정 내용 | 추가한 날 |
 |---|---|---|---|---|---|---|---|
-| reel_* · drag_* · zing_* (assets/sfx_generated/reel) | tools/audio/source/reel_recording.wav | fishing reel (audiopapkin-fishing-reel-302355.mp3) | audiopapkin | Pixabay — https://pixabay.com/sound-effects/ (음원 번호 302355) | Pixabay Content License (상업 이용·수정 허용, 표기 의무 없음) | 모노 44.1kHz 변환 → 클릭 그레인 추출·재배치 (속도·부하·티어·드랙·지잉) | 2026-10-03 |
-
-> 출처: Pixabay (사용자 확인, 2026-10-03). 개별 페이지 주소는 이 작업 환경에서 Pixabay 접속이 막혀 확인하지 못함 — 파일명 기준 'audiopapkin' 의 음원 302355.
+| 릴 클립 (assets/sfx/reel/*) · 성공음의 릴 꼬리 | tools/audio/source/reel_recording.wav | audiopapkin-fishing-reel-302355.mp3 | | | | 구간 자르기·페이드·공통 음량만 (음색 변형 없음) | 2026-10-03 |
+| 성공음 보조 레이어 (줄·물·낚싯대·팡) | assets/sfx/success/*, assets/sfx/success_stems/* | — | 직접 합성 (이 프로젝트) | — | 이 프로젝트 | — | 2026-10-03 |

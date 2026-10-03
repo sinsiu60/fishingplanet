@@ -32,7 +32,6 @@ jobs:
           SDL_AUDIODRIVER: dummy
         run: |
           python tools/bake_sfx.py --check
-          python tools/audio/bake_reel_audio.py --check
           python tools/bake_music.py --check
           python tools/sound_audit.py --strict
       - name: 아이콘
@@ -81,7 +80,6 @@ jobs:
       - name: 사운드 점검 (APK에 묶일 구운 파일이 최신인지)
         run: |
           python tools/bake_sfx.py --check
-          python tools/audio/bake_reel_audio.py --check
           python tools/bake_music.py --check
       - name: 폰과 같은 pygame 2.6 에서 소리·장면 확인 (pygame-ce 전용 API 쓰면 여기서 실패)
         env:
@@ -118,9 +116,9 @@ jobs:
           want=$(ls assets/sfx_space/*.ogg | wc -l)
           echo "APK 공간 소리 ${nsp}/${want}개"
           [ "$nsp" -eq "$want" ] || { echo "::error::APK 에 공간 소리가 빠짐 (${nsp}/${want})"; exit 1; }
-          # 녹음 기반 릴 소리 (sfx_generated/reel: wav 102 + manifest + 공간 ogg) 가 다 들어갔는지
-          nrr=$(tar tf "$T/assets/private.tar" | grep -c 'sfx_generated/reel/.*\.\(wav\|ogg\|json\)$' || true)
-          wrr=$(find assets/sfx_generated/reel -type f \( -name '*.wav' -o -name '*.ogg' -o -name '*.json' \) | wc -l)
+          # 오디오 최종 팩 (assets/sfx/reel·success·success_stems + audio_manifest.json) 이 다 들어갔는지
+          nrr=$(tar tf "$T/assets/private.tar" | grep -c '\(^\|/\)sfx/\(reel\|success\|success_stems\)/[^/]*\.wav$\|\(^\|/\)sfx/audio_manifest\.json$' || true)
+          wrr=$( ( find assets/sfx/reel assets/sfx/success assets/sfx/success_stems -name '*.wav'; ls assets/sfx/audio_manifest.json ) | wc -l)
           echo "APK 릴 소리 ${nrr}/${wrr}개"
           [ "$nrr" -eq "$wrr" ] || { echo "::error::APK 에 릴 소리가 빠짐 (${nrr}/${wrr})"; exit 1; }
           cnt=$(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)

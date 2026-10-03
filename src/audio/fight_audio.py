@@ -1,7 +1,7 @@
 """상태 연동 연속 사운드 (DESIGN.md 32장 S4): 숫자처럼 상태를 알려 주는 소리.
 
-  릴 감기     합성 릴 루프(src/audio/reel_audio.py) — 속도·부하(장력)·티어 음색, 가까운 루프를 섞음 (32-16 Z2)
-  드랙 풀림   풀리는 속도 → 실제 릴 드랙 '지이이잉' 4단계 루프 섞기 (Z1 결정 B), 살짝 풀릴 땐 무음
+  릴 감기     오디오 최종 팩 릴 루프(src/audio/reel_audio.py) — 속도 구간 slow/normal/fast, 장력 높으면 한 단계 느리게 +2dB
+  줄 풀림     줄이 빨리 풀리는 동안 loop_fast (돌진이면 zing_rise → loop_fast → 정점 drag_fast → reel_stop, 장면이 rush_begin)
   장력 삐걱임 v0.8.14 롤백으로 없앰 — 예전처럼 빨강·줄 50% 아래에서 가끔 '끼익'(fight 'creak' 이벤트, fishing_scene)
   줄 실금     v0.8.14 롤백으로 없앰 (예전엔 그 구간에 '끼익'만)
   드랙 단계   단계가 바뀔 때마다 묵직한 '딸깍' (단계 = 피치)
@@ -24,10 +24,8 @@ SLIDERS = [
     {"key": "tension", "label": "장력", "min": 0.0, "max": 110.0, "default": 50.0},
     {"key": "drag", "label": "드랙 단계", "min": 0.0, "max": 4.0, "default": 2.0},
     {"key": "near", "label": "물고기 가까움", "min": 0.0, "max": 1.0, "default": 0.5},
-    {"key": "tier", "label": "릴 티어", "min": 0.0, "max": 2.0, "default": 1.0},
     {"key": "space", "label": "공간", "min": 0.0, "max": 3.0, "default": 0.0},
 ]
-TIER_NAMES = ("wood", "mid", "crystal")
 RED = 75.0  # 테스트 룸에선 이 위가 빨강 (게임에선 물고기별 green_high)
 
 
@@ -42,7 +40,7 @@ class FightAudio:
         self.crack_t = 1.0
         self.thrash_t = 1.5
         from src.audio.reel_audio import ReelPlayer
-        self.reel = ReelPlayer(sfx)  # 합성 릴·드랙 루프 (32-16 Z2)
+        self.reel = ReelPlayer(sfx)  # 릴·돌진·챔질 소리 (오디오 최종 팩)
         self.last_drag = None
 
     def stop(self) -> None:
@@ -89,12 +87,7 @@ class FightAudio:
         drag, near = v.get("drag"), v.get("near", 0.5)
         self.sfx.fish_dist = 1.0 - near  # N5: 물고기 쪽 소리는 믹서가 거리만큼 작고 둔하게
         self._update_focus(dt, v, red_at)
-        # 릴 감기·드랙 풀림: 합성 릴 루프 섞기 (32-16 Z2, reel_audio) — 부하 = 장력 / 빨강 기준, 티어 음색
-        tier = v.get("tier")
-        if tier is not None:
-            tier = TIER_NAMES[int(round(tier))] if not isinstance(tier, str) else tier
-            if tier != self.reel.tier:
-                self.reel.prepare(tier)
+        # 릴 감기·줄 풀림 (오디오 최종 팩, reel_audio) — 부하 = 장력 / 빨강 기준
         load = max(0.0, min(1.0, v.get("tension", 0.0) / max(1.0, red_at)))
         self.reel.update(dt, reel if (reel > 0.05 and payout < 0.6) else 0.0, load, payout,
                          self.gain["reel"], self.gain["drag"])

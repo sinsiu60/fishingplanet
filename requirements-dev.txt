@@ -1,4 +1,4 @@
 # 개발용 (게임 실행에는 필요 없음): 소리 미리 굽기
-# 릴 녹음 재합성 tools/audio/bake_reel_audio.py 에 scipy 가 필요 (tools/audio/requirements-dev.txt)
+# 오디오 팩을 다시 만들 때만 (tools/audio/cut_reel_clips.py · make_success_sfx.py · make_perfect_pop.py — 수동 실행) scipy 필요
 -r requirements.txt
 scipy

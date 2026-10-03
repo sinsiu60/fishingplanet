@@ -9,6 +9,7 @@ import pygame
 
 RATE = 44100
 LAZY_SEC = 2.5   # 이보다 긴 소리(환경음 바탕 9초 등)는 처음 쓸 때 읽는다 → 시작 메모리·시간 절반 (폰, v0.8.3)
+AS_IS = ("succ_",)   # 오디오 최종 팩 성공음: 변주·슬로우모션·먹먹 효과 없이 그대로 재생
 
 
 class _Sounds(dict):
@@ -108,8 +109,8 @@ class Sfx:
             except Exception as e:
                 if len(self.missing_baked) == 1:
                     bootlog.mark(f"  {name} 합성 실패: {e!r}")
-        from src.audio.reel_audio import load_zings
-        load_zings(self, "mid")  # 패턴 성공 지잉 (Z3) — 낚시 화면이 장착 릴 티어로 바꿈
+        from src.audio.reel_audio import register_success
+        register_success(self)  # 패턴 성공음 'succ_*' (오디오 최종 팩 — assets/sfx/success, 그대로 재생)
 
     def _to_pcm_stereo(self, st: np.ndarray) -> np.ndarray:
         """합성 엔진의 스테레오 float → 믹서 형식 (샘플레이트 맞춤, 모노 믹서면 섞음)."""
@@ -136,6 +137,7 @@ class Sfx:
         self.sig_boost = False
         self.duck_db = {b: 0.0 for b in c["priority"]}  # 지금 낮춘 양 (dB, 음수)
         self.duck_hold: dict[str, float] = {}
+        self.duck_rate: dict[str, float] = {}   # 복귀 속도 dB/초
         self.base_duck = {b: 0.0 for b in c["priority"]}  # 계속 낮춤 (파이팅 중 환경음 등)
         self.limiter = 1.0
         self.slow = False
@@ -311,8 +313,9 @@ class Sfx:
             g *= self.limiter
         return g
 
-    def duck(self, kind: str) -> None:
-        """순간 덕킹: 신호·챔질·퍼펙트 때 음악·환경음을 잠깐 낮춘다 (sec 동안 유지 후 복귀)."""
+    def duck(self, kind: str, hold: float | None = None, release: float | None = None) -> None:
+        """순간 덕킹: 신호·챔질·퍼펙트 때 음악·환경음을 잠깐 낮춘다 (sec 동안 유지 후 복귀).
+        hold = 유지 시간(없으면 config sec), release = 복귀에 걸리는 초 (없으면 초당 30dB)."""
         if not self.enabled:
             return
         if kind == "sig" and self.sig_boost:
@@ -324,7 +327,8 @@ class Sfx:
             if bus == "sec":
                 continue
             self.duck_db[bus] = min(self.duck_db.get(bus, 0.0), db)
-            self.duck_hold[bus] = max(self.duck_hold.get(bus, 0.0), d.get("sec", 0.3))
+            self.duck_hold[bus] = max(self.duck_hold.get(bus, 0.0), hold if hold is not None else d.get("sec", 0.3))
+            self.duck_rate[bus] = 30.0 if not release else max(1.0, -db / release)
 
     def set_base_duck(self, kind: str | None) -> None:
         """계속 낮춤 (예: 파이팅 중 환경음 −4dB). None이면 해제."""
@@ -339,6 +343,8 @@ class Sfx:
     def _variant(self, name: str) -> pygame.mixer.Sound:
         """반복 소리 변주: 피치 ±2·4% 변형 중 하나 (처음 쓸 때 만들어 둠), 슬로우모션이면 낮고 먹먹한 변형."""
         snd, key = self._base(name)
+        if name.startswith(AS_IS):   # 오디오 최종 팩: 속도·피치·필터 변경 없이 그대로
+            return snd
         if self.slow and self.bus_of(name) in ("sfx", "reward", "amb"):
             if key not in self.slowed:
                 self.slowed[key] = self._resampled(snd, self.cfg["slowmo"]["pitch"], self.cfg["slowmo"]["lowpass"])
@@ -499,7 +505,7 @@ class Sfx:
             if self.duck_hold.get(bus, 0) > 0:
                 self.duck_hold[bus] -= dt
             elif self.duck_db[bus] < 0:
-                self.duck_db[bus] = min(0.0, self.duck_db[bus] + dt * 30)  # 초당 30dB로 복귀
+                self.duck_db[bus] = min(0.0, self.duck_db[bus] + dt * self.duck_rate.get(bus, 30.0))  # 기본 초당 30dB로 복귀
         self.active = [e for e in self.active if e["ch"].get_busy() and e["ch"].get_sound() is not None]
         self.bus_vol["master"] = self.volume
         total = sum(min(1.0, e["vol"] * self.bus_gain(e["bus"], limit=False))

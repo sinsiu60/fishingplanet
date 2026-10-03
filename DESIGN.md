@@ -2618,7 +2618,7 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
 6. 동시 재생 한도: 실제 시간 파이팅(저수지·습지·전설 황금잉어) 한도 초과 프레임 0.
 7. 직접 들어볼 체크리스트: `SOUND_CHECKLIST.md` 'Z5'.
 
-### 릴 녹음 재합성으로 교체 (REEL_AUDIO_INTEGRATE.md) — Z2 합성 릴·Z3 지잉을 **대체**
+### 릴 녹음 재합성으로 교체 (REEL_AUDIO_INTEGRATE.md) — Z2 합성 릴·Z3 지잉을 **대체** — ※ 아래 '오디오 최종 팩'으로 다시 대체, 코드·파일 삭제됨
 - **재료**: 실제 릴 녹음 `tools/audio/source/reel_recording.wav` (모노 44.1kHz 41.8초, Pixabay — CREDITS.md).
   `reel_from_recording.py` 가 녹음에서 클릭 그레인(약 5ms) 2065개 + 클릭 사이 바탕 질감을 잘라 내고, 원하는 속도·부하로 다시 배치. `drag_zing.py` = 드랙(줄 풀리는 속도 = 클릭 속도 = 음 높이)·지잉.
 - **굽기** `python tools/audio/bake_reel_audio.py` (numpy + scipy — `requirements-dev.txt`, 게임 실행엔 불필요) → `assets/sfx_generated/reel/`
@@ -2641,3 +2641,31 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
   돌진 silence_sec 전 무음 → 돌진 순간 `surge()` = 최고 속도(850회/초)로 확 풀렸다가 0.5초에 걸쳐 실제 줄 풀림 속도로 넘어감 + 물보라·진동 '툭'.
   신호음 '강조' 모드만 예전 legacy_rush_hum0~7·legacy_rush_go 도 같이. '소리 신호' 끔이면 예고 드랙 없음(진동만).
 - 출처: Pixabay (audiopapkin, 302355) · Pixabay Content License — CREDITS.md.
+
+### 오디오 최종 팩 (tools/audio/INTEGRATE.md, assets/sfx/audio_manifest.json) — 릴 합성·재합성·지잉을 모두 **대체**
+- **파일** (미리 만든 것 — 빌드 때 굽기 없음, `tools/audio/` 스크립트는 다시 만들 때만 수동 실행, scipy 는 `requirements-dev.txt`):
+  `assets/sfx/reel/` 11개 = 원본 릴 녹음(`tools/audio/source/reel_recording.wav`, 스테레오)을 **자르기만** 한 것 — loop_slow(약 116 클릭/초) · loop_normal_A/B(약 190) · loop_fast(약 279) ·
+  reel_start · reel_stop · zing_rise_A/B/C(가속) · drag_fast(가장 빠름) · reel_burst_heavy(가장 큼). `assets/sfx/success/` 14개 '쒸익-팽!' + `success_stems/` 퍼펙트 '팡'·'반짝임'.
+  manifest 경로 "sfx/..." = assets/sfx/... 기준. **모든 클립은 속도·피치·필터 변경 없이 그대로** (믹서의 변주·슬로우모션·먹먹 효과에서 succ_ 제외, 음량만 조절).
+  장소 잔향은 팩에 공간 버전이 없어 적용 안 함 (넣으려면 공간별 버전을 미리 만들어 assets/sfx_space 방식으로).
+- **릴 감기** (`src/audio/reel_audio.py` ReelPlayer): 감기 속도 0~3 → 0~1 → speed_bands slow <0.35 ≤ normal <0.75 ≤ fast, 바뀌면 0.2초 크로스페이드.
+  normal 은 A·B 를 번갈아 (각 0.62초, 끝·처음 샘플이 달라 30ms 겹쳐 이어 붙임). 장력(부하 = 장력/빨강 기준) 0.75 넘으면(0.65 아래로 풀림) 한 단계 느린 구간 + 2dB.
+  감기 시작 reel_start(0.25초 넘게 쉬었다 감을 때만), 0.15초 넘게 떼면 멈춤 → reel_stop. 릴 루프는 크로스페이드·A/B 이음 중에도 동시 최대 2개.
+- **돌진**: 'action:rush'(줄 펄스가 손에 닿음) → zing_rise C·A·B 무작위(같은 것 연속 금지) + 감기 루프 즉시 정지 → zing_rise 가 끝나 갈 때부터 줄이 풀리는 동안 loop_fast →
+  돌진 정점(고른 줄 풀림이 최고에서 85% 아래로 꺾임, 0.4초 이후, 최고 0.1 이상) drag_fast 한 번 → 돌진 끝(뇌 상태가 rush 아님) reel_stop.
+  실제 파이팅에서 돌진은 약 1.2초·줄 풀림 최고 0.2~0.33 → 정점 소리는 대부분의 돌진에서 0.4초쯤. 돌진이 아니어도 줄이 빨리(0.3+) 풀리면 loop_fast.
+  돌진 예고(줄 펄스) 동안 감지 않고 있으면 loop_slow 가 0→크게 (드랙이 슬금슬금 — 자연음 신호), '강조' 모드는 예전 울림·쉬익도.
+- **챔질**: 챔질 성공 임팩트에 reel_burst_heavy (30cm 0.45 → 150cm+ 1.0), 기존 sfx_hook 와 같이, 음악 −3dB 덕킹(hook).
+- **패턴 성공음** `_success(grade, fx, fx2)` (fishing_scene): success_mapping — small 일반 대응(돌진 버팀·흔들기·잠수·수면·펌핑·물어뜯기·GREAT·방향 GREAT) /
+  mid 꼬임 해소·역주행 회수·숨기 기습 / big 콤보 완료·이중 패턴 / big_pop 퍼펙트(점프·방향·패턴 깔끔) / double_pop 더블 퍼펙트 (double 은 예비).
+  연속 0~2단계(3번째부터 2, 실패·놓침에서 0), 판정 순간 바로 재생, small 쿨다운 1.5초(소리만 생략, 연출은 그대로). 믹서 이름 `succ_<등급>_<연속>` · `succ_double_pop`, 보상 버스.
+  울리는 동안 효과음(릴 루프)·환경음·음악 −3dB (덕킹 'success', 클립 길이만큼 유지 → 0.3초에 걸쳐 복귀). 예전 지잉 성공음·퍼펙트 '쿵'(sfx_perfect_low, 삭제)·'챙' 없음.
+  성공 시 물고기 거리 감소(패턴 ok_distance 3~6m)는 판정 순간 → 성공음 타격(25~41ms 뒤)과 1~2프레임 차이라 그대로.
+- **퍼펙트 노란 이펙트 싱크**: 연출(섬광·충격파·빛줄기·반짝임·글자·흔들림·슬로우)은 성공음 impact_ms(+ 설정 '오디오 지연 보정') 뒤 **실제 시간**으로 (슬로우모션 무관, `_at`).
+  노란 빛 = ScreenFX.glow — perfect_effect.glow_duration_ms(0.3초, 실제 시간) 동안 빠르게 퍼졌다(첫 20%) 사라짐. 더블 = impact_ms(41) · second_impact_ms(461) 두 번.
+  진동도 impact_ms 에: 작은 'pump' 약하게 / 중간 'bite' / 큰 'perfect' / 퍼펙트 'perfect' 세게 / 더블 두 번. 측정: 노란 빛 46~49ms(목표 41 + 그리기 1프레임), +40ms 보정이면 83~87ms.
+- **사운드 테스트 룸**: '연속음' 페이지 = 감기 속도·장력 슬라이더 → '릴 느림/보통 A·B/빠름 (무겁게)' 표시, '돌진' 버튼 = 돌진 시뮬레이션(줄 풀림 0→1→0).
+  '성공음' 페이지 = 등급 4 × 연속 0~2 버튼, '퍼펙트 + 노란 빛'·'더블 퍼펙트 + 빛' (게임과 같은 impact_ms 로 노란 상자 미리보기).
+- **확인**: 숙련 봇 파이팅 41번 이벤트 → 성공음 330번, 매핑 설계대로·small 간격 최소 2.37초·연속 단계 오류 0. 훈련 수조 돌진: zing_rise → (loop_fast) → drag_fast → reel_stop,
+  돌진 중 감기 루프 0프레임, 릴 루프 동시 최대 2. 실제 시간 파이팅 동시 재생 한도 초과 0, 최악 상황(전설) 최대 −0.1dBFS 찢어짐 0 / (대형+위기+성공음 연타) +1.9dBFS 0.001%.
+  PC 실행·모바일 미리보기·옛 세이브(v1·v2) 정상. CI: 예전 릴 굽기 확인 단계 삭제, APK 안에 팩 파일(28개)이 다 들어갔는지 셈.

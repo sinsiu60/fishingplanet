@@ -9,7 +9,7 @@
  "bus_rules": [["sig_", "sig"], ["mus_", "mus"], ["amb_", "amb"], ["ui_", "ui"],
                ["sfx_rank", "reward"], ["sfx_record", "reward"], ["sfx_chest", "reward"], ["sfx_mut_", "reward"],
                ["sfx_legend", "reward"], ["sfx_net_success", "reward"], ["sfx_chord_", "reward"], ["sfx_catch", "reward"],
-               ["sfx_coin", "reward"], ["zing_", "reward"], ["sfx_launch", "reward"], ["sfx_rise", "reward"]],
+               ["sfx_coin", "reward"], ["succ_", "reward"], ["sfx_launch", "reward"], ["sfx_rise", "reward"]],
  "duck": {
   "_설명": "N3: 덕킹 완화 — 신호·챔질은 살짝, 퍼펙트는 조금, 줄 끊김은 환경음·효과음을 크게 (큰 순간의 정적). focus = 파이팅 연속음 주인공이 바뀔 때 아주 살짝. Z4: 음악(mus)은 챔질·퍼펙트·지잉·줄 끊김 모두 −3dB (파이팅 음악은 원래 효과음 아래, 줄 끊김 뒤엔 1.5초 페이드 아웃).",
   "sig": {"mus": -3, "amb": -3, "sec": 0.25},
@@ -19,7 +19,7 @@
   "fight": {"amb": -4},
   "snap": {"mus": -3, "amb": -24, "sfx": -12, "sec": 0.45},
   "focus": {"mus": -2, "amb": -2, "sec": 0.3},
-  "zing": {"sfx": -3, "amb": -3, "mus": -3, "sec": 0.5}
+  "success": {"sfx": -3, "amb": -3, "mus": -3, "sec": 0.5}
  },
  "sig_boost_gain": 1.3,
  "variation": {"pitch_pct": [-4, -2, 2, 4], "vol_db": 2.0,
@@ -41,9 +41,9 @@
  },
  "grade": {
   "_설명": "N3 강조 등급 (SOUND_CLEANUP 3-3): big 크게 > signal 신호 > normal 보통 > small 작게(기본). 앞부분이 맞으면 그 등급 (이름 앞부분 규칙).",
-  "big": ["sfx_hook_success", "sfx_hook_heavy", "sfx_perfect", "sfx_double_perfect", "sfx_line_snap", "sfx_chord_legend", "sfx_roar", "sfx_legend_appear", "sfx_rank_s", "sfx_record", "zing_mid", "zing_big", "zing_double"],
+  "big": ["sfx_hook_success", "sfx_hook_heavy", "sfx_perfect", "sfx_double_perfect", "sfx_line_snap", "sfx_chord_legend", "sfx_roar", "sfx_legend_appear", "sfx_rank_s", "sfx_record", "succ_mid", "succ_big", "succ_double"],
   "signal": ["sig_", "legacy_rush", "legacy_sig_reel", "legacy_bubbles"],
-  "normal": ["sfx_jump_out", "sfx_jump_land", "sfx_net_success", "sfx_catch", "sfx_splash", "sfx_flee", "sfx_float_flee", "sfx_judge_miss", "sfx_great", "sfx_bite_real", "sfx_impact", "sfx_launch", "sfx_rise", "sfx_chord_rare", "sfx_twist_snap", "sfx_line_crack", "legacy_creak", "legacy_splash_small", "zing_small"]
+  "normal": ["sfx_jump_out", "sfx_jump_land", "sfx_net_success", "sfx_catch", "sfx_splash", "sfx_flee", "sfx_float_flee", "sfx_judge_miss", "sfx_great", "sfx_bite_real", "sfx_impact", "sfx_launch", "sfx_rise", "sfx_chord_rare", "sfx_twist_snap", "sfx_line_crack", "legacy_creak", "legacy_splash_small", "succ_small"]
  },
  "focus": {
   "_설명": "N3 파이팅 연속음 주인공 (SOUND_CLEANUP 3-2): 상태마다 주인공 하나, 나머지 배율. 바뀔 때 fade_sec 동안 크로스페이드. yellow = 초록 위쪽 끝에서 초록 폭의 yellow_frac 안 (게임엔 노란 구간이 없어 소리용으로만 정함). thrash = 몸부림 첨벙 뒤 thrash_sec 동안.",
