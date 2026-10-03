@@ -3,7 +3,7 @@
   릴 감기     감기 속도 → 클릭 간격(빠를수록 촘촘)·피치(#0~4)
   드랙 풀림   줄이 풀리는 속도 → 바람 '휘이잉' 반복음 높이(#0~3)·음량 (v0.8.13: 예전 '지이잉'은 거슬려서)
   장력 삐걱임 v0.8.14 롤백으로 없앰 — 예전처럼 빨강·줄 50% 아래에서 가끔 '끼익'(fight 'creak' 이벤트, fishing_scene)
-  줄 실금     내구도 50% 아래부터 '지직' — 낮을수록 잦고 크게
+  줄 실금     v0.8.14 롤백으로 없앰 (예전엔 그 구간에 '끼익'만)
   드랙 단계   단계가 바뀔 때마다 묵직한 '딸깍' (단계 = 피치)
   몸부림     물고기가 움직일 때 가끔 첨벙 — 가까울수록 크게
 
@@ -47,7 +47,7 @@ class FightAudio:
 
     def update(self, dt: float, v: dict, red_at: float = RED, active: bool = True) -> None:
         reel, payout = v.get("reel", 0.0), v.get("payout", 0.0)
-        line, drag, near = v.get("line", 1.0), v.get("drag"), v.get("near", 0.5)
+        drag, near = v.get("drag"), v.get("near", 0.5)
         # 드랙 풀림: 바람 휘이잉 (풀리는 속도 → 높이 단계·음량). 살짝 풀릴 땐 안 내서 파이팅 내내 깔리지 않게
         if payout > 0.12:
             step = min(3, int(payout * 4))
@@ -61,13 +61,6 @@ class FightAudio:
                 self.click_t = max(0.022, 0.16 / (0.4 + reel))
                 step = min(4, int(reel / 3.0 * 5))
                 self.sfx.play(f"sfx_reel_click#{step}", 0.35 + 0.1 * min(1.0, reel / 2))
-        # 줄 실금: 내구도 50% 아래, 낮을수록 잦고 크게
-        if line < 0.5:
-            self.crack_t -= dt
-            if self.crack_t <= 0:
-                k = 1 - line / 0.5
-                self.crack_t = random.uniform(0.8, 1.4) * (1.8 - 1.4 * k)
-                self.sfx.play("sfx_line_crack", 0.3 + 0.6 * k)
         # 드랙 단계 딸깍
         if drag is not None:
             d = int(round(drag))

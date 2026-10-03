@@ -723,6 +723,7 @@ class FishingScene(Scene):
         self.toasts.sink = self._say if self._fight_text_mode() else None
         self.sig_dim_t = max(0.0, getattr(self, "sig_dim_t", 0.0) - dt)
         self.signal_audio.update(dt, self.fight if self.fight is not None and self.fight.phase == "fight" else None)
+        self._rush_audio()
         fighting = self.fight is not None and self.fight.phase in ("fight", "net")
         if fighting != getattr(self, "_amb_fight", False):
             self._amb_fight = fighting
@@ -1616,11 +1617,10 @@ class FishingScene(Scene):
             self._signal_cue(ev.split(":", 1)[1])
             self.sig_dim_t = 0.9  # 신호가 뜨는 순간: 하위 HUD 잠깐 더 흐리게
         elif ev == "tired":
-            # v0.8.14 롤백: 지침(기회!)은 사운드 개편 전 '딸깍' 두 번 그대로
+            # v0.8.14 롤백: 지침(기회!)은 사운드 개편 전 그대로 — '딸깍' 두 번 + 감기 계열 진동 바로
             if self.settings.get("signal_sound"):
-                self.sfx.play("legacy_sig_reel", 0.8, haptic="sig_reel")
-            else:
-                self.game.haptics.vibrate("sig_reel", 1.0)
+                self.sfx.play("legacy_sig_reel", 0.8)
+            self.game.haptics.vibrate("sig_reel")
         elif ev in ("action:charge", "hide_peek"):
             self._signal_cue("charge")  # 감기 계열 (빈틈·고개 내밂)
         qr = getattr(self, "quest_run", None)
@@ -1663,6 +1663,7 @@ class FishingScene(Scene):
             pass  # 소리 전용이어도 감기 계열 소리(sig_reel)가 이미 알림 (32장 S8: cue_charge 정리)
         elif ev in ("telegraph:rush", "telegraph:fake_rush"):
             self.sfx.play("legacy_bubbles", 0.45)  # 웅크림: 물을 빨아들이는 소리 (v0.8.14 롤백: 예전 소리)
+            self.rush_hum_i = -1
         elif ev == "telegraph:jump":
             self.sfx.play("sfx_bubbles", 0.8)
             if f.brain.lightning_cue:
@@ -1686,8 +1687,10 @@ class FishingScene(Scene):
         elif ev == "telegraph:turn":
             self.sfx.play("sfx_scrape", 0.8)
         elif ev == "action:rush":
-            # 펄스가 손에 닿음 = 돌진: 쉬익(신호 소리가 냄, signal_audio) + 물보라 + 툭 (v0.8.14 롤백: 예전 소리)
+            # 펄스가 손에 닿음 = 돌진: 쉬익 + 물보라 + 툭 (v0.8.14 롤백: 사운드 개편 전 그대로)
+            self.sfx.play("legacy_rush_go", 1.0)
             self.sfx.play("legacy_splash_small", 0.8)
+            self.game.haptics.vibrate("bite", 1.0)
             self._splash_at(x, z, 0.9)
             self.shake_kick = max(self.shake_kick, 1.5)
         elif ev == "action:jump":
@@ -2131,6 +2134,24 @@ class FishingScene(Scene):
             if nk.get(key):
                 out[f"net_{key}"] = tuple(nk[key])
         return out
+
+    def _rush_audio(self) -> None:
+        """v0.8.14 롤백 (사운드 개편 전 그대로): 줄 펄스 동안 울림 음이 단계마다 높아지고 돌진 silence_sec 전 무음,
+        진동은 약하게 시작해 점점 세게."""
+        ph = self._rush_ph(visual=False)
+        if ph is None or ph["stage"] != "pulse":
+            return
+        from src.ui import rush_cue
+        c = rush_cue.cfg()
+        if ph["left"] <= c["silence_sec"]:
+            return
+        steps = 8
+        i = min(steps - 1, int(ph["q"] * steps))
+        if i > getattr(self, "rush_hum_i", -1):
+            self.rush_hum_i = i
+            if self.settings.get("signal_sound"):
+                self.sfx.play(f"legacy_rush_hum{i}", 0.55 + 0.35 * ph["q"])
+            self.game.haptics.vibrate("pump", c["haptic_min"] + (c["haptic_max"] - c["haptic_min"]) * ph["q"])
 
     def _rush_ph_ok(self) -> bool:
         """줄 펄스 같은 그림 예고를 보여도 되나 (소리 전용·동굴 어둠·먹물이면 숨김)."""

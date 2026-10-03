@@ -8,8 +8,8 @@
   참기   '타타타탁'
   제스처 '끼리릭'
 
-v0.8.14 롤백: 돌진(rush)은 사운드 개편 전 소리로 — 예고 순간 'legacy_sig_release'(낮게 빠지는 쉬익), 줄 펄스 동안
-'legacy_rush_hum0~7', 돌진 순간 'legacy_rush_go' (assets/sfx/legacy_*.wav, tools/legacy_sfx_extract.py). 시각은 그대로.
+v0.8.14 롤백: 돌진(rush)은 여기서 소리를 내지 않는다 — 사운드 개편 전과 똑같이 fishing_scene._rush_audio 가
+줄 펄스 동안 legacy_rush_hum0~7 과 'pump' 진동을, 돌진 순간 legacy_rush_go 를 낸다.
 
 시각 보정: 정해진 시각에 내는 소리(빌드업·틱·쉬익·띵)는 설정 '오디오 지연 보정'만큼 일찍 낸다 → 들리는 순간 = 화면 순간.
 진동은 Sfx.play(haptic=)가 소리 어택에 맞춘다. 펌핑(박자 북)은 판정 박자와 같은 틱에 따로 낸다 (fishing_scene).
@@ -46,13 +46,13 @@ class SignalAudio:
         b = fight.brain
         hap = f"sig_{fam}"
         self.curs = [c for c in self.curs if c["a"] != action]
+        if action == "rush":
+            return  # v0.8.14 롤백: 예전 방식 (fishing_scene._rush_audio)
         if fam == "release":
             crouch = self.rc["crouch_frac"] * (self.rc["frenzy_crouch_mult"] if "frenzy" in fight.mutations else 1.0)
             self.curs.append({"a": action, "fam": fam, "hum": -1, "go": False,
                               "start": crouch if action == "rush" else 0.0})
-            if action == "rush":
-                self._play("legacy_sig_release", 0.8, haptic=hap)  # 예전 그대로: 예고 순간 계열 소리
-            else:
+            if action != "rush":
                 self._vib(hap)
             return
         if fam == "timing" and action != "pump":
@@ -83,8 +83,7 @@ class SignalAudio:
 
     def _release_go(self, c: dict) -> None:
         c["go"] = True
-        name = "legacy_rush_go" if c["a"] == "rush" else "sig_release_go"
-        self._play(name, 1.0, haptic="bite", strength=1.0)
+        self._play("sig_release_go", 1.0, haptic="bite", strength=1.0)
 
     def update(self, dt: float, fight) -> None:
         if not self.curs or fight is None:
@@ -113,8 +112,7 @@ class SignalAudio:
         if i > c["hum"]:
             c["hum"] = i
             rc = self.rc
-            name = f"legacy_rush_hum{i}" if c["a"] == "rush" else f"sig_release_hum#{i}"
-            self._play(name, 0.55 + 0.35 * q, haptic="pump",
+            self._play(f"sig_release_hum#{i}", 0.55 + 0.35 * q, haptic="pump",
                        strength=rc["haptic_min"] + (rc["haptic_max"] - rc["haptic_min"]) * q)
 
     def _update_timing(self, c: dict, dt: float, off: float) -> bool:

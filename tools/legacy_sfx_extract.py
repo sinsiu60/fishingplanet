@@ -15,7 +15,7 @@ sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 COMMIT = "c2cb9e8"
-NAMES = ["sig_reel", "creak", "creak2", "creak3", "sig_release", "bubbles", "rush_go", "splash_small"] + [f"rush_hum{i}" for i in range(8)]
+NAMES = ["sig_reel", "creak", "creak2", "creak3", "bubbles", "rush_go", "splash_small"] + [f"rush_hum{i}" for i in range(8)]
 
 
 def main() -> int:
