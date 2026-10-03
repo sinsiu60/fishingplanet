@@ -8,6 +8,14 @@
   참기   '타타타탁'
   제스처 '끼리릭'
 
+신호음 모드 (SOUND_CLEANUP N2, 설정 '신호음'): 자연음(기본) / 보조음 / 강조.
+  자연음  세계에 있는 소리로 — 풀기 '꿀렁' + 줄 떨림 → '촤악' + 드랙 / 감기 줄 '툭' + 다가오는 물살 /
+          타이밍 수면 아래 보글(물고기가 물 밖으로 나가면 멈춤) → 정점에 물방울 / 방향 물살 '쏴—'(패닝) /
+          참기 팽팽한 줄 '드르르' / 제스처 줄 꼬이는 마찰. 행동 직전 무음은 대형(150cm+)·전설만.
+  보조음  자연음 + 계열마다 아주 작고 짧은 보조음 (sig_aux_*). 패턴 숙련도 '처음'(성공 3회 미만)이면 자연음 모드여도 자동.
+  강조    예전처럼 또렷한 인공 신호음 (sig_release_hum·sig_timing 등, 행동 직전 무음은 항상).
+시각·진동은 세 모드 모두 같다.
+
 v0.8.14 롤백: 돌진(rush)은 여기서 소리를 내지 않는다 — 사운드 개편 전과 똑같이 fishing_scene._rush_audio 가
 줄 펄스 동안 legacy_rush_hum0~7 과 'pump' 진동을, 돌진 순간 legacy_rush_go 를 낸다.
 
@@ -16,15 +24,21 @@ v0.8.14 롤백: 돌진(rush)은 여기서 소리를 내지 않는다 — 사운�
 """
 from src.core.config import load_json
 
-TICKS = 6          # sig_timing_tick 단계 수
-HUMS = 8           # sig_release_hum 단계 수
+TICKS = 6          # sig_timing_tick · sig_nat_timing_boil 단계 수
+HUMS = 8           # sig_release_hum · sig_nat_release_quiver 단계 수
+MODES = ("natural", "assist", "strong")
+AUX_VOL = 0.4      # 보조음 음량 (자연음보다 작게)
 
 
 class SignalAudio:
-    def __init__(self, sfx, sound_on=lambda: True):
+    def __init__(self, sfx, sound_on=lambda: True, mode=lambda: 0, mastery=lambda: None):
         self.sfx = sfx
         self.sound_on = sound_on   # 접근성 '소리 신호' 끄면 소리 없이 진동만
-        self.rc = load_json("signals.json")["rush_pulse"]
+        self.mode = mode           # 설정 signal_mode: 0 자연음 / 1 보조음 / 2 강조
+        self.mastery = mastery     # 세이브 pattern_mastery (훈련 수조에서도 — 두뇌의 mastery 는 훈련 땐 None)
+        sig = load_json("signals.json")
+        self.rc = sig["rush_pulse"]
+        self.first_need = sig["mastery"]["tiers"][1][0]  # 이 횟수만큼 성공하기 전 = 숙련도 '처음'
         self.curs: list[dict] = []  # 진행 중인 시간 맞춤 소리 (이중 패턴이면 둘)
 
     def stop(self) -> None:
@@ -41,6 +55,34 @@ class SignalAudio:
         elif haptic:
             self._vib(haptic, strength)
 
+    def mode_for(self, action: str, fight) -> str:
+        """이 행동의 신호음 모드. 자연음 모드라도 그 패턴 숙련도가 '처음'이면 보조음."""
+        m = MODES[max(0, min(len(MODES) - 1, int(self.mode() or 0)))]
+        if m == "natural":
+            mastery = self.mastery()
+            if mastery is not None and action not in ("lure", "fake_rush") and mastery.get(action, 0) < self.first_need:
+                m = "assist"
+        return m
+
+    def pick(self, action: str, fight, strong: str, natural: str, aux: str | None = None) -> list[tuple[str, float]]:
+        """낚시 화면이 직접 내는 신호(펌핑 박자·소리 전용 몸털기·등불 미끼)용: [(이름, 음량 배율)]."""
+        m = self.mode_for(action, fight)
+        if m == "strong":
+            return [(strong, 1.0)]
+        out = [(natural, 1.0)]
+        if m == "assist" and aux:
+            out.append((aux, AUX_VOL / 0.8))
+        return out
+
+    def _aux(self, c_or_mode, fam: str, pan: float | None = None) -> None:
+        mode = c_or_mode if isinstance(c_or_mode, str) else c_or_mode["mode"]
+        if mode == "assist":
+            self._play(f"sig_aux_{fam}", AUX_VOL, pan=pan)
+
+    def _big(self, fight) -> bool:
+        """행동 직전 0.1초 무음은 대형·전설 물고기만 (자연음·보조음 모드)."""
+        return fight.size_cm >= self.rc["big_fish_cm"] or fight.fish.get("rarity") == "legend"
+
     def start(self, action: str, fam: str, fight) -> None:
         """예고 시작 (telegraph:<action>). 계열마다 바로 내는 소리 + 시간 맞춰 낼 소리 준비."""
         b = fight.brain
@@ -48,29 +90,39 @@ class SignalAudio:
         self.curs = [c for c in self.curs if c["a"] != action]
         if action == "rush":
             return  # v0.8.14 롤백: 예전 방식 (fishing_scene._rush_audio)
+        mode = self.mode_for(action, fight)
+        strong = mode == "strong"
         if fam == "release":
             crouch = self.rc["crouch_frac"] * (self.rc["frenzy_crouch_mult"] if "frenzy" in fight.mutations else 1.0)
-            self.curs.append({"a": action, "fam": fam, "hum": -1, "go": False,
-                              "start": crouch if action == "rush" else 0.0})
-            if action != "rush":
-                self._vib(hap)
+            c = {"a": action, "fam": fam, "hum": -1, "go": False, "mode": mode,
+                 "silence": strong or self._big(fight), "start": crouch if action == "rush" else 0.0}
+            self.curs.append(c)
+            self._vib(hap)
+            if not strong:
+                self._play("sig_nat_release_gulp", 0.7)  # 물이 빨려드는 '꿀렁'
+                self._aux(c, fam)
             return
         if fam == "timing" and action != "pump":
             total = b.time_to_apex()
             if total > 50:   # 정점이 없는 타이밍 행동
-                self._play("sig_timing", 0.8, haptic=hap)
+                self._play("sig_timing" if strong else "sig_nat_timing_boil#5", 0.8, haptic=hap)
+                self._aux(mode, fam)
                 return
             n = max(3, min(7, int(total / 0.16)))
             # 링이 닫힐수록 촘촘해지는 틱 시각 (0 = 지금, 1 = 정점)
             times = [total * (k / n) ** 0.7 for k in range(n)]
-            self.curs.append({"a": action, "fam": fam, "times": times, "total": total, "k": 0, "t": 0.0, "ding": False})
+            c = {"a": action, "fam": fam, "times": times, "total": total, "k": 0, "t": 0.0, "ding": False, "mode": mode}
+            self.curs.append(c)
+            self._aux(c, fam)
             return
         if fam == "direction":
             pan = 0.85 * (b.turn_dir or 0) if action == "turn" else None
-            self._play("sig_direction", 0.85, pan=pan, haptic=hap)
+            self._play("sig_direction" if strong else "sig_nat_direction", 0.85, pan=pan, haptic=hap)
+            self._aux(mode, fam, pan)
         elif fam in ("reel", "endure", "gesture"):
-            self._play(f"sig_{fam}", 0.8, haptic=hap)
-        elif fam == "timing":   # 펌핑: 박자 북이 따로 — 계열 진동만
+            self._play(f"sig_{fam}" if strong else f"sig_nat_{fam}", 0.8, haptic=hap)
+            self._aux(mode, fam)
+        elif fam == "timing":   # 펌핑: 박자 소리가 따로 (fishing_scene, pick) — 계열 진동만
             self._vib(hap)
 
     def on_event(self, ev: str) -> None:
@@ -83,7 +135,8 @@ class SignalAudio:
 
     def _release_go(self, c: dict) -> None:
         c["go"] = True
-        self._play("sig_release_go", 1.0, haptic="bite", strength=1.0)
+        name = "sig_release_go" if c["mode"] == "strong" else "sig_nat_release_go"  # '쉬익!' / 물살 '촤악' + 드랙
+        self._play(name, 1.0, haptic="bite", strength=1.0)
 
     def update(self, dt: float, fight) -> None:
         if not self.curs or fight is None:
@@ -92,7 +145,7 @@ class SignalAudio:
         for c in list(self.curs):
             if c["fam"] == "release":
                 self._update_release(c, fight.brain, off)
-            elif self._update_timing(c, dt, off):
+            elif self._update_timing(c, dt, off, fight.brain):
                 self.curs.remove(c)
 
     def _update_release(self, c: dict, b, off: float) -> None:
@@ -105,26 +158,37 @@ class SignalAudio:
             self._release_go(c)
             return
         p = t / dur
-        if left <= self.rc["silence_sec"] or p < c["start"]:
-            return  # 웅크림 동안 조용, 행동 직전 무음
+        if (c["silence"] and left <= self.rc["silence_sec"]) or p < c["start"]:
+            return  # 웅크림 동안 조용, 행동 직전 무음 (자연음·보조음은 대형·전설만)
         q = (p - c["start"]) / max(1e-6, 1 - c["start"])
         i = min(HUMS - 1, int(q * HUMS))
         if i > c["hum"]:
             c["hum"] = i
             rc = self.rc
-            self._play(f"sig_release_hum#{i}", 0.55 + 0.35 * q, haptic="pump",
-                       strength=rc["haptic_min"] + (rc["haptic_max"] - rc["haptic_min"]) * q)
+            if c["mode"] == "strong":
+                name, vol = f"sig_release_hum#{i}", 0.55 + 0.35 * q
+            else:
+                name, vol = f"sig_nat_release_quiver#{i}", 0.45 + 0.4 * q  # 팽팽해지는 줄의 미세한 떨림
+            self._play(name, vol, haptic="pump", strength=rc["haptic_min"] + (rc["haptic_max"] - rc["haptic_min"]) * q)
 
-    def _update_timing(self, c: dict, dt: float, off: float) -> bool:
+    def _update_timing(self, c: dict, dt: float, off: float, b=None) -> bool:
         c["t"] += dt
         t = c["t"] + off
+        strong = c["mode"] == "strong"
         while c["k"] < len(c["times"]) and t >= c["times"][c["k"]]:
             k = c["k"]
             step = round(k / max(1, len(c["times"]) - 1) * (TICKS - 1))
-            self._play(f"sig_timing_tick#{step}", 0.55 + 0.3 * k / len(c["times"]),
-                       haptic="sig_timing" if k == 0 else None)
+            hap = "sig_timing" if k == 0 else None
+            vol = 0.55 + 0.3 * k / len(c["times"])
+            if strong:
+                self._play(f"sig_timing_tick#{step}", vol, haptic=hap)
+            elif b is None or b.state == "telegraph":
+                self._play(f"sig_nat_timing_boil#{step}", vol, haptic=hap)  # 수면 아래 보글 — 물 밖으로 나가면 멈춤
+            elif hap:
+                self._vib(hap)
             c["k"] += 1
         if t >= c["total"]:
-            self._play("sig_timing", 0.85)
+            self._play("sig_timing" if strong else "sig_nat_timing_apex", 0.85)  # '띵' / 흩뿌려지는 물방울
+            self._aux(c, "timing")
             return True
         return False

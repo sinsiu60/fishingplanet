@@ -255,7 +255,7 @@ class FishBrain:
     def signal_progress(self) -> float:
         if self.state != "telegraph":
             return 0.0
-        return min(1.0, self.state_t / self.cur_telegraph)
+        return min(1.0, self.state_t / max(1e-6, self.cur_telegraph))
 
     @property
     def jump_air(self) -> float:
@@ -478,6 +478,8 @@ class FishBrain:
         self.cur_telegraph = max(self.cur_telegraph, self.min_telegraph(action))  # 계열별 최소 예고 (31장 C4)
         self.cur_telegraph *= self.learn_mult(action) * self.access_mult  # 패턴 숙련도 (C5) × 접근성 배율 (C6)
         speed = getattr(self, "train_speed", None)  # 훈련 수조 예고 속도
+        if self.min_telegraph(action) <= 0:
+            speed = None  # 펌핑(박자 미리 듣기 길이 고정)·등불은 속도 배율 없음 — 0초 예고로 꺼지던 문제 (훈련 수조 펌핑)
         if speed == "slow":
             self.cur_telegraph = self.min_telegraph(action) * 2
         elif speed == "norm":

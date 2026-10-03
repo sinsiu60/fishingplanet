@@ -10,7 +10,7 @@ from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text
 
-BUSES = ("전체", "sig", "sfx", "reward", "mus", "amb", "ui")
+BUSES = ("전체", "sig", "자연", "sfx", "reward", "mus", "amb", "ui")  # 자연 = 자연음 신호·보조음 (SOUND_CLEANUP N2)
 ROWS = 12
 MUS_STATES = ("끔", "idle", "bite", "fight", "tired", "legend", "legend_tired", "win", "fail", "menu")
 
@@ -22,7 +22,7 @@ class SoundTestScene(Scene):
         super().__init__(game)
         self.mouse = (0, 0)
         self.sfx = game.sfx
-        self.tabs = ui.Tabs(14, 34, list(BUSES), width=30)
+        self.tabs = ui.Tabs(14, 34, list(BUSES), width=27)
         self.top = 0
         self.queue: list[tuple[float, str]] = []
         self.t = 0.0
@@ -44,7 +44,9 @@ class SoundTestScene(Scene):
     def names(self) -> list[str]:
         bus = BUSES[self.tabs.index]
         out = sorted(self.sfx.sounds) if self.sfx.enabled else []
-        if bus != "전체":
+        if bus == "자연":
+            out = [n for n in out if n.startswith(("sig_nat_", "sig_aux_"))]
+        elif bus != "전체":
             out = [n for n in out if self.sfx.bus_of(n) == bus]
         return out
 

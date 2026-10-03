@@ -66,12 +66,12 @@ TIPS = {
 # 소리 자막 (설정 '소리 자막'): 예고 소리를 글자로도 보여준다
 CAPTIONS = {"telegraph:rush": "웅— 줄이 울린다 (돌진)", "telegraph:jump": "보글보글 — 기포 (점프)",
             "telegraph:leap": "촵촵 — 몸털기", "telegraph:turn": "스윽 — 긁힘 (방향 전환)",
-            "action:charge": "쿵 — 힘 모으기", "telegraph:lure": "팅 — 등불 (가짜)",
-            "telegraph:shake": "타타탁 — 줄 떨림 (머리 흔들기)", "telegraph:dive": "꾸르륵 — 가라앉음 (잠수)",
+            "action:charge": "쿵 — 힘 모으기", "telegraph:lure": "찰랑 — 등불 (가짜)",
+            "telegraph:shake": "드르르 — 팽팽한 줄 떨림 (머리 흔들기)", "telegraph:dive": "꾸르륵 — 가라앉음 (잠수)",
             "telegraph:surface": "쉬이익 — 물살 (수면 질주)", "telegraph:reverse": "스르르 — 줄 처짐 (역주행)",
             "telegraph:twist": "끼릭끼릭 — 줄 꼬임 (비틀기)", "telegraph:chain": "둥 둥 둥 — 콤보",
-            "telegraph:hide": "쿵 — 바위 틈 (숨기)", "telegraph:pump": "둥 둥 — 북 박자 (펌핑)",
-            "telegraph:thrash": "보글보글보글 — 큰 기포 (공중 몸부림)", "telegraph:bite": "딱 — 이빨 (물어뜯기)",
+            "telegraph:hide": "꿀렁 — 물을 빨아들임 (숨기)", "telegraph:pump": "끼익 끼익 — 낚싯대 박자 (펌핑)",
+            "telegraph:thrash": "보글보글보글 — 큰 기포 (공중 몸부림)", "telegraph:bite": "꿀렁 — 물을 빨아들임 (물어뜯기)",
             "telegraph:dual": "두 소리가 겹친다 — 이중 패턴", "hide_peek": "뽀글 — 고개를 내밀었다 (지금 감기)"}
 FORCE_PATTERNS = ("shake", "dive", "surface", "reverse", "twist", "chain", "hide", "pump", "thrash", "bite", "fake", "dual")
 PATTERN_EVENTS = ("twist_snap", "twist_turn", "combo_break", "combo_ok", "pump_hit", "pump_miss", "hide_peek",
@@ -169,7 +169,9 @@ class FishingScene(Scene):
         from src.audio.fight_audio import FightAudio
         self.fight_audio = FightAudio(self.sfx)  # 상태 연동 연속음 (32장 S4)
         from src.audio.signal_audio import SignalAudio
-        self.signal_audio = SignalAudio(self.sfx, lambda: self.settings.get("signal_sound"))  # 신호 6계열 소리 (S5)
+        self.signal_audio = SignalAudio(self.sfx, lambda: self.settings.get("signal_sound"),
+                                        lambda: self.settings.get("signal_mode"),
+                                        lambda: self.save.data.get("pattern_mastery", {}) if self.save else None)  # 신호 6계열 (S5, 모드 N2)
         self.cast_far = self.fish_cfg["cast"]["max_distance"]  # 소리 거리 감쇠 기준
         self.cast_loops: dict[str, str | None] = {"charge": None, "line": None}
         self.captions = None     # [글자, 남은 시간] 소리 자막
@@ -1468,7 +1470,8 @@ class FishingScene(Scene):
             self.popups.add("combo_ok", pos)
         elif kind == "pump_beat":
             # 북 박자: 소리 = 판정 박자 (같은 틱에 낸다)
-            self.sfx.play("sig_drum", 0.9 if pid == "preview" else 0.75)
+            for name, k in self.signal_audio.pick("pump", self.fight, "sig_drum", "sig_nat_drum", "sig_aux_timing"):
+                self.sfx.play(name, (0.9 if pid == "preview" else 0.75) * k)  # 강조 '둥' / 자연음 낚싯대 '끼익' 한 박
             self.game.haptics.vibrate("pump")
             self.pump_flash = 0.15
         elif ev == "pump_hit":
@@ -1656,7 +1659,8 @@ class FishingScene(Scene):
                 ev in PATTERN_EVENTS:
             self._on_pattern_event(ev, kind, pid)
         if ev == "telegraph:lure":
-            self.sfx.play("sig_lure", 0.8)
+            for name, k in self.signal_audio.pick("lure", f, "sig_lure", "sig_nat_lure"):
+                self.sfx.play(name, 0.8 * k)  # 강조 '우웅~' / 자연음 수면 '찰랑'
             pos = self._fish_screen()
             self.sparkles.burst(*pos, count=8, speed=0.6, ring=False)  # 등불 번쩍 (판정 원과 헷갈리지 않게 고리 없음)
         elif ev == "action:charge" and sound_only:
@@ -1699,7 +1703,8 @@ class FishingScene(Scene):
             self._splash_at(x, z, 0.8)
         elif ev == "telegraph:leap":
             if sound_only:
-                self.sfx.play("sig_leap", 1.0)
+                for name, k in self.signal_audio.pick("leap", f, "sig_leap", "sig_nat_leap", "sig_aux_timing"):
+                    self.sfx.play(name, 1.0 * k)  # 강조 '휙-팅' / 자연음 짧게 끓어오름 → 물 터짐
             else:
                 self.sfx.play("sfx_bubbles", 0.8)
                 self.sfx.play("sfx_splash_small", 0.5)

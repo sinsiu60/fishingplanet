@@ -83,17 +83,19 @@ class SettingsScene(Scene):
         return [tele, cards, slot, cb, snd]
 
     def _sound_rows(self) -> list[tuple]:
-        """소리 (32장 S3): 버스 볼륨 4개, 신호 강조, 오디오 지연 보정, 사운드 테스트 룸."""
+        """소리 (32장 S3): 버스 볼륨 4개, 신호음 모드(N2), 신호 때 배경 줄이기, 오디오 지연 보정, 사운드 테스트 룸."""
         s = self.s
 
         def vol(label, key):
             return (label, "volume", lambda: key, (lambda: self._vol(key, -0.1), lambda: self._vol(key, 0.1)))
-        boost = ("신호 강조", "toggle", lambda: s.get("signal_boost"), self._toggle_boost)
+        mode = ("신호음", "step", lambda: ("자연음", "보조음", "강조")[s.get("signal_mode")],
+                (lambda: self._step("signal_mode", -1, 2), lambda: self._step("signal_mode", 1, 2)))
+        boost = ("신호 때 배경 줄이기", "toggle", lambda: s.get("signal_boost"), self._toggle_boost)
         offset = ("오디오 지연 보정", "step", lambda: f"{s.get('audio_offset_ms'):+d}ms",
                   (lambda: self._offset(-10), lambda: self._offset(10)))
         test = ("사운드 테스트 룸", "button", lambda: "열기", self._open_sound_test)
         return [vol("전체 음량", "volume"), vol("음악", "vol_music"), vol("효과음", "vol_sfx"), vol("환경음", "vol_amb"),
-                boost, offset, test]
+                mode, boost, offset, test]
 
     def _vol(self, key: str, d: float) -> None:
         self.s.set(key, round(min(1.0, max(0.0, self.s.get(key) + d)), 1))
@@ -117,7 +119,7 @@ class SettingsScene(Scene):
         x = self.x0 + ROW_X
         self.rows = self._rows()
         y0, back_y = 86, 226
-        step = 24 if len(self.rows) <= 6 else 19
+        step = 24 if len(self.rows) <= 6 else 19 if len(self.rows) <= 7 else 18
         self.rows_y = [y0 + i * step for i in range(len(self.rows))]
         self.buttons = []
         for (label, kind, value, act), y in zip(self.rows, self.rows_y):
