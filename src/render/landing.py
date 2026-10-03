@@ -10,6 +10,8 @@ import random
 
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 from src.render.chest import draw_chest, draw_glow
 from src.render.fish_draw import catch_length, draw_fish_side, fish_colors
@@ -268,7 +270,7 @@ class LandingCinematic:
         # 1-1) 전설: 끌어올리는 동안 하늘이 어두워지고 물에서 금빛 기둥이 솟음
         if tier >= 3 and t > self.t_scoop:
             dk = clamp((t - self.t_scoop) / 0.5, 0, 1) * (1 - clamp((t - self.t_flash) / 0.2, 0, 1))
-            dim = pygame.Surface((w, h))
+            dim = _opaque((w, h))
             dim.fill((10, 6, 20))
             dim.set_alpha(int(150 * dk))
             canvas.blit(dim, (0, 0))
@@ -376,7 +378,7 @@ class LandingCinematic:
         if t > self.t_flash - 0.22:
             flash = max(flash, clamp((t - (self.t_flash - 0.22)) / 0.22, 0, 1))
         if flash > 0.01:
-            fl = pygame.Surface((w, h))
+            fl = _opaque((w, h))
             fl.fill((255, 245, 200) if tier >= 3 or self.golden else (255, 255, 250))
             fl.set_alpha(int(255 * flash))
             canvas.blit(fl, (0, 0))

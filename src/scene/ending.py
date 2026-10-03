@@ -8,6 +8,8 @@ import random
 
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.core.config import load_json
 from src.core.mathutil import clamp, lerp, lerp_color
 from src.scene.base import Scene
@@ -97,7 +99,7 @@ class EndingScene(Scene):
             self._draw_stats(canvas, t - STATS_T)
         # 처음 페이드 인
         if t < 1.2:
-            fl = pygame.Surface((w, h))
+            fl = _opaque((w, h))
             fl.fill((255, 250, 240))
             fl.set_alpha(int(255 * (1 - t / 1.2)))
             canvas.blit(fl, (0, 0))

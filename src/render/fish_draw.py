@@ -3,6 +3,8 @@ import math
 
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 
 DEFAULT_COLORS = {"body": [120, 130, 120], "belly": [220, 220, 210], "fin": [90, 100, 90], "stripe": None, "eye": None}
@@ -316,7 +318,7 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
     glow = RARITY_GLOW[fish["rarity"]]
     if tier >= 3:
         # 전설: 배경 전체가 금빛으로 물듦
-        gold = pygame.Surface((w, h))
+        gold = _opaque((w, h))
         gold.fill((90, 60, 10))
         gold.set_alpha(110)
         canvas.blit(gold, (0, 0))
@@ -406,7 +408,7 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
         pygame.draw.rect(canvas, lerp_color(frame, (60, 40, 0), 0.5), (6, 6, w - 12, h - 12), 1)
     # 연출에서 넘어온 하얀 섬광이 걷힘
     if t < 0.25:
-        fl = pygame.Surface((w, h))
+        fl = _opaque((w, h))
         fl.fill((255, 255, 250))
         fl.set_alpha(int(255 * (1 - t / 0.25)))
         canvas.blit(fl, (0, 0))

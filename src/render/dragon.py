@@ -4,6 +4,8 @@ import random
 
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.core.mathutil import clamp, lerp, lerp_color, smoothstep
 from src.ui.fight_fx import big_text
 
@@ -249,7 +251,7 @@ class DragonTransform:
             pygame.draw.lines(canvas, (255, 230, 200), False, pts, 1)
         # 5) 섬광 + 배너
         if 1.3 <= t < 1.6:
-            fl = pygame.Surface((w, h))
+            fl = _opaque((w, h))
             fl.fill((255, 200, 160))
             fl.set_alpha(int(230 * (1 - (t - 1.3) / 0.3)))
             canvas.blit(fl, (0, 0))

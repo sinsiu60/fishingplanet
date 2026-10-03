@@ -4,6 +4,8 @@ import random
 
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.core.config import load_json
 from src.core.mathutil import clamp, lerp, lerp_color
 from src.scene.base import Scene
@@ -89,7 +91,7 @@ class VoyageScene(Scene):
         for at in (T_SAIL, T_ARRIVE):
             d = abs(t - at)
             if d < 0.5:
-                fl = pygame.Surface(canvas.get_size())
+                fl = _opaque(canvas.get_size())
                 fl.fill((0, 0, 0))
                 fl.set_alpha(int(255 * (1 - d / 0.5)))
                 canvas.blit(fl, (0, 0))

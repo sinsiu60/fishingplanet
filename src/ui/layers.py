@@ -23,3 +23,9 @@ def solid(canvas, key: str, color) -> pygame.Surface:
     surf = layer(canvas, key)
     surf.fill(color)
     return surf
+
+
+
+def put(canvas, surf: pygame.Surface) -> None:
+    """층을 캔버스에 섞는다. (그린 부분만 잘라 섞기는 get_bounding_rect 훑기가 섞기보다 더 느려서 안 씀)"""
+    canvas.blit(surf, (0, 0))

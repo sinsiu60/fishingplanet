@@ -3,13 +3,15 @@ import math
 
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.core.mathutil import clamp, lerp_color, scale_color
 
 
 def draw_glow(canvas, x: float, y: float, radius: float, color, strength: float = 1.0) -> None:
     """부드러운 원형 빛 (가산 혼합)."""
     r = max(2, int(radius))
-    layer = pygame.Surface((r * 2, r * 2))
+    layer = _opaque((r * 2, r * 2))
     layer.fill((0, 0, 0))
     for i in range(r, 0, -2):
         k = 0.45 * strength * (1 - i / r) ** 1.6  # 가운데로 갈수록 밝게 (가산 혼합이라 색 자체를 어둡게 해서 세기 조절)

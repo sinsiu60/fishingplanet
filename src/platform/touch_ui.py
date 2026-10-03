@@ -123,7 +123,7 @@ def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0
          pitch: float = 0.0) -> None:
     """버튼을 반투명으로 그린다. pressed = 지금 눌린 버튼 id."""
     a = cfg()["button_alpha"][settings.get("touch_alpha")]
-    from src.ui.layers import layer as _layer
+    from src.ui.layers import layer as _layer, put as _put
     layer = _layer(canvas, "touch_ui")
     for c in controls:
         on = c.id in pressed
@@ -145,7 +145,7 @@ def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0
             pygame.draw.line(layer, (220, 228, 245, a // 2), (c.center[0], c.rect.y + 16), (c.center[0], c.rect.bottom - 16))
             pygame.draw.circle(layer, (255, 220, 120, 200) if on else (200, 210, 230, min(255, a + 30)),
                                (kx, ky), kr)
-    canvas.blit(layer, (0, 0))
+    _put(canvas, layer)
     for c in controls:
         col = (255, 228, 140) if c.id in pressed else TEXT
         if c.id == "pad":

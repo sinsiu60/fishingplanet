@@ -11,6 +11,26 @@ import pygame
 
 BASE_W, BASE_H = 480, 270
 MAX_W, MAX_H = 630, 360  # 21:9 / 4:3
+_masks = None
+
+
+def opaque(size) -> pygame.Surface:
+    """불투명 표면을 캔버스와 같은 픽셀 형식으로 (v0.8.11).
+
+    pygame.Surface(size) 는 화면(창) 형식을 따르는데, 폰 창은 RGB 순서가 다르거나(ABGR) 16비트라
+    반투명 그림(SRCALPHA, ARGB)을 그 위에 섞으면 픽셀마다 형식을 변환하는 느린 길로 간다 (S25 파이팅 '그리기' 200ms+).
+    그래서 캔버스와 불투명 표면은 SRCALPHA 와 RGB 순서가 같은 32비트로 만든다."""
+    global _masks
+    if _masks is None:
+        r, g, b, _a = pygame.Surface((1, 1), pygame.SRCALPHA).get_masks()
+        _masks = (r, g, b, 0)
+    return pygame.Surface(size, 0, 32, _masks)
+
+
+def fmt_name(surf) -> str:
+    m = surf.get_masks()
+    order = "".join(c for _, c in sorted(zip(m[:3], "RGB"), reverse=True))
+    return f"{surf.get_bitsize()}bit {order}{'A' if m[3] else ''}"
 
 
 def canvas_size_for(window_w: int, window_h: int) -> tuple[int, int]:
@@ -43,7 +63,7 @@ class PixelScreen:
             self.dest = pygame.Rect((ww - dw) // 2, (wh - dh) // 2, dw, dh)
         self.width = width
         self.height = height
-        self.canvas = pygame.Surface((width, height))
+        self.canvas = opaque((width, height))
         self.ui_rect = pygame.Rect((width - BASE_W) // 2, (height - BASE_H) // 2, BASE_W, BASE_H)
         # 좌우 안전 여백 (캔버스 px): 가로가 긴 폰은 가장자리에 카메라 구멍·둥근 모서리가 있다. PC·태블릿은 0
         self.safe_x = 0
@@ -62,6 +82,17 @@ class PixelScreen:
             self.scale = scale or self._best_scale()
             self.window = pygame.display.set_mode((width * self.scale, height * self.scale))
         pygame.display.set_caption(title)
+        # 창 형식이 캔버스와 다르면 transform.scale 로 창에 바로 쓸 수 없다 → 작은 캔버스를 창 형식으로 한 번 옮긴 뒤 확대
+        self.same_fmt = (self.window.get_bitsize() == 32 and self.window.get_masks()[:3] == self.canvas.get_masks()[:3])
+        self._conv = None if self.same_fmt else pygame.Surface((width, height), 0, self.window)
+        self.fmt_note = f"창 {fmt_name(self.window)} · 캔버스 {fmt_name(self.canvas)}"
+
+    def _src(self) -> pygame.Surface:
+        """창 형식의 캔버스 (같으면 캔버스 그대로)."""
+        if self._conv is None:
+            return self.canvas
+        self._conv.blit(self.canvas, (0, 0))
+        return self._conv
 
     def _best_scale(self) -> int:
         """모니터에 들어가는 가장 큰 정수 배율 (작업표시줄 여유 고려)."""
@@ -76,6 +107,8 @@ class PixelScreen:
             return
         self.scale = max(1, scale)
         self.window = pygame.display.set_mode((self.width * self.scale, self.height * self.scale))
+        self.same_fmt = (self.window.get_bitsize() == 32 and self.window.get_masks()[:3] == self.canvas.get_masks()[:3])
+        self._conv = None if self.same_fmt else pygame.Surface((self.width, self.height), 0, self.window)
 
     def to_canvas(self, pos: tuple[int, int]) -> tuple[int, int]:
         """창 좌표(마우스·손가락) → 캔버스 좌표."""
@@ -92,16 +125,16 @@ class PixelScreen:
                 if getattr(self, "_bars_dirty", True) or self.overlay is not None:  # 미리보기는 띠에 표시를 그린다
                     self.window.fill((0, 0, 0))
                     self._bars_dirty = False
-                pygame.transform.scale(self.canvas, self.dest.size, self.window.subsurface(self.dest))
+                pygame.transform.scale(self._src(), self.dest.size, self.window.subsurface(self.dest))
             else:
                 self.window.fill((0, 0, 0))
-                scaled = pygame.transform.scale(self.canvas, self.dest.size)
+                scaled = pygame.transform.scale(self._src(), self.dest.size)
                 self.window.blit(scaled, (self.dest.x + sx, self.dest.y + sy))
                 self._bars_dirty = True
         elif self.shake == (0, 0):
-            pygame.transform.scale(self.canvas, self.window.get_size(), self.window)
+            pygame.transform.scale(self._src(), self.window.get_size(), self.window)
         else:
-            scaled = pygame.transform.scale(self.canvas, self.window.get_size())
+            scaled = pygame.transform.scale(self._src(), self.window.get_size())
             self.window.fill((0, 0, 0))
             self.window.blit(scaled, (self.shake[0] * self.scale, self.shake[1] * self.scale))
         if self.overlay is not None:

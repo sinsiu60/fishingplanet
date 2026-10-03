@@ -18,6 +18,8 @@ import random
 import numpy as np
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.core.mathutil import clamp, lerp
 
 BASE_FIGHT_ZOOM = 1.035  # 파이팅 중 기본 줌 (줌 아웃 연출의 여유)
@@ -329,7 +331,7 @@ class ScreenFX:
         if self.flash > 0.01:
             fl = getattr(self, "_flash_surf", None)
             if fl is None or fl.get_size() != (w, h):
-                fl = self._flash_surf = pygame.Surface((w, h))
+                fl = self._flash_surf = _opaque((w, h))
             fl.fill(self.flash_color)
             fl.set_alpha(int(150 * self.flash))
             canvas.blit(fl, (0, 0))

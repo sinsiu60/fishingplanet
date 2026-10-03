@@ -12,7 +12,7 @@ import math
 import pygame
 
 from src.core.config import load_json
-from src.ui.layers import layer as _layer
+from src.ui.layers import layer as _layer, put as _put
 from src.core.mathutil import clamp, lerp_color
 
 PULSE = (255, 236, 160)
@@ -92,7 +92,7 @@ def draw_ripples(canvas, pos, scale: float, ph: dict | None, t: float) -> None:
             p0 = (x + math.cos(a0) * rx, y + math.sin(a0) * ry)
             p1 = (x + math.cos(a1) * rx, y + math.sin(a1) * ry)
             pygame.draw.line(layer, (225, 240, 255, a), p0, p1, 1)
-    canvas.blit(layer, (0, 0))
+    _put(canvas, layer)
 
 
 def draw_pulse(canvas, pts: list, ph: dict | None, t: float) -> None:
@@ -124,7 +124,7 @@ def draw_pulse(canvas, pts: list, ph: dict | None, t: float) -> None:
         seg = pts[k:]
         if len(seg) >= 2:
             pygame.draw.lines(layer, (*PULSE, int(120 * min(1.0, bright))), False, seg, 1)
-    canvas.blit(layer, (0, 0))
+    _put(canvas, layer)
 
 
 def draw_taut(canvas, pts: list, ph: dict | None, t: float) -> None:
@@ -156,7 +156,7 @@ def draw_wake(canvas, pos, heading_side: float, scale: float, ph: dict | None, t
             off = w * 4
             pygame.draw.line(layer, (235, 245, 255, max(0, a - w * 60)), (x - d * off, y),
                              (x - d * (ln + off), y + s * ln * 0.32), 1)
-    canvas.blit(layer, (0, 0))
+    _put(canvas, layer)
 
 
 # ───────────────────────── 점프·방향 전환: 가벼운 줄 펄스 (31-15) ─────────────────────────
@@ -204,4 +204,4 @@ def draw_light_pulse(canvas, pts: list, lph: dict | None, t: float) -> None:
         for k in (0, 5):
             cx = x + d * (8 + k)
             pygame.draw.lines(layer, (*col, 220), False, [(cx - d * 3, y - 4), (cx, y), (cx - d * 3, y + 4)], 1)
-    canvas.blit(layer, (0, 0))
+    _put(canvas, layer)

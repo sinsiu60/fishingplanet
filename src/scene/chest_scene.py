@@ -4,6 +4,8 @@ import random
 
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.core.mathutil import clamp, lerp, lerp_color
 from src.core.game_clock import PERIODS
 from src.core.weather import WEATHER_KO, Weather
@@ -485,7 +487,7 @@ class ChestScene(Scene):
                 canvas.fill(c, (int(x), int(y), 2, 2))
         # 섬광
         if opened and t - open_at < 0.18 and g != "common":
-            fl = pygame.Surface((w, h))
+            fl = _opaque((w, h))
             fl.fill((255, 245, 210))
             fl.set_alpha(int(220 * (1 - (t - open_at) / 0.18) * (1.0 if g == "legend" else 0.6)))
             canvas.blit(fl, (0, 0))

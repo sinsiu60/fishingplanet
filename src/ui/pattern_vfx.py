@@ -181,7 +181,7 @@ class PatternVFX:
     def draw(self, canvas) -> None:
         if not (self.parts or self.rings or self.stars):
             return
-        from src.ui.layers import layer as _layer
+        from src.ui.layers import layer as _layer, put as _put
         layer = _layer(canvas, "pattern_vfx")
         for r in self.rings:
             if r["t"] < 0:
@@ -223,4 +223,4 @@ class PatternVFX:
             d = sz * 0.45
             pygame.draw.line(layer, (*s["col"], a // 2), (x - d, y - d), (x + d, y + d), 1)
             pygame.draw.line(layer, (*s["col"], a // 2), (x - d, y + d), (x + d, y - d), 1)
-        canvas.blit(layer, (0, 0))
+        _put(canvas, layer)

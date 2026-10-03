@@ -8,6 +8,8 @@ import random
 import numpy as np
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color
 
 MOON_COLOR = (236, 236, 214)
@@ -54,7 +56,7 @@ def _cached(key, w: int, h: int, paint) -> pygame.Surface:
     if surf is None:
         if len(_GRAD) > 24:
             _GRAD.clear()
-        surf = pygame.Surface((max(1, w), max(1, h)))
+        surf = _opaque((max(1, w), max(1, h)))
         paint(surf)
         _GRAD[key] = surf
     return surf

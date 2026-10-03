@@ -3,6 +3,8 @@ import time
 
 import pygame
 
+from src.render.screen import opaque as _opaque
+
 from src.audio.music import Music
 from src.audio.sfx import Sfx
 from src.core.config import game_config
@@ -49,7 +51,7 @@ class Game:
             self.screen.overlay = self.preview.draw
             pygame.display.set_caption(self.preview.caption())
         self.clock = pygame.time.Clock()
-        bootlog.mark(f"화면 {self.screen.canvas.get_size()} · 입력 {self.input.kind}")
+        bootlog.mark(f"화면 {self.screen.canvas.get_size()} · {self.screen.fmt_note} · 입력 {self.input.kind}")
         if self.screen.mobile:
             self._loading_frame()
             from src.platform.detect import IS_ANDROID
@@ -109,6 +111,11 @@ class Game:
             tot = sum(v[2] for v in stats.values()) / st["n"] * 1000
             st["lines"] = [f"프로파일 합계 {tot:6.2f}ms/프레임 (그리기 시간과 차이 = 파이썬 함수 밖)"] + [f"{v[2] / st['n'] * 1000:6.2f}ms {v[1] // st['n']:5d}회 "
                            f"{k[0].replace(chr(92), '/').split('/')[-1]}:{k[1]} {k[2]}" for k, v in rows]
+            # 가장 오래 걸린 것이 blit 같은 C 함수면 어디서 불렀는지 (위 3곳)
+            top = rows[0][1][4] if rows and rows[0][0][0] == "~" else {}
+            for ck, cv in sorted(top.items(), key=lambda kv: -kv[1][3])[:3]:
+                st["lines"].insert(2, f"   └ {cv[3] / st['n'] * 1000:6.2f}ms {cv[0] / st['n']:4.1f}회 "
+                                      f"{ck[0].replace(chr(92), '/').split('/')[-1]}:{ck[1]} {ck[2]}")
             st["prof"], st["next"] = None, now + 10.0
 
     @staticmethod
@@ -144,7 +151,7 @@ class Game:
                                  f"최장 {gcwatch.take_longest() * 1000:4.1f}ms")
             self._gc_win = (now, gcwatch.total, gcwatch.count)
         extra = [f"메모리 {self._rss_mb():5.0f}MB  객체 {getattr(self, '_perf_objs', 0)}  얼림 {gc.get_freeze_count()}  "
-                 f"{getattr(self, '_gc_line', 'GC -')}"]
+                 f"{getattr(self, '_gc_line', 'GC -')}", self.screen.fmt_note]
         lines = [line] + extra + list(getattr(self, "_prof_state", {}).get("lines", []))
         from src.core.fonts import get_font
         font = get_font(11)
@@ -282,7 +289,7 @@ class Game:
                     self.scenes.current.draw(self.screen.canvas)
             if self.fade > 0:
                 self.fade = max(0.0, self.fade - frame_time)
-                veil = pygame.Surface(self.screen.canvas.get_size())
+                veil = _opaque(self.screen.canvas.get_size())
                 veil.set_alpha(int(255 * self.fade / self.fade_total))
                 self.screen.canvas.blit(veil, (0, 0))
             if perf:
