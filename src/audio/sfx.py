@@ -150,6 +150,53 @@ class Sfx:
         self.offset_s = 0.0      # 설정 '오디오 지연 보정' (game.apply_audio_settings)
         self.haptics = None      # game이 넣어 줌
         self.attack_t: dict[str, float] = {}
+        self.budget: int | None = None   # 동시 재생 한도 (N3: 파이팅 3 / 전설 4, None = 없음)
+        self._grade_cache: dict[str, int] = {}
+        self.dropped = 0                 # 한도 때문에 안 낸·끊은 소리 수 (검증용)
+        self.dropped_names: dict[str, int] = {}
+
+    GRADES = ("small", "normal", "signal", "big")
+    BUDGET_BUSES = ("sig", "sfx", "reward")
+
+    def grade_of(self, name: str) -> int:
+        """강조 등급 (N3): 0 작게 / 1 보통 / 2 신호 / 3 크게 — audio_config.json grade (이름 앞부분 규칙)."""
+        g = self._grade_cache.get(name)
+        if g is None:
+            g = 0
+            gc = self.cfg.get("grade", {})
+            for i, key in enumerate(self.GRADES):
+                if i and any(name.startswith(pre) for pre in gc.get(key, [])):
+                    g = i
+            self._grade_cache[name] = g
+        return g
+
+    def set_budget(self, kind: str | None) -> None:
+        """동시 재생 한도 (SOUND_CLEANUP 3-1): 'fight' 일반 파이팅 / 'legend' 전설 / None 없음."""
+        if self.enabled:
+            self.budget = self.cfg.get("budget", {}).get(kind) if kind else None
+
+    def _make_room(self, name: str, bus: str, grade: int | None = None) -> bool:
+        """한도가 차 있으면 등급 낮고 오래된 한 번 소리를 끊는다. 새 소리가 더 낮은 등급이면 False (안 냄).
+        반복음(드랙 바람)은 '보통' 등급으로 자리를 얻고, 못 얻으면 다음 프레임에 다시 시도된다."""
+        if self.budget is None or bus not in self.BUDGET_BUSES:
+            return True
+        live = [e for e in self.active if e["bus"] in self.BUDGET_BUSES and e["ch"].get_busy()]
+        if len(live) < self.budget:
+            return True
+        cands = [e for e in live if not e["loop"]]
+        if not cands:
+            return True  # 반복음만 가득 — 반복음은 끊지 않는다 (주인공 연속음)
+        g = self.grade_of(name) if grade is None else grade
+        victim = min(cands, key=lambda e: (self.grade_of(e["name"]), e["t0"]))
+        if self.grade_of(victim["name"]) > g:
+            self.dropped += 1
+            self.dropped_names[name] = self.dropped_names.get(name, 0) + 1
+            return False
+        victim["ch"].fadeout(int(self.cfg["budget"].get("fade_ms", 30)))
+        self.active = [a for a in self.active if a is not victim]
+        self.dropped += 1
+        self.dropped_names[victim["name"]] = self.dropped_names.get(victim["name"], 0) + 1
+        return True
 
     def bus_of(self, name: str) -> str:
         b = self._bus_cache.get(name)
@@ -310,6 +357,8 @@ class Sfx:
             oldest = min(same, key=lambda e: e["t0"])
             oldest["ch"].stop()
         bus = self.bus_of(name)
+        if not self._make_room(name, bus):
+            return None
         got = self._channel(bus)
         if got is None:
             return None
@@ -401,6 +450,10 @@ class Sfx:
                 return
             if e is not None:
                 e["ch"].stop()
+                self.loops.pop(name, None)
+                self.active = [a for a in self.active if a is not e]
+            if not self._make_room(name, bus, grade=1):
+                return
             got = self._channel(bus) if bus == "sig" else self._free() or self._channel(bus)
             if got is None:
                 return

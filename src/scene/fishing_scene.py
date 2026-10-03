@@ -256,8 +256,7 @@ class FishingScene(Scene):
             if can_unlock_soon(self.save, sp):
                 notified.append(sp["id"])
                 name = sp["name"] if not sp.get("secret") else "숨겨진 장소"
-                self.toasts.show(f"새 낚시터 '{name}'을(를) 열 수 있어요! (M: 지도)", GOOD, 3.5, 11)
-                self.sfx.play("sfx_great", 0.7)
+                self.toasts.show(f"새 낚시터 '{name}'을(를) 열 수 있어요! (M: 지도)", GOOD, 3.5, 11)  # 소리 없이 (N3)
                 return
 
     @property
@@ -311,15 +310,14 @@ class FishingScene(Scene):
         """의뢰 진행 알림: 실패는 작게, 완료는 보상과 함께."""
         for ev in qr.events:
             if ev == "quest_fail":
-                self.sfx.play("ui_error", 0.6)
+                pass  # N3: 낚시 화면에선 의뢰 소리 없음 (화면 알림만)
             elif ev == "quest_done":
                 it = next((x for x in qr.items if x[1] == "done" and len(x) > 3 and not x[3].get("_shown")), None)
                 if it is not None:
                     got = it[3]
                     got["_shown"] = True
                     from src.save.quests import reward_text
-                    self.toasts.show(f"의뢰 완료! {reward_text(it[0]['reward'])}", (255, 214, 90), 3.0, 11)
-                    self.sfx.play("ui_quest_done", 0.9)
+                    self.toasts.show(f"의뢰 완료! {reward_text(it[0]['reward'])}", (255, 214, 90), 3.0, 11)  # 소리 없이 (N3)
         qr.events.clear()
 
     def _record_mutation(self, f, muts: list) -> None:
@@ -343,8 +341,7 @@ class FishingScene(Scene):
         st = self.save.data["stats"]
         st["mutations_caught"] = st.get("mutations_caught", 0) + 1
         for rw in mutation.record(self.save, f.fish["id"], muts):
-            self.toasts.show(f"변이 도감 {rw['count']}종 달성! 보상: {rw['name']}", (255, 214, 90), 3.4, 11)
-            self.sfx.play("sfx_chord_rare", 0.8)
+            self.toasts.show(f"변이 도감 {rw['count']}종 달성! 보상: {rw['name']}", (255, 214, 90), 3.4, 11)  # 소리 없이 (N3)
 
     def _cycle_mutation(self) -> None:
         """[테스트] F10: 다음 물고기 변이 강제 지정 순환 (없음 → 7종 → 거대+교활)."""
@@ -418,7 +415,8 @@ class FishingScene(Scene):
             self.help_page = 0
         elif n == "back":
             if self.landing is None:
-                self.sfx.play("ui_click")
+                if f is None or f.phase not in ("fight", "net"):
+                    self.sfx.play("ui_click")  # N3: 파이팅 중엔 UI 소리 없음
                 from src.scene.pause import PauseScene
                 self.game.scenes.push(PauseScene(self.game, self))
         elif n == "menu":
@@ -640,7 +638,7 @@ class FishingScene(Scene):
             kinds = mutation.cfg()["kinds"]
             col = tuple(kinds[muts[0]]["color"])
             self.toasts.show(f"{kinds[muts[0]]['name']} 변이", col, 3.2, 11)
-            self.sfx.play(f"sfx_mut_{muts[0]}", 0.9)  # 변이마다 색깔 있는 소리 (32장 S5)
+            # 변이 등장은 소리 없이 화면 연출만 (N3, 강조 등급 '없음')
             self.sparkles.burst(*self._fish_screen(), count=16, speed=0.9)
         for g in sorted(self.fight.gim.kinds(self.fight.brain)):
             key = f"gimmick:{g}"
@@ -730,6 +728,9 @@ class FishingScene(Scene):
         if fighting != getattr(self, "_amb_fight", False):
             self._amb_fight = fighting
             self.sfx.set_base_duck("fight" if fighting else None)  # 파이팅 중 환경음 −4dB
+            # 동시 재생 한도 (N3): 일반 파이팅 3 (주인공 1 + 보조 2) / 전설 4, 파이팅 밖은 없음
+            legend = fighting and self.fight.fish.get("rarity") == "legend"
+            self.sfx.set_budget(("legend" if legend else "fight") if fighting else None)
         self.drag_seen_t = max(0.0, getattr(self, "drag_seen_t", 0.0) - dt)
         signal_slots.configure(self.settings)
         if self.captions:
@@ -969,7 +970,7 @@ class FishingScene(Scene):
         waiting = self.fight is None and self.cast.state in LOOK_STATES and self.landing is None
         kind = self.signs.update(dt, waiting, self.cam.yaw)
         if kind == "sparkle":
-            self.sfx.play("sfx_chord_rare", 0.25)
+            pass  # N3: 전조 반짝은 소리 없이 (대기 중 정적)
         s = self.signs.sign
         if s is None:
             return
@@ -1045,13 +1046,14 @@ class FishingScene(Scene):
             self.end_t += dt
             if f.phase == "caught" and prev < fight_hud.STAMP_T <= self.end_t:
                 # 랭크 도장 쾅 — 랭크마다 다른 소리 (C 담백 / B 밝음 / A 화음 / S 화음 + 반짝 + 저음)
-                self.sfx.play("sfx_impact", 0.6)
-                self.sfx.play(f"sfx_rank_{f.result['rank'].lower()}", 0.9)
+                if f.result["rank"] == "S":  # N3: 랭크 소리·도장 저음은 S랭크만 (나머지는 화면 도장만)
+                    self.sfx.play("sfx_impact", 0.6)
+                    self.sfx.play("sfx_rank_s", 0.9)
                 self.shake_kick = 2.5
             news = getattr(self, "catch_news", None) or {}
             if f.phase == "caught" and prev < 1.0 <= self.end_t:
                 if news.get("new"):
-                    self.sfx.play("ui_dex_new", 0.9)  # NEW! 도감 등록 배지와 함께
+                    self.sfx.play("ui_dex_new", 0.5)  # NEW! 도감 등록 배지와 함께 (N3: 작게)
                 elif news.get("record"):
                     self.sfx.play("sfx_record", 0.85)  # 최대 크기 경신 배지와 함께
             return
@@ -1191,7 +1193,8 @@ class FishingScene(Scene):
                 cls = self.landing.cls
                 # 뜰채 성공: 물보라 + 퍼덕임 + 짧은 승리음 (크기 등급만큼 크게·묵직하게)
                 self.sfx.play("sfx_net_success", {"small": 0.6, "mid": 0.8, "big": 0.95, "huge": 1.0}[cls])
-                self.sfx.play("sfx_impact", {"small": 0.15, "mid": 0.35, "big": 0.6, "huge": 0.85}[cls])
+                if cls in ("big", "huge"):  # N3: 저음 '퍽'은 대형만
+                    self.sfx.play("sfx_impact", {"big": 0.6, "huge": 0.85}[cls])
                 self.shake_kick = {"small": 0.8, "mid": 2.0, "big": 3.0, "huge": 4.0}[cls]
             elif ev.startswith("heave"):
                 # 큰 물고기 '영차': 처졌다가 확 들어 올림
@@ -1200,15 +1203,16 @@ class FishingScene(Scene):
                 self.shake_kick = 3.0 if self.landing.cls == "big" else 4.0
                 self.game.haptics.vibrate("lose", 0.5)
             elif ev == "lift":
-                self.sfx.play("sfx_rise", 0.9)
-                if self.landing.tier >= 3:
+                if self.landing.tier >= 3:  # N3: 들어 올림 상승음은 전설만
+                    self.sfx.play("sfx_rise", 0.9)
                     self.sfx.play("sfx_chord_legend", 0.9)   # 하늘이 어두워지며 금빛 기둥
                     self.shake_kick = 1.5
             elif ev == "launch":
                 self.sfx.play("sfx_launch", 0.9)
                 self.sfx.play("sfx_splash_small", 0.6)
             elif ev == "apex":
-                self.sfx.play("sfx_perfect#0", 0.45)
+                if self.landing.tier >= 2:  # N3: 정점 '챙'은 희귀 이상만 (일반 포획은 자연음만)
+                    self.sfx.play("sfx_perfect#0", 0.45)
                 if self.landing.chest:
                     self.sfx.play("sfx_coin", 0.9)  # 물고기가 상자를 물고 나왔다
                 if self.landing.tier == 2:
@@ -1292,10 +1296,13 @@ class FishingScene(Scene):
         fa = self.fight_audio
         if f is not None and f.phase == "fight":
             far = self.cast_far
+            zone = f.zone()
+            if zone == "green" and f.tension >= f.green_high - fa.fc["yellow_frac"] * (f.green_high - f.green_low):
+                zone = "yellow"  # 소리용 노란 구간: 초록 위쪽 끝 (N3 연속음 주인공)
             fa.update(dt, {"reel": f.reel_speed_now if f.reeling else 0.0,
                            "payout": min(1.0, f.payout_now / self.fish_cfg["fight"]["payout_max_speed"]),
                            "tension": f.tension, "line": f.line_frac, "drag": f.drag - 1,
-                           "near": max(0.0, 1 - f.distance / far)},
+                           "near": max(0.0, 1 - f.distance / far), "zone": zone},
                       red_at=f.green_high, active=f.brain.is_active and not f.brain.sound_only)
         elif self.cast.state == CastState.RETRIEVE:
             fa.update(dt, {"reel": 1.6}, active=False)  # 회수: 릴만 감김
@@ -1434,8 +1441,7 @@ class FishingScene(Scene):
             self.pvfx.success(pid, pos[0], pos[1], perfect, col)
             self.popups.pattern(pid, perfect, pos, col)
         elif kind == "pattern_fail":
-            self.sfx.play("sfx_judge_miss")
-            self.sfx.play("sfx_impact", 0.5)
+            self.sfx.play("sfx_judge_miss")  # N3: 놓침에 저음 '퍽' 없음
             self.popups.add(f"fail_{pid}", pos)
             self.screen_fx.miss(self.screen_fx.map(pos))
             self.pvfx.fail(pid, pos[0], pos[1])
@@ -1838,8 +1844,7 @@ class FishingScene(Scene):
             self.save.data["flags"]["eldra_escape_tutorial"] = True
             self.save.data["flags"]["float_highlight"] = True
             self.save.record_seen(f.fish["id"])
-            self.game.save_now()
-            self.sfx.play("sfx_lose", 0.6)
+            self.game.save_now()  # N3: 놓침 하강음 없음
             self.end_t = 0.0
             self.escape_tutorial_pending = True
         elif ev.startswith("lost:"):
@@ -1852,8 +1857,7 @@ class FishingScene(Scene):
                 self.game.haptics.vibrate("lose")
             self.sfx.play("sfx_line_snap" if ev == "lost:snap" else "sfx_flee")
             if ev == "lost:snap":
-                self.sfx.duck("snap")  # 팅! 뒤 잠깐 무음
-            self.sfx.play("sfx_lose", 0.8)
+                self.sfx.duck("snap")  # 팅! 뒤 잠깐 무음 (N3: 놓침 하강음 없음 — 끊김·달아남 소리로 충분)
             self.end_t = 0.0
             self.shake_kick = 4.0 if ev == "lost:snap" else 0.0
 

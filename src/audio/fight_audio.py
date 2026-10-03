@@ -8,9 +8,15 @@
   몸부림     물고기가 움직일 때 가끔 첨벙 — 가까울수록 크게
 
 낚시 화면은 매 틱 update(dt, values)를 부르고(values = 아래 SLIDERS 키), 사운드 테스트 룸은 슬라이더 값으로 부른다.
-연속음끼리 겹쳐도 지저분하지 않게: 삐걱임은 감기·드랙 소리가 날 때 한 단계 낮추고, 드랙 풀림이 크면 클릭을 줄인다.
+
+주인공 하나 (SOUND_CLEANUP 3-2, N3 — audio_config.json focus): 상태마다 연속음 하나만 또렷하게, 나머지는 배율로 낮춘다.
+  red(장력 빨강) > payout(줄 풀리는 중) > thrash(방금 첨벙) > yellow(초록 위쪽 끝) > reel(평소 감기)
+  배율은 fade_sec(0.2초) 동안 크로스페이드, 주인공이 바뀌면 음악·환경음을 아주 살짝 덕킹(focus).
+  장력 소리 자체는 v0.8.14 롤백 그대로(빨강 + 줄 50% 아래 '끼익') — 노란 구간 삐걱임은 새로 넣지 않는다 (N1 결정 A).
 """
 import random
+
+from src.core.config import load_json
 
 SLIDERS = [
     {"key": "reel", "label": "감기 속도", "min": 0.0, "max": 3.0, "default": 1.2},
@@ -26,6 +32,11 @@ RED = 75.0  # 테스트 룸에선 이 위가 빨강 (게임에선 물고기별 g
 class FightAudio:
     def __init__(self, sfx):
         self.sfx = sfx
+        self.fc = load_json("audio_config.json")["focus"]
+        self.focus = "reel"
+        self.gain = {"reel": 1.0, "drag": 1.0, "thrash": 1.0}   # 지금 배율 (크로스페이드 중)
+        self.since_thrash = 9.0
+        self.focus_duck_t = 0.0
         self.click_t = 0.0
         self.crack_t = 1.0
         self.thrash_t = 1.5
@@ -45,13 +56,49 @@ class FightAudio:
             self._loop(slot, None)
         self.last_drag = None
 
+    def zone_of(self, v: dict, red_at: float) -> str:
+        """장력 구간 (소리용): red / yellow(초록 위쪽 끝 yellow_frac) / green. 게임은 v["zone"]을 넣어 준다."""
+        z = v.get("zone")
+        if z is not None:
+            return z
+        t, lo = v.get("tension", 0.0), v.get("green_low", 30.0)
+        if t >= red_at:
+            return "red"
+        return "yellow" if t >= red_at - self.fc["yellow_frac"] * max(1.0, red_at - lo) else "green"
+
+    def _update_focus(self, dt: float, v: dict, red_at: float) -> None:
+        zone = self.zone_of(v, red_at)
+        self.since_thrash += dt
+        if zone == "red":
+            f = "red"
+        elif v.get("payout", 0.0) > 0.12:
+            f = "payout"
+        elif self.since_thrash < self.fc["thrash_sec"]:
+            f = "thrash"
+        elif zone == "yellow":
+            f = "yellow"
+        else:
+            f = "reel"
+        self.focus_duck_t = max(0.0, self.focus_duck_t - dt)
+        if f != self.focus:
+            self.focus = f
+            if self.focus_duck_t <= 0:
+                self.sfx.duck("focus")  # 주인공이 바뀔 때만 아주 살짝
+                self.focus_duck_t = 0.6
+        step = dt / max(1e-3, self.fc["fade_sec"])
+        for k in self.gain:
+            goal = self.fc[k][f]
+            g = self.gain[k]
+            self.gain[k] = min(goal, g + step) if goal > g else max(goal, g - step)
+
     def update(self, dt: float, v: dict, red_at: float = RED, active: bool = True) -> None:
         reel, payout = v.get("reel", 0.0), v.get("payout", 0.0)
         drag, near = v.get("drag"), v.get("near", 0.5)
+        self._update_focus(dt, v, red_at)
         # 드랙 풀림: 바람 휘이잉 (풀리는 속도 → 높이 단계·음량). 살짝 풀릴 땐 안 내서 파이팅 내내 깔리지 않게
         if payout > 0.12:
             step = min(3, int(payout * 4))
-            self._loop("drag", f"sfx_drag_run#{step}", 0.12 + 0.45 * payout)
+            self._loop("drag", f"sfx_drag_run#{step}", (0.12 + 0.45 * payout) * self.gain["drag"])
         else:
             self._loop("drag", None)
         # 릴 감기: 클릭 간격·피치 (드랙이 크게 풀리면 클릭은 묻히니 줄인다)
@@ -60,7 +107,7 @@ class FightAudio:
             if self.click_t <= 0:
                 self.click_t = max(0.022, 0.16 / (0.4 + reel))
                 step = min(4, int(reel / 3.0 * 5))
-                self.sfx.play(f"sfx_reel_click#{step}", 0.35 + 0.1 * min(1.0, reel / 2))
+                self.sfx.play(f"sfx_reel_click#{step}", (0.35 + 0.1 * min(1.0, reel / 2)) * self.gain["reel"])
         # 드랙 단계 딸깍
         if drag is not None:
             d = int(round(drag))
@@ -72,4 +119,5 @@ class FightAudio:
             self.thrash_t -= dt
             if self.thrash_t <= 0:
                 self.thrash_t = random.uniform(0.9, 2.2)
-                self.sfx.play("sfx_thrash", 0.15 + 0.6 * near)
+                self.sfx.play("sfx_thrash", (0.15 + 0.6 * near) * self.gain["thrash"])
+                self.since_thrash = 0.0
