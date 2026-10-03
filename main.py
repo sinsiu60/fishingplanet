@@ -30,6 +30,9 @@ def main() -> None:
     from src.core import bootlog
     bootlog.start()
     from src.platform.detect import IS_ANDROID
+    if IS_ANDROID:
+        from src.version import VERSION
+        bootlog.android_toast(f"v{VERSION} 파이썬 시작됨")  # 이 알림이 보이면 파이썬은 돈다 (진단용)
     audio = True
     if IS_ANDROID and (bootlog.previous or bootlog.fault):
         # 지난번 실행이 통째로 죽었다 → 어디서 멈췄는지 보여 주고, 이번엔 소리 없이(안전 모드) 시작
@@ -39,8 +42,14 @@ def main() -> None:
         lines = list(bootlog.previous or [])
         if bootlog.fault:
             lines += ["", "충돌 위치 (faulthandler):"] + bootlog.fault
-        bootlog.show_lines("지난번 실행이 도중에 꺼졌어요 — 이번엔 소리 없이 시작합니다", lines)
+        # pygame 을 불러오기 전에 안드로이드 대화상자로 먼저 (pygame 자체가 죽는 원인이어도 보이게)
+        if not bootlog.android_dialog("지난번 실행이 도중에 꺼졌어요", lines):
+            bootlog.show_lines("지난번 실행이 도중에 꺼졌어요 — 이번엔 소리 없이 시작합니다", lines)
+    bootlog.mark("pygame 불러오기")
+    import pygame  # noqa: F401  (여기서 죽으면 기록이 이 줄에서 멈춘다)
+    bootlog.mark(f"pygame {pygame.version.ver} 불러옴")
     from src.core.game import Game
+    bootlog.mark("게임 코드 불러옴")
 
     # 자동 테스트: python main.py --frames 120
     max_frames = None

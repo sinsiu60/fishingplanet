@@ -103,3 +103,48 @@ def show_lines(title: str, lines: list[str], wait: bool = True) -> None:
             time.sleep(0.05)
     except Exception:
         pass
+
+
+def android_dialog(title: str, lines: list[str], wait_sec: float = 15.0) -> bool:
+    """pygame 없이 안드로이드 기본 대화상자로 글을 띄운다 (pygame 을 불러오다 죽는 경우에도 보이게, v0.8.4).
+    성공하면 True. 대화상자가 떠 있는 동안 wait_sec 초 기다린 뒤 돌아온다."""
+    try:
+        from jnius import autoclass
+        from android.runnable import run_on_ui_thread
+        act = autoclass("org.kivy.android.PythonActivity").mActivity
+        builder_cls = autoclass("android.app.AlertDialog$Builder")
+        jstr = autoclass("java.lang.String")
+        msg = "\n".join(lines)
+
+        @run_on_ui_thread
+        def _show():
+            b = builder_cls(act)
+            b.setTitle(jstr(title))
+            b.setMessage(jstr(msg + "\n\n이 화면을 캡처해서 보내 주세요 (잠시 뒤 계속)"))
+            b.setCancelable(True)
+            b.create().show()
+
+        _show()
+        time.sleep(wait_sec)
+        return True
+    except Exception as e:
+        mark(f"대화상자 실패: {e!r}")
+        return False
+
+
+def android_toast(text: str) -> None:
+    """화면 아래 짧은 알림 (pygame 없이). 진단판에서 '파이썬은 시작됐다'를 알려 준다."""
+    try:
+        from jnius import autoclass
+        from android.runnable import run_on_ui_thread
+        act = autoclass("org.kivy.android.PythonActivity").mActivity
+        toast = autoclass("android.widget.Toast")
+        jstr = autoclass("java.lang.String")
+
+        @run_on_ui_thread
+        def _show():
+            toast.makeText(act, jstr(text), toast.LENGTH_LONG).show()
+
+        _show()
+    except Exception as e:
+        mark(f"토스트 실패: {e!r}")
