@@ -1585,12 +1585,12 @@ class FishingScene(Scene):
         self._zing("big", vol)
         self.sfx.duck("perfect")
 
-    ZING_SEC = {"small": 0.26, "mid": 0.4, "big": 0.53, "double": 1.15}  # 정점(드랙이 잡히는 순간) 시각 — assets/sfx_generated/reel 지잉에서 잼
+    ZING_SEC = {"small": 0.3, "mid": 0.45, "big": 0.6, "double": 1.15}  # 지잉 길이(끝에 드랙이 다시 잡히는 '틱') — tools/audio/drag_zing.success
 
     def _zing(self, grade: str, vol: float = 1.0) -> None:
-        """패턴 성공 '지이이잉!' (32-16 Z3): 성공 판정 순간에만. 작은 지잉은 1.5초 쿨다운(겹치면 생략),
-        같은 파이팅에서 연속 성공할수록 시작 피치 한 단계 위(최대 3단계, 실패하면 처음으로).
-        울리는 동안 주인공: 릴·환경음·음악 −3dB. 진동은 피치와 함께 세지다 정점에서 '툭'."""
+        """패턴 성공 '지이이잉↘' (32-16 Z3): 성공 판정 순간에만. 드랙이 확 풀리며 가장 높은 음으로 터진 뒤 음이 내려감.
+        작은 지잉은 1.5초 쿨다운(겹치면 생략), 같은 파이팅에서 연속 성공할수록 시작 피치 한 단계 위(최대 3단계, 실패하면 처음으로).
+        울리는 동안 주인공: 릴·환경음·음악 −3dB. 진동은 터지는 순간 '툭' → 음과 함께 약해짐."""
         if grade == "small" and self.t - getattr(self, "zing_small_t", -9.0) < 1.5:
             return
         if grade == "small":
@@ -1604,9 +1604,9 @@ class FishingScene(Scene):
         self.sfx.duck("zing")
         hp = self.game.haptics
         top = {"small": 0.45, "mid": 0.65}.get(grade, 0.9)
-        hp.vibrate("pump", 0.2 * top / 0.9)
-        hp.vibrate("pump", 0.45 * top / 0.9, delay=sec * 0.6)
-        hp.vibrate("bite", top, delay=sec)  # 정점 '툭'
+        hp.vibrate("bite", top)  # 터지는 순간 '툭'
+        hp.vibrate("pump", 0.45 * top / 0.9, delay=sec * 0.35)
+        hp.vibrate("pump", 0.2 * top / 0.9, delay=sec * 0.75)
 
     def _tip(self, key: str) -> None:
         n = self.tip_counts.get(key, 0)

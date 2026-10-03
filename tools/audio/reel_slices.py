@@ -159,11 +159,12 @@ def zing(src, grade, streak, tier, rng):
     peak *= 1 + 0.07 * streak
     n = int(dur * SR)
     u = np.linspace(0, 1, n)
-    rc = 60 + (peak - 60) * u ** 2.4          # 끝에서 급하게
-    rc[u > 0.9] = peak * np.exp(-(u[u > 0.9] - 0.9) * 40)
+    rc = 50 + (peak - 50) * (1 - u) ** 1.6    # '지이이잉↘': 처음 최고 → 점점 내려감
+    a = u < 0.04
+    rc[a] *= 0.75 + 0.25 * u[a] / 0.04
     rc = np.maximum(rc, 20)
     tm = src.click_times(rc, rng)
-    amps = 0.6 + 0.6 * (tm / dur)
+    amps = 1.2 - 0.6 * (tm / dur)            # 터질 때 가장 크고 점점 작아짐
     y = src.place(n, tm, amps, TIER[tier]["ratio"] * 1.1, rng)
     tail = np.zeros(int(0.08 * SR))
     g = src.grains[rng.integers(len(src.grains))] * 1.3     # 드랙이 다시 잡히는 '틱'

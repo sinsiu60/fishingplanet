@@ -48,13 +48,15 @@ def run(G, bed):
 
 
 def success(G, bed, grade="big", streak=0, grain_pitch=1.12):
-    """패턴 성공: 드랙이 순간 확 풀렸다 잡힘 (피치가 끝에서 급하게 치솟고 '틱')"""
+    """패턴 성공 '지이이잉↘': 드랙이 순간 확 풀리며 가장 높은 음으로 터진 뒤 점점 느려지며 음이 내려가고, 끝에 다시 잡히는 '틱'.
+    (사용자 요청: 피치가 올라가는 '지이이잉!' 대신 내려가는 '지이이잉\')"""
     spec = {"small": (0.3, 420), "mid": (0.45, 650), "big": (0.6, 950)}
     dur, peak = spec[grade]
     peak *= 1 + 0.07 * streak
     t = np.linspace(0, 1, int(dur * SR))
-    r = 60 + (peak - 60) * t ** 2.4  # 끝에서 급하게
-    r[t > 0.9] = peak * np.exp(-(t[t > 0.9] - 0.9) * 40)  # 드랙이 잡히며 급정지
+    r = 50 + (peak - 50) * (1 - t) ** 1.6       # 처음 최고 → 점점 내려감 (처음엔 빠르게, 끝으로 갈수록 천천히)
+    a = t < 0.04
+    r[a] *= 0.75 + 0.25 * t[a] / 0.04           # 터지는 순간 아주 짧게 붙잡혔다 풀림
     gain = {"small": 0.6, "mid": 0.78, "big": 0.89}[grade]
     return finish(line_speed_drag(G, bed, np.maximum(r, 20), grain_pitch=grain_pitch), gain)
 
