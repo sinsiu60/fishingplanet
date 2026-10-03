@@ -169,69 +169,61 @@ def drag_loop_raw(peak_rate, post=None):
     return _loop_cut(post(x) if post else x, n)
 
 
-# ───────── 패턴 성공 '지이이잉!' (DESIGN.md 32-16 Z3) ─────────
+# ───────── 패턴 성공 '지이이잉!' (DESIGN.md 32-16 Z3) — 예시 릴 소리(reel_*.wav)와 같은 엔진·결 ─────────
 ZING_GRADES = {"small": (0.35, 1.5, 0.55), "mid": (0.5, 2.0, 0.75), "big": (0.7, 3.0, 0.95)}  # 길이, 피치 상승 배, 세기
-WHINE_F0 = {"wood": 380.0, "mid": 560.0, "crystal": 760.0}
-RING_DECAY = {"wood": 0.04, "mid": 0.08, "crystal": 0.14}
+ZING_RPS0 = 2.6                    # 시작 핸들 회전/초 (보통 감기보다 조금 빠르게 — 확 감기는 순간)
 
 
-def _zing_one(dur, mult, tier, f0):
-    """스풀이 확 돌아가는 한 번: 틱 간격이 촘촘해져 한 음으로 뭉치고, 기어 웅웅 피치가 곡선으로 치솟는다 (끝에서 급하게)."""
-    cfg = TIER_CFG[tier]
+def _zing_one(dur, mult, tier, rps0):
+    """실제 릴 소리(reel_core)에서 출발: 스풀이 한순간 확 가속 — 기어 웅웅·이빨 틱·줄 마찰이 함께 치솟고(처음 천천히·끝에서 급하게),
+    틱이 촘촘해져 한 음으로 뭉친다. 위에 드랙처럼 '지이' 하는 마찰음이 속도만큼 얹힌다."""
     n = int(dur * SR)
-    t = np.arange(n) / SR
-    u = t / dur
-    f = f0 * mult ** (u ** 2.6)                       # 처음 천천히 → 끝에서 급하게
-    rate = 18 * (600 / 18) ** (u ** 1.6)              # 틱 18회/초 → 600회/초 (뭉침)
-    idx = np.where(np.diff(np.floor(np.cumsum(rate) / SR)) > 0)[0]
-    imp = np.zeros(n)
-    imp[idx] = np.clip(1 + cfg["jitter"] * RNG.standard_normal(len(idx)), 0.2, 2.0)
-    ticks = fftconvolve(imp, tick_kernel(cfg["res"], cfg["decay"], tier == "wood"))[:n] * cfg["tick"] * (1 - 0.6 * u)
-    ph = 2 * np.pi * np.cumsum(f) / SR
-    whine = np.sin(ph) + 0.45 * np.sin(2 * ph) + 0.22 * np.sin(3 * ph) + 0.1 * np.sin(5 * ph)
-    whine = lp(whine, 4500)
-    env = 0.15 + 0.85 * u ** 1.3
-    sig = ticks + whine * env * 0.55
-    if tier == "wood":   # 거칠고 덜컥이는
-        sig += bp(RNG.standard_normal(n), 300, 1500) * 0.25 * env
-        sig *= 1 + 0.25 * np.sign(np.sin(2 * np.pi * np.cumsum(rate * 0.25) / SR))
-    if tier == "crystal":  # 맑게 울리는
-        sig += np.sin(ph * 6.03) * 0.18 * env
-    return sig, f[-1], ph[-1]
+    u = np.arange(PRE + n) / SR / dur - PRE / SR / dur
+    u = np.clip(u, 0, 1)
+    v = rps0 * mult ** (u ** 2.6)
+    sig = reel_core(v, rps0, 0.0, tier)[PRE:]
+    uu = u[PRE:]
+    spool = np.sin(2 * np.pi * np.cumsum(v[PRE:] * TIER_CFG[tier]["teeth"] * 0.5) / SR)
+    spool = lp(spool + 0.3 * np.sign(spool), 2500) * 0.25 * uu ** 1.5          # 스풀 회전음 (drag_scream 결)
+    hiss = bp(RNG.standard_normal(n), 2500, 7000) * 0.18 * uu ** 2              # 줄 마찰 '지이'
+    env = 0.35 + 0.65 * uu ** 1.2
+    return (sig * env + spool + hiss), v[-1]
 
 
-def _zing_peak(f_end, ph_end, tier):
-    """정점: 아주 짧은 맑은 금속 울림 + 빠르게 잦아드는 꼬리 (질질 끌지 않음)."""
-    n = int(0.16 * SR)
+def _zing_peak(tier, v_end):
+    """정점: 짧은 금속 울림(멈춤 딸깍과 같은 이빨 공명) + 웅웅거림이 40ms 안에 잦아드는 꼬리."""
+    cfg = TIER_CFG[tier]
+    n = int(0.14 * SR)
     t = np.arange(n) / SR
-    d = RING_DECAY[tier]
-    ring = sum(a * np.sin(2 * np.pi * f_end * k * t) for k, a in ((2.0, 0.5), (2.76, 0.35), (5.4, 0.18))) * np.exp(-t / d)
-    tail = np.sin(ph_end + 2 * np.pi * f_end * t) * np.exp(-t / 0.025) * 0.55
-    if tier == "wood":
-        ring += bp(RNG.standard_normal(n), 200, 900) * np.exp(-t / 0.02) * 0.6
-    return ring * 0.7 + tail
+    out = np.zeros(n)
+    k = tick_kernel(cfg["res"] * 1.3, cfg["decay"] * 2.5, tier == "wood")
+    out[:len(k)] += k * 1.1
+    f = v_end * cfg["teeth"]
+    hum = np.sin(2 * np.pi * f * t) + 0.5 * np.sin(4 * np.pi * f * t) + 0.25 * np.sin(6 * np.pi * f * t)
+    out += lp(hum, 1800) * cfg["hum"] * 1.6 * np.exp(-t / 0.04)
+    if cfg["shimmer"]:
+        out += np.sin(2 * np.pi * f * 6.03 * t) * 0.3 * np.exp(-t / 0.09)
+    return out
 
 
 def reel_zing(grade, tier="mid", streak=0):
-    """grade: small / mid / big / double, streak 0~2 (연속 성공 → 시작 피치 반음씩 위). 반환: (소리, 정점 시각 초)."""
-    f0 = WHINE_F0[tier] * 1.06 ** streak
+    """grade: small / mid / big / double, streak 0~2 (연속 성공 → 시작 회전 6%씩 빠르게 = 피치 위). 반환: (소리, 정점 시각 초)."""
+    rps0 = ZING_RPS0 * 1.06 ** streak
     if grade == "double":
-        a, fa, pa = _zing_one(0.7, 3.0, tier, f0)
-        f1 = f0 * 1.122                                   # 한 음 높은 두 번째: ×3 → ×4
-        b, fb, pb = _zing_one(0.45, 4.0 / 1.122, tier, f1)
-        pk_a, pk_b = _zing_peak(fa, pa, tier), _zing_peak(fb, pb, tier)
-        gap = int(0.04 * SR)
-        out = np.zeros(len(a) + len(pk_a) // 2 + gap + len(b) + len(pk_b))
+        a, va = _zing_one(0.7, 3.0, tier, rps0)
+        b, vb = _zing_one(0.45, 4.0 / 1.122, tier, rps0 * 1.122)     # 한 음 높은 두 번째: ×3 → ×4
+        pa, pb = _zing_peak(tier, va), _zing_peak(tier, vb)
+        gap = int(0.03 * SR)
+        o = len(a) + len(pa) // 2 + gap
+        out = np.zeros(o + len(b) + len(pb))
         out[:len(a)] += a
-        out[len(a):len(a) + len(pk_a)] += pk_a
-        o = len(a) + len(pk_a) // 2 + gap
+        out[len(a):len(a) + len(pa)] += pa
         out[o:o + len(b)] += b
-        out[o + len(b):o + len(b) + len(pk_b)] += pk_b * 1.2
+        out[o + len(b):] += pb * 1.15
         return finish(out) * 0.95, (o + len(b)) / SR
     dur, mult, gain = ZING_GRADES[grade]
-    a, fa, pa = _zing_one(dur, mult, tier, f0)
-    out = np.concatenate([a, _zing_peak(fa, pa, tier)])
-    return finish(out) * gain, dur
+    a, va = _zing_one(dur, mult, tier, rps0)
+    return finish(np.concatenate([a, _zing_peak(tier, va)])) * gain, dur
 
 
 def reel(dur=3.0, rps=2.0, load=0.0, tier="mid", stop_click=True):
