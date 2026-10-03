@@ -5,7 +5,7 @@
   장력 삐걱임 v0.8.14 롤백으로 없앰 — 예전처럼 빨강·줄 50% 아래에서 가끔 '끼익'(fight 'creak' 이벤트, fishing_scene)
   줄 실금     v0.8.14 롤백으로 없앰 (예전엔 그 구간에 '끼익'만)
   드랙 단계   단계가 바뀔 때마다 묵직한 '딸깍' (단계 = 피치)
-  몸부림     물고기가 움직일 때 가끔 첨벙 — 가까울수록 크게
+  몸부림     물고기가 움직일 때 가끔 첨벙 — 멀수록 작고 둔하게 (믹서 거리감, N5)
 
 낚시 화면은 매 틱 update(dt, values)를 부르고(values = 아래 SLIDERS 키), 사운드 테스트 룸은 슬라이더 값으로 부른다.
 
@@ -94,6 +94,7 @@ class FightAudio:
     def update(self, dt: float, v: dict, red_at: float = RED, active: bool = True) -> None:
         reel, payout = v.get("reel", 0.0), v.get("payout", 0.0)
         drag, near = v.get("drag"), v.get("near", 0.5)
+        self.sfx.fish_dist = 1.0 - near  # N5: 물고기 쪽 소리는 믹서가 거리만큼 작고 둔하게
         self._update_focus(dt, v, red_at)
         # 드랙 풀림: 바람 휘이잉 (풀리는 속도 → 높이 단계·음량). 살짝 풀릴 땐 안 내서 파이팅 내내 깔리지 않게
         if payout > 0.12:
@@ -119,5 +120,5 @@ class FightAudio:
             self.thrash_t -= dt
             if self.thrash_t <= 0:
                 self.thrash_t = random.uniform(0.9, 2.2)
-                self.sfx.play("sfx_thrash", (0.15 + 0.6 * near) * self.gain["thrash"])
+                self.sfx.play("sfx_thrash", 0.75 * self.gain["thrash"])  # 거리 감쇠는 믹서가 (N5)
                 self.since_thrash = 0.0

@@ -7,6 +7,7 @@ data/sfx_recipes.json 의 레시피를 합성해서 assets/sfx_generated/<이름
   python tools/bake_sfx.py --all      전부 다시
   python tools/bake_sfx.py 이름 ...   그 소리만
   python tools/bake_sfx.py --check    굽지 않고 확인만 (최신이 아니면 종료 코드 1 — CI)
+공간별 버전(N5, synth.space_recipes — '<이름>~<공간>')은 assets/sfx_space/ 로 함께 굽는다 (OGG 품질 2 — 잔향·먹먹한 소리라 낮아도 티가 덜 남, APK 크기).
 
 OGG 인코딩은 ffmpeg(libvorbis)를 쓴다. ffmpeg이 없으면 .wav 로 저장 (게임은 둘 다 읽음).
 """
@@ -25,6 +26,7 @@ os.chdir(ROOT)
 from src.audio import synth  # noqa: E402
 
 OUT = os.path.join(ROOT, "assets", "sfx_generated")
+SPACE_OUT = os.path.join(ROOT, "assets", "sfx_space")
 
 
 def recipe_hash(name: str, recipe: dict) -> str:
@@ -97,5 +99,19 @@ def main(argv: list[str], rec: dict | None = None, out_dir: str = OUT, quality: 
     return 0
 
 
+def main_all(argv: list[str]) -> int:
+    """기본 소리 + 공간별 버전 (이름을 주면 '~' 있는 이름은 공간 쪽으로)."""
+    flags = [a for a in argv if a.startswith("--")]
+    names = [a for a in argv if not a.startswith("--")]
+    base = [n for n in names if "~" not in n]
+    space = [n for n in names if "~" in n]
+    rc = 0
+    if not names or base:
+        rc |= main(flags + base)
+    if not names or space:
+        rc |= main(flags + space, rec=synth.space_recipes(), out_dir=SPACE_OUT, quality="2")
+    return rc
+
+
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main_all(sys.argv[1:]))

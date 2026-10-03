@@ -191,6 +191,7 @@ class FishingScene(Scene):
         self.theme = self.spot["theme"]
         self.hazard_decor = world.HazardDecor(self.spot["hazards"])
         self.screen_fx.sway = self.theme.get("sway", 0)
+        self.game.sfx.set_space(spot_id)  # N5: 낚시터 잔향·먹먹함 (공간별로 미리 구운 소리)
 
     @property
     def weather(self) -> str:
@@ -725,6 +726,9 @@ class FishingScene(Scene):
         self.signal_audio.update(dt, self.fight if self.fight is not None and self.fight.phase == "fight" else None)
         self._rush_audio()
         fighting = self.fight is not None and self.fight.phase in ("fight", "net")
+        if not fighting:  # N5 거리감: 파이팅 중엔 fight_audio 가 물고기 거리로, 그 밖엔 찌(루어)까지 거리로
+            self.sfx.fish_dist = min(1.0, self.cast.current_distance() / max(1.0, self.cast_far)) \
+                if self.cast.state != CastState.READY else 0.3
         if fighting != getattr(self, "_amb_fight", False):
             self._amb_fight = fighting
             self.sfx.set_base_duck("fight" if fighting else None)  # 파이팅 중 환경음 −4dB

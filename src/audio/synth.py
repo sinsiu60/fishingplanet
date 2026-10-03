@@ -120,6 +120,25 @@ def reverb(stereo: np.ndarray, mix: float, time: float, rng) -> np.ndarray:
     return out
 
 
+def lowpass(stereo: np.ndarray, hz: float) -> np.ndarray:
+    """부드러운 저역 통과 (위상 없이 FFT로, 2차 버터워스 크기 응답) — 먹먹함·거리감 (N5)."""
+    n = len(stereo)
+    L = 1 << int(np.ceil(np.log2(n + 1)))
+    f = np.fft.rfftfreq(L, 1 / RATE)
+    h = 1 / np.sqrt(1 + (f / max(20.0, hz)) ** 4)
+    return np.fft.irfft(np.fft.rfft(stereo, L, axis=0) * h[:, None], L, axis=0)[:n]
+
+
+def space_fx(stereo: np.ndarray, sp: dict, rng) -> np.ndarray:
+    """공간 처리 (N5): 먹먹함(lowpass) → 장소 잔향(reverb [mix, time])."""
+    if sp.get("lowpass"):
+        stereo = lowpass(stereo, sp["lowpass"])
+    rv = sp.get("reverb")
+    if rv:
+        stereo = reverb(stereo, rv[0], rv[1], rng)
+    return stereo
+
+
 def echo(stereo: np.ndarray, delay: float, fb: float, mix: float) -> np.ndarray:
     d = int(RATE * delay)
     if d <= 0 or mix <= 0:
@@ -189,6 +208,16 @@ def render(recipe: dict, seed: int = 1) -> np.ndarray:
     if "reverb" in recipe:
         r = recipe["reverb"]
         out = reverb(out, r.get("mix", 0.2), r.get("time", 0.6), rng)
+    if recipe.get("space"):
+        n0 = len(out)
+        out = space_fx(out, recipe["space"], rng)
+        if recipe.get("loop") and len(out) > n0:
+            # 반복음은 길이를 그대로 두고 잔향 꼬리를 앞머리에 겹친다 (이음매 없이)
+            tail, out = out[n0:], out[:n0].copy()
+            while len(tail):
+                k = min(len(tail), n0)
+                out[:k] += tail[:k]
+                tail = tail[k:]
     if recipe.get("wrap"):
         # 음악 층: 정확히 wrap초 길이로, 넘친 꼬리(울림·잔향)는 앞머리에 더해 이음매 없이 반복 (S6)
         n_loop = int(round(RATE * recipe["wrap"]))
@@ -249,3 +278,32 @@ def recipes() -> dict:
             out[f"{k}#{i}"] = dict(v, pitch_mult=p0 * (p1 / p0) ** u, gain_db=v.get("gain_db", 0.0) + g0 + (g1 - g0) * u,
                                    steps=None)
     return out
+
+
+def space_recipes() -> dict:
+    """N5 공간별 버전: '<이름>~<공간>' (out·cave·deep — open 은 원래 소리) + 물고기 쪽 소리의 먼 버전 '<이름>~<공간>_far'.
+    설정은 data/audio_config.json 'space'. tools/bake_sfx.py 가 assets/sfx_space/ 로 굽는다."""
+    from src.core.config import load_json
+    sc = load_json("audio_config.json")["space"]
+    base = recipes()
+    pre = {k: v for k, v in sc["presets"].items() if "use" not in v}
+    far = sc["far"]
+
+    def spatial(name: str, keys: list) -> bool:
+        b = name.split("#")[0]
+        return any(b == k or (k.endswith("_") and b.startswith(k)) for k in keys)
+
+    out = {}
+    for name, rec in base.items():
+        if not spatial(name, sc["names"]):
+            continue
+        for sp, cfg in pre.items():
+            if cfg:
+                out[f"{name}~{sp}"] = dict(rec, space=cfg)
+            if spatial(name, sc["fish"]):
+                rv = cfg.get("reverb") or [0.0, 0.6]
+                fcfg = {"lowpass": min(cfg.get("lowpass", 99999), far["lowpass"]),
+                        "reverb": [rv[0] + far["reverb_add"], rv[1]]}
+                out[f"{name}~{sp}_far"] = dict(rec, space=fcfg)
+    return out
+

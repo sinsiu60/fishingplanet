@@ -52,5 +52,13 @@
   "reel": {"reel": 1.0, "payout": 0.45, "yellow": 0.55, "red": 0.2, "thrash": 0.6},
   "drag": {"reel": 1.0, "payout": 1.0, "yellow": 0.6, "red": 0.25, "thrash": 0.7},
   "thrash": {"reel": 1.0, "payout": 0.8, "yellow": 0.8, "red": 0.35, "thrash": 1.0}
+ },
+ "space": {
+  "_설명": "N5 공간감 (SOUND_CLEANUP 6번): 낚시터마다 잔향·먹먹함. 효과음 중 '세계에 있는 소리'(names)는 공간별 버전을 미리 구워 assets/sfx_space/<이름>~<공간>.ogg 로 두고, 그 낚시터에 들어갈 때 그 공간 것만 읽는다. open = 원래 소리(잔향 없음). fish = 물고기 쪽 소리 — 멀면(far_from 이상) 둔한 '_far' 버전 + 음량 × (1 − far_vol × 거리). falls = out 잔향 + 폭포가 덮음(mask: 버스 dB). 롤백 소리(legacy_)·판정음·보상음·UI는 공간 처리 안 함.",
+  "presets": {"open": {}, "out": {"reverb": [0.14, 0.6]}, "cave": {"reverb": [0.38, 2.2], "lowpass": 7000}, "deep": {"lowpass": 900, "reverb": [0.2, 1.0]}, "falls": {"use": "out", "mask": {"sfx": -2.5, "sig": -1.5, "amb": 2.0}}},
+  "spots": {"reservoir": "out", "valley": "out", "marsh": "out", "world_tree": "out", "secret": "out", "volcano": "out", "breakwater": "open", "offshore": "open", "ice_sea": "open", "crystal_cave": "cave", "deep": "deep", "sky_falls": "falls"},
+  "far": {"lowpass": 1600, "reverb_add": 0.12, "far_from": 0.55, "far_vol": 0.5},
+  "names": ["sfx_bite_real", "sfx_bubbles", "sfx_cast_charge", "sfx_cast_swing", "sfx_drag_run", "sfx_drag_step", "sfx_flee", "sfx_float_flee", "sfx_hook_heavy", "sfx_hook_success", "sfx_jerk", "sfx_judge_miss", "sfx_jump_land", "sfx_jump_out", "sfx_land", "sfx_launch", "sfx_line_crack", "sfx_line_out", "sfx_line_snap", "sfx_net_success", "sfx_nibble", "sfx_reel_click", "sfx_roar", "sfx_scrape", "sfx_splash", "sfx_splash_small", "sfx_thrash", "sfx_twist_snap", "sfx_twist_step", "sfx_twist_turn", "sfx_whip", "sig_nat_"],
+  "fish": ["sfx_bite_real", "sfx_bubbles", "sfx_flee", "sfx_jump_land", "sfx_jump_out", "sfx_nibble", "sfx_splash", "sfx_splash_small", "sfx_thrash", "sig_nat_direction", "sig_nat_leap", "sig_nat_lure", "sig_nat_release_gulp", "sig_nat_timing_apex", "sig_nat_timing_boil"]
  }
 }

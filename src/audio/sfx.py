@@ -151,6 +151,13 @@ class Sfx:
         self.haptics = None      # game이 넣어 줌
         self.attack_t: dict[str, float] = {}
         self.budget: int | None = None   # 동시 재생 한도 (N3: 파이팅 3 / 전설 4, None = 없음)
+        # N5 공간감: 지금 낚시터의 공간(out/cave/deep, open = 원래 소리)과 그 공간 버전 소리, 물고기 쪽 소리의 먼 버전
+        self.space_name = "open"
+        self.space_mask: dict[str, float] = {}
+        self.space_snd: dict[str, pygame.mixer.Sound] = {}
+        self.far_snd: dict[str, pygame.mixer.Sound] = {}
+        self.fish_dist = 0.3             # 물고기(또는 찌)까지 거리 0 가까움 ~ 1 멂 (낚시 화면이 넣어 줌)
+        self._fish_cache: dict[str, bool] = {}
         self._grade_cache: dict[str, int] = {}
         self.dropped = 0                 # 한도 때문에 안 낸·끊은 소리 수 (검증용)
         self.dropped_names: dict[str, int] = {}
@@ -171,16 +178,36 @@ class Sfx:
         return g
 
     def set_budget(self, kind: str | None) -> None:
-        """동시 재생 한도 (SOUND_CLEANUP 3-1): 'fight' 일반 파이팅 / 'legend' 전설 / None 없음."""
-        if self.enabled:
-            self.budget = self.cfg.get("budget", {}).get(kind) if kind else None
+        """동시 재생 한도 (SOUND_CLEANUP 3-1): 'fight' 일반 파이팅 / 'legend' 전설 / None 없음.
+        켜는 순간 이미 한도를 넘게 울리는 소리(파이팅 직전 입질·챔질)는 등급 낮은 것부터 정리한다."""
+        if not self.enabled:
+            return
+        self.budget = self.cfg.get("budget", {}).get(kind) if kind else None
+        if self.budget is not None:
+            heads = self._heads()
+            for e in sorted((e for e in heads if not e["loop"]), key=lambda e: (self.grade_of(e["name"]), e["t0"])):
+                if len(heads) <= self.budget:
+                    break
+                self._cut(e)
+                heads.remove(e)
+
+    def _heads(self) -> list[dict]:
+        """한도에 세는 소리: 반복음 + 한 번 소리의 '마른 부분'(원래 소리 길이 안). 공간 잔향 꼬리는 세지 않는다 (N5)."""
+        return [e for e in self.active if e["bus"] in self.BUDGET_BUSES and e["ch"].get_busy()
+                and not e["name"].startswith("legacy_") and (e["loop"] or self.clock < e.get("dry", 1e9))]
+
+    def _cut(self, e: dict) -> None:
+        e["ch"].fadeout(int(self.cfg["budget"].get("fade_ms", 30)))
+        self.active = [a for a in self.active if a is not e]
+        self.dropped += 1
+        self.dropped_names[e["name"]] = self.dropped_names.get(e["name"], 0) + 1
 
     def _make_room(self, name: str, bus: str, grade: int | None = None) -> bool:
         """한도가 차 있으면 등급 낮고 오래된 한 번 소리를 끊는다. 새 소리가 더 낮은 등급이면 False (안 냄).
         반복음(드랙 바람)은 '보통' 등급으로 자리를 얻고, 못 얻으면 다음 프레임에 다시 시도된다."""
-        if self.budget is None or bus not in self.BUDGET_BUSES:
-            return True
-        live = [e for e in self.active if e["bus"] in self.BUDGET_BUSES and e["ch"].get_busy()]
+        if self.budget is None or bus not in self.BUDGET_BUSES or name.startswith("legacy_"):
+            return True  # 롤백 소리(legacy_)는 사운드 개편 전처럼 한도 밖 (N1 결정 A)
+        live = self._heads()
         if len(live) < self.budget:
             return True
         cands = [e for e in live if not e["loop"]]
@@ -192,11 +219,65 @@ class Sfx:
             self.dropped += 1
             self.dropped_names[name] = self.dropped_names.get(name, 0) + 1
             return False
-        victim["ch"].fadeout(int(self.cfg["budget"].get("fade_ms", 30)))
-        self.active = [a for a in self.active if a is not victim]
-        self.dropped += 1
-        self.dropped_names[victim["name"]] = self.dropped_names.get(victim["name"], 0) + 1
+        self._cut(victim)
         return True
+
+    def set_space(self, spot_id: str | None) -> None:
+        """N5: 낚시터 공간 (data/audio_config.json space). 그 공간의 미리 구운 버전만 읽어 둔다 (assets/sfx_space)."""
+        if not self.enabled:
+            return
+        sc = self.cfg.get("space")
+        if not sc:
+            return
+        sp = sc["spots"].get(spot_id, "open") if spot_id else "open"
+        pre = sc["presets"].get(sp, {})
+        self.space_mask = dict(pre.get("mask", {}))  # 폭포: 효과음을 살짝 덮는다 (버스 dB)
+        use = pre.get("use", sp)
+        if use == self.space_name and (self.far_snd or use == "open" and not spot_id):
+            return
+        self.space_name = use
+        self.space_snd, self.far_snd = {}, {}
+        if not spot_id:
+            return
+        from src.core.paths import asset_path
+        from src.core import bootlog
+        d = asset_path("sfx_space")
+        if not d.is_dir():
+            return
+        import time
+        t0 = time.perf_counter()
+        for p in d.iterdir():
+            if p.suffix.lower() not in (".ogg", ".wav"):
+                continue
+            name, _, var = p.stem.partition("~")
+            name = name.replace("__", "#")
+            if name not in self.sounds or var not in (use, use + "_far"):
+                continue
+            try:
+                (self.space_snd if var == use else self.far_snd)[name] = pygame.mixer.Sound(str(p))
+            except Exception as e:  # 못 읽으면 원래 소리로
+                bootlog.mark(f"  공간 소리 {p.name} 읽기 실패: {e!r}")
+        bootlog.mark(f"  공간 {use}: 소리 {len(self.space_snd)} + 먼 소리 {len(self.far_snd)} ({(time.perf_counter() - t0) * 1000:.0f}ms)")
+
+    def is_fish(self, name: str) -> bool:
+        f = self._fish_cache.get(name)
+        if f is None:
+            sc = self.cfg.get("space", {})
+            b = name.split("#")[0]
+            f = self._fish_cache[name] = any(b == k or (k.endswith("_") and b.startswith(k)) for k in sc.get("fish", []))
+        return f
+
+    def _far(self) -> bool:
+        return self.fish_dist >= self.cfg.get("space", {}).get("far", {}).get("far_from", 2.0)
+
+    def _base(self, name: str) -> tuple[pygame.mixer.Sound, tuple]:
+        """공간·거리에 맞는 원본 소리와 변형 캐시 키 (N5)."""
+        if self._far() and name in self.far_snd:
+            return self.far_snd[name], (name, self.space_name, "far")
+        snd = self.space_snd.get(name)
+        if snd is not None:
+            return snd, (name, self.space_name)
+        return self.sounds[name], (name,)
 
     def bus_of(self, name: str) -> str:
         b = self._bus_cache.get(name)
@@ -218,7 +299,7 @@ class Sfx:
         g = bv["master"] * bv.get({"mus": "mus", "amb": "amb"}.get(bus, "sfx"), 1.0)
         if bus == "sig" and self.sig_boost:
             g *= self.cfg["sig_boost_gain"]
-        db = self.duck_db.get(bus, 0.0) + self.base_duck.get(bus, 0.0)
+        db = self.duck_db.get(bus, 0.0) + self.base_duck.get(bus, 0.0) + self.space_mask.get(bus, 0.0)
         g *= 10 ** (db / 20)
         if limit and bus not in ("sig", "mus"):
             g *= self.limiter
@@ -251,24 +332,25 @@ class Sfx:
 
     def _variant(self, name: str) -> pygame.mixer.Sound:
         """반복 소리 변주: 피치 ±2·4% 변형 중 하나 (처음 쓸 때 만들어 둠), 슬로우모션이면 낮고 먹먹한 변형."""
-        snd = self.sounds[name]
+        snd, key = self._base(name)
         if self.slow and self.bus_of(name) in ("sfx", "reward", "amb"):
-            if name not in self.slowed:
-                self.slowed[name] = self._resampled(snd, self.cfg["slowmo"]["pitch"], self.cfg["slowmo"]["lowpass"])
-            return self.slowed[name]
+            if key not in self.slowed:
+                self.slowed[key] = self._resampled(snd, self.cfg["slowmo"]["pitch"], self.cfg["slowmo"]["lowpass"])
+            return self.slowed[key]
         if self.muffle and self.bus_of(name) in ("sfx", "reward", "amb"):
             return self._muffled(name)
         if name not in self.cfg["variation"]["names"]:
             return snd
-        if name not in self.variants:
-            self.variants[name] = [snd] + [self._resampled(snd, 1 + p / 100) for p in self.cfg["variation"]["pitch_pct"]]
+        if key not in self.variants:
+            self.variants[key] = [snd] + [self._resampled(snd, 1 + p / 100) for p in self.cfg["variation"]["pitch_pct"]]
         import random
-        return random.choice(self.variants[name])
+        return random.choice(self.variants[key])
 
     def _muffled(self, name: str) -> pygame.mixer.Sound:
-        if name not in self.muffled:
-            self.muffled[name] = self._resampled(self.sounds[name], 1.0, self.cfg["fog_lowpass"])
-        return self.muffled[name]
+        snd, key = self._base(name)
+        if key not in self.muffled:
+            self.muffled[key] = self._resampled(snd, 1.0, self.cfg["fog_lowpass"])
+        return self.muffled[key]
 
     def _resampled(self, snd: pygame.mixer.Sound, ratio: float, lowpass: int = 0) -> pygame.mixer.Sound:
         a = pygame.sndarray.array(snd).astype(np.float32)
@@ -370,9 +452,11 @@ class Sfx:
             volume *= 10 ** (random.uniform(-1, 1) * c["variation"]["vol_db"] / 20)
         if getattr(self, "boost", 1) >= 2 and bus == "sig":
             volume *= 2.0  # 투명 변이: 예고 소리 +6dB
+        if self.is_fish(name):  # N5 거리감: 물고기 쪽 소리는 멀수록 작게 (먼 버전은 _base 가 둔하게)
+            volume *= 1 - self.cfg["space"]["far"]["far_vol"] * max(0.0, min(1.0, self.fish_dist))
         ch.play(snd)
         e = {"ch": ch, "idx": idx, "name": name, "bus": bus, "prio": c["priority"][bus], "t0": self.clock,
-             "vol": volume, "pan": pan, "loop": False}
+             "vol": volume, "pan": pan, "loop": False, "dry": self.clock + self.sounds[name].get_length()}
         self.active = [a for a in self.active if a["idx"] != idx]  # 같은 채널의 예전 기록은 버림
         self.active.append(e)
         self.last_play[name] = self.clock
@@ -443,7 +527,7 @@ class Sfx:
         e = self.loops.get(name)
         if on:
             bus = self.bus_of(name)
-            snd = self._muffled(name) if self.muffle and bus == "amb" else self.sounds[name]  # 안개면 먹먹한 바탕
+            snd = self._muffled(name) if self.muffle and bus == "amb" else self._base(name)[0]  # 안개면 먹먹한 바탕, 공간 버전 (N5)
             if e is not None and e["ch"].get_busy() and e["ch"].get_sound() is snd:
                 e["vol"] = volume
                 self._apply(e)
