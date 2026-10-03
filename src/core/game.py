@@ -1,4 +1,6 @@
 """메인 루프. 게임 로직은 초당 60틱 고정, 렌더링은 그와 분리된다."""
+import time
+
 import pygame
 
 from src.audio.music import Music
@@ -78,6 +80,19 @@ class Game:
             start_scene = TitleScene
         self.scenes.push(start_scene(self))
         bootlog.mark("첫 장면")
+
+    def _perf_draw(self, frame_time: float, ticks: int, upd: float, audio: float, draw: float) -> None:
+        """설정 '성능 표시': 화면 왼쪽 위에 FPS 와 단계별 처리 시간(ms, 평균) — 폰 렉 원인 찾기 (v0.8.8)."""
+        p = getattr(self, "_perf", None)
+        cur = [1.0 / max(frame_time, 1e-4), upd * 1000, audio * 1000, draw * 1000, ticks]
+        self._perf = cur if p is None else [a * 0.9 + b * 0.1 for a, b in zip(p, cur)]
+        fps, u, a, d, tk = self._perf
+        from src.ui.hud import text
+        c = self.screen.canvas
+        line = (f"FPS {fps:4.1f}  갱신 {u:4.1f}(×{tk:.1f})  소리 {a:4.1f}  그리기 {d:4.1f}  "
+                f"출력 {getattr(self, '_perf_present', 0.0):4.1f}ms  일 {getattr(self, '_work_ms', 0):4.1f}")
+        c.fill((0, 0, 0), (0, 0, min(c.get_width(), 8 + len(line) * 5), 12))
+        text(c, line, (3, 6), (140, 255, 160), 11, "midleft")
 
     def _loading_frame(self) -> None:
         """모바일 첫 실행은 효과음을 만드느라 몇 초 걸려서 안내 화면을 먼저 보여 준다."""
@@ -186,14 +201,20 @@ class Game:
                 elif self.scenes.current:
                     self.scenes.current.handle_event(event)
 
+            perf = self.settings.get("perf_overlay")
+            t0 = time.perf_counter() if perf else 0.0
+            ticks = 0
             while accumulator >= self.tick_dt:
                 if self.scenes.current:
                     self.scenes.current.update(self.tick_dt)
                 accumulator -= self.tick_dt
+                ticks += 1
+            t1 = time.perf_counter() if perf else 0.0
             self.music.update()
             self.adaptive.update(frame_time, quiet=self.music.target is not None or self.music.current is not None)
             self.sfx.update(frame_time, slow=self.time_scale < 0.99)  # 믹서: 덕킹·리미터·버스 볼륨
             self.haptics.update(frame_time)  # 소리 어택에 맞춘 진동 (32장 S5)
+            t2 = time.perf_counter() if perf else 0.0
 
             if self.scenes.current:
                 self.scenes.current.draw(self.screen.canvas)
@@ -202,7 +223,13 @@ class Game:
                 veil = pygame.Surface(self.screen.canvas.get_size())
                 veil.set_alpha(int(255 * self.fade / self.fade_total))
                 self.screen.canvas.blit(veil, (0, 0))
+            if perf:
+                t3 = time.perf_counter()
+                self._perf_draw(frame_time, ticks, t1 - t0, t2 - t1, t3 - t2)
             self.screen.present()
+            if perf:
+                self._perf_present = (self._perf_present * 0.9 + (time.perf_counter() - t3) * 100) \
+                    if hasattr(self, "_perf_present") else 0.0
 
             frames += 1
             if frames in (1, 30):

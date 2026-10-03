@@ -45,6 +45,7 @@ class AdaptiveMusic:
         self.state_t = 0.0
         self.sting_left = 0.0
         self.quiet = False                   # 예전 스트리밍 곡이 나오는 중
+        self._vol_q: dict = {}             # 채널에 마지막으로 넣은 음량 (1/128 단위)
         self.missing: list[str] = []
         if self.enabled:
             base = sfx.n_sig
@@ -145,8 +146,10 @@ class AdaptiveMusic:
         self.cache = {n: snd for n, snd in cache.items() if snd is not None}  # 안 쓰는 대륙·낚시터 층은 놓아 준다
         self.sounds = {k: self.cache[n] for k, n in names.items() if n in self.cache}
         self.level = {k: 0.0 for k in LAYERS}
+        self._vol_q = {}
         for k, snd in self.sounds.items():   # 같은 프레임에 한꺼번에 → 끝까지 맞물려 돈다
             self.ch[k].set_volume(0.0)
+            self._vol_q[k] = 0
             self.ch[k].play(snd, loops=-1)
         self.t0 = self.clock
         self.applied = None
@@ -171,6 +174,7 @@ class AdaptiveMusic:
         if snd is None:
             return
         self.cache["mus_sting_win"] = snd
+        self._vol_q.pop("_sting", None)
         self.ch_sting.set_volume(min(1.0, GAIN * self.sfx.bus_gain("mus")))
         self.ch_sting.play(snd)
         self.sting_left = snd.get_length()
@@ -216,6 +220,12 @@ class AdaptiveMusic:
             step = rate if k not in mult else rate * 0.6
             self.level[k] = min(goal, cur + step) if goal > cur else max(goal, cur - step)
             if k in self.sounds:
-                self.ch[k].set_volume(min(1.0, self.level[k] * bus))
-        if self.ch_sting.get_busy():
-            self.ch_sting.set_volume(min(1.0, GAIN * self.sfx.bus_gain("mus") * (0.0 if quiet else 1.0)))
+                q = round(min(1.0, self.level[k] * bus) * 128)
+                if self._vol_q.get(k) != q:  # 바뀔 때만 (폰 오디오 잠금, v0.8.8)
+                    self._vol_q[k] = q
+                    self.ch[k].set_volume(q / 128)
+        if self.sting_left > 0:
+            q = round(min(1.0, GAIN * self.sfx.bus_gain("mus") * (0.0 if quiet else 1.0)) * 128)
+            if self._vol_q.get("_sting") != q:
+                self._vol_q["_sting"] = q
+                self.ch_sting.set_volume(q / 128)

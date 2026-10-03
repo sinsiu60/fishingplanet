@@ -333,12 +333,22 @@ class Sfx:
         return ch
 
     def _apply(self, e: dict) -> None:
+        """채널 음량 반영. 값이 실제로 바뀔 때만 set_volume (믹서 단위 1/128로 비교).
+        폰에선 set_volume 마다 오디오 장치를 잠가서(패닝 효과 등록) 매 프레임 수십 번 부르면 파이팅이 끊겼다 (v0.8.8)."""
         v = min(1.0, e["vol"] * self.bus_gain(e["bus"]))
         if e["pan"] is None:
-            e["ch"].set_volume(v)
+            lr = (v, None)
         else:
             a = (max(-1.0, min(1.0, e["pan"])) + 1) * np.pi / 4
-            e["ch"].set_volume(min(1.0, v * np.cos(a) * 1.41), min(1.0, v * np.sin(a) * 1.41))
+            lr = (min(1.0, v * np.cos(a) * 1.41), min(1.0, v * np.sin(a) * 1.41))
+        q = (round(lr[0] * 128), None if lr[1] is None else round(lr[1] * 128))
+        if e.get("_q") == q:
+            return
+        e["_q"] = q
+        if lr[1] is None:
+            e["ch"].set_volume(lr[0])
+        else:
+            e["ch"].set_volume(lr[0], lr[1])
 
     def update(self, dt: float, slow: bool = False) -> None:
         """매 프레임: 덕킹 복귀, 끝난 소리 정리, 리미터, 루프·재생 중 소리 볼륨 갱신."""
@@ -363,7 +373,10 @@ class Sfx:
             self.limiter = min(want, self.limiter + dt / lim["release_sec"])
         for e in self.active:
             self._apply(e)
-        pygame.mixer.music.set_volume(min(1.0, self.bus_gain("mus") * getattr(self, "music_gain", 0.6)))
+        mv = round(min(1.0, self.bus_gain("mus") * getattr(self, "music_gain", 0.6)) * 128)
+        if mv != getattr(self, "_music_q", None):  # 스트리밍 음악 음량도 바뀔 때만
+            self._music_q = mv
+            pygame.mixer.music.set_volume(mv / 128)
 
     def stop_all(self) -> None:
         """효과음·환경음 전부 멈춤 (음악 층 예약 채널은 그대로 — adaptive_music이 따로 관리)."""

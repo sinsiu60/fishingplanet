@@ -63,7 +63,9 @@ class SettingsScene(Scene):
                (lambda: self._step("vibration", -1, 3), lambda: self._vib_step()))
         fps = ("화면 갱신 (배터리)", "button", lambda: f"초당 {s.get('fps')}번",
                lambda: s.set("fps", 30 if s.get("fps") == 60 else 60))
-        return [size, alpha, left, vib, fps, transfer]
+        perf = ("성능 표시 (FPS·처리 시간)", "toggle", lambda: s.get("perf_overlay"),
+                lambda: s.set("perf_overlay", not s.get("perf_overlay")))
+        return [size, alpha, left, vib, fps, perf, transfer]
 
     def _access_rows(self) -> list[tuple]:
         """접근성 (31장 C6). 예고 배율은 랭크 판정에 영향 없음 — 결과 화면에 작게 표시."""
