@@ -163,6 +163,7 @@ class Sfx:
         self.dropped_names: dict[str, int] = {}
 
     GRADES = ("small", "normal", "signal", "big")
+    SIGNAL = 2
     BUDGET_BUSES = ("sig", "sfx", "reward")
 
     def grade_of(self, name: str) -> int:
@@ -185,7 +186,8 @@ class Sfx:
         self.budget = self.cfg.get("budget", {}).get(kind) if kind else None
         if self.budget is not None:
             heads = self._heads()
-            for e in sorted((e for e in heads if not e["loop"]), key=lambda e: (self.grade_of(e["name"]), e["t0"])):
+            for e in sorted((e for e in heads if not e["loop"] and self.grade_of(e["name"]) != self.SIGNAL),
+                            key=lambda e: (self.grade_of(e["name"]), e["t0"])):
                 if len(heads) <= self.budget:
                     break
                 self._cut(e)
@@ -210,12 +212,13 @@ class Sfx:
         live = self._heads()
         if len(live) < self.budget:
             return True
-        cands = [e for e in live if not e["loop"]]
+        # 신호는 끊지 않는다 (N6: 크게가 몰리는 순간에도 예고를 놓치지 않게 — 그때만 한도를 잠깐 넘을 수 있음)
+        cands = [e for e in live if not e["loop"] and self.grade_of(e["name"]) != self.SIGNAL]
         if not cands:
-            return True  # 반복음만 가득 — 반복음은 끊지 않는다 (주인공 연속음)
+            return True  # 반복음·신호만 가득 — 끊지 않는다
         g = self.grade_of(name) if grade is None else grade
         victim = min(cands, key=lambda e: (self.grade_of(e["name"]), e["t0"]))
-        if self.grade_of(victim["name"]) > g:
+        if self.grade_of(victim["name"]) > g and g != self.SIGNAL:  # 새 소리가 신호면 자리가 없어도 낸다
             self.dropped += 1
             self.dropped_names[name] = self.dropped_names.get(name, 0) + 1
             return False

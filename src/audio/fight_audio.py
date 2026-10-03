@@ -22,7 +22,6 @@ SLIDERS = [
     {"key": "reel", "label": "감기 속도", "min": 0.0, "max": 3.0, "default": 1.2},
     {"key": "payout", "label": "줄 풀림", "min": 0.0, "max": 1.0, "default": 0.0},
     {"key": "tension", "label": "장력", "min": 0.0, "max": 110.0, "default": 50.0},
-    {"key": "line", "label": "줄 내구도", "min": 0.0, "max": 1.0, "default": 1.0},
     {"key": "drag", "label": "드랙 단계", "min": 0.0, "max": 4.0, "default": 2.0},
     {"key": "near", "label": "물고기 가까움", "min": 0.0, "max": 1.0, "default": 0.5},
 ]

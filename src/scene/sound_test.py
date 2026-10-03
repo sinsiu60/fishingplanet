@@ -172,4 +172,8 @@ class SoundTestScene(Scene):
                 k = (s["v"] - s["min"]) / (s["max"] - s["min"])
                 ui.bar(canvas, (x, y - 3, w, 6), k, (140, 200, 255))
                 text(canvas, f"{s['v']:.1f}", (x + w + 4, y), ui.DIM, 11, "midleft")
+            if self.fa is not None and self.fa_on:  # 연속음 주인공 (N3) — 장력·줄 풀림 슬라이더로 바뀌는 것 확인
+                names = {"reel": "감기", "payout": "줄 풀림", "thrash": "첨벙", "yellow": "노란 구간", "red": "빨강"}
+                y = 148 + len(self.sliders) * 18
+                text(canvas, f"주인공: {names.get(self.fa.focus, self.fa.focus)}  (장력 64↑노랑 75↑빨강)", (246, y), ui.ACCENT, 11, "midleft")
         draw_cursor(canvas, self.mouse)
