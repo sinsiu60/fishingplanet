@@ -81,6 +81,41 @@ class Game:
         self.scenes.push(start_scene(self))
         bootlog.mark("첫 장면")
 
+    def _perf_profile_draw(self) -> None:
+        """성능 표시 켜짐: 10초마다 30프레임 동안 그리기를 cProfile 로 재서 오래 걸린 함수 8개를 화면에 (기기에서 원인 찾기)."""
+        now = time.perf_counter()
+        st = getattr(self, "_prof_state", None)
+        if st is None:
+            st = self._prof_state = {"next": now + 2.0, "prof": None, "n": 0, "lines": []}
+        if st["prof"] is None and now >= st["next"]:
+            import cProfile
+            st["prof"], st["n"] = cProfile.Profile(), 0
+        if st["prof"] is None:
+            self.scenes.current.draw(self.screen.canvas)
+            return
+        st["prof"].enable()
+        try:
+            self.scenes.current.draw(self.screen.canvas)
+        finally:
+            st["prof"].disable()
+        st["n"] += 1
+        if st["n"] >= 30:
+            import pstats
+            stats = pstats.Stats(st["prof"]).stats
+            rows = sorted(stats.items(), key=lambda kv: -kv[1][2])[:8]
+            st["lines"] = [f"{v[2] / st['n'] * 1000:6.2f}ms {v[1] // st['n']:5d}회 "
+                           f"{k[0].replace(chr(92), '/').split('/')[-1]}:{k[1]} {k[2]}" for k, v in rows]
+            st["prof"], st["next"] = None, now + 10.0
+
+    @staticmethod
+    def _rss_mb() -> float:
+        try:
+            with open("/proc/self/statm") as f:
+                import os
+                return int(f.read().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 1e6
+        except Exception:
+            return 0.0
+
     def _perf_draw(self, frame_time: float, ticks: int, upd: float, audio: float, draw: float) -> None:
         """설정 '성능 표시': 화면 왼쪽 위에 FPS 와 단계별 처리 시간(ms, 평균) — 폰 렉 원인 찾기 (v0.8.8)."""
         p = getattr(self, "_perf", None)
@@ -91,8 +126,18 @@ class Game:
         c = self.screen.canvas
         line = (f"FPS {fps:4.1f}  갱신 {u:4.1f}(×{tk:.1f})  소리 {a:4.1f}  그리기 {d:4.1f}  "
                 f"출력 {getattr(self, '_perf_present', 0.0):4.1f}ms  일 {getattr(self, '_work_ms', 0):4.1f}")
-        c.fill((0, 0, 0), (0, 0, min(c.get_width(), 8 + len(line) * 5), 12))
-        text(c, line, (3, 6), (140, 255, 160), 11, "midleft")
+        import gc
+        self._perf_tick = getattr(self, "_perf_tick", 0) + 1
+        if self._perf_tick % 60 == 1:
+            self._perf_objs = len(gc.get_objects())  # 파이썬 객체 수 (1초에 한 번) — 계속 늘면 무언가 쌓이는 중
+        extra = [f"메모리 {self._rss_mb():5.0f}MB  객체 {getattr(self, '_perf_objs', 0)}  GC {gc.get_count()}"]
+        lines = [line] + extra + list(getattr(self, "_prof_state", {}).get("lines", []))
+        from src.core.fonts import get_font
+        font = get_font(11)
+        for i, ln in enumerate(lines):
+            w = font.size(ln)[0] + 6
+            c.fill((0, 0, 0), (0, i * 12, min(c.get_width(), w), 12))
+            text(c, ln, (3, 6 + i * 12), (140, 255, 160) if i < 2 else (255, 220, 120), 11, "midleft")
 
     def _loading_frame(self) -> None:
         """모바일 첫 실행은 효과음을 만드느라 몇 초 걸려서 안내 화면을 먼저 보여 준다."""
@@ -217,7 +262,10 @@ class Game:
             t2 = time.perf_counter() if perf else 0.0
 
             if self.scenes.current:
-                self.scenes.current.draw(self.screen.canvas)
+                if perf:
+                    self._perf_profile_draw()
+                else:
+                    self.scenes.current.draw(self.screen.canvas)
             if self.fade > 0:
                 self.fade = max(0.0, self.fade - frame_time)
                 veil = pygame.Surface(self.screen.canvas.get_size())
