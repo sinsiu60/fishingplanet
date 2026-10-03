@@ -110,6 +110,12 @@ jobs:
             und=$(readelf -Ws --dyn-syms "$so" | awk '$7=="UND"{print $8}' | grep -E '_(sse2|avx2|neon)|^alphablit_|^blit_blend_|^premul_surf|^pg_has_' || true)
             if [ -n "$und" ]; then echo "::error::$(basename $so) 에 정의 안 된 pygame 함수: $und"; bad=1; fi
           done
+          # N5 공간별 소리(assets/sfx_space, 이름에 '~')가 APK 앱 묶음(private.tar)에 다 들어갔는지
+          unzip -q -o bin/*.apk 'assets/private.tar' -d "$T"
+          nsp=$(tar tf "$T/assets/private.tar" | grep -c 'sfx_space/.*~.*\.ogg$' || true)
+          want=$(ls assets/sfx_space/*.ogg | wc -l)
+          echo "APK 공간 소리 ${nsp}/${want}개"
+          [ "$nsp" -eq "$want" ] || { echo "::error::APK 에 공간 소리가 빠짐 (${nsp}/${want})"; exit 1; }
           cnt=$(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)
           echo "pygame 모듈 ${cnt}개 검사"
           [ "$cnt" -gt 10 ] || { echo "::error::APK 에서 pygame 모듈을 못 찾음 (${cnt}개)"; exit 1; }
