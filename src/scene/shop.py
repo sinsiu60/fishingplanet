@@ -307,6 +307,15 @@ class ShopScene(Scene):
             notes.append("도시락 +10%")
         if it.get("twin"):
             notes.append("쌍둥이 바늘")
+        if fish["rarity"] == "legend":
+            from src.save.save_game import legend_economy
+            cfg = legend_economy()
+            if not it.get("first"):
+                notes.append(f"재포획 ×{cfg['resell_mult']:g}")
+            n = self.save.legend_sold_today(it["id"])
+            if n:
+                d = cfg["daily_decay"]
+                notes.append(f"오늘 {n + 1}번째 ×{d[min(len(d) - 1, n)]:g}")
         for m in it.get("mut", []):
             if m in ("giant", "golden"):
                 notes.append(f"{mut_label([m])} ×{3 if m == 'giant' else 5}")
@@ -316,7 +325,7 @@ class ShopScene(Scene):
         got = self.save.disassemble_yield(self.sel)
         dis = ", ".join(f"{MAT_KO[k]} {v}" for k, v in got.items()) if got else "전설은 분해 불가"
         text(canvas, f"분해: {dis}", (DETAIL.centerx, DETAIL.y + 138), ui.DIM, 11, "center")
-        total = sum(self.save.sale_price(x) for x in items)
+        total = sum(self.save.sale_prices(items))
         self.dis_btn.enabled = got is not None
         self.sell_all_btn.label, self.sell_all_btn.enabled = f"모두 팔기 ({len(items)}마리 · {total:,}원)", True
         self.sell_btn.draw(canvas, self.mouse)

@@ -239,6 +239,10 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
             badges.append(("도감 금테 획득!", RANK_COLORS["S"]))
         if news.get("hint"):
             badges.append((f"힌트 해금 ({news['hint']}회) - 도감 확인", (150, 220, 255)))
+        if news.get("trophy"):
+            badges.append((f"전설 첫 포획 트로피 +{news['trophy']:,}원!", RANK_COLORS["S"]))
+        if news.get("resell"):
+            badges.append((f"다시 잡은 전설: 판매가 ×{news['resell']:g}", (200, 200, 210)))
         for i, (label, col) in enumerate(badges):
             if t > 1.0 + i * 0.15:
                 text(canvas, label, (12, 24 + i * 15), col, 11, "midleft")

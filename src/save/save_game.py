@@ -27,6 +27,15 @@ def _slot_path(slot: int):
     return save_dir() / f"slot{slot}.json"
 
 
+def legend_economy() -> dict:
+    return load_json("fishing_config.json")["legend_economy"]
+
+
+def _today() -> str:
+    from src.save.quests import today_key
+    return today_key()
+
+
 def rules() -> dict:
     return load_json("equipment.json")["_rules"]
 
@@ -72,6 +81,12 @@ def migrate(data: dict, slot: int | None = None) -> dict:
                 except OSError:
                     pass
         data["version"] = 3
+    if "legend_sales" not in data:
+        # 전설 감가(A+D) 이전에 잡아 둔 살림망 전설은 제값으로 (규칙이 생기기 전에 잡은 것)
+        legends = {f["id"] for f in load_json("fish.json")["fish"] if f["rarity"] == "legend"}
+        for it in data.get("keepnet", []):
+            if it.get("id") in legends:
+                it["first"] = True
     return data
 
 
@@ -176,7 +191,8 @@ def new_data() -> dict:
         "float": {"owned": [], "equipped": None},
         "treasure_dex": {},
         "flags": {"eldra_escape_tutorial": False},
-        "buffs": {"lucky_casts": 0, "lunch_until": 0.0},  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
+        "buffs": {"lucky_casts": 0, "lunch_until": 0.0},
+        "legend_sales": {"day": "", "counts": {}},       # 오늘(실제 날짜) 전설 종별 판매 수 → 반복 판매 감가  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
         # ── 콘텐츠 업데이트 (DESIGN.md 27-8) ──
         "patterns_seen": [],                             # 만나 본 신규 패턴 (첫 만남 안내·도감 힌트)
         "pattern_mastery": {},                           # 패턴별 성공 횟수 → 예고 배율 (31장 C5)
@@ -387,8 +403,40 @@ class SaveGame:
     def lunch_active(self) -> bool:
         return self.data["playtime"] < self.data["buffs"].get("lunch_until", 0.0)
 
-    def sale_price(self, item: dict) -> int:
-        return int(round(item["price"] * (1.1 if self.lunch_active() else 1.0)))
+    def sale_price(self, item: dict, nth: int = 0) -> int:
+        """판매가. 전설은 첫 포획 1마리 말고는 재판매 ×resell, 같은 종을 오늘 여러 번 팔면 감가 (nth = 이번 묶음에서 앞선 같은 종 수)."""
+        k = 1.1 if self.lunch_active() else 1.0
+        return int(round(item["price"] * k * self.legend_sale_mult(item, nth)))
+
+    def legend_sale_mult(self, item: dict, nth: int = 0) -> float:
+        fish = fish_by_id(item["id"])
+        if fish["rarity"] != "legend":
+            return 1.0
+        cfg = legend_economy()
+        k = 1.0 if item.get("first") else cfg["resell_mult"]
+        decay = cfg["daily_decay"]
+        return k * decay[min(len(decay) - 1, self.legend_sold_today(item["id"]) + nth)]
+
+    def legend_sold_today(self, fid: str) -> int:
+        ls = self.data["legend_sales"]
+        return ls["counts"].get(fid, 0) if ls.get("day") == _today() else 0
+
+    def sale_prices(self, items: list) -> list[int]:
+        """여러 마리를 차례로 팔 때 각 판매가 (같은 전설이 여럿이면 뒤로 갈수록 감가)."""
+        seen: dict = {}
+        out = []
+        for it in items:
+            out.append(self.sale_price(it, seen.get(it["id"], 0)))
+            seen[it["id"]] = seen.get(it["id"], 0) + 1
+        return out
+
+    def _note_sale(self, item: dict) -> None:
+        if fish_by_id(item["id"])["rarity"] != "legend":
+            return
+        ls = self.data["legend_sales"]
+        if ls.get("day") != _today():
+            ls["day"], ls["counts"] = _today(), {}
+        ls["counts"][item["id"]] = ls["counts"].get(item["id"], 0) + 1
 
     def enhance_level(self, item_id: str) -> int:
         return self.data["enhance"].get(item_id, 0)
@@ -509,6 +557,16 @@ class SaveGame:
             news["hint"] = entry["count"]
         self.data["keepnet"].append({"id": fid, "size": result["size"], "rank": result["rank"],
                                      "price": result["price"]})
+        if fish["rarity"] == "legend":
+            # 전설: 첫 포획은 트로피 보상금 + 그 한 마리는 제값, 이후는 재판매가 (판매 감가는 sale_price)
+            cfg = legend_economy()
+            if news["new"]:
+                self.data["keepnet"][-1]["first"] = True
+                news["trophy"] = int(round(result["price"] * cfg["trophy_mult"]))
+                self.data["money"] += news["trophy"]
+                self.data["stats"]["earned"] += news["trophy"]
+            else:
+                news["resell"] = cfg["resell_mult"]
         st = self.data["stats"]
         st["catches"] += 1
         st["perfects"] += result.get("perfects", 0)
@@ -526,6 +584,7 @@ class SaveGame:
             return 0
         item = self.data["keepnet"].pop(index)
         price = self.sale_price(item)
+        self._note_sale(item)
         self.data["money"] += price
         self.data["stats"]["earned"] += price
         return price
@@ -559,7 +618,9 @@ class SaveGame:
         return got
 
     def sell_all(self) -> int:
-        total = sum(self.sale_price(it) for it in self.data["keepnet"])
+        total = sum(self.sale_prices(self.data["keepnet"]))
+        for it in self.data["keepnet"]:
+            self._note_sale(it)
         self.data["money"] += total
         self.data["stats"]["earned"] += total
         self.data["keepnet"].clear()
