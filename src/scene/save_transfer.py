@@ -48,7 +48,7 @@ class SaveTransferScene(Scene):
             parts.append(f"파일: {path.parent.name}/{path.name} ({'Android/data' if IS_ANDROID else '내 문서/FishingPlanet'} 안)")
         if IS_ANDROID:
             from src.platform import android
-            if android.share_text(code, "낚시 게임 세이브"):
+            if android.share_text(code, "미니 피싱 세이브"):
                 parts.append("공유 창에서 나에게 보내기(카톡·메일)를 고르세요")
         self._say(" · ".join(parts) or "내보내기에 실패했어요", ui.GOOD if parts else ui.BAD)
 

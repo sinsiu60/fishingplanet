@@ -36,7 +36,7 @@ class Preview:
 
     def caption(self) -> str:
         p = detect.current_preset()
-        return f"낚시 게임 — 모바일 미리보기: {NAMES[p]} (F7 프리셋, F8 노치)"
+        return f"미니 피싱 — 모바일 미리보기: {NAMES[p]} (F7 프리셋, F8 노치)"
 
     def draw(self, window) -> None:
         """창 위에 덧그리기 (캔버스 밖): 노치·둥근 모서리, 진동 표시."""

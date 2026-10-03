@@ -1,4 +1,4 @@
-# 🎣 낚시 게임
+# 🎣 미니 피싱 (Mini Fishing)
 
 어렵지만 공정한 1인칭 낚시 게임. 설계는 [DESIGN.md](DESIGN.md) 참고.
 
@@ -38,15 +38,15 @@ AI 작곡용 프롬프트와 파일 이름은 [MUSIC_PROMPTS.md](MUSIC_PROMPTS.m
 ## exe 빌드 (배포용)
 
 1. `build.bat` 더블클릭 (처음이면 가상환경·PyInstaller를 자동 설치, 1~3분)
-2. 완료되면 `dist\FishingGame\` 폴더가 열립니다 → `FishingGame.exe` 실행
-3. **`dist\FishingGame` 폴더를 통째로 압축**해서 나눠주면 끝 (exe만 따로 떼면 실행 안 됨)
+2. 완료되면 `dist\MiniFishing\` 폴더가 열립니다 → `MiniFishing.exe` 실행
+3. **`dist\MiniFishing` 폴더를 통째로 압축**해서 나눠주면 끝 (exe만 따로 떼면 실행 안 됨)
 
 세이브·설정·에러 로그(`crash.log`)는 `내 문서\FishingPlanet`에 저장됩니다.
 
 ### Python 없는 PC에서 확인하는 법
 
 - **가장 확실**: Windows 샌드박스(Windows Pro: "Windows 기능 켜기/끄기" → Windows Sandbox) 실행 →
-  압축파일을 복사해 넣고 풀어서 `FishingGame.exe` 실행. 샌드박스엔 Python이 없으니 그대로 검증됩니다.
+  압축파일을 복사해 넣고 풀어서 `MiniFishing.exe` 실행. 샌드박스엔 Python이 없으니 그대로 검증됩니다.
 - 또는 Python 안 깔린 다른 PC / 가상머신(VirtualBox 등)에서 같은 방법으로 실행.
 - 내 PC에서 간이 확인: 압축을 **다른 폴더(예: 바탕화면)**에 풀고 실행 → 프로젝트 폴더 없이도 도는지(데이터 경로) 확인.
 - "Windows의 PC 보호" 창이 뜨면 **[추가 정보] → [실행]** (코드 서명이 없는 개인 제작 exe라 뜨는 정상 경고).
@@ -55,8 +55,8 @@ AI 작곡용 프롬프트와 파일 이름은 [MUSIC_PROMPTS.md](MUSIC_PROMPTS.m
 
 ## 안드로이드 APK 빌드
 
-**방법 1 — GitHub에서 받기 (설치 없음)**: 저장소 Actions → `build` 실행 → 맨 아래 Artifacts의 `FishingGame-android`
-(디버그 APK)와 `FishingGame-windows`(exe 폴더). 브랜치에 push하면 자동으로 돌고, Actions 화면의 "Run workflow"로도 실행.
+**방법 1 — GitHub에서 받기 (설치 없음)**: 저장소 Actions → `build` 실행 → 맨 아래 Artifacts의 `MiniFishing-android`
+(디버그 APK)와 `MiniFishing-windows`(exe 폴더). 브랜치에 push하면 자동으로 돌고, Actions 화면의 "Run workflow"로도 실행.
 
 **방법 2 — WSL2 우분투에서 직접**: 프로젝트를 WSL 홈(예: `~/fishingplanet`)에 두고
 ```

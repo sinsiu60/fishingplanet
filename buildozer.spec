@@ -2,7 +2,7 @@
 # 기준: buildozer 1.6.0 + python-for-android 2026.5.9 (권장 NDK 28c, minapi 24). Google Play 기준 target API 35.
 
 [app]
-title = 낚시 게임
+title = 미니 피싱
 package.name = fishingplanet
 package.domain = com.sinsiu
 source.dir = .

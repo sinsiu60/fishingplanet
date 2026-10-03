@@ -117,8 +117,9 @@ class TitleScene(Scene):
         self.bg.draw(canvas)
         canvas = self.ui_canvas(canvas)
         w = canvas.get_width()
-        big_text(canvas, game_config()["title"], (w // 2, 62), (255, 228, 150), 3.0, outline=True)
-        text(canvas, "어렵지만 공정한 1인칭 낚시", (w // 2, 96), (235, 225, 240), 11, "center")
+        big_text(canvas, game_config()["title"], (w // 2, 58), (255, 228, 150), 3.0, outline=True)
+        text(canvas, "MINI  FISHING", (w // 2, 84), (255, 214, 140), 11, "center")
+        text(canvas, "어렵지만 공정한 1인칭 낚시", (w // 2, 98), (235, 225, 240), 11, "center")
         if self.latest_title:
             text(canvas, f"「{self.latest_title}」", (w // 2, 114), (255, 214, 90), 11, "center")  # 장착한 칭호
         for b in self.buttons:

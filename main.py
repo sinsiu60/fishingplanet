@@ -1,4 +1,4 @@
-"""1인칭 낚시 게임 진입점."""
+"""미니 피싱 (Mini Fishing) — 1인칭 낚시 게임 진입점."""
 import os
 import sys
 import traceback
@@ -82,5 +82,5 @@ if __name__ == "__main__":
         if sys.platform == "win32" and getattr(sys, "frozen", False):
             import ctypes
             ctypes.windll.user32.MessageBoxW(
-                None, f"게임이 에러로 종료되었습니다.\n로그: {log}", "낚시 게임", 0x10)
+                None, f"게임이 에러로 종료되었습니다.\n로그: {log}", "미니 피싱", 0x10)
         sys.exit(1)

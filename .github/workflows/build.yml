@@ -1,5 +1,5 @@
 # PC exe(윈도우) + 안드로이드 APK 빌드 확인 (U8 / MOBILE.md M6).
-# 결과물은 실행 화면의 Artifacts 에서 받는다: FishingGame-windows (폴더 압축), FishingGame-android (debug APK).
+# 결과물은 실행 화면의 Artifacts 에서 받는다: MiniFishing-windows (폴더 압축), MiniFishing-android (debug APK).
 name: build
 
 on:
@@ -39,9 +39,9 @@ jobs:
       - name: PyInstaller (build.bat 과 같은 옵션)
         shell: cmd
         run: |
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name FishingGame --icon "%CD%\build\icon.ico" --add-data "%CD%\data;data" --add-data "%CD%\assets;assets" --exclude-module tkinter --specpath build "%CD%\main.py"
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name MiniFishing --icon "%CD%\build\icon.ico" --add-data "%CD%\data;data" --add-data "%CD%\assets;assets" --exclude-module tkinter --specpath build "%CD%\main.py"
           if errorlevel 1 exit /b 1
-          copy /y dist_readme.txt dist\FishingGame\README.txt
+          copy /y dist_readme.txt dist\MiniFishing\README.txt
       - name: 실행 확인 (화면 없이 120프레임)
         timeout-minutes: 5
         shell: bash
@@ -49,12 +49,12 @@ jobs:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
         run: |
-          ./dist/FishingGame/FishingGame.exe --frames 120 --require-baked
+          ./dist/MiniFishing/MiniFishing.exe --frames 120 --require-baked
           echo "exit $?"
       - uses: actions/upload-artifact@v4
         with:
-          name: FishingGame-windows
-          path: dist/FishingGame
+          name: MiniFishing-windows
+          path: dist/MiniFishing
 
   android-apk:
     runs-on: ubuntu-24.04
@@ -152,7 +152,7 @@ jobs:
           echo "$line" | grep -Eq '\)0x(0|6)$' || { echo "::error::가로가 아님: $line"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
-          name: FishingGame-android
+          name: MiniFishing-android
           path: bin/*.apk
 
   release:
@@ -172,13 +172,13 @@ jobs:
           V="${{ inputs.release != '' && format('v{0}', inputs.release) || github.ref_name }}"
           echo "TAG=$V" >> "$GITHUB_ENV"
           mkdir -p out
-          (cd art/FishingGame-windows && zip -qr "../../out/FishingGame-${V}-windows.zip" .)
-          cp art/FishingGame-android/*.apk "out/FishingGame-${V}-android.apk"
+          (cd art/MiniFishing-windows && zip -qr "../../out/MiniFishing-${V}-windows.zip" .)
+          cp art/MiniFishing-android/*.apk "out/MiniFishing-${V}-android.apk"
           ls -la out
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
           target_commitish: ${{ github.sha }}
-          name: 낚시 게임 ${{ env.TAG }}
+          name: 미니 피싱 (Mini Fishing) ${{ env.TAG }}
           body_path: RELEASE_NOTES.md
           files: out/*

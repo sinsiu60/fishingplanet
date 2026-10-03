@@ -12,7 +12,7 @@ from src.core.config import load_json
 from src.ui.hud import SHADOW, text, wrap_text
 
 CARDS = {
-    "welcome": ("낚시 게임에 오신 걸 환영해요!", [
+    "welcome": ("미니 피싱에 오신 걸 환영해요!", [
         "던지기 → 입질 기다리기 → 챔질 → 파이팅 → 뜰채 순서로 진행돼요.",
         "물고기는 행동하기 전에 반드시 신호를 보내요. 신호를 읽으면 이깁니다.",
         "처음 보는 상황마다 잠깐 멈추고 설명해 드릴게요. (H키: 도움말)",

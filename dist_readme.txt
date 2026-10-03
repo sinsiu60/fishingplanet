@@ -1,7 +1,7 @@
-낚시 게임 v0.10.1
+미니 피싱 (Mini Fishing) v0.10.1
 ================
 
-실행: FishingGame.exe 를 더블클릭하세요. (Python 설치 필요 없음)
+실행: MiniFishing.exe 를 더블클릭하세요. (Python 설치 필요 없음)
 주의: 폴더 안의 _internal 폴더를 지우거나 exe만 따로 옮기면 실행되지 않습니다.
       폴더째로 옮기거나 바로가기를 만들어 쓰세요.
 
