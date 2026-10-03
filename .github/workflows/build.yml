@@ -103,13 +103,16 @@ jobs:
           set -e
           T=$(mktemp -d)
           unzip -q -o bin/*.apk 'lib/arm64-v8a/libpybundle.so' -d "$T"
-          mkdir -p "$T/pb" && tar xzf "$T/lib/arm64-v8a/libpybundle.so" -C "$T/pb"
+          mkdir -p "$T/pb" && tar xzf "$T/lib/arm64-v8a/libpybundle.so" -C "$T/pb" --no-same-permissions
+          chmod -R u+rwX "$T/pb"   # 묶음 안 폴더 권한이 막혀 있으면 find 가 아무것도 못 찾는다 (예전엔 '0개 검사'로 그냥 통과)
           bad=0
           for so in $(find "$T/pb" -path '*site-packages/pygame/*.so'); do
             und=$(readelf -Ws --dyn-syms "$so" | awk '$7=="UND"{print $8}' | grep -E '_(sse2|avx2|neon)|^alphablit_|^blit_blend_|^premul_surf|^pg_has_' || true)
             if [ -n "$und" ]; then echo "::error::$(basename $so) 에 정의 안 된 pygame 함수: $und"; bad=1; fi
           done
-          echo "pygame 모듈 $(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)개 검사"
+          cnt=$(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)
+          echo "pygame 모듈 ${cnt}개 검사"
+          [ "$cnt" -gt 10 ] || { echo "::error::APK 에서 pygame 모듈을 못 찾음 (${cnt}개)"; exit 1; }
           # 최적화 확인: -O0 이면 반투명 blit 함수가 거의 스택 ldr/str 뿐이라 폰에서 수십 배 느리다 (v0.8.11 파이팅 렉)
           # NDK 의 llvm-objdump 우선 (러너 기본 것은 AArch64 를 못 읽을 수 있음)
           OBJDUMP=$(find ~/.buildozer -path '*toolchains/llvm/prebuilt/*' -name 'llvm-objdump' 2>/dev/null | head -1)
