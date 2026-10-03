@@ -1,7 +1,7 @@
 """상태 연동 연속 사운드 (DESIGN.md 32장 S4): 숫자처럼 상태를 알려 주는 소리.
 
   릴 감기     감기 속도 → 클릭 간격(빠를수록 촘촘)·피치(#0~4)
-  드랙 풀림   줄이 풀리는 속도 → '지이잉' 반복음 피치(#0~3)·음량
+  드랙 풀림   줄이 풀리는 속도 → 바람 '휘이잉' 반복음 높이(#0~3)·음량 (v0.8.13: 예전 '지이잉'은 거슬려서)
   장력 삐걱임 장력 → 신음 반복음 단계(#0~2)·음량, 빨강 구간이면 떨리는 삐걱(red)으로
   줄 실금     내구도 50% 아래부터 '지직' — 낮을수록 잦고 크게
   드랙 단계   단계가 바뀔 때마다 묵직한 '딸깍' (단계 = 피치)
@@ -48,10 +48,10 @@ class FightAudio:
     def update(self, dt: float, v: dict, red_at: float = RED, active: bool = True) -> None:
         reel, payout, tension = v.get("reel", 0.0), v.get("payout", 0.0), v.get("tension", 0.0)
         line, drag, near = v.get("line", 1.0), v.get("drag"), v.get("near", 0.5)
-        # 드랙 풀림: 지이잉 (풀리는 속도 → 피치 단계·음량)
-        if payout > 0.05:
+        # 드랙 풀림: 바람 휘이잉 (풀리는 속도 → 높이 단계·음량). 살짝 풀릴 땐 안 내서 파이팅 내내 깔리지 않게
+        if payout > 0.12:
             step = min(3, int(payout * 4))
-            self._loop("drag", f"sfx_drag_run#{step}", 0.25 + 0.55 * payout)
+            self._loop("drag", f"sfx_drag_run#{step}", 0.12 + 0.45 * payout)
         else:
             self._loop("drag", None)
         # 릴 감기: 클릭 간격·피치 (드랙이 크게 풀리면 클릭은 묻히니 줄인다)

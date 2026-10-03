@@ -100,14 +100,14 @@
   ]
  },
  "sfx_drag_run": {
-  "_소리": "드랙 풀림 지이이잉 (반복음, 풀리는 속도 단계 #0~3 = 피치)",
+  "_소리": "드랙 풀림 바람 '휘이잉' (반복음, 풀리는 속도 단계 #0~3 = 바람 높이) — v0.8.13: 톱니파 '지이잉'이 파이팅 내내 거슬려 바람 소리로",
   "loop": true,
-  "len": 0.8,
-  "steps": {"n": 4, "pitch": [0.8, 1.6], "gain_db": [-3, 0]},
+  "len": 1.6,
+  "steps": {"n": 4, "pitch": [0.8, 1.6], "gain_db": [-4, 0]},
   "layers": [
-   {"wave": "saw", "freq": 620, "len": 0.8, "vib": [22, 0.02], "filter": {"type": "bp", "f": 1800, "q": 1.5}, "env": {"a": 0.01, "d": 1, "s": 1, "r": 0.01}, "gain": 0.5},
-   {"wave": "square", "freq": 110, "len": 0.8, "filter": {"type": "hp", "f": 2500}, "env": {"a": 0.01, "d": 1, "s": 1, "r": 0.01}, "trem": [55, 0.8], "gain": 0.35},
-   {"wave": "noise", "len": 0.8, "filter": {"type": "bp", "f": 5000, "q": 2, "track": false}, "env": {"a": 0.01, "d": 1, "s": 1, "r": 0.01}, "gain": 0.2}
+   {"wave": "pink", "len": 1.6, "filter": {"type": "bp", "f": 700, "q": 2.5}, "env": {"a": 0.05, "d": 1, "s": 1, "r": 0.05}, "trem": [1.25, 0.35], "gain": 0.8},
+   {"wave": "noise", "len": 1.6, "filter": {"type": "bp", "f": 1900, "q": 4}, "env": {"a": 0.05, "d": 1, "s": 1, "r": 0.05}, "trem": [2.5, 0.5], "gain": 0.18},
+   {"wave": "pink", "len": 1.6, "filter": {"type": "lp", "f": 380, "track": false}, "env": {"a": 0.05, "d": 1, "s": 1, "r": 0.05}, "gain": 0.3}
   ]
  },
  "sfx_drag_step": {
