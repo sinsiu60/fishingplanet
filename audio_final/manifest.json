@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "principle": "모든 클립은 재생 속도·피치·필터 변경 없이 그대로 재생",
+  "reel": {
+    "loops": {
+      "slow": {
+        "files": [
+          "sfx/reel/loop_slow.wav"
+        ],
+        "approx_clicks_per_sec": 116
+      },
+      "normal": {
+        "files": [
+          "sfx/reel/loop_normal_A.wav",
+          "sfx/reel/loop_normal_B.wav"
+        ],
+        "approx_clicks_per_sec": 190,
+        "note": "A·B 번갈아 반복"
+      },
+      "fast": {
+        "files": [
+          "sfx/reel/loop_fast.wav"
+        ],
+        "approx_clicks_per_sec": 279
+      }
+    },
+    "speed_bands": {
+      "slow": [
+        0.0,
+        0.35
+      ],
+      "normal": [
+        0.35,
+        0.75
+      ],
+      "fast": [
+        0.75,
+        1.0
+      ]
+    },
+    "band_crossfade_sec": 0.2,
+    "start": "sfx/reel/reel_start.wav",
+    "stop": "sfx/reel/reel_stop.wav"
+  },
+  "fish_run": {
+    "start_options": [
+      "sfx/reel/zing_rise_C.wav",
+      "sfx/reel/zing_rise_A.wav",
+      "sfx/reel/zing_rise_B.wav"
+    ],
+    "sustain_loop": "sfx/reel/loop_fast.wav",
+    "peak_accent": "sfx/reel/drag_fast.wav",
+    "end": "sfx/reel/reel_stop.wav"
+  },
+  "hookset_or_heavy": "sfx/reel/reel_burst_heavy.wav",
+  "success": {
+    "small": {
+      "streak0": {
+        "file": "sfx/success/success_small_k0.wav",
+        "duration_sec": 0.42,
+        "impact_ms": 25
+      },
+      "streak1": {
+        "file": "sfx/success/success_small_k1.wav",
+        "duration_sec": 0.42,
+        "impact_ms": 25
+      },
+      "streak2": {
+        "file": "sfx/success/success_small_k2.wav",
+        "duration_sec": 0.42,
+        "impact_ms": 25
+      }
+    },
+    "mid": {
+      "streak0": {
+        "file": "sfx/success/success_mid_k0.wav",
+        "duration_sec": 0.62,
+        "impact_ms": 30
+      },
+      "streak1": {
+        "file": "sfx/success/success_mid_k1.wav",
+        "duration_sec": 0.62,
+        "impact_ms": 30
+      },
+      "streak2": {
+        "file": "sfx/success/success_mid_k2.wav",
+        "duration_sec": 0.62,
+        "impact_ms": 30
+      }
+    },
+    "big": {
+      "streak0": {
+        "file": "sfx/success/success_big_k0.wav",
+        "duration_sec": 0.95,
+        "impact_ms": 41
+      },
+      "streak1": {
+        "file": "sfx/success/success_big_k1.wav",
+        "duration_sec": 0.95,
+        "impact_ms": 41
+      },
+      "streak2": {
+        "file": "sfx/success/success_big_k2.wav",
+        "duration_sec": 0.95,
+        "impact_ms": 42
+      }
+    },
+    "big_pop": {
+      "streak0": {
+        "file": "sfx/success/success_big_pop_k0.wav",
+        "duration_sec": 0.95,
+        "impact_ms": 41
+      },
+      "streak1": {
+        "file": "sfx/success/success_big_pop_k1.wav",
+        "duration_sec": 0.95,
+        "impact_ms": 40
+      },
+      "streak2": {
+        "file": "sfx/success/success_big_pop_k2.wav",
+        "duration_sec": 0.95,
+        "impact_ms": 41
+      }
+    },
+    "double": {
+      "file": "sfx/success/success_double.wav",
+      "duration_sec": 1.37,
+      "impact_ms": 462,
+      "second_impact_ms": 462
+    },
+    "double_pop": {
+      "file": "sfx/success/success_double_pop.wav",
+      "duration_sec": 1.37,
+      "impact_ms": 41,
+      "second_impact_ms": 461
+    }
+  },
+  "perfect_effect": {
+    "flash_offset_ms": 40,
+    "glow_duration_ms": 300,
+    "stems": [
+      "sfx/success_stems/perfect_pop.wav",
+      "sfx/success_stems/perfect_glow.wav"
+    ]
+  },
+  "success_mapping": {
+    "small": "일반 패턴 대응 성공 (풀기·방향·참기·감기)",
+    "mid": "꼬임 해소, 역주행 회수, 숨기 기습 성공",
+    "big": "연쇄 콤보 3연속 완료, 이중 패턴 동시 성공",
+    "big_pop": "퍼펙트 (노란 이펙트와 싱크)",
+    "double_pop": "더블 퍼펙트",
+    "double": "예비 (팡 없는 더블)"
+  }
+}
