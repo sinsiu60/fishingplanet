@@ -18,3 +18,10 @@
 |---|---|---|---|---|---|---|---|
 | 릴 클립 (assets/sfx/reel/*) · 성공음의 릴 꼬리 | tools/audio/source/reel_recording.wav | audiopapkin-fishing-reel-302355.mp3 | | | | 구간 자르기·페이드·공통 음량만 (음색 변형 없음) | 2026-10-03 |
 | 성공음 보조 레이어 (줄·물·낚싯대·팡) | assets/sfx/success/*, assets/sfx/success_stems/* | — | 직접 합성 (이 프로젝트) | — | 이 프로젝트 | — | 2026-10-03 |
+
+## 글꼴
+시작 화면 '시우 공방'의 글자("시우 공방" · "SIU GONGBANG")는 갈무리 글꼴로 미리 그린 그림이다 (`assets/branding/siu_splash_text.png`, `tools/art/make_logo.py splash`). 게임에 글꼴 파일은 넣지 않았다.
+
+| 게임 안 이름 | 파일 | 원본 제목 | 만든 사람 | 출처 URL | 라이선스 | 수정 내용 | 추가한 날 |
+|---|---|---|---|---|---|---|---|
+| 시작 화면 로고 글자 | assets/branding/siu_splash_text.png · siu_logo_horizontal*.png | 갈무리 (Galmuri14 · Galmuri7) 2.40.3 | 이민서 (quiple) | https://github.com/quiple/galmuri | SIL Open Font License 1.1 | 글자를 픽셀 그림으로 렌더링 | 2026-10-04 |

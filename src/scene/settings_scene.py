@@ -43,6 +43,8 @@ class SettingsScene(Scene):
             ("이동 컷신", "step", lambda: {"full": "전체", "short": "짧게", "off": "끄기"}[s.get("travel_cutscene") or "full"],
              (lambda: self._cycle("travel_cutscene", ("full", "short", "off"), -1),
               lambda: self._cycle("travel_cutscene", ("full", "short", "off"), 1))),
+            ("시작 로고 짧게", "toggle", lambda: s.get("splash_short"),
+             lambda: s.set("splash_short", not s.get("splash_short"))),
             ("계절 고정 (고정 중 한정 물고기 없음)", "step",
              lambda: {None: "실제 날짜", "spring": "봄", "summer": "여름", "autumn": "가을", "winter": "겨울"}[s.get("season_lock")],
              (lambda: self._cycle("season_lock", (None, "spring", "summer", "autumn", "winter"), -1),
@@ -224,6 +226,8 @@ class SettingsScene(Scene):
         bh = 16
         if len(self.rows) > 9:   # 소리 탭 10줄: 조금 위에서 촘촘히
             y0, step, bh = 82, 15, 14
+        if len(self.rows) > 10:  # PC 화면 탭 11줄 (시작 로고 짧게): 더 촘촘히 — 뒤로 버튼과 안 겹치게
+            y0, step, bh = 80, 14, 13
         self.rows_y = [y0 + i * step for i in range(len(self.rows))]
         self.buttons = []
         for (label, kind, value, act), y in zip(self.rows, self.rows_y):

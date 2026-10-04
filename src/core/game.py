@@ -83,8 +83,8 @@ class Game:
         self.running = True
         self.max_frames = max_frames  # 자동 테스트용
         if start_scene is None:
-            from src.scene.menu import TitleScene
-            start_scene = TitleScene
+            from src.scene.splash import SplashScene   # 개발사 로고 '시우 공방' → 타이틀 (SPLASH.md)
+            start_scene = SplashScene
         self.scenes.push(start_scene(self))
         from src.core import gcwatch
         gcwatch.install()

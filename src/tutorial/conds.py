@@ -3,7 +3,7 @@ import math
 
 # 스토리 장면 (이게 떠 있으면 튜토리얼은 대기열에서 기다림)
 STORY_SCENES = {"CutsceneScene", "SubtitleScene", "ChoiceScene", "EpilogueScene", "PaperScene", "NameInputScene",
-                "PhantomIntroScene", "TravelScene", "EndingScene", "VoyageScene", "StoryDebugScene"}
+                "PhantomIntroScene", "TravelScene", "EndingScene", "VoyageScene", "StoryDebugScene", "SplashScene"}
 # 잠깐 끼어드는 화면 (가이드가 숨고 입력도 그대로 통과)
 ASIDE_SCENES = {"PauseScene", "SettingsScene", "ConfirmScene", "SaveTransferScene", "TutorialReplayScene",
                 "TutorialDebugScene"}
