@@ -1,4 +1,10 @@
 """미니 피싱 (Mini Fishing) — 1인칭 낚시 게임 진입점."""
+# 웹 버전(pygbag)이 브라우저에 미리 깔아 둘 패키지
+# /// script
+# dependencies = [
+#  "numpy",
+# ]
+# ///
 import os
 import sys
 import traceback
@@ -65,7 +71,23 @@ def main() -> None:
     game.run()
 
 
-if __name__ == "__main__":
+async def main_web() -> None:
+    """웹(브라우저, pygbag): 세이브를 브라우저 저장소에서 되살리고, 메인 루프를 비동기로 돌린다 (DESIGN.md 41)."""
+    from src.core.paths import save_dir
+    from src.platform import web
+    print("세이브 되살림:", web.restore(save_dir()), "개")
+    from src.core import bootlog
+    bootlog.start()
+    import pygame  # noqa: F401
+    from src.core.game import Game
+    game = Game()
+    await game.run_async()
+
+
+if sys.platform == "emscripten":
+    import asyncio
+    asyncio.run(main_web())
+elif __name__ == "__main__":
     try:
         main()
     except Exception:

@@ -1,0 +1,62 @@
+# 웹 버전 (아이폰·아이패드·PC 브라우저, DESIGN.md 41): pygbag 으로 WebAssembly 빌드 → 브라우저 실행 확인 → GitHub Pages.
+# 주소: https://sinsiu60.github.io/fishingplanet/  (아이폰 사파리로 열고 공유 → '홈 화면에 추가' 하면 앱처럼 전체 화면)
+# 실행 확인 스크린샷은 같은 사이트의 _check/ 에 함께 올라간다.
+name: web
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/**", "main"]
+    paths-ignore: ["**.md"]
+
+concurrency:
+  group: web-pages
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 도구
+        run: python -m pip install "pygbag==0.9.3" "pygame-ce==2.5.8" numpy playwright
+      - name: 게임 파일 모으기
+        run: python tools/web_build.py stage webapp
+      - name: pygbag 빌드 (소리 파일은 그대로 — 변환하면 파일 이름이 바뀜)
+        run: python -m pygbag --build --no_opt --disable-sound-format-error --title "미니 피싱" --app_name minifishing webapp
+      - name: 아이콘·index.html 손보기
+        run: |
+          python tools/web_build.py finish webapp/build/web
+          ls -la webapp/build/web
+      - name: 브라우저 실행 확인 (아이폰 가로 · PC)
+        run: |
+          python -m playwright install --with-deps chromium
+          (cd webapp/build/web && python -m http.server 8000 >/dev/null 2>&1 &)
+          sleep 2
+          python tools/web_smoke.py http://localhost:8000/ webapp/build/web/_check
+      - name: GitHub Pages 올리기 (gh-pages 브랜치)
+        if: always() && hashFiles('webapp/build/web/index.html') != ''
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ github.token }}
+          publish_dir: webapp/build/web
+          force_orphan: true
+          enable_jekyll: false
+      - name: GitHub Pages 켜기 (처음 한 번 — 권한이 없으면 저장소 설정에서 직접)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST repos/${{ github.repository }}/pages -f "source[branch]=gh-pages" -f "source[path]=/" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MiniFishing-web
+          path: webapp/build/web

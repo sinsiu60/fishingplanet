@@ -24,7 +24,8 @@ class Game:
         from src.core.config import load_json as _lj
         from src.core import bootlog
         _ac = _lj("audio_config.json")
-        pygame.mixer.pre_init(44100, -16, 2, _ac["buffer_mobile"] if _mob else _ac["buffer_pc"])
+        from src.platform.detect import IS_WEB as _web
+        pygame.mixer.pre_init(44100, -16, 2, _ac["buffer_web"] if _web else _ac["buffer_mobile"] if _mob else _ac["buffer_pc"])
         pygame.init()
         bootlog.mark(f"pygame {pygame.version.ver} init · mixer {pygame.mixer.get_init()}")
         self.settings = Settings()
@@ -239,93 +240,119 @@ class Game:
                 scene.write_save()
         self.save.save()
         self.autosave_t = 0.0
+        from src.platform.detect import IS_WEB
+        if IS_WEB:   # 브라우저: 바로 localStorage 로 (탭을 닫아도 남게)
+            from src.platform import web
+            web.sync()
 
     def quit(self) -> None:
         self.save_now()
         self.running = False
 
     def run(self) -> None:
-        accumulator = 0.0
-        frames = 0
+        self._acc, self._frames = 0.0, 0
         while self.running:
-            frame_time = min(self.clock.tick(self.frame_cap()) / 1000.0, MAX_FRAME_TIME)
-            if self.screen.mobile:
-                # 한 프레임 일한 시간(대기 제외) 평균: 20ms 넘으면 60fps 무리 → 30fps, 12ms 아래면 다시 60
-                work = getattr(self, "_work_ms", 10.0) * 0.95 + self.clock.get_rawtime() * 0.05
-                self._work_ms = work
-                if work > 20.0:
-                    self.slow_device = True
-                elif work < 12.0:
-                    self.slow_device = False
-            if self.slow_timer > 0:
-                self.slow_timer -= frame_time
-                if self.slow_timer <= 0:
-                    self.time_scale = 1.0
-            accumulator += frame_time * self.time_scale
-            if self.save is not None:
-                self.save.data["playtime"] += frame_time
-                self.autosave_t += frame_time
-                if self.autosave_t >= AUTOSAVE_SEC:
-                    self.save_now()
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.quit()
-                elif self.preview is not None and self.preview.handle_event(event):
-                    pass
-                elif self.lifecycle.handle_event(event):
-                    pass
-                elif not self.guide.pass_event(event):
-                    pass   # 건너뛰기 버튼·확인 창
-                elif self.scenes.current:
-                    self.scenes.current.handle_event(event)
-
-            perf = self.settings.get("perf_overlay")
-            t0 = time.perf_counter() if perf else 0.0
-            ticks = 0
-            while accumulator >= self.tick_dt:
-                if self.scenes.current:
-                    self.scenes.current.update(self.tick_dt)
-                accumulator -= self.tick_dt
-                ticks += 1
-            t1 = time.perf_counter() if perf else 0.0
-            self.guide.update(frame_time)
-            self.music.update()
-            self.zones.update(frame_time)
-            self.adaptive.update(frame_time, quiet=self.music.target is not None or self.music.current is not None)
-            self.sfx.update(frame_time, slow=self.time_scale < 0.99)  # 믹서: 덕킹·리미터·버스 볼륨
-            self.haptics.update(frame_time)  # 소리 어택에 맞춘 진동 (32장 S5)
-            t2 = time.perf_counter() if perf else 0.0
-
-            if self.scenes.current:
-                from src.tutorial import targets
-                targets.begin()
-                if perf:
-                    self._perf_profile_draw()
-                else:
-                    self.scenes.current.draw(self.screen.canvas)
-                self.guide.draw(self.screen.canvas)
-            if self.fade > 0:
-                self.fade = max(0.0, self.fade - frame_time)
-                veil = _opaque(self.screen.canvas.get_size())
-                veil.set_alpha(int(255 * self.fade / self.fade_total))
-                self.screen.canvas.blit(veil, (0, 0))
-            if perf:
-                t3 = time.perf_counter()
-                self._perf_draw(frame_time, ticks, t1 - t0, t2 - t1, t3 - t2)
-            self.screen.present()
-            if perf:
-                self._perf_present = (self._perf_present * 0.9 + (time.perf_counter() - t3) * 100) \
-                    if hasattr(self, "_perf_present") else 0.0
-
-            frames += 1
-            if frames in (1, 30):
-                from src.core import bootlog
-                bootlog.mark(f"프레임 {frames}")
-            elif frames == 90:
-                from src.core import bootlog
-                bootlog.done()  # 여기까지 오면 시작 성공
-            if self.max_frames is not None and frames >= self.max_frames:
-                self.running = False
-
+            self._frame(min(self.clock.tick(self.frame_cap()) / 1000.0, MAX_FRAME_TIME))
         pygame.quit()
+
+    async def run_async(self) -> None:
+        """웹(pygbag): 브라우저가 화면을 그릴 때마다 한 프레임 (프레임 사이에 브라우저로 돌려줘야 멈추지 않는다).
+        프레임 상한은 브라우저가 맞추고(보통 60), 메뉴 30fps 는 한 번씩 건너뛴다."""
+        import asyncio
+        from src.platform import web
+        self._acc, self._frames = 0.0, 0
+        sync_t, skip = 0.0, 0.0
+        while self.running:
+            dt = min(self.clock.tick() / 1000.0, MAX_FRAME_TIME)
+            skip += dt
+            if skip + 0.004 < 1.0 / self.frame_cap():
+                await asyncio.sleep(0)
+                continue
+            self._frame(min(skip, MAX_FRAME_TIME))
+            sync_t += skip
+            skip = 0.0
+            if sync_t >= 5.0:   # 설정·세이브 이전 등 여기저기서 쓴 파일을 브라우저 저장소로
+                sync_t = 0.0
+                web.sync()
+            await asyncio.sleep(0)
+        web.sync()
+
+    def _frame(self, frame_time: float) -> None:
+        if self.screen.mobile:
+            # 한 프레임 일한 시간(대기 제외) 평균: 20ms 넘으면 60fps 무리 → 30fps, 12ms 아래면 다시 60
+            work = getattr(self, "_work_ms", 10.0) * 0.95 + self.clock.get_rawtime() * 0.05
+            self._work_ms = work
+            if work > 20.0:
+                self.slow_device = True
+            elif work < 12.0:
+                self.slow_device = False
+        if self.slow_timer > 0:
+            self.slow_timer -= frame_time
+            if self.slow_timer <= 0:
+                self.time_scale = 1.0
+        self._acc += frame_time * self.time_scale
+        if self.save is not None:
+            self.save.data["playtime"] += frame_time
+            self.autosave_t += frame_time
+            if self.autosave_t >= AUTOSAVE_SEC:
+                self.save_now()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.quit()
+            elif self.preview is not None and self.preview.handle_event(event):
+                pass
+            elif self.lifecycle.handle_event(event):
+                pass
+            elif not self.guide.pass_event(event):
+                pass   # 건너뛰기 버튼·확인 창
+            elif self.scenes.current:
+                self.scenes.current.handle_event(event)
+
+        perf = self.settings.get("perf_overlay")
+        t0 = time.perf_counter() if perf else 0.0
+        ticks = 0
+        while self._acc >= self.tick_dt:
+            if self.scenes.current:
+                self.scenes.current.update(self.tick_dt)
+            self._acc -= self.tick_dt
+            ticks += 1
+        t1 = time.perf_counter() if perf else 0.0
+        self.guide.update(frame_time)
+        self.music.update()
+        self.zones.update(frame_time)
+        self.adaptive.update(frame_time, quiet=self.music.target is not None or self.music.current is not None)
+        self.sfx.update(frame_time, slow=self.time_scale < 0.99)  # 믹서: 덕킹·리미터·버스 볼륨
+        self.haptics.update(frame_time)  # 소리 어택에 맞춘 진동 (32장 S5)
+        t2 = time.perf_counter() if perf else 0.0
+
+        if self.scenes.current:
+            from src.tutorial import targets
+            targets.begin()
+            if perf:
+                self._perf_profile_draw()
+            else:
+                self.scenes.current.draw(self.screen.canvas)
+            self.guide.draw(self.screen.canvas)
+        if self.fade > 0:
+            self.fade = max(0.0, self.fade - frame_time)
+            veil = _opaque(self.screen.canvas.get_size())
+            veil.set_alpha(int(255 * self.fade / self.fade_total))
+            self.screen.canvas.blit(veil, (0, 0))
+        if perf:
+            t3 = time.perf_counter()
+            self._perf_draw(frame_time, ticks, t1 - t0, t2 - t1, t3 - t2)
+        self.screen.present()
+        if perf:
+            self._perf_present = (self._perf_present * 0.9 + (time.perf_counter() - t3) * 100) \
+                if hasattr(self, "_perf_present") else 0.0
+
+        self._frames += 1
+        if self._frames in (1, 30):
+            from src.core import bootlog
+            bootlog.mark(f"프레임 {self._frames}")
+        elif self._frames == 90:
+            from src.core import bootlog
+            bootlog.done()  # 여기까지 오면 시작 성공
+        if self.max_frames is not None and self._frames >= self.max_frames:
+            self.running = False

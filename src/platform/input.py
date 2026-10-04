@@ -181,6 +181,9 @@ class TouchInput(PcInput):
         elif et in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
             if getattr(event, "touch", False):
                 return None  # 터치가 만든 가짜 마우스 이벤트 (손가락 이벤트로 이미 처리)
+            from src.platform.detect import WEB_TOUCH
+            if WEB_TOUCH:
+                return None  # 터치 브라우저: 가짜 마우스 이벤트에 touch 표시가 없을 수 있다 → 손가락 이벤트만 쓴다
             if et == pygame.MOUSEMOTION:
                 if not event.buttons[0]:
                     return None

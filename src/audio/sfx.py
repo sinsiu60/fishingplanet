@@ -166,8 +166,8 @@ class Sfx:
         self.muffled: dict[str, pygame.mixer.Sound] = {}
         self._bus_cache: dict[str, str] = {}
         self.clock = 0.0
-        from src.platform.detect import IS_ANDROID
-        self.latency = c["buffer_mobile" if IS_ANDROID else "buffer_pc"] / max(1, self.rate)  # 출력 버퍼 지연 (초)
+        from src.platform.detect import IS_ANDROID, IS_WEB
+        self.latency = c["buffer_web" if IS_WEB else "buffer_mobile" if IS_ANDROID else "buffer_pc"] / max(1, self.rate)  # 출력 버퍼 지연 (초)
         self.offset_s = 0.0      # 설정 '오디오 지연 보정' (game.apply_audio_settings)
         self.haptics = None      # game이 넣어 줌
         self.attack_t: dict[str, float] = {}
