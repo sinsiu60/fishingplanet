@@ -108,7 +108,8 @@ class DexScene(Scene):
     def _lim_list(self) -> list[dict]:
         from src.save.dexbook import limited_fish
         order = {"spring": 0, "summer": 1, "autumn": 2, "winter": 3}
-        return sorted(limited_fish(), key=lambda f: (f.get("continent", "z"), order.get(f.get("season"), 9)))
+        # 이벤트 물고기는 두 대륙 공통이라 continent 가 없음(None) → 계절 한정 뒤로 (None 과 문자열 비교 금지)
+        return sorted(limited_fish(), key=lambda f: (f.get("continent") or "z", order.get(f.get("season"), 9)))
 
     def _toggle_ph(self) -> None:
         self.ph_mode = not self.ph_mode
