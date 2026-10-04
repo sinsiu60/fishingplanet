@@ -1,7 +1,7 @@
 """PC 회귀 검사용 결정적 리플레이 (DESIGN.md 26-9).
 
 고정 시계(60fps)·고정 난수·고정 시각·스크립트 마우스/키보드로 타이틀 → 낚시 3번 → 상점·도감·지도·상자·일시정지·설정
-→ 타이틀 → 불러오기 → 새 게임까지 돌리고, 매 프레임 화면 해시를 JSON으로 남긴다.
+→ 타이틀 → 이어하기(슬롯) → 새 게임까지 돌리고, 매 프레임 화면 해시를 JSON으로 남긴다.
 코드를 바꾸기 전·후 두 체크아웃에서 돌려 결과 파일이 같으면 PC 동작(입력·화면)이 그대로라는 뜻.
 
 사용: PYTHONHASHSEED=0 python tools/pc_replay.py <저장소 경로> <결과.json> <sharmion|eldra>
@@ -185,7 +185,8 @@ def wait_until(cond, limit):
 
 def scenario():
     yield from step(30)
-    click(btn("이어하기"))
+    click(btn("이어하기")); yield from step(15)
+    click(scene().cards[1].center)   # 이어하기 = 슬롯 고르기
     yield from step(60)
     fs = fishing()
     assert fs is not None
@@ -332,7 +333,7 @@ def scenario():
             key(pygame.K_ESCAPE)
         yield from step(20)
     yield from step(20)
-    click(btn("불러오기")); yield from step(15)
+    click(btn("이어하기")); yield from step(15)
     key(pygame.K_ESCAPE); yield from step(10)
     click(btn("새 게임")); yield from step(15)
     click((240, 80)); yield from step(10); click((240, 80)); yield from step(60)

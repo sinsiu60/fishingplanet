@@ -109,9 +109,24 @@ def _float(s, n, item, dark):
     s.fill(_shade(col, 0.6), (cx, body.bottom, max(1, n // 16), n // 6))
 
 
+def _parcel(s, n, dark):
+    """특급 배송: 끈 묶은 상자 + 속도선."""
+    box, tape, line = (_c((200, 150, 90), dark), _c((240, 210, 120), dark), _c((150, 200, 255), dark))
+    r = pygame.Rect(n * 3 // 10, n // 4, n * 6 // 10, n // 2)
+    s.fill(_shade(box, 0.7), r.move(1, 1))
+    s.fill(box, r)
+    s.fill(tape, (r.centerx - max(1, n // 16), r.y, max(1, n // 8), r.h))
+    s.fill(tape, (r.x, r.centery - max(1, n // 16), r.w, max(1, n // 8)))
+    for i in range(3):
+        y = r.y + r.h * (i + 1) // 4
+        s.fill(line, (r.x - n // 4 + i * n // 16, y, n // 6, 1))
+
+
 def _paint(kind: str, item: dict, n: int, dark: bool) -> pygame.Surface:
     s = pygame.Surface((n, n), pygame.SRCALPHA)
-    if kind == "bait":
+    if kind == "delivery":
+        _parcel(s, n, dark)
+    elif kind == "bait":
         _bait(s, n, item, dark)
     elif kind == "float":
         _float(s, n, item, dark)

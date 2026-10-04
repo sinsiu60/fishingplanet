@@ -104,7 +104,11 @@ class ShopScene(Scene):
         fr = self.frame
         self.wide = fr.w >= 440
         self.tab_ids = [t[0] for t in TABS if tabs is None or t[0] in tabs]
+        # 판매·분해는 하루네 낚시점 안에서만. 야외(낚시터·마을)는 살림망 보기만 + 특급 배송 일괄 판매 (하루 n번)
+        self.can_sell = host is not None and getattr(host, "npc", None) == "haru"
         names = dict(TABS)
+        if not self.can_sell:
+            names["sell"] = "살림망"
         # 탭: 같은 줄, 판매 │ 장비 6종 │ 강화 사이 세로 구분선 (목업: 위 25~42)
         seps = sum(1 for a, b in zip(self.tab_ids, self.tab_ids[1:]) if GROUP[a] != GROUP[b])
         n = len(self.tab_ids)
@@ -179,6 +183,7 @@ class ShopScene(Scene):
                 for g in sorted(equipment()[k], key=lambda g: g["tier"]):
                     if self.save.owns(k, g["id"]):
                         out.append((k, g))
+            out.append(("delivery", {"id": "delivery", "name": "특급 배송 시스템", "tier": 0}))   # 야외 일괄 판매 (하루 n번)
             return out
         return sorted(equipment()[self.kind], key=lambda g: g["tier"])
 
@@ -308,6 +313,9 @@ class ShopScene(Scene):
             idx = self._sel_index()
             if idx is None:
                 return
+            if not self.can_sell:
+                self._say("판매는 하루네 낚시점에서 할 수 있어요", ui.BAD)
+                return
             gained = self.save.sell(idx)
             self.game.sfx.play("sfx_coin")
             self._react("sell")
@@ -336,6 +344,17 @@ class ShopScene(Scene):
             return
         if self.kind == "enhance":
             kind, gear = item
+            if kind == "delivery":
+                from src.save import delivery
+                lv = delivery.level(self.save)
+                res = delivery.upgrade(self.save)
+                if res == "ok":
+                    self.game.sfx.play("ui_buy" if lv == 0 else "ui_enhance")
+                    self._react("buy" if lv == 0 else "enhance")
+                    self._say(f"특급 배송 {'구매' if lv == 0 else '강화'}! 야외 판매 하루 {lv + 1}번", ui.GOOD)
+                elif res == "money":
+                    self._say("돈이 부족해요", ui.BAD)
+                return
             res = self.save.enhance(kind, gear)
             if res == "ok":
                 self.game.sfx.play("ui_enhance")
@@ -377,6 +396,9 @@ class ShopScene(Scene):
         idx = self._sel_index()
         if idx is None:
             return
+        if not self.can_sell:
+            self._say("분해는 하루네 낚시점에서 할 수 있어요", ui.BAD)
+            return
         got = self.save.disassemble(idx)
         if got is None:
             self._say(self._no_dis_reason(idx), ui.BAD)
@@ -409,6 +431,14 @@ class ShopScene(Scene):
 
     # ── 일괄 판매 확인 창 ──
     def _open_bulk(self) -> None:
+        from src.save import delivery
+        if not self.can_sell:
+            if delivery.level(self.save) == 0:
+                self._say("특급 배송 시스템이 있으면 여기서도 팔 수 있어요 (하루네 낚시점 강화 탭)", ui.BAD)
+                return
+            if delivery.uses_left(self.save) <= 0:
+                self._say("오늘 특급 배송을 다 썼어요 · 내일 다시", ui.BAD)
+                return
         if not self._bulk_pool():
             self._say("잠금 제외 팔 물고기가 없어요", ui.BAD)
             return
@@ -430,6 +460,9 @@ class ShopScene(Scene):
             return
         net = self.save.data["keepnet"]
         total = 0
+        if not self.can_sell:
+            from src.save import delivery
+            delivery.use(self.save)   # 특급 배송 1회
         for it in todo:   # 살림망 순서대로 한 마리씩 (판매가·전설 감가는 save.sell 그대로)
             idx = next(i for i, x in enumerate(net) if x is it)
             total += self.save.sell(idx)
@@ -997,7 +1030,10 @@ class ShopScene(Scene):
         text(canvas, "= 판매가", (calc.x + 4, calc.y + 19), su.SUB, 11, "midleft")
         su.btext(canvas, f"{final:,}원", (calc.right - 4, calc.y + 19), su.YELLOW, 11, "midright")
         # 팔기 + 잠금
-        su.button(canvas, self.sell_btn.rect, su.fit(f"팔기 {final:,}원", self.sell_btn.rect.w - 6), "fill", self.mouse)
+        if self.can_sell:
+            su.button(canvas, self.sell_btn.rect, su.fit(f"팔기 {final:,}원", self.sell_btn.rect.w - 6), "fill", self.mouse)
+        else:   # 야외: 살림망 보기만
+            su.button(canvas, self.sell_btn.rect, su.fit("하루네에서 판매", self.sell_btn.rect.w - 6), "dim", self.mouse)
         lr = self.lock_btn.rect
         hov = lr.collidepoint(self.mouse)
         canvas.fill(ui.SHADOW, lr.move(1, 1))
@@ -1013,7 +1049,11 @@ class ShopScene(Scene):
         got = self.save.disassemble_yield(idx)
         dr = self.dis_btn.rect
         self.dis_btn.enabled = got is not None
-        if got is None:
+        if not self.can_sell:
+            canvas.fill(su.CELL_BG, dr)
+            pygame.draw.rect(canvas, (46, 54, 84), dr, 1)
+            text(canvas, su.fit("분해는 하루네 낚시점에서", dr.w - 6), (dr.x + 4, dr.centery), su.SUB, 11, "midleft")
+        elif got is None:
             canvas.fill(su.CELL_BG, dr)
             pygame.draw.rect(canvas, (46, 54, 84), dr, 1)
             s = f"분해  {self._no_dis_reason(idx)}"
@@ -1053,6 +1093,9 @@ class ShopScene(Scene):
 
     def _draw_bulk_button(self, canvas, pool: list) -> None:
         r = self.sell_all_btn.rect
+        if not self.can_sell:
+            self._draw_delivery_button(canvas, pool)
+            return
         en = bool(pool)
         hov = en and r.collidepoint(self.mouse)
         canvas.fill(ui.SHADOW, r.move(1, 1))
@@ -1064,6 +1107,25 @@ class ShopScene(Scene):
         if su.width(s) > r.right - lab.right - 12:
             s = f"{len(pool)}마리 · {total:,}원"
         text(canvas, su.fit(s, r.right - lab.right - 12), (r.right - 5, r.centery), su.SUB, 11, "midright")
+
+    def _draw_delivery_button(self, canvas, pool: list) -> None:
+        """야외: 특급 배송 일괄 판매 (오늘 남은 횟수) / 없으면 안내."""
+        from src.save import delivery
+        r = self.sell_all_btn.rect
+        lv = delivery.level(self.save)
+        left = delivery.uses_left(self.save)
+        en = lv > 0 and left > 0 and bool(pool)
+        self.sell_all_btn.enabled = True   # 눌렀을 때 이유 안내
+        hov = en and r.collidepoint(self.mouse)
+        canvas.fill(ui.SHADOW, r.move(1, 1))
+        canvas.fill(su.SEL_BG if hov else (su.WIN_BG if en else su.CELL_BG), r)
+        pygame.draw.rect(canvas, su.YELLOW if hov else (su.BORDER if en else (54, 62, 90)), r, 1)
+        if lv == 0:
+            text(canvas, su.fit("판매는 하루네 낚시점에서", r.w - 10), (r.x + 5, r.centery), su.SUB, 11, "midleft")
+            return
+        lab = su.btext(canvas, "특급 배송…", (r.x + 5, r.centery), su.WHITE if en else su.SUB, 11, "midleft")
+        s = f"오늘 {left}/{lv}회"
+        text(canvas, su.fit(s, r.right - lab.right - 12), (r.right - 5, r.centery), su.YELLOW if left else su.SUB, 11, "midright")
 
     def _bulk_lines(self) -> list[tuple[str, int, int, str]]:
         """확인 창 목록: (이름, 마리 수, 합계, 등급) — 같은 종은 한 줄."""
@@ -1086,8 +1148,14 @@ class ShopScene(Scene):
         canvas.fill(ui.SHADOW, P.move(2, 2))
         canvas.fill(su.WIN_BG, P)
         pygame.draw.rect(canvas, su.YELLOW, P, 1)
-        su.btext(canvas, "일괄 판매", (P.x + 10, P.y + 11), su.YELLOW, 11, "midleft")
-        text(canvas, "잠금한 물고기는 빠져요", (P.right - 10, P.y + 11), su.SUB, 11, "midright")
+        if self.can_sell:
+            su.btext(canvas, "일괄 판매", (P.x + 10, P.y + 11), su.YELLOW, 11, "midleft")
+        else:
+            from src.save import delivery
+            su.btext(canvas, f"특급 배송 (오늘 {delivery.uses_left(self.save)}회 남음)", (P.x + 10, P.y + 11), su.YELLOW, 11,
+                     "midleft")
+        if P.w >= 280:
+            text(canvas, "잠금한 물고기는 빠져요", (P.right - 10, P.y + 11), su.SUB, 11, "midright")
         for r, rc in checks:
             on = r in self.bulk["rar"]
             box = pygame.Rect(rc.x, rc.y + 2, 9, 9)
@@ -1136,8 +1204,18 @@ class ShopScene(Scene):
             if r is None:
                 continue
             su.row_bg(canvas, r, i == self.sel, r.collidepoint(self.mouse))
-            lvl = self.save.enhance_level(g["id"])
             ny, sy = (r.centery, r.centery) if self.wide else (r.y + 8, r.y + 19)
+            if kind == "delivery":
+                from src.save import delivery
+                dl = delivery.level(self.save)
+                gear_icon.draw(canvas, kind, g, (r.x + 30, sy - 7, 14, 14))
+                st = f"Lv{dl}" if dl else "미보유"
+                sr = text(canvas, st, (r.right - 4, sy), su.YELLOW if dl else su.SUB, 11, "midright")
+                nx = r.x + 48 if self.wide else r.x + 9
+                text(canvas, su.fit(g["name"], (sr.x - nx - 4) if self.wide else (r.right - 4 - nx)), (nx, ny), su.WHITE,
+                     11, "midleft")
+                continue
+            lvl = self.save.enhance_level(g["id"])
             su.btext(canvas, f"T{g['tier']}", (r.x + 9, ny), su.YELLOW, 11, "midleft")
             gear_icon.draw(canvas, kind, g, (r.x + 30, sy - 7, 14, 14))
             right = r.right - 4
@@ -1152,6 +1230,9 @@ class ShopScene(Scene):
             self._scrollbar(canvas, n, self._visible(), L.y + 2, L.bottom - 16)
         D = self.DETAIL
         kind, g = rows[self.sel]
+        if kind == "delivery":
+            self._draw_delivery_detail(canvas, g)
+            return
         lvl = self.save.enhance_level(g["id"])
         x = D.x + 6
         box = pygame.Rect(D.x + 6, D.y + 6, D.w - 12, 70)
@@ -1190,6 +1271,39 @@ class ShopScene(Scene):
             text(canvas, "강화는 실패하지 않아요", (x, D.bottom - 31), su.SUB, 11, "midleft")
             b.label = f"+{lvl + 1} 강화"
             b.enabled = have_gold and have_mat and have_rare
+            style = "fill" if b.enabled else "dim"
+        su.button(canvas, b.rect, b.label, style, self.mouse)
+
+    def _draw_delivery_detail(self, canvas, g: dict) -> None:
+        """특급 배송 시스템: 야외에서 일괄 판매 하루 n번 (단계 = 횟수, 최대 5)."""
+        from src.save import delivery
+        D = self.DETAIL
+        x = D.x + 6
+        lv = delivery.level(self.save)
+        box = pygame.Rect(D.x + 6, D.y + 6, D.w - 12, 70)
+        su.pic_box(canvas, box)
+        gear_icon.draw(canvas, "delivery", g, (box.centerx - 32, box.centery - 32, 64, 64))
+        text(canvas, "★" * lv + "☆" * (delivery.MAX_LEVEL - lv), (box.right - 4, box.y + 8), su.YELLOW, 11, "midright")
+        su.btext(canvas, su.fit(f"{g['name']} Lv{lv}", D.w - 12), (x, D.y + 88), su.YELLOW, 11, "midleft")
+        lines = wrap_text("낚시터·마을에서도 살림망 물고기를 일괄 판매할 수 있어요.", D.w - 12)[:2]
+        for i, ln in enumerate(lines):
+            text(canvas, ln, (x, D.y + 104 + i * 12), su.GRAY, 11, "midleft")
+        yy = D.y + 132
+        text(canvas, "하루 횟수", (x, yy), su.WHITE, 11, "midleft")
+        cost = delivery.next_cost(self.save)
+        s = f"{lv}회" + (f" → {lv + 1}회" if cost is not None else "")
+        (su.btext if cost is not None else text)(canvas, s, (D.right - 6, yy), su.GREEN if cost is not None else su.WHITE, 11,
+                                                 "midright")
+        if lv:
+            text(canvas, f"오늘 남은 횟수 {delivery.uses_left(self.save)}회", (x, yy + 13), su.SUB, 11, "midleft")
+        b = self.action_btn
+        if cost is None:
+            b.label, b.enabled, style = "최대 단계", False, "dim"
+        else:
+            su.price(canvas, cost, (x, D.bottom - 31), su.WHITE if self.save.money >= cost else su.RED, anchor="midleft",
+                     bold=True)
+            b.label = "구매하기" if lv == 0 else f"Lv{lv + 1} 강화"
+            b.enabled = self.save.money >= cost
             style = "fill" if b.enabled else "dim"
         su.button(canvas, b.rect, b.label, style, self.mouse)
 

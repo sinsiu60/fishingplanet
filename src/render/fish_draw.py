@@ -691,26 +691,50 @@ def draw_catch_cut(canvas, pal, result: dict, t: float) -> None:
                            silhouette=lerp_color((60, 30, 100), (190, 120, 255), 0.45 + 0.2 * math.sin(t * 3 + i)),
                            shape=fish_shape(fish))
     if one_hand:
-        # 한 손: 손바닥이 배를 받치고, 손가락이 몸통을 감싸 쥠 (엄지는 위쪽)
-        body_h = length * (fish.get("shape") or {}).get("height", 0.17)
-        hx, hy = cx + 4, fy + body_h * 0.5 + 5 + rise  # 손바닥은 배 아래
-        sleeve = [(hx - 9, hy + 10), (hx + 11, hy + 10), (hx + 50, h + 60), (hx + 26, h + 60)]
+        # 한 손 (옆에서 본 쥔 손): 손바닥은 배 아래 뒤쪽, 손가락은 물고기 너머로 돌아가 등 위로 끝만 살짝 보이고,
+        # 엄지는 앞쪽 옆구리에 비스듬히 걸친다. 아주 작은 물고기(손보다 짧음)는 펼친 손바닥 위에 올려 둔다.
+        body_h = max(4.0, length * (fish.get("shape") or {}).get("height", 0.17))
+        hx = cx + 4
+        belly = fy + body_h * 0.5 + rise
+        sleeve_top = belly + 12
+        sleeve = [(hx - 9, sleeve_top), (hx + 11, sleeve_top), (hx + 50, h + 60), (hx + 26, h + 60)]
         pygame.draw.polygon(canvas, (60, 80, 120), sleeve)
-        pygame.draw.line(canvas, (44, 60, 94), (hx + 8, hy + 12), (hx + 44, h), 2)
-        pygame.draw.ellipse(canvas, shadow, (hx - 13, hy - 2, 26, 18))
-        pygame.draw.ellipse(canvas, skin, (hx - 13, hy - 4, 26, 16))  # 손바닥 (물고기 뒤)
-        draw_fish_side(canvas, cx, fy, length * (1 + squash), flap, colors, facing=-1,
-                       tail_wag=math.sin(t * (18 if t < 0.8 else 8)) * 0.7, shape=fish_shape(fish))
-        # 앞쪽 손가락 네 개가 몸통 아래쪽을 감쌈
-        top = fy + body_h * 0.05 + rise
-        for i in range(4):
-            fx = hx - 8 + i * 5
-            fl = hy - top + 2
-            pygame.draw.ellipse(canvas, shadow, (fx - 2, top + 1, 5, fl))
-            pygame.draw.ellipse(canvas, skin, (fx - 3, top, 5, fl))
-        # 엄지: 위쪽에서 걸침
-        pygame.draw.ellipse(canvas, shadow, (hx - 3, fy - body_h * 0.62 + rise, 10, 7))
-        pygame.draw.ellipse(canvas, skin, (hx - 4, fy - body_h * 0.66 + rise, 10, 6))
+        pygame.draw.line(canvas, (44, 60, 94), (hx + 8, sleeve_top + 2), (hx + 44, h), 2)
+        tiny = length < 34
+        if tiny:
+            # 펼친 손바닥 (물고기보다 큼) + 손가락 넷이 왼쪽으로 뻗음 — 물고기는 그 위에 누움
+            palm = pygame.Rect(0, 0, 30, 14)
+            palm.midtop = (hx, belly - 4)
+            pygame.draw.ellipse(canvas, shadow, palm.move(0, 2))
+            pygame.draw.ellipse(canvas, skin, palm)
+            for i in range(4):
+                fr = pygame.Rect(palm.x - 9 + i * 2, palm.y + 1 + i * 3, 12, 4)
+                pygame.draw.ellipse(canvas, shadow, fr.move(0, 1))
+                pygame.draw.ellipse(canvas, skin, fr)
+            pygame.draw.ellipse(canvas, skin, (palm.right - 8, palm.y - 3, 6, 8))   # 엄지 (오른쪽 위로)
+            draw_fish_side(canvas, cx, fy, length * (1 + squash), flap, colors, facing=-1,
+                           tail_wag=math.sin(t * (18 if t < 0.8 else 8)) * 0.7, shape=fish_shape(fish))
+        else:
+            # 손가락 (물고기 뒤): 등선 위로 끝마디만 보임
+            top = fy - body_h * 0.5 + rise
+            for i in range(4):
+                fx = hx - 9 + i * 5
+                pygame.draw.ellipse(canvas, shadow, (fx - 2, top - 4, 6, 9))
+                pygame.draw.ellipse(canvas, skin, (fx - 3, top - 5, 6, 8))
+            # 손바닥 (물고기 뒤, 배 아래로 두툼하게 보임)
+            pygame.draw.ellipse(canvas, shadow, (hx - 14, belly - 6, 28, 18))
+            pygame.draw.ellipse(canvas, skin, (hx - 14, belly - 8, 28, 16))
+            draw_fish_side(canvas, cx, fy, length * (1 + squash), flap, colors, facing=-1,
+                           tail_wag=math.sin(t * (18 if t < 0.8 else 8)) * 0.7, shape=fish_shape(fish))
+            # 엄지 (앞쪽 옆구리): 손바닥 아래쪽에서 머리 쪽 위로 비스듬히
+            th = pygame.Surface((22, 7), pygame.SRCALPHA)
+            pygame.draw.ellipse(th, shadow, (0, 1, 22, 6))
+            pygame.draw.ellipse(th, skin, (0, 0, 21, 6))
+            pygame.draw.line(th, shadow, (3, 2), (3, 4), 1)   # 손톱 쪽 마디
+            th = pygame.transform.rotate(th, -28)
+            canvas.blit(th, th.get_rect(center=(hx - 6, belly - body_h * 0.28 - 1)))
+            # 엄지 뿌리 (손바닥과 이어짐)
+            pygame.draw.ellipse(canvas, skin, (hx - 2, belly - 5, 12, 9))
     else:
         body_h = length * (fish.get("shape") or {}).get("height", 0.17)
         draw_fish_side(canvas, cx, fy, length * (1 + squash), 0.0, colors, facing=-1,

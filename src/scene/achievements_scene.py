@@ -79,8 +79,9 @@ class AchievementsScene(Scene):
                 side_menu.trophy(canvas, r.x + 14, r.centery, (255, 255, 255), self.age)
             else:
                 side_menu.trophy(canvas, r.x + 14, r.centery, (120, 124, 140), 0, gold=(92, 96, 112), dark=(70, 72, 86))
-            text(canvas, fit(a["name"], 150), (r.x + 30, r.y + 8), (255, 220, 120) if done else ui.TEXT, 11, "midleft")
-            text(canvas, fit(a["desc"], 220), (r.x + 30, r.y + 20), ui.DIM, 11, "midleft")
+            name, desc = (a["name"], a["desc"]) if done or not _secret(self.save, a) else ("???", "비밀 내용")
+            text(canvas, fit(name, 150), (r.x + 30, r.y + 8), (255, 220, 120) if done else ui.TEXT, 11, "midleft")
+            text(canvas, fit(desc, 220), (r.x + 30, r.y + 20), ui.DIM, 11, "midleft")
             v = min(achievements.value(self.save, a), a["goal"])
             if done:
                 text(canvas, "달성", (r.right - 8, r.centery), ui.GOOD, 11, "midright")
@@ -95,3 +96,15 @@ class AchievementsScene(Scene):
                  (LIST.x, 255), ui.DIM, 11, "midleft")
         self.close_btn.draw(canvas, self.mouse)
         draw_cursor(canvas, self.mouse)
+
+
+def _secret(save, a: dict) -> bool:
+    """아직 낚지 못한 전설 물고기가 이름으로 나오는 업적 (용문잉어 '등용' · 오르시엘 등) → '비밀 내용'."""
+    if a.get("type") != "caught":
+        return False
+    from src.save.save_game import fish_by_id
+    try:
+        f = fish_by_id(a["arg"])
+    except (KeyError, StopIteration):
+        return False
+    return f.get("rarity") == "legend" and not save.caught(a["arg"])

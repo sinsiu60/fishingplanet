@@ -1039,6 +1039,9 @@ class FishingScene(Scene):
             if not runner.before_final_ending(self.game, self, last["fish"], last.get("size", 0.0), final):
                 final()
         self.screen_fx.reset()
+        if last and self.card is None and len(self.game.scenes.stack) and self.game.scenes.current is self \
+                and self.tutorial.want("catch_intro"):
+            self._open_card("catch_intro", None)   # 첫 포획: 살림망 · 판매(하루네 낚시점) · 도감 안내
         if last and phantom.is_phantom(last["fish"]):
             self.phantom_fx.restore()  # 포획 컷이 끝나면 1.5초에 걸쳐 원래 색
             if not phantom.state(self.save)["tutorial"]:

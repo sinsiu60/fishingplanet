@@ -5,15 +5,11 @@ import pygame
 
 from src.core.config import load_json
 from src.core.mathutil import lerp_color
-from src.core.weather import WEATHER_KO
 from src.render.fish_draw import RANK_COLORS, draw_fish_fit
-from src.save.save_game import baits
-from src.fishing.patterns import TIP_SHORT, fish_patterns
 from src.fishing import mutation
-from src.fishing.lure import profile_of
 from src.scene.base import Scene
 from src.ui import widgets as ui
-from src.ui.hud import draw_cursor, text, wrap_text
+from src.ui.hud import draw_cursor, text
 from src.scene.inventory import fit
 
 SPOT_TABS = [("reservoir", "저수지"), ("valley", "계곡"), ("breakwater", "방파제"), ("offshore", "먼바다"),
@@ -31,10 +27,6 @@ COLS = 4
 GRID_X, GRID_Y = 14, 50
 BOSS = pygame.Rect(GRID_X, GRID_Y + 2 * (CARD_H + 4) + 2, 4 * CARD_W + 3 * 4, 94)  # 전설 = 이 낚시터의 보스 칸
 DETAIL = pygame.Rect(306, 50, 160, 196)
-
-
-def _join(values, table, all_count) -> str:
-    return "전체" if len(values) >= all_count else "·".join(table[v] for v in values)
 
 
 MUT_COL = (255, 190, 120)
@@ -89,6 +81,8 @@ class DexScene(Scene):
         self.lim_btn = ui.Button((304, 9, 34, 15), "한정", self._toggle_lim)
         self.lim_sel = 0
         self.title_page = 0
+        self.dpop = None          # 상세 칸 해금 내용 창 (제목, 줄들)
+        self.detail_clicks = []
 
     def _toggle_mut(self) -> None:
         self.mut_mode = not self.mut_mode
@@ -139,8 +133,15 @@ class DexScene(Scene):
     def _pat_rect(self, i: int) -> pygame.Rect:
         return pygame.Rect(18 + (i % 5) * 90, 52 + (i // 5) * 62, 84, 56)
 
+    def _tab_list(self) -> list:
+        """이 대륙에서 도달한(해금·방문) 낚시터 탭만 — 아직 못 간 곳의 도감 탭은 숨김."""
+        d = self.save.data
+        reached = set(d.get("unlocked_spots", [])) | set(d.get("visited", [])) | {self.fishing.spot_id}
+        tabs = [t for t in CONT_TABS[self.cont] if t[0] in reached]
+        return tabs or CONT_TABS[self.cont][:1]
+
     def _make_tabs(self) -> None:
-        tabs = CONT_TABS[self.cont]
+        tabs = self._tab_list()
         self.tabs = ui.Tabs(14, 30, [t[1] for t in tabs], width=46)
         self.tabs.index = next((i for i, t in enumerate(tabs) if t[0] == self.fishing.spot_id), 0)
 
@@ -153,7 +154,7 @@ class DexScene(Scene):
 
     def spot_fish(self) -> list[dict]:
         """그 낚시터 물고기: 일반 → 고급 → 희귀 → 전설 (왼쪽 위부터, 같은 등급은 fish.json 순서)."""
-        lst = [f for f in self.fish if f["spot"] == CONT_TABS[self.cont][self.tabs.index][0]]
+        lst = [f for f in self.fish if f["spot"] == self._tab_list()[self.tabs.index][0]]
         return sorted(lst, key=lambda f: self.RARITY_ORDER.get(f["rarity"], 9))
 
     def card_rect(self, i: int) -> pygame.Rect:
@@ -174,6 +175,8 @@ class DexScene(Scene):
                 if self.pat_card["t"] > 0.3:
                     self.pat_card = None
                 return
+            if not (self.star_mode or self.pat_mode or self.mut_mode) and self._detail_click(m):
+                return
             if self.pat_btn.click(m):
                 self.game.sfx.play("ui_click")
                 return
@@ -186,7 +189,7 @@ class DexScene(Scene):
             if self.lim_mode:
                 for i in range(len(self._lim_list())):
                     if self.card_rect_lim(i).collidepoint(m):
-                        self.lim_sel = i
+                        self.lim_sel, self.dpop = i, None
                         self.game.sfx.play("ui_click")
                 self.close_btn.click(m)
                 return
@@ -200,7 +203,7 @@ class DexScene(Scene):
             if self.ph_mode:
                 for i in range(len(self._ph_list())):
                     if self.card_rect_ph(i).collidepoint(m):
-                        self.ph_sel = i
+                        self.ph_sel, self.dpop = i, None
                         self.game.sfx.play("ui_click")
                 self.close_btn.click(m)
                 return
@@ -213,7 +216,7 @@ class DexScene(Scene):
                     return
                 return
             if self.tabs.click(m):
-                self.sel = 0
+                self.sel, self.dpop = 0, None
                 self.game.sfx.play("ui_tab")
                 return
             if self.close_btn.click(m):
@@ -226,7 +229,7 @@ class DexScene(Scene):
                 return
             for i in range(len(self.spot_fish())):
                 if self.card_rect(i).collidepoint(m):
-                    self.sel = i
+                    self.sel, self.dpop = i, None
                     self.game.sfx.play("ui_click")
 
     def update(self, dt: float) -> None:
@@ -294,8 +297,8 @@ class DexScene(Scene):
             self.cont_btn.draw(canvas, self.mouse)
         fishes = self.spot_fish()
         from src.save import dexbook
-        got_s, max_s = dexbook.spot_stars(self.save, CONT_TABS[self.cont][self.tabs.index][0])
-        text(canvas, f"★ {got_s}/{max_s}", (466, 38), STAR_ON, 11, "midright")
+        got_s, max_s = dexbook.spot_stars(self.save, self._tab_list()[self.tabs.index][0])
+        text(canvas, f"낚시터 별 {got_s}/{max_s}", (466, 38), STAR_ON, 11, "midright")
         self.sel = min(self.sel, len(fishes) - 1)
         for i, f in enumerate(fishes):
             self._draw_card(canvas, i, f)
@@ -397,36 +400,11 @@ class DexScene(Scene):
             text(canvas, fit(f["name"], r.w - 6), (r.centerx, r.bottom - 8), phantom.COLOR_LIGHT, 11, "center")
             from src.save import dexbook
             draw_stars(canvas, r.x + 5, r.y + 5, dexbook.stars(self.save, f), 5)
-        d = DETAIL
-        ui.panel(canvas, d, (110, 70, 160), (16, 12, 30))
         if not fl:
+            ui.panel(canvas, DETAIL, (110, 70, 160), (16, 12, 30))
             return
         self.ph_sel = min(self.ph_sel, len(fl) - 1)
-        f = fl[self.ph_sel]
-        e = phantom.state(self.save)["caught"][f["id"]]
-        y = d.y + 10
-        text(canvas, f["name"], (d.centerx, y), phantom.COLOR_LIGHT, 11, "center")
-        draw_fish_fit(canvas, pygame.Rect(d.x + 8, y + 8, d.w - 16, 48), f, 120)
-        y += 64
-        spot = next((s for s in load_json("spots.json")["spots"] if s["id"] == f["spot"]), {})
-        for ln, c in ((f"환상 · {spot.get('name', '')}", col),
-                      (f"최대 {e['max_size']:.1f}cm · 최고 {e['best_rank']} · {e['count']}회", ui.ACCENT),
-                      (self._mastery_line(f), (170, 255, 200))):
-            text(canvas, ln, (d.x + 6, y), c, 11, "midleft")
-            y += 14
-        for ln in wrap_text(f["desc"], d.w - 12)[:4]:
-            text(canvas, ln, (d.x + 6, y), ui.DIM, 11, "midleft")
-            y += 13
-
-    def _season_rows(self, f: dict) -> list:
-        """'잘 잡히는 계절' (35-4, data/seasons.json)."""
-        from src.core import season as seasons
-        sf = load_json("seasons.json")["fish"].get(f["id"])
-        if not sf:
-            return []
-        cont = "eldrasion" if f["spot"] in dict(ELDRA_TABS) else "sharmion"
-        good = "·".join(seasons.name(s, cont) for s in sf["good"])
-        return [(f"잘 잡히는 계절: {good}", (255, 200, 220))]
+        self._draw_detail(canvas, fl[self.ph_sel], "phantom", (110, 70, 160), (16, 12, 30))
 
     def card_rect_lim(self, i: int) -> pygame.Rect:
         return pygame.Rect(GRID_X + (i % COLS) * (CARD_W + 4), GRID_Y + (i // COLS) * (CARD_H + 4) + 8, CARD_W, CARD_H)
@@ -459,39 +437,11 @@ class DexScene(Scene):
             text(canvas, mark, (r.right - 8, r.y + 8), (30, 30, 40), 11, "center")
             if e:
                 draw_stars(canvas, r.x + 5, r.y + 5, dexbook.stars(self.save, f), 5)
-        d = DETAIL
-        ui.panel(canvas, d, ui.BORDER, (16, 20, 36))
         if not fl:
+            ui.panel(canvas, DETAIL, ui.BORDER, (16, 20, 36))
             return
         self.lim_sel = min(self.lim_sel, len(fl) - 1)
-        f = fl[self.lim_sel]
-        e = dexbook.entry(self.save, f)
-        y = d.y + 10
-        text(canvas, f["name"] if e else "???", (d.centerx, y), RARITY_COL.get(f["rarity"], ui.TEXT), 11, "center")
-        y += 16
-        rows = [(f"{RARITY_KO[f['rarity']]} · {self._lim_label(f)}", (255, 200, 220))]
-        if e:
-            rows += [(f"최대 {e['max_size']:.1f}cm · 최고 {e['best_rank']} · {e['count']}회", ui.ACCENT),
-                     (self._mastery_line(f), (170, 255, 200))]
-        for ln, c in rows:
-            for w_ in wrap_text(ln, d.w - 12):
-                text(canvas, w_, (d.x + 6, y), c, 11, "midleft")
-                y += 13
-        y += 3
-        for ln in wrap_text(f["desc"] if e else "그때가 오면 어딘가에서 모습을 드러낸다고 한다.", d.w - 12)[:3]:
-            text(canvas, ln, (d.x + 6, y), ui.DIM, 11, "midleft")
-            y += 12
-        if e and e["count"] >= 3:
-            for ln in wrap_text("· " + f.get("hint3", ""), d.w - 12)[:2]:
-                text(canvas, ln, (d.x + 6, y + 4), (150, 230, 255), 11, "midleft")
-                y += 12
-
-    def _mastery_line(self, f: dict) -> str:
-        from src.save import dexbook
-        m = dexbook.mastery(self.save, f)
-        nxt = dexbook.next_mastery(self.save, f)
-        tail = f" ({nxt[0]}/{nxt[1]})" if nxt else " 달인"
-        return f"숙련 {m}단계{tail} · ★{dexbook.star_count(self.save, f)}/5"
+        self._draw_detail(canvas, fl[self.lim_sel], "limited")
 
     # ── 도감 별 보상 페이지 (35-2) ──
     REW_X, REW_Y = 14, 52
@@ -685,94 +635,25 @@ class DexScene(Scene):
             if seen:
                 text(canvas, "목격", (r.right - 18, r.y + 9), (200, 180, 255), 11, "center")
 
-    def _draw_detail(self, canvas, f: dict) -> None:
-        d = DETAIL
-        ui.panel(canvas, d, fill=(16, 20, 36))
-        entry = self.save.dex_entry(f["id"])
-        x, y = d.x + 6, d.y + 8
-        if entry is None:
-            seen = self.save.data["dex"].get(f["id"], {}).get("seen")
-            text(canvas, f["name"] if seen else "???", (d.centerx, y + 4), ui.DIM, 16 if not seen else 11, "center")
-            hinted = f["rarity"] in ("uncommon", "rare", "legend")
-            text(canvas, f"희귀도: {RARITY_KO[f['rarity']]}" if hinted else "아직 잡지 못했다",
-                 (d.centerx, y + 26), ui.DIM, 11, "center")
-            if hinted:
-                revealed, rows = self.save.hint_status(f)
-                lines = ["특별한 조건에서만 나타난다고 한다."] if f["rarity"] == "legend" else []
-                if f["rarity"] == "legend":
-                    bait = next((b for b in baits().values() if b.get("legend_for") == f["id"]), None)
-                    if bait:
-                        lines.append(f"필요한 미끼: {bait['name']}")
-                if revealed:
-                    # 아래 등급을 충분히 잡으면 등장 조건 공개
-                    cond = f"조건: {_join(f['times'], TIME_KO, 4)} · {_join(f['weathers'], WEATHER_KO, 3)}"
-                    if f["rarity"] == "legend":
-                        cond += " · 25m 이상 던지기"
-                    lines.append(cond)
-                    if f["rarity"] == "legend":
-                        lines.append("지도에서 날씨 예보를 확인하세요.")
-                else:
-                    # 바로 아래 등급은 1종 이상, 그보다 아래는 모두 (save.hint_status)
-                    prev = {"uncommon": None, "rare": "uncommon", "legend": "rare"}[f["rarity"]]
-                    lines.append("이 낚시터에서 이만큼 잡으면 단서가 보인다:")
-                    for t, h, n in rows:
-                        done = h >= n
-                        lines.append((f"{'v' if done else '·'} {RARITY_KO[t]} {'1종 이상' if t == prev else '모두'}"
-                                      f" {h}/{n}", ui.GOOD if done else ui.DIM))
-                yy = y + 46
-                for ln in lines:
-                    ln, col = ln if isinstance(ln, tuple) else (ln, ui.TEXT)
-                    for w in wrap_text(ln, d.w - 12):
-                        text(canvas, w, (x, yy), col, 11, "midleft")
-                        yy += 13
-            return
-        text(canvas, f["name"], (d.centerx, y + 4), RARITY_COL[f["rarity"]], 11, "center")
-        yy = y + 18
-        rows = [
-            (f"{RARITY_KO[f['rarity']]} · 난이도 {'★' * min(5, (f['difficulty'] + 1) // 2)}", ui.TEXT),
-            (f"시간 {_join(f['times'], TIME_KO, 4)} / {_join(f['weathers'], WEATHER_KO, 3)}", ui.TEXT),
-            (f"크기 {f['size_cm'][0]}~{f['size_cm'][1]}cm", ui.TEXT),
-            (f"최대 {entry['max_size']:.1f}cm · 최고 {entry['best_rank']} · {entry['count']}회", ui.ACCENT),
-            (self._mastery_line(f), (170, 255, 200)),
-        ] + self._season_rows(f)
-        for s, col in rows:
-            text(canvas, s, (x, yy), col, 11, "midleft")
-            yy += 13
-        yy += 2
-        for ln in wrap_text(f["desc"], d.w - 12)[:3]:
-            text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
-            yy += 12
-        yy += 4
-        for need, key in ((3, "hint3"), (10, "hint10")):
-            if entry["count"] >= need:
-                lines = wrap_text("· " + f[key], d.w - 12)[:3]
-                for ln in lines:
-                    text(canvas, ln, (x, yy), (150, 230, 255), 11, "midleft")
-                    yy += 12
-            else:
-                for ln in wrap_text(f"· 힌트 잠김: {need}회 포획 시 해금 ({entry['count']}/{need})", d.w - 12):
-                    text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
-                    yy += 12
-        lc = load_json("lure.json")
-        from src.save import dexbook
-        if entry["count"] >= lc["dex_hint_catches"] or dexbook.mastery(self.save, f) >= 3:  # 숙련 3 보상 (전설은 3회)
-            prof = lc["profiles"][profile_of(f)]
-            for ln in wrap_text(f"· 선호 리듬: {prof['name']} — {prof['hint']}", d.w - 12)[:2]:
-                text(canvas, ln, (x, yy), (170, 255, 200), 11, "midleft")
-                yy += 12
-        else:
-            text(canvas, f"· 선호 리듬: {lc['dex_hint_catches']}회 포획 시 ({entry['count']}/{lc['dex_hint_catches']})",
-                 (x, yy), ui.DIM, 11, "midleft")
-            yy += 12
-        pats = fish_patterns(f)
-        if pats:
-            # 신규 패턴 힌트: 만나 본 패턴만 이름과 대응, 아직이면 ???
-            seen = self.save.data.get("patterns_seen", [])
-            names = load_json("patterns.json")["names"]
-            parts = [f"{names[p]}({TIP_SHORT[p]})" if p in seen else "???" for p in pats]
-            for ln in wrap_text("· 패턴: " + ", ".join(parts), d.w - 12)[:2]:
-                text(canvas, ln, (x, yy), (255, 200, 150), 11, "midleft")
-                yy += 12
-        if entry["best_rank"] == "S":
+    def _draw_detail(self, canvas, f: dict, kind: str = "normal", border=None, fill=(16, 20, 36)) -> None:
+        """오른쪽 상세 칸 (DEX_UI.md) — src/scene/dex_detail.py. 해금된 항목·패턴은 눌러서 내용 보기."""
+        from src.scene import dex_detail
+        self.detail_clicks = dex_detail.draw(self, canvas, DETAIL, f, kind, border, fill)
+        e = self.save.dex_entry(f["id"]) if kind == "normal" else None
+        if e and e["best_rank"] == "S":
             pulse = 0.5 + 0.5 * math.sin(self.t * 4)
-            pygame.draw.rect(canvas, GOLD if pulse > 0.3 else (180, 140, 40), d, 1)
+            pygame.draw.rect(canvas, GOLD if pulse > 0.3 else (180, 140, 40), DETAIL, 1)
+        if self.dpop is not None:
+            dex_detail.draw_popup(canvas, DETAIL, *self.dpop)
+
+    def _detail_click(self, m) -> bool:
+        """상세 칸: 열린 내용 창 닫기 / 해금 항목 누르면 내용 보기."""
+        if self.dpop is not None:
+            self.dpop = None
+            return True
+        for r, title, lines in getattr(self, "detail_clicks", []):
+            if r.collidepoint(m):
+                self.dpop = (title, lines)
+                self.game.sfx.play("ui_click")
+                return True
+        return False

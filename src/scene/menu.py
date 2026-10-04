@@ -87,9 +87,9 @@ class TitleScene(Scene):
         self.latest_title = info.get("title") if info else None
         bx, bw = w // 2 - 60, 120
         y0 = 132
+        # 이어하기 = 저장 슬롯 3개 중에서 골라 들어감 (예전 저장으로도 갈 수 있게, 가장 최근 슬롯에 '최근' 표시)
         items = [("이어하기", self._continue, self.latest is not None),
                  ("새 게임", lambda: self._push(SlotScene(game, "new")), True),
-                 ("불러오기", lambda: self._push(SlotScene(game, "load")), self.latest is not None),
                  ("설정", self._settings, True),
                  ("종료", game.quit, True)]
         self.buttons = [ui.Button((bx, y0 + i * 23, bw, 19), label, act, en)
@@ -99,9 +99,7 @@ class TitleScene(Scene):
         self.game.scenes.push(scene)
 
     def _continue(self) -> None:
-        sg = SaveGame.load(self.latest)
-        if sg:
-            start_game(self.game, sg)
+        self._push(SlotScene(self.game, "load"))
 
     def _settings(self) -> None:
         from src.scene.settings_scene import SettingsScene
@@ -109,7 +107,7 @@ class TitleScene(Scene):
 
     def on_resume(self) -> None:
         self.latest = SaveGame.latest_slot()
-        self.buttons[0].enabled = self.buttons[2].enabled = self.latest is not None
+        self.buttons[0].enabled = self.latest is not None
 
     def handle_action(self, a) -> None:
         from src.platform.detect import IS_MOBILE
@@ -208,7 +206,8 @@ class SlotScene(Scene):
         ui.dim(canvas, 120)
         canvas = self.ui_canvas(canvas)
         w = canvas.get_width()
-        title = "새 게임 — 슬롯 선택" if self.mode == "new" else "불러오기"
+        title = "새 게임 — 슬롯 선택" if self.mode == "new" else "이어하기 — 슬롯 선택"
+        latest = SaveGame.latest_slot() if self.mode == "load" else None
         text(canvas, title, (w // 2, 30), ui.ACCENT, 16, "center")
         for s, r in self.cards.items():
             info = self.infos[s]
@@ -219,6 +218,8 @@ class SlotScene(Scene):
                 border = ui.BAD
             ui.panel(canvas, r, border, ui.PANEL_LIGHT if hov and usable else ui.PANEL)
             text(canvas, f"슬롯 {s}", (r.x + 10, r.y + 12), ui.ACCENT if usable else ui.DIM, 16, "midleft")
+            if s == latest:
+                text(canvas, "최근", (r.x + 10, r.y + 34), ui.GOOD, 11, "midleft")
             if info is None:
                 text(canvas, "비어 있음", (r.x + 80, r.y + 26), ui.DIM, 11, "midleft")
             else:

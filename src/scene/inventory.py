@@ -135,7 +135,7 @@ class InventoryScene(Scene):
         if e["key"] == "chest":
             return "보물상자 열기", True
         if e["key"] == "keepnet":
-            return ("상점에서 판매", True) if e["n"] else ("비어 있음", False)
+            return ("살림망 보기", True) if e["n"] else ("비어 있음", False)
         return "", False
 
     def _action(self) -> None:
