@@ -330,7 +330,7 @@ class Guide:
         if k == "wait":
             return True
         if k == "info" or (k == "freeze" and s["until"] == "tap"):
-            if (a.any_press or a.name == "confirm") and r["t"] > 0.3:
+            if (a.any_press or a.name in ("confirm", "reel_tap", "drag")) and r["t"] > 0.3:   # 모바일: 릴 패드·버튼을 눌러도 넘어감
                 r["tapped"] = True
             return False
         if k == "spotlight":

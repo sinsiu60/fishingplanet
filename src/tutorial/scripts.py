@@ -7,6 +7,8 @@ data/tutorials.json 의 튜토리얼마다
 tick 이 True 를 돌려주면 그 프레임은 가이드가 단계 조건을 보지 않는다 (대본이 직접 진행).
 """
 
+import pygame
+
 SCRIPTS: dict[str, dict] = {}
 ACTIONS: dict = {}
 
@@ -451,8 +453,12 @@ class _Pattern:
                 # 슬롯마다 조작 이름 (왼쪽 슬롯 = 첫 패턴, 오른쪽 = 둘째)
                 from src.tutorial import targets
                 rs = targets.rects(game, "fight.slots", run)
-                c = rs[0].center if rs else (game.screen.width // 2, 80)
-                ctx["labels"] = [(ops[0][1], (c[0] - 52, c[1])), (ops[1][1], (c[0] + 52, c[1]))]
+                r0 = rs[0] if rs else pygame.Rect(game.screen.width // 2 - 34, 60, 68, 40)
+                from src.core.fonts import get_font
+                g = game.guide
+                w = [get_font(11).size(g._sub(o[1]))[0] + 10 for o in ops]
+                ctx["labels"] = [(ops[0][1], (r0.left - 6 - w[0] // 2, r0.centery - 10)),
+                                 (ops[1][1], (r0.right + 6 + w[1] // 2, r0.centery + 10))]
             return True
         pair = ctx.get("pair", [])
         oks = []
