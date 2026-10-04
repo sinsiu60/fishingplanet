@@ -1,5 +1,5 @@
 {
- "_설명": "계절 (DESIGN.md 35-4). fish = 기존 물고기 계절 가중치 초안 (good ×1.5 / bad ×0.5, 전설·심해 제외 = 계절 무관). 이름(송어·은어·잉어·메기·빙어…)으로 정하고 나머지는 종 id로 고르게 나눔 — 여기서 고치면 된다. ambience = 계절 환경음 조각 [소리, 최소 초, 최대 초, 음량, 때].",
+ "_설명": "계절 (DESIGN.md 35-4). fish = 기존 물고기 계절 가중치 초안 (good ×1.5 / bad ×0.5, 전설·심해 제외 = 계절 무관). 이름(송어·은어·잉어·메기·빙어…)으로 정하고 나머지는 종 id로 고르게 나눔 — 여기서 고치면 된다. ambience = 계절 환경음 조각 [소리, 최소 초, 최대 초, 음량, 때]. 한 해 평균 배율이 1.0이 되게 (잘 나옴 2계절이면 안 나옴도 2계절) — 시간당 골드 보호 (DESIGN.md 35-15).",
  "mult": {
   "good": 1.5,
   "bad": 0.5
@@ -35,7 +35,8 @@
     "autumn"
    ],
    "bad": [
-    "winter"
+    "winter",
+    "spring"
    ]
   },
   "carp": {
@@ -92,7 +93,8 @@
     "autumn"
    ],
    "bad": [
-    "summer"
+    "summer",
+    "winter"
    ]
   },
   "mandarin_fish": {
@@ -101,7 +103,8 @@
     "autumn"
    ],
    "bad": [
-    "winter"
+    "winter",
+    "spring"
    ]
   },
   "lenok": {
@@ -110,7 +113,8 @@
     "autumn"
    ],
    "bad": [
-    "summer"
+    "summer",
+    "winter"
    ]
   },
   "eoreumchi": {
@@ -167,7 +171,8 @@
     "autumn"
    ],
    "bad": [
-    "winter"
+    "winter",
+    "spring"
    ]
   },
   "mullet": {
@@ -256,7 +261,8 @@
     "autumn"
    ],
    "bad": [
-    "summer"
+    "summer",
+    "winter"
    ]
   },
   "ghost_catfish": {
@@ -377,7 +383,8 @@
     "autumn"
    ],
    "bad": [
-    "winter"
+    "winter",
+    "spring"
    ]
   },
   "cloud_trout": {
@@ -386,7 +393,8 @@
     "autumn"
    ],
    "bad": [
-    "summer"
+    "summer",
+    "winter"
    ]
   },
   "cloud_carp": {
@@ -403,7 +411,8 @@
     "autumn"
    ],
    "bad": [
-    "summer"
+    "summer",
+    "winter"
    ]
   },
   "rainbow_char": {
@@ -516,7 +525,8 @@
     "autumn"
    ],
    "bad": [
-    "summer"
+    "summer",
+    "winter"
    ]
   },
   "frostfang_shark": {
@@ -549,7 +559,8 @@
     "autumn"
    ],
    "bad": [
-    "summer"
+    "summer",
+    "winter"
    ]
   },
   "oldwood_catfish": {

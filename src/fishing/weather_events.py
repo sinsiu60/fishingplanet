@@ -99,14 +99,11 @@ def benefit(save, key: str, default=0.0):
 
 
 def extra_fish(save, cont: str) -> list:
-    """이벤트 물고기 [(물고기, 가중치)] — 이벤트 중에만, 두 대륙 공통 (엘드라시온은 그 대륙 가격)."""
+    """이벤트 물고기 [(물고기, 가중치)] — 이벤트 중에만, 두 대륙 공통 (판매가는 bite.limited_here 가 지금 낚시터 기준으로)."""
     ev = active(save)
     if not ev or not ev.get("fish"):
         return []
-    f = dict(ev["fish"])
-    if cont == "eldrasion" and f.get("price_eld"):
-        f["base_price"] = f["price_eld"]
-    f["continent"] = cont
+    f = dict(ev["fish"], continent=cont)
     return [(f, cfg()["fish_weight"][f["rarity"]])]
 
 

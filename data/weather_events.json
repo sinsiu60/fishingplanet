@@ -51,7 +51,6 @@
      40
     ],
     "base_price": 140,
-    "price_eld": 1400,
     "difficulty": 4,
     "telegraph_sec": 0.85,
     "power": 0.95,
@@ -147,7 +146,6 @@
      8
     ],
     "base_price": 90,
-    "price_eld": 900,
     "difficulty": 3,
     "telegraph_sec": 0.95,
     "power": 0.6,
@@ -241,7 +239,6 @@
      120
     ],
     "base_price": 480,
-    "price_eld": 4200,
     "difficulty": 7,
     "telegraph_sec": 0.7,
     "power": 1.45,
@@ -333,7 +330,6 @@
      100
     ],
     "base_price": 180,
-    "price_eld": 1700,
     "difficulty": 5,
     "telegraph_sec": 0.8,
     "power": 1.1,

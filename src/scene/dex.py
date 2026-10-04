@@ -544,9 +544,10 @@ class DexScene(Scene):
 
     def _draw_star_page(self, canvas) -> None:
         from src.save import dexbook, quests
-        pts, cap = dexbook.points(self.save), dexbook.max_points()
+        pts, cap = dexbook.points(self.save), dexbook.max_points(self.save)
         text(canvas, f"도감 포인트 ★ {pts} / {cap}", (14, 38), STAR_ON, 11, "midleft")
-        text(canvas, "별: 첫 포획 · S랭크 · 대물 · 변이 3종(전설·환상 3회) · 숙련 5", (466, 38), ui.DIM, 11, "midright")
+        rule = "(전설·환상 3회)" if self.ph_on else "(전설 3회)"   # 환상 튜토리얼 전엔 '환상' 단어 없음
+        text(canvas, f"별: 첫 포획 · S랭크 · 대물 · 변이 3종{rule} · 숙련 5", (466, 38), ui.DIM, 11, "midright")
         claimed = dexbook.book(self.save)["claimed"]
         kind_ko = {"title": "칭호", "float_skin": "찌", "rod_skin": "낚싯대", "net_skin": "뜰채", "cover": "표지"}
         for i, rw in enumerate(dexbook.cfg()["rewards"]):

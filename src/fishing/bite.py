@@ -33,6 +33,23 @@ def bait_tier_mult(bait: dict | None, key: str) -> float:
     return 1.0 + load_json("equipment.json")["_rules"][key] * (bait["tier"] - 1)
 
 
+def spot_price_level(spot: str) -> float:
+    """그 낚시터 물고기(전설 제외) 기본가의 출현 가중 평균 = 평소 입질 한 번의 기대 기본가."""
+    rw = load_json("fishing_config.json")["bite"]["rarity_weight"]
+    fs = [(f["base_price"], f.get("spawn_weight", rw.get(f["rarity"], 0))) for f in load_json("fish.json")["fish"]
+          if f["spot"] == spot and f["rarity"] != "legend"]
+    tot = sum(w for _, w in fs)
+    return sum(p * w for p, w in fs) / tot if tot else 50
+
+
+def limited_here(f: dict, spot: str, level: float | None = None) -> dict:
+    """계절·이벤트 한정 물고기를 지금 낚시터에 맞춘 복사본: spot = 지금 낚시터, 판매가 = 지금 입질 기대 기본가(level) × 희귀도 배율
+    (어느 낚시터·시간대에서든 '조금 비싼 손님' — 시간당 골드 +10% 이내, DESIGN.md 35-15). level 없으면 낚시터 하루 평균."""
+    mult = load_json("fishing_config.json")["bite"]["limited_price_mult"][f["rarity"]]
+    lv = spot_price_level(spot) if level is None else level
+    return dict(f, spot=spot, base_price=max(10, int(round(lv * mult, -1 if lv * mult >= 100 else 0))))
+
+
 def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir",
               bait: dict | None = None, rare_bonus: float = 0.0, pref: str | None = None,
               mods: dict | None = None, season: str | None = None, extra: list | None = None) -> dict | None:
@@ -45,7 +62,7 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
         from src.fishing.lure import cfg as lure_cfg, profile_of
         pref_mult = lure_cfg()["pref_weight_mult"]
     candidates, weights = [], []
-    pool = [(f, None) for f in load_json("fish.json")["fish"]] + [(dict(f, spot=spot), w0) for f, w0 in (extra or [])]
+    pool = [(f, None) for f in load_json("fish.json")["fish"]] + [(dict(f, spot=spot, _limited=True), w0) for f, w0 in (extra or [])]
     for f, w0 in pool:
         if f["spot"] != spot or period not in f["times"] or weather not in f["weathers"]:
             continue
@@ -77,6 +94,18 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
             weights.append(w)
     if not candidates:
         return None
+    if extra:
+        # 한정 물고기: 판매가 = 지금 후보(전설·한정 제외)의 출현 가중 기대 기본가 × 희귀도 배율,
+        # 가중치 = 데이터 값 × (지금 후보 합 / 표준 풀 limited_ref_pool) — 작은 풀(비밀 낚시터 등)에서도 같은 비율로 드물게.
+        base = [(c["base_price"], w) for c, w in zip(candidates, weights) if not c.get("_limited") and c["rarity"] != "legend"]
+        tot = sum(w for _, w in base)
+        if not tot:
+            return None   # 평소 물고기가 안 나오는 시간·날씨엔 한정 물고기도 없음 (비밀 낚시터 낮 등)
+        level = sum(p * w for p, w in base) / tot
+        scale = tot / cfg["limited_ref_pool"]
+        weights = [w * scale if c.get("_limited") else w for c, w in zip(candidates, weights)]
+        candidates = [limited_here({k: v for k, v in c.items() if k != "_limited"}, spot, level) if c.get("_limited") else c
+                      for c in candidates]
     if rare_bonus > 0:
         # 행운의 떡밥: 희귀 이상이 나올 확률을 +rare_bonus (%p)
         total = sum(weights)

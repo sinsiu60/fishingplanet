@@ -108,8 +108,14 @@ def points(save) -> int:
     return sum(star_count(save, f) for f in all_species())
 
 
-def max_points() -> int:
-    return 5 * len(all_species())
+def max_points(save=None) -> int:
+    """최대 도감 포인트. save 를 주면 환상 튜토리얼 전엔 환상 종을 빼고 센다 (환상 비밀 유지)."""
+    sp = all_species()
+    if save is not None:
+        from src.fishing import phantom
+        if not phantom.state(save)["tutorial"]:
+            sp = [f for f in sp if kind_of(f) != "phantom"]
+    return 5 * len(sp)
 
 
 def spot_stars(save, spot: str) -> tuple[int, int]:

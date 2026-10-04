@@ -592,6 +592,8 @@ class SaveGame:
             news["hint"] = entry["count"]
         self.data["keepnet"].append({"id": fid, "size": result["size"], "rank": result["rank"],
                                      "price": result["price"]})
+        if fish.get("limited"):   # 한정 물고기: 잡은 대륙 (분해 소재용 — 이벤트 물고기는 두 대륙 공통)
+            self.data["keepnet"][-1]["cont"] = spot_continent(fish["spot"])
         if fish["rarity"] == "legend":
             # 전설: 첫 포획은 트로피 보상금 + 그 한 마리는 제값, 이후는 재판매가 (판매 감가는 sale_price)
             cfg = legend_economy()
@@ -650,7 +652,7 @@ class SaveGame:
         n = r["disassemble"].get(fish["rarity"])
         if n is None:
             return None
-        out = {spot_continent(fish["spot"]): n}
+        out = {self.data["keepnet"][index].get("cont") or spot_continent(fish["spot"]): n}
         if r["disassemble_rare_bonus"].get(fish["rarity"]):
             out["rare"] = r["disassemble_rare_bonus"][fish["rarity"]]
         if "cunning" in self.data["keepnet"][index].get("mut", []):
