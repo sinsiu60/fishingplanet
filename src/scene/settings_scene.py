@@ -86,7 +86,11 @@ class SettingsScene(Scene):
                 lambda: "다음 착수에 나옴 (취소)" if s.get("test_phantom") else "다음 착수에 부르기",
                 lambda: s.set("test_phantom", not s.get("test_phantom")))
         show = ("테스트: 환상 포획 연출", "button", lambda: "열기", self._open_phantom_test)
-        return [tele, cards, slot, cb, snd, test, show]
+        rows = [tele, cards, slot, cb, snd, test, show]
+        if self.game.save is not None:
+            rows.append(("테스트: 환상 낚은 기록", "button",
+                         lambda: "지웠어요" if getattr(self, "_ph_wiped", False) else "지우기", self._ask_phantom_reset))
+        return rows
 
     def _sound_rows(self) -> list[tuple]:
         """소리 (32장 S3): 버스 볼륨 4개, 신호음 모드(N2), 성공 효과음·파이팅 음악(32-16), 신호 때 배경 줄이기, 오디오 지연 보정, 사운드 테스트 룸."""
@@ -124,6 +128,17 @@ class SettingsScene(Scene):
     def _open_sound_test(self) -> None:
         from src.scene.sound_test import SoundTestScene
         self.game.scenes.push(SoundTestScene(self.game))
+
+    def _ask_phantom_reset(self) -> None:
+        from src.scene.confirm import ConfirmScene
+        self.game.scenes.push(ConfirmScene(self.game, "환상어 낚은 기록을 지울까요?",
+                                           self._phantom_reset, yes="지우기", no="취소"))
+
+    def _phantom_reset(self) -> None:
+        from src.fishing import phantom
+        phantom.reset_records(self.game.save)
+        self.game.save_now()
+        self._ph_wiped = True
 
     def _open_phantom_test(self) -> None:
         from src.scene.phantom_show_test import PhantomShowTestScene

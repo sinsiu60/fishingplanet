@@ -46,6 +46,16 @@ def state(save) -> dict:
     return ph
 
 
+def reset_records(save) -> None:
+    """테스트용: 환상어 낚은 기록을 지운다 (환상 도감·수집 보상 진행·첫 포획 튜토리얼·착수 천장).
+    이미 받은 칭호·외형·부적·환상 비늘·돈은 그대로 — 다시 달성해도 겹쳐 주지 않음 (첫 포획 골드 보너스만 다시 받음)."""
+    ph = state(save)
+    ph["caught"] = {}
+    ph["rewards"] = []
+    ph["tutorial"] = False
+    ph["casts"] = {}
+
+
 def legend_caught(save, spot: str) -> bool:
     return any(f["spot"] == spot and f["rarity"] == "legend" and save.caught(f["id"])
                for f in load_json("fish.json")["fish"])
