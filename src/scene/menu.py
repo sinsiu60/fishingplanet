@@ -54,7 +54,12 @@ def start_game(game, save: SaveGame) -> None:
     dexbook.ensure_seen(save)   # 옛 세이브: 지금 별·숙련을 기준으로 (알림 폭탄 없이) + 소급 보상·달인 칭호
     game.save.save()
     game.scenes.stack.clear()
-    game.scenes.push(FishingScene(game))
+    fishing = FishingScene(game)
+    game.scenes.push(fishing)
+    if not getattr(fishing, "voyage_pending", False):
+        # 게임 시작 = 마을에서 (35-3): 부두 → 지도 → 낚시터
+        from src.scene.village import VillageScene, village_for
+        game.scenes.push(VillageScene(game, fishing, village_for(save)))
     game.fade_in(0.7)
 
 

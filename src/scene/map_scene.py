@@ -91,9 +91,10 @@ def can_unlock_soon(save, spot: dict) -> bool:
 class MapScene(Scene):
     UI_FRAME = True
 
-    def __init__(self, game, fishing):
+    def __init__(self, game, fishing, from_village=None):
         super().__init__(game)
         self.fishing = fishing
+        self.village = from_village   # 마을 부두에서 열었으면 그 마을 (이동하면 마을도 닫힘)
         self.save = game.save
         self.mouse = (0, 0)
         self.age = 0.0  # 열림 애니메이션
@@ -110,6 +111,7 @@ class MapScene(Scene):
         self.go_btn = ui.Button((300, 214, 164, 17), "", self._go)
         self.rest_btn = ui.Button((300, 56, 164, 16), "텐트에서 쉬기", self._rest)
         self.train_btn = ui.Button((330, 250, 70, 15), "훈련 수조", self._train)
+        self.town_btn = ui.Button((300, 233, 164, 14), "", self._town)
 
     @property
     def spots(self) -> list:
@@ -143,14 +145,28 @@ class MapScene(Scene):
     def _close(self) -> None:
         self.game.scenes.pop()
 
+    def _town(self) -> None:
+        """마을로: 낚시터 → 마을 (보고 있는 대륙의 마을)."""
+        self.game.sfx.play("ui_click")
+        if self.village is not None:
+            self._close()
+            return
+        from src.scene.village import VillageScene
+        self.game.scenes.pop()
+        self.game.scenes.push(VillageScene(self.game, self.fishing, self.cont))
+        self.game.fade_in(0.6)
+
     def _go(self) -> None:
         sp = self.spot
-        if sp["id"] == self.fishing.spot_id:
+        if sp["id"] == self.fishing.spot_id and self.village is None:
             return
         if self.unlocked(sp):
-            self.fishing.travel(sp["id"])
+            if sp["id"] != self.fishing.spot_id:
+                self.fishing.travel(sp["id"])
             self.game.sfx.play("sfx_splash_small", 0.6)
             self.game.scenes.pop()
+            if self.village is not None:
+                self.village.leave()   # 부두에서 출발: 마을도 닫고 낚시터로
             self.game.fade_in(0.8)
             return
         ok, _ = unlock_status(self.save, sp)
@@ -180,6 +196,8 @@ class MapScene(Scene):
         from src.scene.training import TrainingTank
         self.game.sfx.play("ui_click")
         self.game.scenes.pop()
+        if self.village is not None:
+            self.village.leave()
         self.fishing.training = TrainingTank(self.fishing)
         self.fishing.training.start()
 
@@ -188,7 +206,7 @@ class MapScene(Scene):
             self._close()
         elif a.name == "primary":
             m = a.pos
-            for b in (self.close_btn, self.go_btn, self.rest_btn, self.train_btn) + tuple(self.cont_btns if self._multi() else ()):
+            for b in (self.close_btn, self.go_btn, self.rest_btn, self.train_btn, self.town_btn) + tuple(self.cont_btns if self._multi() else ()):
                 if b.click(m):
                     return
             for i, sp in enumerate(self.spots):
@@ -369,7 +387,9 @@ class MapScene(Scene):
             yy += 14
         self.go_btn.rect.topleft = (box.x + 2, box.bottom - 20)
         self.go_btn.rect.size = (box.w - 4, 17)
-        if sp["id"] == self.fishing.spot_id:
+        if sp["id"] == self.fishing.spot_id and self.village is not None:
+            self.go_btn.label, self.go_btn.enabled = "다시 여기로 출발", self.fishing.fight is None
+        elif sp["id"] == self.fishing.spot_id:
             self.go_btn.label, self.go_btn.enabled = "지금 여기 있어요", False
         elif self.unlocked(sp):
             self.go_btn.label, self.go_btn.enabled = "이동 (1시간)", self.fishing.fight is None
@@ -388,3 +408,7 @@ class MapScene(Scene):
             self.go_btn.label = f"해금하기 ({cost:,}원)" if cost else "해금하기"
             self.go_btn.enabled = ok
         self.go_btn.draw(canvas, self.mouse)
+        if self.fishing.fight is None:
+            vname = load_json("villages.json").get(self.cont, {}).get("name", "마을")
+            self.town_btn.label = "마을로 돌아가기" if self.village is not None else f"{vname}로"
+            self.town_btn.draw(canvas, self.mouse)

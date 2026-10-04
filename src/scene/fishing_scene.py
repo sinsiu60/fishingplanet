@@ -148,6 +148,7 @@ class FishingScene(Scene):
         self.phantom_fx = PhantomFx(phantom.spawn_cfg())  # 환상의 물고기 보랏빛 파장 (33장)
         self.force_phantom = False   # 디버그 F7: 다음 착수 환상 강제
         self.glints: list[list[float]] = []  # 먼 수면 보라빛 물결 (x, z, t)
+        self.backdrop = None       # 마을이 열려 있으면 마을 풍경 (src/scene/village.py) — 겹친 화면 뒤 배경
         self.catch_show = None     # 환상·전설 포획 연출 (src/render/phantom_show.py · legend_show.py)
         self.phantom_song_ch = self.phantom_loop_ch = None
         self.show_pity = False       # 디버그 F8: 낚시터별 천장 카운트
@@ -2325,6 +2326,9 @@ class FishingScene(Scene):
             world.draw_ship_lamp(canvas, pal, cam)
 
     def draw(self, canvas: pygame.Surface) -> None:
+        if self.backdrop is not None:
+            self.backdrop(canvas)   # 마을에 있는 동안: 상점·도감 같은 겹친 화면 뒤로 마을이 보이게
+            return
         self._run_rt_fx()   # 슬로우모션 중엔 update 가 드물게 불리므로 그리기에서도 (타격 시점 정확히)
         hour = self.clock.hour
         theme, weather = self.theme, self.weather
