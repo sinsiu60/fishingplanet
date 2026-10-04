@@ -12,7 +12,7 @@ ACTIONS = {
     "dex.open": ["menu:dex", "menu:bag"],
     "fish.bag": ["menu:bag"],
     "fight.reel": ["reel_tap"],
-    "chest.menu": ["menu:chest"],
+    "chest.menu": ["menu:chest", "menu:bag"],
     "dex.close": ["menu:dex", "back"],
     "shop.close": ["back"],
 }
@@ -48,6 +48,12 @@ def resolve(game, tid: str) -> str:
         if game.input.kind == "touch":
             return "fish.bag"
         return "fish.menu.dex" if has("fish.menu.dex") else "fish.menu.collection"
+    if tid.startswith("home.menu."):
+        return "interior.menu." + tid[10:]
+    if tid == "chest.menu" and type(game.scenes.current).__name__ == "QuickMenuScene":
+        return "fish.quick.chest"
+    if tid.startswith("shop.tab.") and not has(tid) and has("interior.menu.buy"):
+        return "interior.menu.buy"   # TG-18: 상점을 열기 전엔 '사기' 메뉴부터
     if tid == "fight.reel" and game.input.kind == "touch" and has("fight.pad"):
         return "fight.pad"
     if tid == "fight.slots":

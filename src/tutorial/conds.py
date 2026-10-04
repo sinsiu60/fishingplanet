@@ -56,10 +56,15 @@ def check(game, name: str, run) -> bool:
     if name == "c402_done":
         from src.story import story
         return story.seen(save, "C4-02")
+    if name == "catch_card":   # 포획 카드가 아직 떠 있음 (카드 위 튜토리얼은 카드가 닫히면 이번엔 넘김)
+        fs = _fishing(game)
+        return fs is not None and fs.fight is not None and fs.fight.phase == "caught" and fs.landing is None
     if name == "float_owned":
         return bool(d.get("float", {}).get("owned"))
     if name == "float_equipped":
         return bool(d.get("float", {}).get("equipped"))
+    if name in getattr(game.guide, "flags", {}):
+        return bool(game.guide.flags[name])
     # 화면 상태 (도감·상점이 tut_cond 로 대답)
     for sc in reversed(game.scenes.stack):
         if hasattr(sc, "tut_cond"):

@@ -142,7 +142,11 @@ script("tg02_fight")(_TG02)
 def _close_catch(game) -> None:
     """TG-03 마지막: 포획 카드 닫기 → TG-04."""
     fs = _fishing(game)
-    if fs is not None and fs.fight is not None and fs.fight.phase in ("caught", "lost"):
+    if fs is None:
+        return
+    if fs.catch_show is not None:
+        fs._close_catch_show()     # 환상·전설 연출 카드 (TG-PH)
+    elif fs.fight is not None and fs.fight.phase in ("caught", "lost"):
         fs._end_fight()
 
 
@@ -488,3 +492,60 @@ class _Pattern:
 
 
 script("pattern")(_Pattern)
+
+
+# ───────────────────────── 다른 시스템 (TG-08 ~ TG-19, TG-PH) ─────────────────────────
+class _SeasonPanel:
+    """TG-15: 계절이 바뀐 뒤 마을 입장 → 계절 알림판을 열어 두고 설명."""
+
+    @staticmethod
+    def start(game, run) -> None:
+        cur = game.scenes.current
+        if type(cur).__name__ == "VillageScene" and cur.panel is None:
+            cur.panel = {"t": 0.0}
+
+
+script("season_panel")(_SeasonPanel)
+
+
+class _FloatShop:
+    """TG-18: 엘라 공방 '사기' — 돈이 모자라면 '물고기를 팔면 살 수 있어요…' + 판매 탭."""
+
+    @staticmethod
+    def tick(game, run, dt: float) -> bool:
+        if run["i"] != 2:
+            return False
+        cur = game.scenes.current
+        if type(cur).__name__ != "ShopScene":
+            return False
+        from src.core.config import load_json
+        it = next((f for f in load_json("floats.json")["floats"] if f["id"] == "paralysis_float"), None)
+        owned = "paralysis_float" in game.save.data.get("float", {}).get("owned", [])
+        ctx = run["ctx"]
+        step = game.guide.data[run["id"]]["steps"][2]
+        if it is not None and not owned and game.save.money < it["price"]:
+            ctx["text"] = step["short_text"]
+            ctx["target"] = "shop.tab.sell" if cur.kind != "sell" else "-"   # 판매 탭에선 막지 않음
+        elif cur.kind != "float":
+            ctx.pop("text", None)
+            ctx["target"] = "shop.tab.float"
+        else:
+            ctx.pop("text", None)
+            ctx.pop("target", None)
+        return False
+
+
+script("float_shop")(_FloatShop)
+
+
+class _Phantom:
+    """TG-PH: 포획 카드에서 백 노인 → 카드 닫기 → 도감 [환상] 탭."""
+
+    @staticmethod
+    def start(game, run) -> None:
+        from src.fishing import phantom
+        if game.save is not None:
+            phantom.state(game.save)["tutorial"] = True
+
+
+script("phantom")(_Phantom)

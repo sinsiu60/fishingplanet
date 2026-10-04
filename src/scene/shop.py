@@ -632,7 +632,9 @@ class ShopScene(Scene):
         return net[0]["id"] if net else None
 
     def _row_id(self, row) -> str:
-        return self.save.data["keepnet"][row["idxs"][0]]["id"] if self.kind == "sell" else row["id"]
+        if self.kind == "sell":
+            return self.save.data["keepnet"][row["idxs"][0]]["id"]
+        return row[1]["id"] if isinstance(row, tuple) else row["id"]   # 강화 탭 줄 = (종류, 장비)
 
     def tut_cond(self, name: str):
         rows = self._rows()
@@ -1315,6 +1317,8 @@ class ShopScene(Scene):
         gear_icon.draw(canvas, kind, g, (box.centerx - 32, box.centery - 32, 64, 64))
         stars = "★" * lvl + "☆" * (rules()["max_level"] - lvl)
         text(canvas, stars, (box.right - 4, box.y + 8), su.YELLOW, 11, "midright")
+        from src.tutorial import targets as T   # TG-12 강화: 단계 별
+        T.mark_ui(self, "shop.enhance.stars", (box.right - 6 - su.width(stars), box.y + 1, su.width(stars) + 4, 14))
         su.btext(canvas, su.fit(f"{g['name']} +{lvl}", D.w - 12), (x, D.y + 88), su.YELLOW, 11, "midleft")
         cost = self.save.enhance_cost(kind, g)
         yy = D.y + 106
@@ -1332,6 +1336,8 @@ class ShopScene(Scene):
             text(canvas, "최대 강화 (+3)", (x, yy), su.GREEN, 11, "midleft")
             b.label, b.enabled, style = "최대 강화", False, "dim"
         else:
+            from src.tutorial import targets as T   # TG-12 강화: 재료 칸
+            T.mark_ui(self, "shop.enhance.cost", (x - 2, yy - 7, D.w - 10, 40 if cost["rare"] else 27))
             have_gold = self.save.money >= cost["gold"]
             have_mat = mats.get(cost["continent"], 0) >= cost["materials"]
             have_rare = mats.get("rare", 0) >= cost["rare"]

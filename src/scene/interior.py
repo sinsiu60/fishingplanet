@@ -151,7 +151,9 @@ class InteriorScene(Scene):
                 return
         self.wait_menu = True
         if self.menu_on and not self.replay:
-            self.game.guide.event(f"interior_ready:{self.npc}")   # 가이드 튜토리얼 (TG-06 판매 · TG-12 강화 · TG-18)
+            self.game.guide.event(f"interior_ready:{self.npc}")
+            if self.npc == "home":
+                self.game.guide.event("home_ready")   # 가이드 튜토리얼 (TG-06 판매 · TG-12 강화 · TG-18)
 
     def tut_busy(self) -> bool:
         """대사가 진행 중이면 가이드는 기다림 (메뉴가 뜬 뒤 시작)."""
@@ -213,6 +215,9 @@ class InteriorScene(Scene):
     def _open_shop(self, mode: str, tabs: list | None = None, tab: str | None = None) -> None:
         from src.scene.shop import ShopScene
         tabs = tabs or self.c["shop_tabs"][mode]
+        g = self.game.guide
+        if mode == "buy" and g.run is not None and g.run["id"] == "TG-18" and "sell" not in tabs:
+            tabs = ["sell"] + list(tabs)   # 특수 찌 튜토리얼: 돈이 모자라면 같은 창에서 팔 수 있게
         title = {"buy": "사기", "sell": "팔기", "enhance": "강화"}[mode]
         self.shop = ShopScene(self.game, self.fishing, tab=tab or tabs[0], frame=(130, 6, 342, 258), host=self, tabs=tabs,
                               title=f"{self.nc['sign']} · {title}")

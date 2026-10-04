@@ -203,6 +203,15 @@ def catch_badges(news: dict | None) -> list:
         badges.append((f"전설 첫 포획 트로피 +{news['trophy']:,}원!", RANK_COLORS["S"]))
     if news.get("resell"):
         badges.append((f"다시 잡은 전설: 판매가 ×{news['resell']:g}", (200, 200, 210)))
+    if news.get("mutations"):   # 변이 (TG-17 강조 대상) — 파이팅 시작 알림과 같은 글자
+        from src.fishing import mutation
+        kinds = mutation.cfg()["kinds"]
+        m = news["mutations"][0]
+        badges.append((f"{kinds[m]['name']} 변이", tuple(kinds[m]["color"])))
+    if news.get("chest"):       # 보물상자 (TG-10 강조 대상) — 획득 알림과 같은 이름
+        from src.save import treasure
+        info = treasure.grade_info(news["chest"])
+        badges.append((f"{info['name']} 보물상자 획득!", tuple(info["color"])))
     badges += dex_badges(news)
     return badges
 

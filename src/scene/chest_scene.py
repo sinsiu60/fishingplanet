@@ -99,6 +99,7 @@ class ChestScene(Scene):
             if grade in ("special", "legend"):
                 self.game.haptics.vibrate("perfect" if grade == "special" else "double_perfect")
         elif key == "card":
+            self.game.guide.event("chest_opened")   # TG-10
             r = a["reward"]
             if r["type"] == "item" and not r.get("dup"):
                 sfx.play("sfx_catch", 0.7)
@@ -317,6 +318,13 @@ class ChestScene(Scene):
         text(canvas, f"천장: 특별 상자까지 {max(0, c['special'] - p['special'])}개 · 전설 상자까지 "
                      f"{max(0, c['legend'] - p['legend'])}개", (240, 218), ui.DIM, 11, "center")
         text(canvas, "상자는 물고기를 잡을 때 가끔 얻어요 (S랭크면 더 잘 나와요)", (240, 232), ui.DIM, 11, "center")
+        from src.tutorial import targets as T   # TG-10 강조 대상
+        panels = [pygame.Rect(18 + i * 112, 56, 104, 150) for i in range(len(tr.GRADES))]
+        T.mark_ui(self, "chest.grade", panels[0].unionall(panels))
+        for i, g in enumerate(tr.GRADES):
+            if chests.get(g, 0):
+                T.mark_ui(self, "chest.box", self.open_btns[i].rect)   # '열기' 버튼
+        T.mark_ui(self, "chest.pity", (60, 211, 360, 14))
 
     def _row_rect(self, i: int) -> pygame.Rect:
         return pygame.Rect(LIST.x + 2, LIST.y + 2 + (i - self.scroll) * ROW_H, LIST.w - 4, ROW_H - 1)

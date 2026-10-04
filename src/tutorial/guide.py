@@ -33,6 +33,7 @@ class Guide:
         self.result: dict | None = None     # 패턴 ③ 결과 (대기 단계로 표시)
         self.t = 0.0
         self.force_debug = False
+        self.flags: dict = {}               # 장면이 막 만들어지는 중에 알려 주는 조건 (계절 바뀜 등)
 
     # ── 세이브 ──
     def st(self) -> dict:
@@ -112,7 +113,7 @@ class Guide:
             cur = self.run["id"] if self.run is not None else None
             if any(a not in st["done"] and a != cur for a in tut.get("after", [])):   # 진행 중인 앞 튜토리얼은 곧 끝남
                 return False
-        if tut.get("need_cond") and not conds.check(self.game, tut["need_cond"], None) and not replay:
+        if tut.get("need_cond") and not conds.check(self.game, tut["need_cond"], None) and (not replay or tut["need_cond"] == "catch_card"):
             return False
         return True
 
@@ -189,7 +190,7 @@ class Guide:
         r["tapped"] = False
         r["nudge"] = 0.0
         r["sub"] = 0
-        for k in ("released", "start_ptr", "passed", "c_acc", "c_prev", "c_hist", "mash_n", "circle_k", "text", "anim",
+        for k in ("released", "start_ptr", "passed", "target", "c_acc", "c_prev", "c_hist", "mash_n", "circle_k", "text", "anim",
                   "allow", "badge", "show", "dir"):
             r["ctx"].pop(k, None)
         self.st()["active"] = {"id": r["id"], "step": r["i"]}
@@ -261,8 +262,8 @@ class Guide:
             x -= load_json("mobile_config.json")["hud_inset_px"] + self.game.screen.safe_x
         s = self.step
         avoid = targets.rects(self.game, "shop.money")
-        if s is not None and s.get("target"):
-            avoid += targets.rects(self.game, s["target"], self.run)
+        if s is not None and self.target_of(s):
+            avoid += targets.rects(self.game, self.target_of(s), self.run)
         for r in (pygame.Rect(x, 4, 58, 15), pygame.Rect(4 + self.game.screen.safe_x, 4, 58, 15),
                   pygame.Rect(4 + self.game.screen.safe_x, h - 19, 58, 15)):
             if not any(r.colliderect(a) for a in avoid):
@@ -317,14 +318,21 @@ class Guide:
         return None
 
     def allow_action(self, scene, a) -> bool:
-        """행동 단계 (Scene.handle_event): 단계 종류별로 통과시킬지. 화면 좌표(a.pos)는 캔버스 기준."""
+        """행동 단계 (Scene.handle_event): 단계 종류별로 통과시킬지. 화면 좌표(a.pos)는 캔버스 기준.
+        떼기(primary_up)는 그 누름이 통과했을 때만 (떼는 순간 누르기로 치는 화면 — 마을 등 — 이 막힌 탭에 반응하지 않게)."""
+        if a.name == "primary_up":
+            return getattr(self, "down_ok", True) or not self.active()
+        ok = self._allow(scene, a)
+        if a.name == "primary":
+            self.down_ok = ok
+        return ok
+
+    def _allow(self, scene, a) -> bool:
         if not self.active():
             return True
         s = self.step
         r = self.run
         k = s["kind"]
-        if a.name in ("primary_up",):
-            return True
         if a.name == "debug" or r["ctx"].get("released"):
             return True
         if k == "wait":
@@ -334,10 +342,10 @@ class Guide:
                 r["tapped"] = True
             return False
         if k == "spotlight":
-            rects = targets.rects(self.game, s["target"], r)
+            rects = targets.rects(self.game, self.target_of(s), r)
             if not rects:
                 return True   # 대상이 화면에 없으면 막지 않음 (갇히지 않게)
-            keys = s.get("allow_keys", []) + targets.actions(self.game, s["target"])
+            keys = s.get("allow_keys", []) + targets.actions(self.game, self.target_of(s))
             if f"{a.name}:{a.value}" in keys or a.name in keys:
                 return True
             if a.pos is not None:
@@ -377,6 +385,12 @@ class Guide:
         return re.sub(r"\{([^}/]+)\}", lambda m: (self.inputs[m.group(1)]["mobile" if touch else "pc"]
                                                     if m.group(1) in self.inputs else m.group(0)), txt)
 
+    def target_of(self, s: dict):
+        """강조 대상 (대본이 바꿀 수 있음 — TG-18 돈이 모자라면 판매 탭)."""
+        if self.run is not None and self.run["ctx"].get("target"):
+            return self.run["ctx"]["target"]
+        return s.get("target")
+
     def who(self) -> str:
         return self.data[self.run["id"]].get("who", "haru") if self.run else "haru"
 
@@ -388,7 +402,7 @@ class Guide:
             return
         s = self.step
         r = self.run
-        rects = targets.rects(self.game, s["target"], r) if s.get("target") else []
+        rects = targets.rects(self.game, self.target_of(s), r) if self.target_of(s) else []
         k = s["kind"]
         if r["ctx"].get("released"):
             if r["ctx"].get("show"):   # 머리 흔들기: 문구를 띄운 채 진행

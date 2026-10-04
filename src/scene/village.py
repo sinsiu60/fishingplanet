@@ -75,15 +75,24 @@ class VillageScene(Scene):
                     game.haptics.vibrate("phone")
         # 계절이 바뀐 뒤 처음 들어옴: 계절 알림 + 상점 주인의 계절 대사 (35-4)
         self.season_banner = 0.0
+        self.season_changed = False   # 가이드 TG-15: 계절이 바뀐 뒤 처음 들어옴
         if self.save.data.get("season_seen") != self.season:
             first = self.save.data.get("season_seen") is None
             self.save.data["season_seen"] = self.season
             if not first:
+                self.season_changed = True
                 self.season_banner = 3.5
                 host = "haru" if cont == "sharmion" else "ella"
                 from src.scene import dialogue
                 self.bubble = {"npc": host, "lines": dialogue.pick(game, host, cont, prefer_season=True), "i": 0, "t": -1.0}
                 self.ox = max(0, self.cfg["npcs"][host]["x"] - game.screen.canvas.get_width() // 2)
+        game.guide.flags["season_changed"] = self.season_changed   # 아직 장면 스택에 올라가기 전이라 직접 알려 줌
+        game.guide.event("village_enter")   # 가이드 TG-15 (계절이 바뀐 뒤 처음)
+
+    def tut_cond(self, name: str):
+        if name == "season_changed":
+            return self.season_changed
+        return None
 
     # ── 장소 · 행동 ──
     def leave(self) -> None:
@@ -491,6 +500,8 @@ class VillageScene(Scene):
         w = canvas.get_width()
         r = pygame.Rect(w // 2 - 170, 40, 340, 170)
         ui.panel(canvas, r, (230, 200, 140), (30, 24, 18))
+        from src.tutorial import targets as T   # TG-15
+        T.mark("village.season", r)
         s = self.season
         text(canvas, f"계절 알림판 — {seasons.name(s, self.cont)}", (r.centerx, r.y + 14), (255, 230, 170), 16, "center")
         if seasons.locked(self.game.settings):
@@ -505,6 +516,7 @@ class VillageScene(Scene):
             for i, f in enumerate(lim[:3]):
                 box = pygame.Rect(r.x + 12 + i * 106, y + 10, 100, 48)
                 ui.panel(canvas, box, (120, 100, 70), (20, 16, 12))
+                T.mark("village.season.fish", box)
                 got = dexbook.entry(self.save, f) is not None
                 draw_fish_fit(canvas, box.inflate(-8, -16), f, 70, silhouette=None if got else (8, 8, 12))
                 text(canvas, f["name"] if got else "???", (box.centerx, box.bottom - 7), (230, 220, 200), 11, "center")

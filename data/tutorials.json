@@ -1118,6 +1118,7 @@
    "title": "보물상자",
    "who": "haru",
    "start": "event:chest_card",
+   "need_cond": "catch_card",
    "steps": [
     {
      "kind": "info",
@@ -1242,6 +1243,7 @@
    "title": "어탁",
    "who": "haru",
    "start": "event:record_card",
+   "need_cond": "catch_card",
    "steps": [
     {
      "kind": "info",
@@ -1299,6 +1301,7 @@
    "who": "haru",
    "start": "event:village_enter",
    "need_cond": "season_changed",
+   "script": "season_panel",
    "steps": [
     {
      "kind": "info",
@@ -1341,6 +1344,7 @@
    "title": "변이 물고기",
    "who": "haru",
    "start": "event:mutation_card",
+   "need_cond": "catch_card",
    "steps": [
     {
      "kind": "info",
@@ -1363,6 +1367,7 @@
    "who": "ella",
    "start": "event:interior_ready:ella",
    "need_cond": "c402_done",
+   "script": "float_shop",
    "steps": [
     {
      "kind": "spotlight",
@@ -1406,6 +1411,7 @@
    "title": "환상의 물고기",
    "who": "baek",
    "start": "event:phantom_caught",
+   "script": "phantom",
    "steps": [
     {
      "kind": "info",

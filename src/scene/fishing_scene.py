@@ -301,6 +301,7 @@ class FishingScene(Scene):
             ev = weather_events.by_id(self.event_pending)
             self.event_banner = {"id": self.event_pending, "t": 0.0}
             self.event_pending = None
+            self.game.guide.event("weather_event")   # TG-16
             snd, vol = ev.get("start_sound", ["amb_gust", 0.25])
             self.sfx.play(snd, vol)   # 짧은 자연음 (SOUND_CLEANUP)
         if self.event_banner is not None:
@@ -462,7 +463,8 @@ class FishingScene(Scene):
 
     def tut_busy(self) -> bool:
         """가이드 튜토리얼이 기다릴 때: 카드·도움말·환상·전설 포획 연출 중 (src/tutorial/conds.py)."""
-        return self.card is not None or self.help or self.catch_show is not None or self.voyage_pending
+        show = self.catch_show is not None and not self.catch_show.waiting()   # 연출 카드가 떠서 기다리는 중이면 가이드 가능 (TG-PH)
+        return self.card is not None or self.help or show or self.voyage_pending
 
     def _guide_first(self, key: str) -> bool:
         """패턴 첫 만남 신호 → 가이드 (패턴 사전 등록은 그대로). 이번에 패턴 튜토리얼이 시작됐으면 True."""
@@ -597,6 +599,8 @@ class FishingScene(Scene):
             if f is not None and f.phase == "fight":
                 self.ctl.tap(self.t)  # 터치: 릴 패드를 누를 때마다
         elif n == "primary":
+            if a.pos is not None:
+                self.mouse = a.pos   # 누른 자리 그대로 (어탁 버튼 등 — 다음 틱 포인터를 기다리지 않게)
             if self._side_menu_click(a.pos):
                 return
             if not self.touch and f is not None and f.phase == "fight":
@@ -611,6 +615,14 @@ class FishingScene(Scene):
         return (not self.touch and self.fight is None and self.card is None and not self.help
                 and self.landing is None and self.training is None
                 and self.cast.state in (CastState.READY, CastState.LANDED, CastState.RETRIEVE))
+
+    def side_chest_rect(self):
+        """보물상자 버튼 자리 (TG-10): PC 오른쪽 메뉴의 상자 / 모바일 가방 버튼."""
+        if self.touch:
+            return next((ct.rect for ct in getattr(self.game.input, "controls", []) if ct.id == "bag"), None)
+        if not self._side_menu_on():
+            return None
+        return next((r for k, r in self._side_menu_rects() if k == "chest"), None)
 
     def _side_menu_rects(self):
         from src.ui import side_menu
@@ -763,6 +775,12 @@ class FishingScene(Scene):
         self.game.haptics.vibrate("perfect", 1.0)  # 쾅: 강하게 1회
 
     def _update_catch_show(self, dt: float) -> None:
+        sh = self.catch_show
+        if sh is not None and sh.waiting() and getattr(sh, "kind", "phantom") == "phantom" and not getattr(sh, "tut_sent", False):
+            sh.tut_sent = True
+            if not phantom.state(self.save)["tutorial"] and self.game.guide.enabled() and not self.game.guide.done("TG-PH"):
+                phantom.state(self.save)["tutorial"] = True   # 도감 [환상] 탭이 이때 생김
+                self.game.guide.event("phantom_caught")   # TG-PH (예전 PhantomIntroScene 대신)
         sh = self.catch_show
         if getattr(sh, "kind", "phantom") == "legend":
             self._update_legend_show(dt)
@@ -962,8 +980,9 @@ class FishingScene(Scene):
             self.sparkles.burst(*self._fish_screen(), count=16, speed=0.9)
         for g in sorted(self.fight.gim.kinds(self.fight.brain)):
             key = f"gimmick:{g}"
-            if self.card is None and self.tutorial.want(key):
-                self._open_card(key, "gauge")
+            if not train:
+                self.tutorial.mark(key)
+                self.game.guide.event(f"first:{key}")   # TG-19 (예전 기믹 카드 대신)
         from src.fishing.fight import fish_gear_tier
         need_rod = fish_gear_tier(fish)
         if not train and self.save.gear_tier("rod") < need_rod and fish["rarity"] != "common":
@@ -1014,6 +1033,7 @@ class FishingScene(Scene):
         size = size if size is not None else f.result["size"]
         if prints.make(self.save, fish, size, self.spot["name"]):
             self.print_offer = None
+            self.game.guide.event("print_made")   # TG-13
             self.sfx.play("ui_buy", 0.8)
             self.toasts.show("어탁을 남겼다! (도감 · 마을 어탁 갤러리)", (240, 226, 200), 2.5, 11)
             self.game.save_now()
@@ -1066,9 +1086,12 @@ class FishingScene(Scene):
         if last and phantom.is_phantom(last["fish"]):
             self.phantom_fx.restore()  # 포획 컷이 끝나면 1.5초에 걸쳐 원래 색
             if not phantom.state(self.save)["tutorial"]:
-                # 첫 환상어 포획: 안내 1회 + 도감 [환상] 탭이 이때 생김 (33장 P6)
-                from src.scene.phantom_intro import PhantomIntroScene
-                self.game.scenes.push(PhantomIntroScene(self.game, self))
+                # 첫 환상어 포획: 도감 [환상] 탭이 이때 생김 (33장 P6). 안내는 가이드 TG-PH — 튜토리얼 안내를 껐으면 예전 안내 창
+                if self.game.guide.enabled():
+                    phantom.state(self.save)["tutorial"] = True
+                else:
+                    from src.scene.phantom_intro import PhantomIntroScene
+                    self.game.scenes.push(PhantomIntroScene(self.game, self))
         self.bite.stop()
         self.cast.reset()
         self.game.screen.shake = (0, 0)
@@ -1361,8 +1384,9 @@ class FishingScene(Scene):
             self.bite.lure_in = (jerk, retrieving)
             if jerk:
                 self._jerk_fx()
-            if self.bite.lure.engaged and self.card is None and self.tutorial.want("lure_intro"):
-                self._open_card("lure_intro", None)
+            self.lure_idle_t = getattr(self, "lure_idle_t", 0.0) + dt
+            if self.lure_idle_t >= 5.0 and self.bite.state in (BiteState.WAIT, BiteState.APPROACH) and self.training is None:
+                self.game.guide.event("lure_idle")   # TG-08 (예전 'lure_intro' 카드 대신)
         else:
             self.ctl.reset()
         self.bite.sign_mods = self.signs.mods(self.cast.bx, self.cast.bz) if landed else {}
@@ -1425,6 +1449,8 @@ class FishingScene(Scene):
         """수면 징후: 생기고 사라짐 + 물 위 연출 (새 떼·물거품·점프·반짝임)."""
         waiting = self.fight is None and self.cast.state in LOOK_STATES and self.landing is None
         kind = self.signs.update(dt, waiting, self.cam.yaw)
+        if kind == "birds" and self.training is None:
+            self.game.guide.event("sign_seen")   # TG-09 (문구가 새 떼 것뿐이라 새 떼에서만)
         if kind == "sparkle":
             pass  # N3: 전조 반짝은 소리 없이 (대기 중 정적)
         s = self.signs.sign
@@ -1517,6 +1543,12 @@ class FishingScene(Scene):
                     self.sfx.play("sfx_record", 0.85)  # 최대 크기 경신 배지와 함께
             if f.phase == "caught" and prev < 1.6 <= self.end_t and self.training is None:
                 self.game.guide.event("catch_shown")   # TG-03: 배지까지 다 뜬 뒤
+                if getattr(self, "print_offer", None) is not None and news.get("record"):
+                    self.game.guide.event("record_card")   # TG-13 (첫 포획이 아닌 크기 신기록)
+                if news.get("mutations"):
+                    self.game.guide.event("mutation_card")   # TG-17
+                if news.get("chest"):
+                    self.game.guide.event("chest_card")   # TG-10
             return
         reeling = self.game.input.held("reel") and f.phase == "fight"
         fp = getattr(self, "tut_force_pattern", None)
@@ -1887,6 +1919,7 @@ class FishingScene(Scene):
             self.bite.extra_pool = self._extra_fish()   # 계절·날씨 이벤트 한정 물고기 (35-4)
             self.bite.start((c.bx, c.bz), c.current_distance())
         self.idle_ripple_t = 0.0
+        self.lure_idle_t = 0.0
         self.game.guide.event("cast_landed")
 
     def _splash_at(self, x: float, z: float, big: float) -> None:
@@ -2434,6 +2467,8 @@ class FishingScene(Scene):
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
             self.catch_news["chest"] = self.chest_drop
+            if muts:
+                self.catch_news["mutations"] = list(muts)
             if legend_scales:
                 self.catch_news["legend_scales"] = legend_scales
             self.catch_news["title_frame"] = phantom.state(self.save)["title_frame"]
@@ -2568,6 +2603,10 @@ class FishingScene(Scene):
             pfx.draw_ring(canvas, int(cam.horizon))
         if self.catch_show is not None:
             self.catch_show.draw(canvas, pal)  # 환상어 포획 연출 (카드까지)
+            if self.catch_show.waiting():
+                from src.tutorial import targets as T   # TG-PH: 포획 카드
+                W, H = canvas.get_size()
+                T.mark("catch.card", (W // 2 - 170, 12, 340, H - 40))
             return
         if self.landing is not None:
             self.landing.draw(canvas, pal)
@@ -3063,6 +3102,29 @@ class FishingScene(Scene):
                 for ct in getattr(self.game.input, "controls", []):
                     if ct.id == "bag":
                         T.mark("fish.bag", ct.rect)
+                    elif ct.id == "pad":
+                        T.mark("fight.pad", ct.rect)
+            else:
+                hx, hy = self._rod_geo()["hand"]
+                T.mark("fight.reel", (hx - 26, hy - 22, 52, 44))
+            sh = self.bite.shadow
+            if sh is not None and sh.get("alpha", 1) > 0.15:
+                p = cam.project(sh["x"], sh["z"])
+                if p:
+                    x, y = mp((p[0], p[1]))
+                    T.mark("fish.shadow", (x - 26, y - 12, 52, 24))
+            sg = self.signs.sign
+            if sg is not None:
+                p = cam.project(sg["x"], sg["z"])
+                if p:
+                    x, y = mp((p[0], p[1]))
+                    rw = max(30, int(self.signs.radius * p[2]))
+                    T.mark("fish.signs", (x - rw, y - 30, rw * 2, 44))
+            if self.event_banner is not None:
+                T.mark("village.sky", (0, 0, W, max(20, hz - 2)))
+                T.mark("village.banner", (0, 26, W, 34))
+            if self.side_chest_rect() is not None:
+                T.mark("chest.menu", self.side_chest_rect())
             return
         if self.touch:
             for ct in getattr(self.game.input, "controls", []):
@@ -3082,6 +3144,20 @@ class FishingScene(Scene):
             T.mark("fight.slots", (fx - 34, fy - 52, 68, 40))
             T.mark("fight.slot.reel", (fx - 34, fy - 52, 68, 40))
             T.mark("fight.distance", (W - 60 - (self.hud_inset if self.touch else 0), 2, 52, 14))
+            # 엘드라시온 기믹 게이지 (fight_hud.draw_gauges 와 같은 자리)
+            kinds = f.gim.kinds(f.brain)
+            gx = 116 if f.hazards else 88
+            for gk in ("tangle", "heat"):
+                if gk in kinds:
+                    T.mark(f"fight.gimmick.{gk}", (ox + gx - 6, y - 2, 17, h + 18))
+                    gx += 28
+            if "current" in kinds:
+                T.mark("fight.gimmick.current", (ox + 100, y + h - 20, 56, 26))
+            if "ice" in kinds:
+                T.mark("fight.gimmick.ice", (ox + 4, y - 4, 20, h + 8))
+            if "dark" in kinds:
+                fx2, fy2 = mp(self._fish_screen())
+                T.mark("fight.gimmick.dark", (fx2 - 50, fy2 - 40, 100, 70))
             if not self.touch:
                 hx, hy = self._rod_geo()["hand"]
                 T.mark("fight.reel", (hx - 26, hy - 22, 52, 44))
@@ -3092,9 +3168,15 @@ class FishingScene(Scene):
             T.mark("catch.card", (W // 2 - 110, 12, 220, 60))
             T.mark("catch.size", (W // 2 - 40, 36, 80, 16))
             T.mark("catch.rank", (W - 70 - 22, 54 - 22, 44, 50))
-            badges = fight_hud.catch_badges(self.catch_news)
-            if badges and badges[0][0].startswith("NEW!"):
-                T.mark("catch.dex_new", (8, 24 - 8, 110, 16))
+            from src.core.fonts import get_font
+            for i, (label, _) in enumerate(fight_hud.catch_badges(self.catch_news)):
+                r = (8, 24 + i * 15 - 8, get_font(11).size(label)[0] + 8, 16)
+                if label.startswith("NEW!"):
+                    T.mark("catch.dex_new", r)
+                elif label.endswith(" 변이"):
+                    T.mark("catch.mutation", r)
+                elif "보물상자" in label:
+                    T.mark("catch.chest", r)
             pr = self._print_btn()
             if pr is not None:
                 T.mark("catch.print_btn", pr)

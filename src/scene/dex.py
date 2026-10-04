@@ -440,6 +440,8 @@ class DexScene(Scene):
         col = phantom.COLOR
         fl = self._ph_list()
         text(canvas, f"환상  {len(fl)} / {len(phantom.all_phantoms())}", (GRID_X + 2, 40), col, 11, "midleft")
+        from src.tutorial import targets as T
+        T.mark_ui(self, "dex.phantom.count", (GRID_X - 2, 32, 92, 16))   # TG-PH
         for i, f in enumerate(fl):
             r = self.card_rect_ph(i)
             sel = i == self.ph_sel

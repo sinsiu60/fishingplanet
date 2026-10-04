@@ -27,6 +27,8 @@ class HomeScene(InteriorScene):
     def __init__(self, game, fishing, village=None):
         super().__init__(game, fishing, "home", village=village, greet=False)
         self.wait_menu = True
+        if not self.script:
+            game.guide.event("home_ready")   # TG-14 주인공의 집 (대사 장면이 있으면 그 뒤 interior_ready 로)
 
     def _portrait_img(self):
         return pygame.Surface((1, 1), pygame.SRCALPHA)   # 사람 없는 방

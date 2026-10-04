@@ -75,6 +75,6 @@ class QuickMenuScene(Scene):
         from src.tutorial import targets
         for b in self.active:
             b.draw(canvas, self.mouse)
-            tid = {"수집": "fish.quick.collection", "도감": "fish.quick.dex"}.get(b.label)
+            tid = {"수집": "fish.quick.collection", "도감": "fish.quick.dex", "보물상자": "fish.quick.chest"}.get(b.label)
             if tid:
                 targets.mark_ui(self, tid, b.rect)

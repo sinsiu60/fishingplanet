@@ -38,6 +38,7 @@ class QuestBoardScene(Scene):
         # 게시판 구석 낡은 쪽지 (33장 P6): 해금된 낚시터마다 한 장, 읽기 전용
         self.note_btn = ui.Button((262, 30, 70, 16), "낡은 쪽지", self._toggle_notes)
         self.notes_open = False
+        game.guide.event("quests_open")   # TG-11
 
     # ── 동작 ──
     def _toggle_notes(self) -> None:
@@ -178,9 +179,21 @@ class QuestBoardScene(Scene):
         self.refresh_btn.draw(canvas, self.mouse)
         rows = list(b["daily"]) + ([b["weekly"]] if b["weekly"] else [])
         y = 52
+        from src.tutorial import targets as T   # TG-11 강조 대상
+        T.mark_ui(self, "quests.refresh", self.refresh_btn.rect)
+        daily = []
         for q in rows:
-            self._draw_quest(canvas, q, pygame.Rect(14, y, 452, ROW_H - 4))
+            r = pygame.Rect(14, y, 452, ROW_H - 4)
+            self._draw_quest(canvas, q, r)
+            if q["weekly"]:
+                T.mark_ui(self, "quests.weekly", r)
+            else:
+                daily.append(r)
+                T.mark_ui(self, "quests.cond", (r.x + 2, r.y + 14, r.w - 120, r.h - 16))
+                T.mark_ui(self, "quests.reward", (r.right - 112, r.y + 25, 110, 16))
             y += ROW_H
+        if daily:
+            T.mark_ui(self, "quests.daily", daily[0].unionall(daily))
         if not rows:
             text(canvas, "아직 받을 수 있는 의뢰가 없어요", (240, 120), ui.DIM, 11, "center")
         text(canvas, "일일 의뢰는 자정, 주간 의뢰는 월요일에 바뀌어요", (14, 257), ui.DIM, 11, "midleft")
