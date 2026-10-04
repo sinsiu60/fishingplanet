@@ -1,0 +1,129 @@
+{
+ "_설명": "make_phantom_song.py 가 실제로 음을 놓은 시각 (초). 게임 연출은 data/phantom_catch_timeline.json 의 같은 값을 쓴다.",
+ "files": {
+  "phantom_catch_full_sharmion": {
+   "len": 9.2,
+   "peak_db": -1.0,
+   "rms_db": -13.3,
+   "markers": {
+    "breath": 0.0,
+    "rise": 0.35,
+    "scales": 0.8,
+    "rays": 1.2,
+    "climax": 1.8,
+    "return": 2.2,
+    "card": 2.6,
+    "record": 3.4,
+    "rewards": 4.2,
+    "afterglow": 5.0,
+    "wait": 7.0
+   }
+  },
+  "phantom_catch_short_sharmion": {
+   "len": 5.2,
+   "peak_db": -1.0,
+   "rms_db": -13.2,
+   "markers": {
+    "breath": 0.0,
+    "rise": 0.2,
+    "scales": 0.45,
+    "rays": 0.6,
+    "climax": 0.9,
+    "return": 1.2,
+    "card": 1.5,
+    "record": 2.0,
+    "rewards": 2.4,
+    "afterglow": 2.8,
+    "wait": 3.5
+   }
+  },
+  "phantom_catch_extended_sharmion": {
+   "len": 12.2,
+   "peak_db": -1.0,
+   "rms_db": -13.4,
+   "markers": {
+    "breath": 0.0,
+    "rise": 0.35,
+    "scales": 0.8,
+    "rays": 1.2,
+    "climax": 1.8,
+    "ring": 2.2,
+    "ring_end": 4.2,
+    "return": 4.4,
+    "card": 4.8,
+    "record": 5.6,
+    "rewards": 6.4,
+    "afterglow": 7.4,
+    "wait": 10.0
+   }
+  },
+  "phantom_catch_loop_sharmion": {
+   "len": 6.0,
+   "peak_db": -12.0,
+   "rms_db": -21.6,
+   "markers": {}
+  },
+  "phantom_catch_full_eldrasion": {
+   "len": 9.2,
+   "peak_db": -1.0,
+   "rms_db": -13.1,
+   "markers": {
+    "breath": 0.0,
+    "rise": 0.35,
+    "scales": 0.8,
+    "rays": 1.2,
+    "climax": 1.8,
+    "return": 2.2,
+    "card": 2.6,
+    "record": 3.4,
+    "rewards": 4.2,
+    "afterglow": 5.0,
+    "wait": 7.0
+   }
+  },
+  "phantom_catch_short_eldrasion": {
+   "len": 5.2,
+   "peak_db": -1.0,
+   "rms_db": -12.5,
+   "markers": {
+    "breath": 0.0,
+    "rise": 0.2,
+    "scales": 0.45,
+    "rays": 0.6,
+    "climax": 0.9,
+    "return": 1.2,
+    "card": 1.5,
+    "record": 2.0,
+    "rewards": 2.4,
+    "afterglow": 2.8,
+    "wait": 3.5
+   }
+  },
+  "phantom_catch_extended_eldrasion": {
+   "len": 12.2,
+   "peak_db": -1.0,
+   "rms_db": -13.2,
+   "markers": {
+    "breath": 0.0,
+    "rise": 0.35,
+    "scales": 0.8,
+    "rays": 1.2,
+    "climax": 1.8,
+    "ring": 2.2,
+    "ring_end": 4.2,
+    "return": 4.4,
+    "card": 4.8,
+    "record": 5.6,
+    "rewards": 6.4,
+    "afterglow": 7.4,
+    "wait": 10.0
+   }
+  },
+  "phantom_catch_loop_eldrasion": {
+   "len": 6.0,
+   "peak_db": -12.0,
+   "rms_db": -21.7,
+   "markers": {}
+  }
+ }
+}
