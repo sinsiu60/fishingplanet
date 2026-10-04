@@ -4,11 +4,20 @@
 세이브에 남기는 것은 받은 도감 보상(claimed)·표지(cover)·알림 기준(seen) 뿐 (save.data["dex_book"]).
 
   별 ★1 첫 포획 / ★2 S랭크 / ★3 대물(크기 범위 상위 10%) / ★4 변이 3종(일반·고급·희귀·한정) · 3회(전설·환상) / ★5 숙련 5
-  숙련 단계 = 누적 포획 수 기준 (일반·고급·희귀 1·5·15·30·50 · 전설 1·2·3·5·8 · 환상 1·2·3·4·5 · 계절·이벤트 1·3·6·10·15)
+  숙련 단계 = 누적 포획 수 기준 (일반 1·5·15·30·50 · 고급 1·4·10·20·35 · 희귀 1·3·8·15·25 · 전설 1·2·3·5·8 · 환상 1·2·3·4·5 · 계절·이벤트 1·2·4·6·8)
 """
 from src.core.config import load_json
 
-MASTERY = {"normal": (1, 5, 15, 30, 50), "legend": (1, 2, 3, 5, 8), "phantom": (1, 2, 3, 4, 5), "limited": (1, 3, 6, 10, 15)}
+MASTERY = {"normal": (1, 5, 15, 30, 50), "legend": (1, 2, 3, 5, 8), "phantom": (1, 2, 3, 4, 5), "limited": (1, 2, 4, 6, 8)}
+# 일반 중 고급·희귀는 더 적게 (Y9 검증: 희귀 숙련 5 중앙 37시간 → 약 18시간, DESIGN.md 35-15)
+MASTERY_RARITY = {"uncommon": (1, 4, 10, 20, 35), "rare": (1, 3, 8, 15, 25)}
+
+
+def thresholds(fish: dict) -> tuple:
+    kind = kind_of(fish)
+    if kind == "normal":
+        return MASTERY_RARITY.get(fish.get("rarity"), MASTERY["normal"])
+    return MASTERY[kind]
 STAR_LABEL = {1: "첫 포획", 2: "S랭크", 3: "대물", 4: "변이 3종", 5: "숙련 5"}
 
 
@@ -66,14 +75,14 @@ def entry(save, fish: dict) -> dict | None:
 def mastery(save, fish: dict) -> int:
     e = entry(save, fish)
     n = e["count"] if e else 0
-    return sum(1 for need in MASTERY[kind_of(fish)] if n >= need)
+    return sum(1 for need in thresholds(fish) if n >= need)
 
 
 def next_mastery(save, fish: dict) -> tuple[int, int] | None:
     """(지금 포획 수, 다음 단계 필요 수) — 5단계면 None."""
     e = entry(save, fish)
     n = e["count"] if e else 0
-    for need in MASTERY[kind_of(fish)]:
+    for need in thresholds(fish):
         if n < need:
             return n, need
     return None
