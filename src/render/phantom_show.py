@@ -48,6 +48,8 @@ def _env(t: float, a: float, b: float, c: float, d: float) -> float:
 
 
 class PhantomShow:
+    kind = "phantom"
+
     def __init__(self, fish: dict, result: dict, news: dict, variant: str, w: int, h: int, *,
                  mobile: bool = False, reduce: bool = False, delay: float = 0.0, rnd: random.Random | None = None,
                  low: bool = False):

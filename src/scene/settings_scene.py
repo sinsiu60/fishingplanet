@@ -85,7 +85,7 @@ class SettingsScene(Scene):
         test = ("테스트: 환상 물고기", "button",
                 lambda: "다음 착수에 나옴 (취소)" if s.get("test_phantom") else "다음 착수에 부르기",
                 lambda: s.set("test_phantom", not s.get("test_phantom")))
-        show = ("테스트: 환상 포획 연출", "button", lambda: "열기", self._open_phantom_test)
+        show = ("테스트: 포획 연출 (환상·전설)", "button", lambda: "열기", self._open_phantom_test)
         rows = [tele, cards, slot, cb, snd, test, show]
         if self.game.save is not None:
             rows.append(("테스트: 환상 낚은 기록", "button",

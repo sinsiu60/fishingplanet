@@ -54,8 +54,8 @@ class Lifecycle:
         """낚시 화면이 맨 위면 일시정지 화면을 띄운다 (메뉴 화면은 원래 멈춰 있음)."""
         from src.scene.fishing_scene import FishingScene
         cur = self.game.scenes.current
-        if isinstance(cur, FishingScene) and getattr(cur, "phantom_show", None) is not None:
-            return  # 환상 포획 연출: 일시정지 화면 없이 그대로 멈췄다가 (음악과 함께) 이어서 — 보상·도감은 이미 저장됨
+        if isinstance(cur, FishingScene) and getattr(cur, "catch_show", None) is not None:
+            return  # 환상·전설 포획 연출: 일시정지 화면 없이 그대로 멈췄다가 (음악과 함께) 이어서 — 보상·도감은 이미 저장됨
         if isinstance(cur, FishingScene) and cur.landing is None:
             from src.scene.pause import PauseScene
             self.game.scenes.push(PauseScene(self.game, cur))

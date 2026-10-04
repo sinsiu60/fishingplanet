@@ -148,7 +148,7 @@ class FishingScene(Scene):
         self.phantom_fx = PhantomFx(phantom.spawn_cfg())  # 환상의 물고기 보랏빛 파장 (33장)
         self.force_phantom = False   # 디버그 F7: 다음 착수 환상 강제
         self.glints: list[list[float]] = []  # 먼 수면 보라빛 물결 (x, z, t)
-        self.phantom_show = None     # 환상어 포획 연출 (src/render/phantom_show.py)
+        self.catch_show = None     # 환상·전설 포획 연출 (src/render/phantom_show.py · legend_show.py)
         self.phantom_song_ch = self.phantom_loop_ch = None
         self.show_pity = False       # 디버그 F8: 낚시터별 천장 카운트
         self.dragon_fx: DragonTransform | None = None
@@ -590,7 +590,7 @@ class FishingScene(Scene):
         sfx = self.sfx
         delay = getattr(sfx, "latency", 0.0) + getattr(sfx, "offset_s", 0.0)
         w, h = self.cam.width, self.cam.height
-        self.phantom_show = PhantomShow(f.fish, f.result, self.catch_news, variant, w, h, mobile=self.touch,
+        self.catch_show = PhantomShow(f.fish, f.result, self.catch_news, variant, w, h, mobile=self.touch,
                                         reduce=self.settings.get("reduce_fx"), delay=delay,
                                         low=getattr(self.game, "slow_device", False) or self.settings.get("fps") == 30)
         self.fight_audio.stop()
@@ -601,8 +601,31 @@ class FishingScene(Scene):
         self.phantom_loop_ch = None
         self.phantom_fx.k_from = self.phantom_fx.k = 1.0  # 연출 동안 보라 100%
 
-    def _update_phantom_show(self, dt: float) -> None:
-        sh = self.phantom_show
+    def _start_legend_show(self, f) -> None:
+        """전설 포획 연출 (34장): 보스 테마는 끊기지 않고 '전설의 노래' 끝맺음 타격(같은 으뜸음)으로 이어진다."""
+        from src.render.legend_show import LegendShow, pick_variant
+        from src.audio import legend_song
+        variant = pick_variant(f.fish, self.catch_news, self.save)
+        cont = self.spot.get("continent", "sharmion")
+        sfx = self.sfx
+        delay = getattr(sfx, "latency", 0.0) + getattr(sfx, "offset_s", 0.0)
+        w, h = self.cam.width, self.cam.height
+        self.catch_show = LegendShow(f.fish, f.result, self.catch_news, variant, w, h, mobile=self.touch,
+                                     reduce=self.settings.get("reduce_fx"), delay=delay,
+                                     low=getattr(self.game, "slow_device", False) or self.settings.get("fps") == 30)
+        self.fight_audio.stop()
+        self.signal_audio.stop()
+        sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)
+        name = legend_song.preload(sfx, variant, cont)
+        self.phantom_song_ch = sfx.play(name, 1.0) if name else None
+        self.phantom_loop_ch = None
+        self.game.haptics.vibrate("perfect", 1.0)  # 쾅: 강하게 1회
+
+    def _update_catch_show(self, dt: float) -> None:
+        sh = self.catch_show
+        if getattr(sh, "kind", "phantom") == "legend":
+            self._update_legend_show(dt)
+            return
         for ev in sh.update(dt):
             if ev == "breath":
                 self.game.haptics.vibrate("nibble", 0.4)  # 숨 멎음: 심장 박동 1회
@@ -627,14 +650,42 @@ class FishingScene(Scene):
         self.sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.3, release=1.5)
         self.phantom_fx.k = 1.0
 
-    def _close_phantom_show(self) -> None:
+    def _update_legend_show(self, dt: float) -> None:
+        sh = self.catch_show
+        for ev in sh.update(dt):
+            if ev == "climax":
+                self.game.haptics.vibrate("legend", 0.8)   # 절정: 길게
+            elif ev == "record" and sh.news.get("new"):
+                self.game.haptics.vibrate("nibble", 0.7)   # 금 인장: 짧게
+            elif ev.startswith("icon:"):
+                self.sfx.play(f"sfx_legend_icon{min(3, int(ev.split(':')[1]))}", 0.6)
+            elif ev in ("wait", "skip"):
+                if ev == "skip" and self.phantom_song_ch is not None:
+                    self.phantom_song_ch.fadeout(300)
+                if self.phantom_loop_ch is None:
+                    from src.audio import legend_song
+                    name = legend_song.preload(self.sfx, "loop", self.spot.get("continent", "sharmion"))
+                    if name:
+                        self.phantom_loop_ch = self.sfx.play(name, 0.55)
+                        if self.phantom_loop_ch is not None:
+                            self.phantom_loop_ch.play(self.sfx.sounds[name], loops=-1, fade_ms=600)
+        self.sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.3, release=1.5)
+
+    def _close_catch_show(self) -> None:
         """카드 닫기: 노래·여운 정리 → 1.5초에 걸쳐 원래 색·대기 음악 (덕킹 1.5초 복귀) → 튜토리얼(첫 포획)."""
+        sh = self.catch_show
+        final = getattr(sh, "final", False)
         for ch in (getattr(self, "phantom_song_ch", None), getattr(self, "phantom_loop_ch", None)):
             if ch is not None:
-                ch.fadeout(600)
-        self.phantom_show = None
-        self.phantom_fx.mode, self.phantom_fx.k = "fight", 1.0
+                ch.fadeout(1500 if final else 600)  # 최종 보스: 노래 여운이 엔딩 음악 위로 이어지며 사라짐
+        self.catch_show = None
+        if getattr(sh, "kind", "phantom") == "phantom":
+            self.phantom_fx.mode, self.phantom_fx.k = "fight", 1.0
         self._end_fight()
+        if final:
+            self.game.fade_in(load_json("legend_catch_timeline.json")["ending_fade_sec"])
+        elif getattr(sh, "kind", "") == "legend" and sh.news.get("legend_line"):
+            self.toasts.show(sh.news["legend_line"], phantom.COLOR_LIGHT, 3.5, 11)  # 환상 복선 한 줄 (첫 전설 포획)
 
     def _phantom_retreat(self, x: float, z: float) -> None:
         """환상어가 떠났다 (놓침·직접 회수·챔질 놓침): 사라진 지점으로 보라가 빨려 들어감 + 한 줄."""
@@ -647,10 +698,10 @@ class FishingScene(Scene):
 
     def _left_click(self) -> None:
         c, f = self.cast, self.fight
-        if self.phantom_show is not None:
-            sh = self.phantom_show
+        if self.catch_show is not None:
+            sh = self.catch_show
             if sh.waiting():
-                self._close_phantom_show()
+                self._close_catch_show()
             elif sh.can_skip():
                 sh.skip()  # 건너뛰어도 보상·도감은 이미 처리됨
             return
@@ -778,6 +829,21 @@ class FishingScene(Scene):
         self.slack_t = self.red_t = 0.0
         if self.tutorial.want("fight_intro"):
             self._open_card("fight_intro", "gauge")
+        self._preload_catch_song(fish)
+
+    def _preload_catch_song(self, fish: dict) -> None:
+        """환상·전설 파이팅 시작 때 포획 곡을 미리 올려 둔다 (포획 순간 파일 읽기로 끊기지 않게)."""
+        cont = self.spot.get("continent", "sharmion")
+        if phantom.is_phantom(fish):
+            from src.audio import phantom_song as song
+            variants = ("full", "short", "extended", "loop")
+        elif fish.get("rarity") == "legend":
+            from src.audio import legend_song as song
+            variants = ("full", "short", "loop")
+        else:
+            return
+        for v in variants:
+            song.preload(self.sfx, v, cont)
 
     def _end_fight(self) -> None:
         last = self.fight.result if self.fight is not None else None
@@ -1218,8 +1284,8 @@ class FishingScene(Scene):
             self._on_fight_event(ev)
         f.events.clear()
         if f.phase in ("caught", "lost"):
-            if self.phantom_show is not None:
-                self._update_phantom_show(dt)
+            if self.catch_show is not None:
+                self._update_catch_show(dt)
                 return
             if self.landing is not None:
                 self._update_landing(dt)
@@ -2093,18 +2159,20 @@ class FishingScene(Scene):
                 bonus += phantom.reward_cfg()["blessing_chest"]  # 물결의 축복: 상자 +1%p
             ph_first = phantom.is_phantom(f.fish) and not phantom.caught(self.save, f.fish["id"])
             self.chest_drop = treasure.roll_drop(self.save, f.fish, f.result["rank"], bonus=bonus, first=ph_first)
+            legend_scales = 0
             if f.fish["rarity"] == "legend" and self.spot.get("continent") == "eldrasion":
-                # 전설 비늘: 첫 포획 5개, 이후 2개 (T7·T8, 봉인 찌 재료)
-                n = 2 if self.save.caught(f.fish["id"]) else 5
-                self.save.data["scales"] += n
-                self.toasts.show(f"전설 비늘 +{n} (보유 {self.save.data['scales']})", (255, 214, 90), 3.0, 11)
-            if not phantom.is_phantom(f.fish):  # 환상어는 전용 포획 연출 (아래 PhantomShow)
+                # 전설 비늘: 첫 포획 5개, 이후 2개 (T7·T8, 봉인 찌 재료) — 전설 포획 카드에 보상 아이콘으로
+                legend_scales = 2 if self.save.caught(f.fish["id"]) else 5
+                self.save.data["scales"] += legend_scales
+            if not phantom.is_phantom(f.fish) and f.fish["rarity"] != "legend":  # 환상·전설은 전용 포획 연출 (아래)
                 self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46, chest=self.chest_drop,
                                                 golden=golden)
             f.result["fish"] = shown
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
             self.catch_news["chest"] = self.chest_drop
+            if legend_scales:
+                self.catch_news["legend_scales"] = legend_scales
             self.catch_news["title_frame"] = phantom.state(self.save)["title_frame"]
             if f.fish["rarity"] == "legend" and self.catch_news.get("new"):
                 self.catch_news["legend_line"] = phantom.hints()["legend_line"]
@@ -2125,6 +2193,8 @@ class FishingScene(Scene):
             self.game.save_now()  # 보상·도감은 연출 전에 저장 (건너뛰기·백그라운드에도 안전)
             if phantom.is_phantom(f.fish):
                 self._start_phantom_show(f)
+            elif f.fish["rarity"] == "legend":
+                self._start_legend_show(f)
         elif ev == "escape_start":
             # 마지막 발악: 눈이 번쩍 + 물보라 폭발 + 화면 흔들림
             pos = self._fish_screen()
@@ -2211,8 +2281,8 @@ class FishingScene(Scene):
                 layer.blit(m, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
                 canvas.blit(layer, (0, 0))
             pfx.draw_ring(canvas, int(cam.horizon))
-        if self.phantom_show is not None:
-            self.phantom_show.draw(canvas, pal)  # 환상어 포획 연출 (카드까지)
+        if self.catch_show is not None:
+            self.catch_show.draw(canvas, pal)  # 환상어 포획 연출 (카드까지)
             return
         if self.landing is not None:
             self.landing.draw(canvas, pal)
