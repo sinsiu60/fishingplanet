@@ -13,6 +13,8 @@ ACTIONS = {
     "fish.bag": ["menu:bag"],
     "fight.reel": ["reel_tap"],
     "chest.menu": ["menu:chest"],
+    "dex.close": ["menu:dex", "back"],
+    "shop.close": ["back"],
 }
 
 

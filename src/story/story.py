@@ -260,39 +260,42 @@ def goal(save) -> str | None:
     st = state(save)
     s = st["seen_scenes"]
     if "E-01" in s:
-        return g[17]
+        return g[18]
     if _eldra(save):
         if "C5-04" in s or _visited(save, "world_tree"):
-            return g[16]
+            return g[17]
         if "C5-03" in s:
-            return g[15]
+            return g[16]
         if _unlocked(save, "world_tree"):
-            return g[14]
+            return g[15]
         if "C4-05" in s:
-            return g[13]
+            return g[14]
         if _unlocked(save, "volcano"):
-            return g[12]
-        return g[11]
+            return g[13]
+        return g[12]
     if "C3-03" in s:
-        return g[10]
+        return g[11]
     if _visited(save, "secret") or "C3-02" in s:
-        return g[9]
+        return g[10]
     if "C2-05" in s:
-        return g[8]
+        return g[9]
     if _unlocked(save, "deep"):
-        return g[7]
+        return g[8]
     if _unlocked(save, "offshore"):
-        return g[6]
+        return g[7]
     if save.caught("silver_bass"):
-        return g[5]
+        return g[6]
     if "C1-06" in s:
-        return g[4]
+        return g[5]
     if _unlocked(save, "breakwater"):
-        return g[3]
+        return g[4]
     if "C1-04" in s:
-        return g[2]
+        return g[3]
     if _catches(save) >= 1:
-        return g[1]
+        # 첫 포획 뒤: 판매·구매 튜토리얼(TG-06·07)이 끝나야 백 노인 (TUTORIAL.md TG-04 · 튜토리얼 안내를 껐으면 첫 판매로)
+        tut = save.data.get("tutorial", {})
+        sold = "TG-07" in tut.get("done", []) or (not tut.get("enabled", True) and save.data["stats"].get("earned", 0) > 0)
+        return g[2] if sold else g[1]
     return g[0]
 
 

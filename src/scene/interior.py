@@ -150,7 +150,12 @@ class InteriorScene(Scene):
                 self._begin_leave(farewell=False)
                 return
         self.wait_menu = True
+        if self.menu_on and not self.replay:
+            self.game.guide.event(f"interior_ready:{self.npc}")   # 가이드 튜토리얼 (TG-06 판매 · TG-12 강화 · TG-18)
 
+    def tut_busy(self) -> bool:
+        """대사가 진행 중이면 가이드는 기다림 (메뉴가 뜬 뒤 시작)."""
+        return not self.wait_menu or self.leaving is not None or self.fade_in > 0
     def _plain(self) -> str:
         return hud.strip_tags(self._text()) if self.line else ""
 
@@ -205,11 +210,11 @@ class InteriorScene(Scene):
         elif item == "leave":
             self._begin_leave()
 
-    def _open_shop(self, mode: str) -> None:
+    def _open_shop(self, mode: str, tabs: list | None = None, tab: str | None = None) -> None:
         from src.scene.shop import ShopScene
-        tabs = self.c["shop_tabs"][mode]
+        tabs = tabs or self.c["shop_tabs"][mode]
         title = {"buy": "사기", "sell": "팔기", "enhance": "강화"}[mode]
-        self.shop = ShopScene(self.game, self.fishing, tab=tabs[0], frame=(130, 6, 342, 258), host=self, tabs=tabs,
+        self.shop = ShopScene(self.game, self.fishing, tab=tab or tabs[0], frame=(130, 6, 342, 258), host=self, tabs=tabs,
                               title=f"{self.nc['sign']} · {title}")
         self.react_line = None
         self.game.scenes.push(self.shop)
@@ -381,6 +386,11 @@ class InteriorScene(Scene):
         self._draw_talk(canvas, g["talk"])
         if self.menu_on and self.leaving is None:
             self._draw_menu(canvas, g["menu"])
+            from src.tutorial import targets as T
+            for it, rr in zip(self._menu_items(), self._menu_rects()):
+                T.mark(f"interior.menu.{it}", rr)
+        from src.tutorial import targets as T
+        T.mark("interior.portrait", (g["cx"] - 56, g["top_h"] - 150, 112, 140))
         self._draw_fade(canvas)
         draw_cursor(canvas, self.mouse)
 

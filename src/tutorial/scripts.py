@@ -145,3 +145,29 @@ def _close_catch(game) -> None:
 
 
 ACTIONS["close_catch"] = _close_catch
+
+
+# ───────────────────────── 도감 · 상점 (TG-04 ~ TG-07) ─────────────────────────
+def _save_only(game) -> None:
+    """다음 목표는 story.goal() 이 튜토리얼 완료 기록으로 고른다 — 여기선 저장만."""
+    if game.save is not None:
+        game.save_now()
+
+
+ACTIONS["goal_sell"] = _save_only   # TG-04 끝: '하루네 낚시점에서 물고기를 팔아 보자'
+ACTIONS["goal_baek"] = _save_only   # TG-07 끝: '마을 오두막의 노인을 만나 보자'
+
+
+def _shop_to_buy(game) -> None:
+    """TG-06 끝 → TG-07: 팔기 패널을 판매 + 장비 탭이 같이 있는 패널로 바꿔 '낚싯대' 탭을 누르게."""
+    cur = game.scenes.current
+    if type(cur).__name__ != "ShopScene" or cur.host is None:
+        return
+    host = cur.host
+    game.scenes.pop()
+    host.shop = None
+    tabs = ["sell"] + host.c["shop_tabs"]["buy"]
+    host._open_shop("buy", tabs=tabs, tab="sell")
+
+
+ACTIONS["shop_to_buy"] = _shop_to_buy

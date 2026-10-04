@@ -228,6 +228,12 @@ def draw(scene, canvas, d: pygame.Rect, f: dict, kind: str = "normal", border=No
         _draw_rows(canvas, d, rows, top, clicks)
         return clicks
     _draw_rows(canvas, d, rows, d.y + 165, clicks)
+    if kind == "normal":   # 가이드 튜토리얼 강조 구역 (TG-04)
+        from src.tutorial import targets as T
+        for tid, y0, y1 in (("dex.detail.name", 2, 54), ("dex.detail.habitat", 55, 83), ("dex.detail.records", 84, 125),
+                            ("dex.detail.stars", 126, 138), ("dex.detail.mastery", 138, 158),
+                            ("dex.detail.unlocks", 159, d.h - 2)):
+            T.mark_ui(scene, tid, (d.x + 2, d.y + y0, d.w - 4, y1 - y0))
     return clicks
 
 

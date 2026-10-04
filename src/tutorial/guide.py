@@ -231,11 +231,20 @@ class Guide:
 
     # ── 입력 ──
     def skip_rect(self) -> pygame.Rect:
-        w = self.game.screen.canvas.get_width()
+        """오른쪽 위 작게. 강조 대상이나 상점 소지금과 겹치면 왼쪽 위 → 왼쪽 아래로 비켜 남."""
+        w, h = self.game.screen.canvas.get_size()
         x = w - 62
         if self.game.input.kind == "touch":   # 모바일: 오른쪽 위 가방 버튼 왼쪽
             from src.core.config import load_json
             x -= load_json("mobile_config.json")["hud_inset_px"] + self.game.screen.safe_x
+        s = self.step
+        avoid = targets.rects(self.game, "shop.money")
+        if s is not None and s.get("target"):
+            avoid += targets.rects(self.game, s["target"], self.run)
+        for r in (pygame.Rect(x, 4, 58, 15), pygame.Rect(4 + self.game.screen.safe_x, 4, 58, 15),
+                  pygame.Rect(4 + self.game.screen.safe_x, h - 19, 58, 15)):
+            if not any(r.colliderect(a) for a in avoid):
+                return r
         return pygame.Rect(x, 4, 58, 15)
 
     def _modal_rects(self):

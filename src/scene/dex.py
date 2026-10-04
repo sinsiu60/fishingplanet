@@ -83,6 +83,52 @@ class DexScene(Scene):
         self.title_page = 0
         self.dpop = None          # 상세 칸 해금 내용 창 (제목, 줄들)
         self.detail_clicks = []
+        game.guide.event("dex_open")   # 가이드 튜토리얼 (TG-05 패턴 사전)
+
+    # ── 가이드 튜토리얼 (TG-04·05·PH) ──
+    def _first_id(self) -> str | None:
+        """'방금 잡은' 물고기: 살림망 마지막 → 없으면 이 탭에서 잡은 첫 물고기."""
+        kn = self.save.data.get("keepnet", [])
+        ids = [f["id"] for f in self.spot_fish()]
+        if kn and kn[-1]["id"] in ids:
+            return kn[-1]["id"]
+        return next((i for i in ids if self.save.dex_entry(i)), None)
+
+    def tut_cond(self, name: str):
+        if name == "dex_sel_first":
+            fishes = self.spot_fish()
+            return getattr(self, "tut_picked", False) and bool(fishes) and fishes[min(self.sel, len(fishes) - 1)]["id"] == self._first_id()
+        if name == "dex_patterns":
+            return self.pat_mode
+        if name == "dex_phantom":
+            return self.ph_mode
+        return None
+
+    def _mark_targets(self) -> None:
+        from src.tutorial import targets as T
+        T.mark_ui(self, "dex.close", self.close_btn.rect)
+        T.mark_ui(self, "dex.btn.patterns", self.pat_btn.rect)
+        T.mark_ui(self, "dex.btn.stars", self.star_btn.rect)
+        if self.ph_on:
+            T.mark_ui(self, "dex.btn.phantom", self.ph_btn.rect)
+        if self.pat_mode:
+            T.mark_ui(self, "dex.patterns", self._pat_rect(0).unionall([self._pat_rect(len(self.PAT_KEYS) - 1)]))
+            return
+        if self.mut_mode or self.star_mode or self.lim_mode or self.ph_mode:
+            return
+        r = self.tabs.rects[0].unionall(self.tabs.rects)
+        T.mark_ui(self, "dex.tabs", r)
+        T.mark_ui(self, "dex.spot_stars", (380, 31, 88, 14))
+        first = self._first_id()
+        for i, f in enumerate(self.spot_fish()):
+            cr = self.card_rect(i)
+            T.mark_ui(self, f"dex.card.{f['id']}", cr)
+            if f["id"] == first:
+                T.mark_ui(self, "dex.card.first", cr)
+            if f["rarity"] == "legend":
+                T.mark_ui(self, "dex.boss", cr)
+            elif not self.save.dex_entry(f["id"]):
+                T.mark_ui(self, "dex.cards.unknown", cr)
 
     def _toggle_mut(self) -> None:
         self.mut_mode = not self.mut_mode
@@ -230,6 +276,7 @@ class DexScene(Scene):
             for i in range(len(self.spot_fish())):
                 if self.card_rect(i).collidepoint(m):
                     self.sel, self.dpop = i, None
+                    self.tut_picked = True
                     self.game.sfx.play("ui_click")
 
     def update(self, dt: float) -> None:
@@ -245,6 +292,7 @@ class DexScene(Scene):
         canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (6, 6, 468, 260))
         self._draw_cover(canvas)
+        self._mark_targets()
         total = len(self.fish)
         got = self.save.dex_count()
         golds = sum(1 for e in self.save.data["dex"].values() if e.get("best_rank") == "S")

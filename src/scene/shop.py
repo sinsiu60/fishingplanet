@@ -138,6 +138,7 @@ class ShopScene(Scene):
         self.bulk_scroll = 0
         self.dscroll, self.dpages = 0, 1   # 상세 능력치·설명이 칸을 넘칠 때 넘김
         self.close_btn = ui.Button((fr.right - 66, fr.bottom - 21, 58, 16), "닫기" if host else "닫기 (B)", self._close)
+        self.tut_picked = False   # 가이드 튜토리얼: 줄을 직접 골랐는지 (처음부터 골라져 있는 줄로 바로 넘어가지 않게)
         self._layout()
 
     def _layout(self) -> None:
@@ -317,6 +318,7 @@ class ShopScene(Scene):
                 self._say("판매는 하루네 낚시점·엘라 공방에서 할 수 있어요", ui.BAD)
                 return
             gained = self.save.sell(idx)
+            self.game.guide.event("sold")   # 가이드 튜토리얼 (TG-06)
             self.game.sfx.play("sfx_coin")
             self._react("sell")
             self._say(f"+{ui.money_text(gained)}", ui.GOOD)
@@ -472,6 +474,7 @@ class ShopScene(Scene):
         self.game.sfx.play("sfx_coin")
         self._react("sell")
         self._say(f"{len(todo)}마리 팔았어요 +{ui.money_text(total)}", ui.GOOD)
+        self.game.guide.event("sold")
 
     def _bulk_rects(self):
         fr = self.frame
@@ -543,6 +546,7 @@ class ShopScene(Scene):
         elif a.name == "primary":
             m = a.pos
             if self.tabs.click(m):
+                self.tut_picked = False
                 self.sel, self.scroll, self.expanded = 0, 0, None
                 self._layout()
                 self.game.sfx.play("ui_tab")
@@ -571,6 +575,7 @@ class ShopScene(Scene):
                 i = self._row_at(m)
                 if i is not None and i < len(self._rows()):
                     self._select(i)
+                    self.tut_picked = True
                     self.game.sfx.play("ui_click")
 
     def _row_at(self, m) -> int | None:
@@ -617,7 +622,77 @@ class ShopScene(Scene):
         self.close_btn.draw(canvas, self.mouse)
         if self.bulk is not None:
             self._draw_bulk(canvas)
+        self._mark_targets(rows)
         draw_cursor(canvas, self.mouse)
+
+    # ── 가이드 튜토리얼 (TG-06·07·12·18) ──
+    def _tut_first(self) -> str | None:
+        """'붕어 줄' = 살림망에 가장 먼저 들어온 물고기."""
+        net = self.save.data["keepnet"]
+        return net[0]["id"] if net else None
+
+    def _row_id(self, row) -> str:
+        return self.save.data["keepnet"][row["idxs"][0]]["id"] if self.kind == "sell" else row["id"]
+
+    def tut_cond(self, name: str):
+        rows = self._rows()
+        cur = self._row_id(rows[min(self.sel, len(rows) - 1)]) if rows else None
+        if name == "shop_sell":
+            return self.kind == "sell"
+        if name == "shop_sel_first":
+            return self.kind == "sell" and self.tut_picked and cur == self._tut_first()
+        if name.startswith("shop_tab_"):
+            return self.kind == name[9:]
+        if name == "shop_sel_glass":
+            return self.kind == "rod" and self.tut_picked and cur == "glass"
+        if name == "shop_sel_paralysis":
+            return self.kind == "float" and self.tut_picked and cur == "paralysis_float"
+        if name == "shop_sel_any":
+            return self.tut_picked
+        if name == "shop_enhance":
+            return self.kind == "enhance"
+        return None
+
+    def _mark_targets(self, rows) -> None:
+        from src.tutorial import targets as T
+        fr = self.frame
+        T.mark_ui(self, "shop.money", (fr.right - 92, fr.y + 1, 86, 16))
+        T.mark_ui(self, "shop.close", self.close_btn.rect)
+        gear = [r for t, r in zip(self.tab_ids, self.tabs.rects) if GROUP[t] == 1]
+        for t, r in zip(self.tab_ids, self.tabs.rects):
+            T.mark_ui(self, f"shop.tab.{t}", r)
+        if gear:
+            T.mark_ui(self, "shop.tabs.gear", gear[0].unionall(gear))
+        if self.bulk is not None:
+            return
+        T.mark_ui(self, "shop.list", self.LIST)
+        first = self._tut_first()
+        tiers = []
+        for i, row in enumerate(rows):
+            r = self._row_rect(i)
+            if r is None:
+                continue
+            rid = self._row_id(row)
+            T.mark_ui(self, f"shop.row.{rid}", r)
+            if self.kind == "sell" and rid == first:
+                T.mark_ui(self, "shop.row.first", r)
+            if self.kind not in ("sell", "enhance"):
+                tiers.append(pygame.Rect(r.x + 4, r.y + 1, 24, (r.h - 2) if self.wide else 14))
+        if tiers:
+            T.mark_ui(self, "shop.list.tier", tiers[0].unionall(tiers))
+        D = self.DETAIL
+        if self.kind == "sell" and rows:
+            o = self._sell_off()
+            T.mark_ui(self, "shop.detail.calc", (D.x + 6, D.y + o + 107, D.w - 12, 27))
+            T.mark_ui(self, "shop.btn.sell", self.sell_btn.rect)
+            T.mark_ui(self, "shop.btn.lock", self.lock_btn.rect)
+        if self.kind == "sell":
+            T.mark_ui(self, "shop.btn.bulk", self.sell_all_btn.rect)
+        elif rows:
+            T.mark_ui(self, "shop.btn.action", self.action_btn.rect)
+            if self.kind != "enhance":
+                T.mark_ui(self, "shop.detail.compare", self._info_area())
+                T.mark_ui(self, "shop.detail.price", (D.x + 4, D.bottom - 35, D.w - 8, 18))
 
     def _draw_tabs(self, canvas) -> None:
         for i, (r, label) in enumerate(zip(self.tabs.rects, self.tabs.labels)):
