@@ -50,6 +50,8 @@ class VillageScene(Scene):
         game.adaptive.set_context(cont, None)   # 마을: 대륙 테마
         game.adaptive.set("menu")
         self.season = seasons.current(game.settings)
+        from src.render.season_fx import SeasonParticles
+        self.particles = SeasonParticles()
         self.btns = []
         # 계절이 바뀐 뒤 처음 들어옴: 계절 알림 + 상점 주인의 계절 대사 (35-4)
         self.season_banner = 0.0
@@ -118,6 +120,11 @@ class VillageScene(Scene):
                 self._act("place", "dock")
             elif a.value in ("dex", "inventory", "shop", "quests", "chest"):
                 self.fishing.open_menu(a.value)
+        elif a.name == "debug" and a.value == "F12":
+            from src.core.config import load_json as _lj
+            if _lj("fishing_config.json").get("debug_keys") or _lj("mobile_config.json").get("debug_build"):
+                seasons.cycle_forced()
+                self.season = seasons.current(self.game.settings)
         elif a.name == "scroll":
             self.ox -= a.value * 50
         elif a.name == "drag":
@@ -166,7 +173,9 @@ class VillageScene(Scene):
         self.t += dt
         f = self.fishing
         f.clock.update(dt)      # 마을에서도 시간은 흐른다 (등불·창문 불빛)
-        f.ambience.update(dt, self.cfg["ambience"], f.clock.period()[0], f.weather)
+        f.ambience.update(dt, self.cfg["ambience"], f.clock.period()[0], f.weather, season=self.season)
+        self.particles.update(dt, self.season, self.cont, self.game.screen.canvas.get_width(), self.game.screen.canvas.get_height(),
+                              f.clock.period()[0], f.weather, mobile=self.game.input.kind == "touch")
         self.game.adaptive.set_context(self.cont, None)
         self.game.adaptive.set("menu")
         self.mouse = self.game.input.pointer
@@ -194,8 +203,9 @@ class VillageScene(Scene):
 
     # ── 그리기 ──
     def _pal(self) -> dict:
+        from src.render.season_fx import season_palette
         f = self.fishing
-        return themed_palette(f.palette.sample(f.clock.hour), {}, f.weather)
+        return season_palette(themed_palette(f.palette.sample(f.clock.hour), {}, f.weather), self.season, self.cont)
 
     def draw_world(self, canvas) -> None:
         """마을 풍경 (상점·도감 같은 겹친 화면 뒤에도 이것이 보인다)."""
@@ -219,6 +229,8 @@ class VillageScene(Scene):
                 r = vr.draw_place(canvas, p, sx, pal, night, self.t, style, self.season,
                                   self.hover == ("place", p["id"]))
                 hits.append(("place", p["id"], r))
+        from src.render.season_fx import draw_village_decor
+        draw_village_decor(canvas, self.cfg["places"], ox, self.season, night, self.t, vr.GROUND)   # 계절 장식
         vr.draw_lamps(canvas, ox, w, style, night, self.t, self.width)
         for nid, n in self.cfg["npcs"].items():
             sx = n["x"] - ox
@@ -228,6 +240,7 @@ class VillageScene(Scene):
         if style == "stone":
             vr.draw_motes(canvas, w, self.t, night)
         self._weather(canvas, w, h)
+        self.particles.draw(canvas)
         self.hits = hits
 
     def _weather(self, canvas, w, h) -> None:

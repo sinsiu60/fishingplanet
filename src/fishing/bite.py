@@ -35,17 +35,24 @@ def bait_tier_mult(bait: dict | None, key: str) -> float:
 
 def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir",
               bait: dict | None = None, rare_bonus: float = 0.0, pref: str | None = None,
-              mods: dict | None = None) -> dict | None:
-    """pref = 지금 루어 리듬(그 리듬을 좋아하는 물고기 ×1.5), mods = 수면 징후 보정."""
+              mods: dict | None = None, season: str | None = None, extra: list | None = None) -> dict | None:
+    """pref = 지금 루어 리듬(그 리듬을 좋아하는 물고기 ×1.5), mods = 수면 징후 보정.
+    season = 지금 계절 (종별 잘 나옴 ×1.5 / 안 나옴 ×0.5, data/seasons.json), extra = [(물고기, 가중치)] 계절·날씨 이벤트 한정 물고기
+    (그 낚시터 기준 시간·날씨 조건 없이 추가, 낚이면 spot = 지금 낚시터)."""
     cfg = load_json("fishing_config.json")["bite"]
+    sw = load_json("seasons.json") if season else None
     if pref or mods:
         from src.fishing.lure import cfg as lure_cfg, profile_of
         pref_mult = lure_cfg()["pref_weight_mult"]
     candidates, weights = [], []
-    for f in load_json("fish.json")["fish"]:
+    pool = [(f, None) for f in load_json("fish.json")["fish"]] + [(dict(f, spot=spot), w0) for f, w0 in (extra or [])]
+    for f, w0 in pool:
         if f["spot"] != spot or period not in f["times"] or weather not in f["weathers"]:
             continue
-        w = f.get("spawn_weight", cfg["rarity_weight"].get(f["rarity"], 0))  # 종별 덮어쓰기 (조건 까다로운 희귀)
+        w = w0 if w0 is not None else f.get("spawn_weight", cfg["rarity_weight"].get(f["rarity"], 0))  # 종별 덮어쓰기 (조건 까다로운 희귀)
+        if sw is not None and f["id"] in sw["fish"]:
+            sf = sw["fish"][f["id"]]
+            w *= sw["mult"]["good"] if season in sf["good"] else sw["mult"]["bad"] if season in sf["bad"] else 1.0
         if weather == "storm" and f["rarity"] in ("rare", "legend"):
             w *= cfg["storm_rare_mult"]  # 폭풍: 희귀어 증가
         if bait:
@@ -221,7 +228,8 @@ class BiteController:
 
     def _pick(self, pref: str | None = None) -> dict | None:
         return pick_fish(self.period, self.weather, self.cast_distance, self.rnd, self.spot, self.bait,
-                         rare_bonus=self.rare_bonus, pref=pref, mods=self.sign_mods or None)
+                         rare_bonus=self.rare_bonus, pref=pref, mods=self.sign_mods or None,
+                         season=getattr(self, "season", None), extra=getattr(self, "extra_pool", None))
 
     def _update_lure(self, dt: float) -> None:
         """WAIT 중 루어: 리듬 점수 → 후보 물고기 관심도 → 대기 시계·그림자."""

@@ -20,9 +20,11 @@ class Ambience:
         self.key = None
         self.thunder: list[list] = []          # [남은 초, 이름, 음량]
 
-    def _frags(self, spot: str, weather: str) -> list:
+    def _frags(self, spot: str, weather: str, season: str | None = None) -> list:
         out = list(self.cfg["spots"].get(spot, {}).get("frags", []))
         out += self.cfg["weather"].get(weather, {}).get("frags", [])
+        if season and not spot.startswith(("deep", "crystal_cave")):   # 계절 환경음 (35-4) — 심해·동굴은 없음
+            out += load_json("seasons.json")["ambience"].get(season, [])
         return out
 
     def stop(self) -> None:
@@ -43,7 +45,7 @@ class Ambience:
         return d
 
     def update(self, dt: float, spot: str, period: str, weather: str, fighting: bool = False,
-               legend: bool = False) -> None:
+               legend: bool = False, season: str | None = None) -> None:
         c = self.cfg
         fog = weather == "fog"
         self.sfx.muffle = fog
@@ -62,8 +64,8 @@ class Ambience:
             self.sfx.loop(name, True, vol)
         self.beds = want
         # 조각: 낚시터·날씨가 바뀌면 처음 간격을 새로 뽑는다 (모두 한꺼번에 울리지 않게)
-        key = (spot, weather)
-        frags = self._frags(spot, weather)
+        key = (spot, weather, season)
+        frags = self._frags(spot, weather, season)
         if key != self.key:
             self.key = key
             self.timers = {f[0]: self.rnd.uniform(f[1] * 0.3, f[2]) for f in frags}

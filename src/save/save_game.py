@@ -125,6 +125,9 @@ def fish_by_id(fid: str) -> dict:
     if f is None:  # 환상어 (data/phantom.json — 도감 %·해금 집계 밖)
         from src.fishing.phantom import by_id
         f = by_id(fid)
+    if f is None:  # 계절·날씨 이벤트 한정 (도감 %·해금 집계 밖)
+        from src.save.dexbook import limited_fish
+        f = next((x for x in limited_fish() if x["id"] == fid), None)
     if f is None:
         raise StopIteration(fid)
     return f
@@ -677,7 +680,9 @@ class SaveGame:
 
     # ── 도감 ──
     def dex_count(self) -> int:
-        return sum(1 for e in self.data["dex"].values() if e.get("count", 0) > 0)
+        """도감 종 수 (해금 조건) — fish.json 물고기만 (계절·이벤트 한정은 빼서 진행이 막히지 않게)."""
+        ids = {f["id"] for f in all_fish()}
+        return sum(1 for fid, e in self.data["dex"].items() if e.get("count", 0) > 0 and fid in ids)
 
     def dex_entry(self, fish_id: str) -> dict | None:
         e = self.data["dex"].get(fish_id)

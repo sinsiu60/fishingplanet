@@ -1,0 +1,632 @@
+{
+ "_설명": "계절 (DESIGN.md 35-4). fish = 기존 물고기 계절 가중치 초안 (good ×1.5 / bad ×0.5, 전설·심해 제외 = 계절 무관). 이름(송어·은어·잉어·메기·빙어…)으로 정하고 나머지는 종 id로 고르게 나눔 — 여기서 고치면 된다. ambience = 계절 환경음 조각 [소리, 최소 초, 최대 초, 음량, 때].",
+ "mult": {
+  "good": 1.5,
+  "bad": 0.5
+ },
+ "fish": {
+  "crucian": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "minnow": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "bluegill": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "bass": {
+   "good": [
+    "summer",
+    "autumn"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "carp": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "catfish": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "kkuri": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  },
+  "snakehead": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "pale_chub": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "aucha_perch": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "cherry_salmon": {
+   "good": [
+    "spring",
+    "autumn"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "mandarin_fish": {
+   "good": [
+    "summer",
+    "autumn"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "lenok": {
+   "good": [
+    "spring",
+    "autumn"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "eoreumchi": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "tunggari": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "goby": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "mackerel": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "rockfish": {
+   "good": [
+    "winter"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "black_porgy": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "sea_bass": {
+   "good": [
+    "summer",
+    "autumn"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "mullet": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  },
+  "rockfish_bollak": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "jack_mackerel": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "mahi": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "red_seabream": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "amberjack": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "yellowtail": {
+   "good": [
+    "winter"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "bluefin": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "spanish_mackerel": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "sailfish": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "galaxy_trout": {
+   "good": [
+    "spring",
+    "autumn"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "ghost_catfish": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "fog_carp": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "scale_king": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  },
+  "silver_crucian": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "firefly_minnow": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  },
+  "marsh_eel": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "reed_piper": {
+   "good": [
+    "winter"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "mist_catfish": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "silver_snakehead": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "crystal_minnow": {
+   "good": [
+    "winter"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "blind_cavefish": {
+   "good": [
+    "winter"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "stalactite_catfish": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "echo_eel": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "prism_carp": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "amethyst_bass": {
+   "good": [
+    "summer",
+    "autumn"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "cloud_trout": {
+   "good": [
+    "spring",
+    "autumn"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "cloud_carp": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "falls_salmon": {
+   "good": [
+    "spring",
+    "autumn"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "rainbow_char": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "wind_cutter": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "thunder_flyer": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  },
+  "obsidian_bream": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "ash_rockfish": {
+   "good": [
+    "winter"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "lava_grouper": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "sulfur_puffer": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  },
+  "flame_manta": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  },
+  "magma_moray": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  },
+  "frost_cod": {
+   "good": [
+    "winter"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "snow_smelt": {
+   "good": [
+    "winter"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "glacier_ray": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "floe_flounder": {
+   "good": [
+    "autumn"
+   ],
+   "bad": [
+    "spring"
+   ]
+  },
+  "aurora_salmon": {
+   "good": [
+    "spring",
+    "autumn"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "frostfang_shark": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  },
+  "root_eel": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "dew_carp": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "life_trout": {
+   "good": [
+    "spring",
+    "autumn"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "oldwood_catfish": {
+   "good": [
+    "summer"
+   ],
+   "bad": [
+    "winter"
+   ]
+  },
+  "petal_flyer": {
+   "good": [
+    "winter"
+   ],
+   "bad": [
+    "summer"
+   ]
+  },
+  "spirit_fish": {
+   "good": [
+    "spring"
+   ],
+   "bad": [
+    "autumn"
+   ]
+  }
+ },
+ "ambience": {
+  "spring": [
+   [
+    "amb_bird#",
+    5,
+    11,
+    0.28,
+    "day"
+   ]
+  ],
+  "summer": [
+   [
+    "amb_cicada",
+    6,
+    13,
+    0.25,
+    "day"
+   ],
+   [
+    "amb_cricket",
+    3,
+    7,
+    0.22,
+    "night"
+   ]
+  ],
+  "autumn": [
+   [
+    "amb_cricket",
+    3,
+    8,
+    0.25,
+    "night"
+   ],
+   [
+    "amb_gust",
+    9,
+    18,
+    0.22,
+    "any"
+   ]
+  ],
+  "winter": [
+   [
+    "amb_wind_cold",
+    8,
+    16,
+    0.25,
+    "any"
+   ]
+  ]
+ }
+}

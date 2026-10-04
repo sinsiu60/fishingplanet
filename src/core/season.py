@@ -17,6 +17,14 @@ def force(season: str | None) -> None:
     _forced = season if season in SEASONS else None
 
 
+def cycle_forced() -> str:
+    """디버그(F12): 봄 → 여름 → 가을 → 겨울 → 실제 날짜 → 봄 …  돌려주는 값 = 이름."""
+    order = list(SEASONS) + [None]
+    nxt = order[(order.index(_forced) + 1) % len(order)]
+    force(nxt)
+    return NAMES["sharmion"][nxt] if nxt else "실제 날짜"
+
+
 def real_season(today: datetime.date | None = None) -> str:
     d = today or datetime.date.today()
     return SEASONS[d.isocalendar()[1] % 4]

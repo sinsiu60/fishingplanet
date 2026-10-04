@@ -148,6 +148,8 @@ class FishingScene(Scene):
         self.phantom_fx = PhantomFx(phantom.spawn_cfg())  # 환상의 물고기 보랏빛 파장 (33장)
         self.force_phantom = False   # 디버그 F7: 다음 착수 환상 강제
         self.glints: list[list[float]] = []  # 먼 수면 보라빛 물결 (x, z, t)
+        from src.render.season_fx import SeasonParticles
+        self.season_fx = SeasonParticles()   # 계절 파티클 (35-4)
         self.backdrop = None       # 마을이 열려 있으면 마을 풍경 (src/scene/village.py) — 겹친 화면 뒤 배경
         self.catch_show = None     # 환상·전설 포획 연출 (src/render/phantom_show.py · legend_show.py)
         self.phantom_song_ch = self.phantom_loop_ch = None
@@ -278,6 +280,28 @@ class FishingScene(Scene):
                 name = sp["name"] if not sp.get("secret") else "숨겨진 장소"
                 self.toasts.show(f"새 낚시터 '{name}'을(를) 열 수 있어요! (M: 지도)", GOOD, 3.5, 11)  # 소리 없이 (N3)
                 return
+
+    @property
+    def season(self) -> str:
+        from src.core import season as seasons
+        return seasons.current(self.settings)
+
+    def _extra_fish(self) -> list:
+        """이번 착수에 더해지는 한정 물고기 [(물고기, 가중치)]: 계절 한정(계절 고정 중엔 없음) + 날씨 이벤트 물고기."""
+        from src.core import season as seasons
+        from src.core.config import load_json as _lj
+        out = []
+        cont = self.spot.get("continent", "sharmion")
+        if not seasons.locked(self.settings):
+            sf = _lj("seasonal_fish.json")
+            s = self.season
+            out += [(f, sf["weights"][f["rarity"]]) for f in sf["fish"] if f["season"] == s and f["continent"] == cont]
+        try:
+            from src.fishing import weather_events
+            out += weather_events.extra_fish(self.save, cont)
+        except ImportError:
+            pass
+        return out
 
     @property
     def touch(self) -> bool:
@@ -476,6 +500,10 @@ class FishingScene(Scene):
             elif a.value == "F8":
                 if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
                     self.show_pity = not self.show_pity
+            elif a.value == "F12":
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    from src.core import season as seasons
+                    self.toasts.show(f"[테스트] 계절: {seasons.cycle_forced()}", INFO, 1.5, 11)
             elif a.value == "F1":
                 self.debug = not self.debug
             elif a.value == "F2":
@@ -1187,7 +1215,11 @@ class FishingScene(Scene):
         self.ambient.update(dt, self.clock.period()[0], self.weather, self.theme.get("sea", False))
         f = self.fight
         self.ambience.update(dt, self.spot_id, self.clock.period()[0], self.weather,
-                             fighting=f is not None and f.phase in ("fight", "net"), legend=self.legend_on)
+                             fighting=f is not None and f.phase in ("fight", "net"), legend=self.legend_on, season=self.season)
+        self.season_fx.update(dt, self.season, self.spot.get("continent", "sharmion"), self.cam.width, self.cam.height,
+                              self.clock.period()[0], self.weather, mobile=self.touch,
+                              fighting=f is not None and f.phase in ("fight", "net"),
+                              enabled=self.theme["terrain"] != "cave" and self.theme.get("dark", 0) < 0.5)
 
     def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
@@ -1705,6 +1737,8 @@ class FishingScene(Scene):
             self.phantom_fx.bloom((p[0], p[1]) if p else (self.cam.cx, self.cam.horizon + 20),
                                   reduce=self.settings.get("reduce_fx"))
         else:
+            self.bite.season = self.season
+            self.bite.extra_pool = self._extra_fish()   # 계절·날씨 이벤트 한정 물고기 (35-4)
             self.bite.start((c.bx, c.bz), c.current_distance())
         self.idle_ripple_t = 0.0
 
@@ -2337,6 +2371,8 @@ class FishingScene(Scene):
         hour = self.clock.hour
         theme, weather = self.theme, self.weather
         pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash, self.legend_k)
+        from src.render.season_fx import season_palette
+        pal = season_palette(pal, self.season, self.spot.get("continent", "sharmion"))   # 계절 색감 (은은하게)
         pal = self._line_pal(pal)
         if self.dragon_k > 0.01:
             for key, v in pal.items():
@@ -2348,6 +2384,10 @@ class FishingScene(Scene):
         if pfx.active:
             pal = phantom_palette(base_pal, pfx.k)   # 환상 팔레트 덧입히기 (UI·HUD·신호 슬롯 제외)
         self._draw_world(canvas, pal)
+        if self.season == "winter" and self.spot.get("continent", "sharmion") == "sharmion" and not theme.get("sea") \
+                and theme["terrain"] != "cave":
+            from src.render.season_fx import draw_ice_edges
+            draw_ice_edges(canvas, pal, cam.horizon, t)   # 겨울: 수면 가장자리 살얼음
         if pfx.active:
             m = pfx.mask(canvas.get_width(), canvas.get_height(), int(cam.horizon))
             if m is not None:
@@ -2460,6 +2500,7 @@ class FishingScene(Scene):
         self.droplets.draw(canvas, pal)
         self.rain.draw(canvas, pal)
         self.fog.draw(canvas, pal, cam.horizon, t)
+        self.season_fx.draw(canvas)   # 계절 파티클 (파이팅 중엔 위쪽에 1/3만)
         if f is not None and f.phase == "fight":
             # 수면 위 행동 연출 (카메라 연출 전에 그려서 함께 확대됨)
             pos = self._fish_screen()

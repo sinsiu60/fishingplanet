@@ -94,6 +94,8 @@ class TravelScene(Scene):
         self.season = seasons.current(game.settings)
         self.view = TravelView(self.scene, w, h, self.season, bool(game.settings.get("reduce_fx")),
                                seed=hash((spot_id, kind)) & 0xffff)
+        from src.render.season_fx import SeasonParticles
+        self.particles = SeasonParticles()
         self.t = 0.0
         self.step_t = 0.0
         self.preloaded = False
@@ -137,6 +139,9 @@ class TravelScene(Scene):
         self.t += dt
         sp = 1.0 if self.t < self.t_travel else max(0.0, 1 - (self.t - self.t_travel) / 0.6)
         self.view.update(dt, sp)
+        self.particles.update(dt, self.season, self.cont, *self.game.screen.canvas.get_size(), self.fishing.clock.period()[0],
+                              self.fishing.weather, mobile=self.game.input.kind == "touch",
+                              enabled=not self.scene.get("cave"))
         f = self.fishing
         dest = self.spot_id if self.spot is not None else f"village_{self.cont}"
         f.ambience.update(dt, dest, f.clock.period()[0], f.weather)   # 도착지 환경음 (이동 중 점점)
@@ -160,8 +165,9 @@ class TravelScene(Scene):
     # ── 그리기 ──
     def _pal(self) -> dict:
         f = self.fishing
+        from src.render.season_fx import season_palette
         theme = self.spot["theme"] if self.spot else {}
-        return themed_palette(f.palette.sample(f.clock.hour), theme, f.weather)
+        return season_palette(themed_palette(f.palette.sample(f.clock.hour), theme, f.weather), self.season, self.cont)
 
     def _draw_target(self, surf) -> None:
         if self.village is not None:
@@ -185,6 +191,7 @@ class TravelScene(Scene):
         pal = self._pal()
         night = _night(self.fishing.clock.hour)
         self.view.draw(canvas, pal, night, self.fishing.weather)
+        self.particles.draw(canvas)
         if self.t > self.t_travel:
             k = smoothstep(clamp((self.t - self.t_travel) / (self.t_reveal * 0.6), 0, 1))
             tgt = pygame.Surface((w, h))

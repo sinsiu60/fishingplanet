@@ -84,6 +84,10 @@ class DexScene(Scene):
         self.star_mode = False
         self.star_btn = ui.Button((244, 9, 56, 15), "별 보상", self._toggle_star)
         self.print_btn = ui.Button((244, 232, 76, 15), "어탁 갤러리", self._open_prints)
+        # 계절·날씨 이벤트 한정 (35-4): 도감 % 밖, 계절 표시
+        self.lim_mode = False
+        self.lim_btn = ui.Button((304, 9, 34, 15), "한정", self._toggle_lim)
+        self.lim_sel = 0
         self.title_page = 0
 
     def _toggle_mut(self) -> None:
@@ -91,15 +95,26 @@ class DexScene(Scene):
         self.pat_mode = False
         self.ph_mode = False
         self.star_mode = False
+        self.lim_mode = False
 
     def _toggle_star(self) -> None:
         self.star_mode = not self.star_mode
-        self.mut_mode = self.pat_mode = self.ph_mode = False
+        self.mut_mode = self.pat_mode = self.ph_mode = self.lim_mode = False
+
+    def _toggle_lim(self) -> None:
+        self.lim_mode = not self.lim_mode
+        self.mut_mode = self.pat_mode = self.ph_mode = self.star_mode = False
+
+    def _lim_list(self) -> list[dict]:
+        from src.save.dexbook import limited_fish
+        order = {"spring": 0, "summer": 1, "autumn": 2, "winter": 3}
+        return sorted(limited_fish(), key=lambda f: (f.get("continent", "z"), order.get(f.get("season"), 9)))
 
     def _toggle_ph(self) -> None:
         self.ph_mode = not self.ph_mode
         self.star_mode = False
         self.pat_mode = self.mut_mode = False
+        self.lim_mode = False
 
     def _ph_list(self) -> list[dict]:
         from src.fishing import phantom
@@ -110,6 +125,7 @@ class DexScene(Scene):
         self.mut_mode = False
         self.ph_mode = False
         self.star_mode = False
+        self.lim_mode = False
 
     PAT_KEYS = ("telegraph:rush", "telegraph:jump", "telegraph:turn", "telegraph:leap", "pattern:shake", "pattern:dive",
                 "pattern:surface", "pattern:reverse", "pattern:twist", "pattern:chain", "pattern:hide", "pattern:pump",
@@ -162,6 +178,16 @@ class DexScene(Scene):
                 return
             if self.star_btn.click(m):
                 self.game.sfx.play("ui_click")
+                return
+            if self.lim_btn.click(m):
+                self.game.sfx.play("ui_click")
+                return
+            if self.lim_mode:
+                for i in range(len(self._lim_list())):
+                    if self.card_rect_lim(i).collidepoint(m):
+                        self.lim_sel = i
+                        self.game.sfx.play("ui_click")
+                self.close_btn.click(m)
                 return
             if self.star_mode:
                 self._star_click(m)
@@ -225,7 +251,7 @@ class DexScene(Scene):
             tail = f" · 다음 보상 {nxt['count']}: {nxt['name']}" if nxt else " · 보상 모두 받음"
             text(canvas, f"변이 {n}/{cap}{tail}", (466, 16), MUT_COL, 11, "midright")
         else:
-            text(canvas, f"{got}/{total}종 ({got * 100 // total}%)   금테 {golds}", (466, 16), ui.ACCENT, 11, "midright")
+            text(canvas, f"{got}/{total}종 ({got * 100 // total}%) · 금테 {golds}", (466, 16), ui.ACCENT, 11, "midright")
         if mutation.unlocked(self.save):
             self.mut_btn.label = "기본 도감" if self.mut_mode else "변이 도감"
             self.mut_btn.draw(canvas, self.mouse)
@@ -233,6 +259,13 @@ class DexScene(Scene):
         self.pat_btn.draw(canvas, self.mouse)
         self.star_btn.label = "기본 도감" if self.star_mode else "별 보상"
         self.star_btn.draw(canvas, self.mouse)
+        self.lim_btn.label = "기본" if self.lim_mode else "한정"
+        self.lim_btn.draw(canvas, self.mouse)
+        if self.lim_mode:
+            self._draw_limited(canvas)
+            self.close_btn.draw(canvas, self.mouse)
+            draw_cursor(canvas, self.mouse)
+            return
         if self.star_mode:
             self._draw_star_page(canvas)
             self.close_btn.draw(canvas, self.mouse)
@@ -383,6 +416,74 @@ class DexScene(Scene):
         for ln in wrap_text(f["desc"], d.w - 12)[:4]:
             text(canvas, ln, (d.x + 6, y), ui.DIM, 11, "midleft")
             y += 13
+
+    def _season_rows(self, f: dict) -> list:
+        """'잘 잡히는 계절' (35-4, data/seasons.json)."""
+        from src.core import season as seasons
+        sf = load_json("seasons.json")["fish"].get(f["id"])
+        if not sf:
+            return []
+        cont = "eldrasion" if f["spot"] in dict(ELDRA_TABS) else "sharmion"
+        good = "·".join(seasons.name(s, cont) for s in sf["good"])
+        return [(f"잘 잡히는 계절: {good}", (255, 200, 220))]
+
+    def card_rect_lim(self, i: int) -> pygame.Rect:
+        return pygame.Rect(GRID_X + (i % COLS) * (CARD_W + 4), GRID_Y + (i // COLS) * (CARD_H + 4) + 8, CARD_W, CARD_H)
+
+    def _lim_label(self, f: dict) -> str:
+        from src.core import season as seasons
+        cont = f.get("continent", "sharmion")
+        if f.get("season"):
+            return f"{seasons.name(f['season'], cont)} 한정 · {'샤르미온' if cont == 'sharmion' else '엘드라시온'} 어디서나"
+        return f"날씨 이벤트 '{f.get('event_name', '')}' 중에만"
+
+    def _draw_limited(self, canvas) -> None:
+        """계절·이벤트 한정: 칸마다 계절 표시. 도감 %·해금 조건에는 들어가지 않는다."""
+        from src.core import season as seasons
+        from src.save import dexbook
+        fl = self._lim_list()
+        got = sum(1 for f in fl if dexbook.entry(self.save, f))
+        text(canvas, f"계절·이벤트 한정  {got} / {len(fl)}  (도감 %에는 안 들어가요)", (GRID_X + 2, 40), (255, 200, 220), 11, "midleft")
+        scol = {"spring": (255, 170, 200), "summer": (120, 210, 100), "autumn": (230, 140, 60), "winter": (190, 220, 255)}
+        for i, f in enumerate(fl):
+            r = self.card_rect_lim(i)
+            e = dexbook.entry(self.save, f)
+            sel = i == self.lim_sel
+            col = scol.get(f.get("season"), (200, 220, 255))
+            ui.panel(canvas, r, col if sel else ui.BORDER, ui.PANEL_LIGHT if sel or r.collidepoint(self.mouse) else (16, 20, 36))
+            draw_fish_fit(canvas, pygame.Rect(r.x + 3, r.y + 3, r.w - 6, r.h - 19), f, 52, silhouette=None if e else (8, 8, 14))
+            text(canvas, fit(f["name"], r.w - 6) if e else "???", (r.centerx, r.bottom - 8), RARITY_COL.get(f["rarity"], ui.TEXT), 11, "center")
+            mark = seasons.ICON.get(f.get("season"), "★")
+            pygame.draw.circle(canvas, col, (r.right - 8, r.y + 8), 6)
+            text(canvas, mark, (r.right - 8, r.y + 8), (30, 30, 40), 11, "center")
+            if e:
+                draw_stars(canvas, r.x + 5, r.y + 5, dexbook.stars(self.save, f), 5)
+        d = DETAIL
+        ui.panel(canvas, d, ui.BORDER, (16, 20, 36))
+        if not fl:
+            return
+        self.lim_sel = min(self.lim_sel, len(fl) - 1)
+        f = fl[self.lim_sel]
+        e = dexbook.entry(self.save, f)
+        y = d.y + 10
+        text(canvas, f["name"] if e else "???", (d.centerx, y), RARITY_COL.get(f["rarity"], ui.TEXT), 11, "center")
+        y += 16
+        rows = [(f"{RARITY_KO[f['rarity']]} · {self._lim_label(f)}", (255, 200, 220))]
+        if e:
+            rows += [(f"최대 {e['max_size']:.1f}cm · 최고 {e['best_rank']} · {e['count']}회", ui.ACCENT),
+                     (self._mastery_line(f), (170, 255, 200))]
+        for ln, c in rows:
+            for w_ in wrap_text(ln, d.w - 12):
+                text(canvas, w_, (d.x + 6, y), c, 11, "midleft")
+                y += 13
+        y += 3
+        for ln in wrap_text(f["desc"] if e else "그때가 오면 어딘가에서 모습을 드러낸다고 한다.", d.w - 12)[:3]:
+            text(canvas, ln, (d.x + 6, y), ui.DIM, 11, "midleft")
+            y += 12
+        if e and e["count"] >= 3:
+            for ln in wrap_text("· " + f.get("hint3", ""), d.w - 12)[:2]:
+                text(canvas, ln, (d.x + 6, y + 4), (150, 230, 255), 11, "midleft")
+                y += 12
 
     def _mastery_line(self, f: dict) -> str:
         from src.save import dexbook
@@ -631,7 +732,7 @@ class DexScene(Scene):
             (f"크기 {f['size_cm'][0]}~{f['size_cm'][1]}cm", ui.TEXT),
             (f"최대 {entry['max_size']:.1f}cm · 최고 {entry['best_rank']} · {entry['count']}회", ui.ACCENT),
             (self._mastery_line(f), (170, 255, 200)),
-        ]
+        ] + self._season_rows(f)
         for s, col in rows:
             text(canvas, s, (x, yy), col, 11, "midleft")
             yy += 13

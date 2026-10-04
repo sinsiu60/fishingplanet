@@ -1,0 +1,579 @@
+{
+ "_설명": "계절 한정 물고기 8종 (DESIGN.md 35-4). fish.json 밖 → 도감 %·해금 집계 제외 (진행 막힘 금지). 그 대륙의 해금된 낚시터 어디서나 그 계절에만 (계절 고정 중엔 없음). spot = 기본값(가격·대륙 계산용), 낚일 때 지금 낚시터로 바뀐다. 패턴은 그 대륙에서 이미 배운 것만.",
+ "weights": {
+  "uncommon": 6,
+  "rare": 3
+ },
+ "fish": [
+  {
+   "id": "cherry_trout",
+   "name": "벚꽃 송어",
+   "spot": "reservoir",
+   "continent": "sharmion",
+   "limited": "season",
+   "season": "spring",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    30,
+    60
+   ],
+   "base_price": 150,
+   "difficulty": 4,
+   "telegraph_sec": 0.9,
+   "power": 0.95,
+   "stamina": 110,
+   "actions": {
+    "jump": 38,
+    "leap": 18,
+    "turn": 24,
+    "rush": 20
+   },
+   "shadow_len_m": 0.41,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     200,
+     150,
+     160
+    ],
+    "belly": [
+     245,
+     225,
+     230
+    ],
+    "fin": [
+     230,
+     150,
+     170
+    ],
+    "stripe": [
+     255,
+     170,
+     200
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "pattern": "spots",
+    "form": "trout"
+   },
+   "skill": "꽃잎 점프",
+   "desc": "분홍 반점이 벚꽃잎 같은 송어. 봄에만 올라온다.",
+   "hint3": "점프가 꽃잎처럼 가볍고 잦다.",
+   "hint10": "점프 → 도약이 이어지기 쉽다 (예고 0.9초).",
+   "jump_chain": [
+    1,
+    2
+   ]
+  },
+  {
+   "id": "sun_ayu",
+   "name": "햇살 은어",
+   "spot": "reservoir",
+   "continent": "sharmion",
+   "limited": "season",
+   "season": "summer",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    15,
+    30
+   ],
+   "base_price": 120,
+   "difficulty": 5,
+   "telegraph_sec": 0.8,
+   "power": 0.85,
+   "stamina": 90,
+   "actions": {
+    "turn": 55,
+    "rush": 25,
+    "jump": 20
+   },
+   "shadow_len_m": 0.2,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     170,
+     200,
+     170
+    ],
+    "belly": [
+     240,
+     245,
+     230
+    ],
+    "fin": [
+     230,
+     210,
+     120
+    ],
+    "stripe": [
+     255,
+     220,
+     100
+    ]
+   },
+   "shape": {
+    "height": 0.15,
+    "tail": "fork"
+   },
+   "skill": "방향 전환 연쇄",
+   "desc": "여름 햇살처럼 반짝이며 쏜살같이 방향을 바꾼다.",
+   "hint3": "방향 전환이 2~3번 이어진다.",
+   "hint10": "연쇄 전환은 좌우 번갈아.",
+   "turn_chain": [
+    2,
+    3
+   ]
+  },
+  {
+   "id": "maple_carp",
+   "name": "단풍 잉어",
+   "spot": "reservoir",
+   "continent": "sharmion",
+   "limited": "season",
+   "season": "autumn",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    50,
+    90
+   ],
+   "base_price": 420,
+   "difficulty": 6,
+   "telegraph_sec": 0.85,
+   "power": 1.25,
+   "stamina": 220,
+   "actions": {
+    "charge": 40,
+    "rush": 35,
+    "turn": 25
+   },
+   "shadow_len_m": 0.63,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     200,
+     70,
+     40
+    ],
+    "belly": [
+     240,
+     180,
+     120
+    ],
+    "fin": [
+     230,
+     120,
+     50
+    ],
+    "stripe": null
+   },
+   "shape": {
+    "height": 0.26,
+    "whiskers": true,
+    "form": "hump"
+   },
+   "skill": "바닥 버티기",
+   "desc": "붉은 비늘의 잉어. 가을 바닥에 엎드려 버틴다.",
+   "hint3": "차지(버티기)가 길다 — 드랙을 풀어 줘라.",
+   "hint10": "돌진 뒤 곧바로 버티기로 바뀐다."
+  },
+  {
+   "id": "ice_smelt",
+   "name": "얼음 빙어",
+   "spot": "reservoir",
+   "continent": "sharmion",
+   "limited": "season",
+   "season": "winter",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    10,
+    18
+   ],
+   "base_price": 110,
+   "difficulty": 4,
+   "telegraph_sec": 0.85,
+   "power": 0.7,
+   "stamina": 70,
+   "actions": {
+    "shake": 45,
+    "turn": 30,
+    "rush": 25
+   },
+   "shadow_len_m": 0.13,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     190,
+     215,
+     235
+    ],
+    "belly": [
+     245,
+     250,
+     255
+    ],
+    "fin": [
+     200,
+     225,
+     245
+    ],
+    "stripe": [
+     160,
+     200,
+     230
+    ]
+   },
+   "shape": {
+    "height": 0.12,
+    "tail": "fork"
+   },
+   "skill": "잦은 머리 흔들기",
+   "desc": "작지만 머리를 쉴 새 없이 흔드는 겨울 손님.",
+   "hint3": "머리 흔들기가 자주 온다.",
+   "hint10": "흔들기 사이 간격이 짧다 (예고 0.85초)."
+  },
+  {
+   "id": "crystal_butterflyfish",
+   "name": "수정꽃 나비고기",
+   "spot": "marsh",
+   "continent": "eldrasion",
+   "limited": "season",
+   "season": "spring",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    20,
+    40
+   ],
+   "base_price": 1300,
+   "difficulty": 5,
+   "telegraph_sec": 0.8,
+   "power": 1.0,
+   "stamina": 150,
+   "actions": {
+    "jump": 34,
+    "turn": 32,
+    "leap": 14,
+    "rush": 20
+   },
+   "shadow_len_m": 0.27,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     170,
+     220,
+     240
+    ],
+    "belly": [
+     240,
+     250,
+     255
+    ],
+    "fin": [
+     230,
+     170,
+     240
+    ],
+    "stripe": [
+     200,
+     140,
+     240
+    ]
+   },
+   "shape": {
+    "height": 0.34,
+    "form": "disk"
+   },
+   "skill": "꽃잎 지느러미",
+   "desc": "수정 꽃잎 같은 지느러미를 펄럭이는 개화기의 물고기.",
+   "hint3": "점프와 방향 전환이 번갈아 온다.",
+   "hint10": "지느러미가 반짝이면 곧 점프."
+  },
+  {
+   "id": "mana_eel",
+   "name": "마력 뱀장어",
+   "spot": "marsh",
+   "continent": "eldrasion",
+   "limited": "season",
+   "season": "summer",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    80,
+    160
+   ],
+   "base_price": 3800,
+   "difficulty": 7,
+   "telegraph_sec": 0.75,
+   "power": 1.4,
+   "stamina": 260,
+   "actions": {
+    "twist": 40,
+    "turn": 30,
+    "rush": 30
+   },
+   "shadow_len_m": 1.08,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     60,
+     50,
+     120
+    ],
+    "belly": [
+     150,
+     130,
+     220
+    ],
+    "fin": [
+     110,
+     200,
+     230
+    ],
+    "stripe": [
+     120,
+     230,
+     240
+    ]
+   },
+   "shape": {
+    "height": 0.07,
+    "tail": "ribbon"
+   },
+   "skill": "줄 비틀기",
+   "desc": "성하기의 짙은 마력을 두른 뱀장어. 줄을 비틀어 끊으려 한다.",
+   "hint3": "줄 비틀기 위주 — 반대로 풀어 줘라.",
+   "hint10": "비틀기가 두 번 이어질 때가 있다."
+  },
+  {
+   "id": "golden_reed_gull",
+   "name": "금빛 갈대메기",
+   "spot": "marsh",
+   "continent": "eldrasion",
+   "limited": "season",
+   "season": "autumn",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "uncommon",
+   "size_cm": [
+    40,
+    80
+   ],
+   "base_price": 1500,
+   "difficulty": 6,
+   "telegraph_sec": 0.75,
+   "power": 1.2,
+   "stamina": 170,
+   "actions": {
+    "hide": 40,
+    "turn": 30,
+    "rush": 30
+   },
+   "shadow_len_m": 0.54,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     210,
+     180,
+     90
+    ],
+    "belly": [
+     245,
+     230,
+     180
+    ],
+    "fin": [
+     230,
+     200,
+     110
+    ],
+    "stripe": [
+     180,
+     140,
+     60
+    ]
+   },
+   "shape": {
+    "height": 0.14,
+    "whiskers": true
+   },
+   "skill": "갈대 숨기",
+   "desc": "수확기의 금빛 갈대 사이에 숨는 메기.",
+   "hint3": "숨기 위주 — 줄을 놓지 말고 기다려라.",
+   "hint10": "숨기 뒤에 돌진이 온다."
+  },
+  {
+   "id": "starlight_cod",
+   "name": "별빛 대구",
+   "spot": "marsh",
+   "continent": "eldrasion",
+   "limited": "season",
+   "season": "winter",
+   "times": [
+    "morning",
+    "day",
+    "evening",
+    "night"
+   ],
+   "weathers": [
+    "clear",
+    "rain",
+    "storm",
+    "fog"
+   ],
+   "rarity": "rare",
+   "size_cm": [
+    60,
+    120
+   ],
+   "base_price": 3600,
+   "difficulty": 7,
+   "telegraph_sec": 0.75,
+   "power": 1.35,
+   "stamina": 250,
+   "actions": {
+    "pump": 40,
+    "charge": 30,
+    "rush": 30
+   },
+   "shadow_len_m": 0.81,
+   "nibbles": [
+    1,
+    2
+   ],
+   "colors": {
+    "body": [
+     60,
+     70,
+     110
+    ],
+    "belly": [
+     200,
+     210,
+     235
+    ],
+    "fin": [
+     120,
+     140,
+     200
+    ],
+    "stripe": [
+     240,
+     240,
+     200
+    ]
+   },
+   "shape": {
+    "height": 0.2,
+    "pattern": "spots",
+    "whiskers": true
+   },
+   "skill": "펌핑 리듬",
+   "desc": "극야기에 별빛을 따라 올라오는 대구.",
+   "hint3": "펌핑 리듬 위주 — 박자에 맞춰 감기.",
+   "hint10": "펌핑 사이 차지가 끼어든다.",
+   "cover_bias": 0.5
+  }
+ ]
+}
