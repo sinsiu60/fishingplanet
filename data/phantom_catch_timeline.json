@@ -1,0 +1,199 @@
+{
+ "_설명": "환상어 포획 연출 (DESIGN.md 33-11, PHANTOM_CATCH_SHOW.md). variants = 첫 포획(full)·재포획(short)·12종 완성(extended): markers = 단계 시각(초, 음악 마커와 같다 — 음악 합성 tools/audio/make_phantom_song.py 도 이 값을 읽는다), slow = [시작, 끝, 배속] 슬로모션 구간, skip_after = 건너뛰기 가능 시각. fx = 이펙트 수치, unique = 환상어 12종 고유 이펙트, caps = 입자 상한.",
+ "variants": {
+  "full": {
+   "len": 8.0,
+   "skip_after": 2.0,
+   "slow": [
+    0.0,
+    2.2,
+    0.2
+   ],
+   "markers": {
+    "breath": 0.0,
+    "rise": 0.35,
+    "scales": 0.8,
+    "rays": 1.2,
+    "climax": 1.8,
+    "return": 2.2,
+    "card": 2.6,
+    "record": 3.4,
+    "rewards": 4.2,
+    "afterglow": 5.0,
+    "wait": 7.0
+   }
+  },
+  "short": {
+   "len": 4.0,
+   "skip_after": 0.0,
+   "slow": [
+    0.0,
+    1.2,
+    0.3
+   ],
+   "markers": {
+    "breath": 0.0,
+    "rise": 0.2,
+    "scales": 0.45,
+    "rays": 0.6,
+    "climax": 0.9,
+    "return": 1.2,
+    "card": 1.5,
+    "record": 2.0,
+    "rewards": 2.4,
+    "afterglow": 2.8,
+    "wait": 3.5
+   }
+  },
+  "extended": {
+   "len": 11.0,
+   "skip_after": 2.0,
+   "slow": [
+    0.0,
+    4.4,
+    0.2
+   ],
+   "markers": {
+    "breath": 0.0,
+    "rise": 0.35,
+    "scales": 0.8,
+    "rays": 1.2,
+    "climax": 1.8,
+    "ring": 2.2,
+    "ring_end": 4.2,
+    "return": 4.4,
+    "card": 4.8,
+    "record": 5.6,
+    "rewards": 6.4,
+    "afterglow": 7.4,
+    "wait": 10.0
+   }
+  }
+ },
+ "loop_len": 6.0,
+ "restore_sec": 1.5,
+ "caps": {
+  "pc": 1500,
+  "mobile": 600
+ },
+ "fx": {
+  "droplets": 60,
+  "column_h": 120,
+  "rays": 18,
+  "aurora_bands": 5,
+  "burst_particles": 220,
+  "star_rate": 40,
+  "shock_rings": 2,
+  "zoom": 0.06,
+  "tilt_deg": 2.0,
+  "glow_scale": 0.5
+ },
+ "unique": {
+  "moon_shadow_carp": {
+   "kind": "moon",
+   "color": [
+    235,
+    225,
+    255
+   ]
+  },
+  "mist_mandarin": {
+   "kind": "mist",
+   "color": [
+    190,
+    150,
+    240
+   ],
+   "n": 24
+  },
+  "dusk_bass": {
+   "kind": "dusk",
+   "color": [
+    255,
+    150,
+    210
+   ]
+  },
+  "meteor_tuna": {
+   "kind": "meteors",
+   "color": [
+    240,
+    220,
+    255
+   ],
+   "n": 14
+  },
+  "abyss_lantern": {
+   "kind": "orbs",
+   "color": [
+    200,
+    160,
+    255
+   ],
+   "n": 12
+  },
+  "echo_fish": {
+   "kind": "echo",
+   "color": [
+    220,
+    190,
+    255
+   ],
+   "n": 4
+  },
+  "violet_reed_carp": {
+   "kind": "reeds",
+   "color": [
+    225,
+    225,
+    245
+   ],
+   "n": 40
+  },
+  "amethyst_blindfish": {
+   "kind": "crystals",
+   "color": [
+    190,
+    120,
+    255
+   ],
+   "n": 14
+  },
+  "sky_butterfly": {
+   "kind": "butterflies",
+   "color": [
+    220,
+    160,
+    255
+   ],
+   "n": 26
+  },
+  "ember_moray": {
+   "kind": "embers",
+   "color": [
+    220,
+    110,
+    255
+   ],
+   "n": 70
+  },
+  "aurora_smelt": {
+   "kind": "snow",
+   "color": [
+    235,
+    235,
+    255
+   ],
+   "n": 60
+  },
+  "dream_carp": {
+   "kind": "spirits",
+   "color": [
+    230,
+    210,
+    255
+   ],
+   "n": 10
+  }
+ }
+}

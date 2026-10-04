@@ -2789,3 +2789,22 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
   낮·저녁·밤·동굴, PC·폰(20:9·21:9)·태블릿(4:3) 화면비 / 해금 조건은 fish.json 만 봄 → 환상 없이 두 대륙 클리어 가능 / 옛 세이브(v1·v2·v3) 불러오기 22/22 + 환상 필드 기본값.
 - **수정한 것**: 동굴·밤에 보라가 거의 안 보임 → phantom_palette 최소 밝기 0.5. 포획 컷 긴 제목이 기록 배지와 겹침 → 두 줄 + 배지 문구 축약, 숙련도 아이콘 줄을 배지 수만큼 아래로.
   희귀와 시간 차이가 거의 없던 종(저수지·용문 폭포·부유섬 등) → 체력 상향.
+
+## 33-11. 환상어 포획 연출 (PHANTOM_CATCH_SHOW.md, V1~V7) — 33-5 포획 연출을 대체
+### 현재 구조 (V1 분석)
+- **전설 포획** (`src/render/landing.py` LandingCinematic, tier 3): 뜰채 닿음 → 끌어올림(크기별 1.0~2.0초) → 상승 0.7초(대형 ×1.25) → 정점 머묾 0.95초 → 섬광 0.18초
+  = 뜰채 성공 뒤 약 2.3~3.9초, 이어 포획 컷(획득 카드) 클릭 대기. 효과 층 11개 (물보라·물방울 뚝뚝·불꽃 튐·잔상 꼬리·고리·빛줄기·빛 원·별 반짝임·금빛 비 70·섬광·배너),
+  최대 입자 약 200개, 소리 = 팡파레(sfx_legend_fanfare) + 덕킹. 시간 배율은 game.slowmo(실제 시간, 배속) — 장면 update 호출 간격을 늘리는 방식.
+- **입자·렌더**: 장면마다 리스트 입자(Sparkles·Droplets 등), 더하기 합성(BLEND_RGB_ADD)은 이미 오라·파장에 사용 중. 480×270 내부 캔버스 → 화면 배율.
+- **음악**: `music_synth.py` 레시피 → `tools/bake_music.py` 로 ogg 미리 굽기(assets/music_generated), 적응형 음악은 mus 버스. 성공음 팩은 `register_success` 로 이름 등록.
+- **흐름**: 뜰채 성공 'caught' → 기록·보상(즉시 저장) → LandingCinematic → 포획 컷 + 카드 정보 → 클릭 → `_end_fight`(복귀·튜토리얼).
+### 설계
+- **데이터**: `data/phantom_catch_timeline.json` — 버전별 markers(단계 시각 = 음악 마커), slow(슬로모션 구간·배속), skip_after, fx 수치, unique(12종), 입자 상한(PC 1500 / 모바일 600).
+- **버전**: full(그 종 첫 포획, 8초, 2초 뒤 건너뛰기) / short(재포획, 4초, 바로 건너뛰기) / extended(12종 완성, 11초, 절정 뒤 12종 실루엣 원 2.2~4.2초).
+- **음악** `tools/audio/make_phantom_song.py` (numpy/scipy, 빌드 전 수동) → `assets/music_generated/phantom_catch_{full,short,extended,loop}_{sharmion,eldrasion}.ogg`
+  + 같은 이름 wav 를 `tools/audio/reference/phantom_catch/`. 마커는 타임라인 JSON 을 읽어 그 시각에 음을 놓는다 (싱크 = 같은 숫자). `assets/music/phantom_catch_*.ogg` 가 있으면 우선.
+  재생은 보상 버스 'phantom_song_*' (그대로 재생, 다른 버스는 덕킹: 음악 −60dB 0.15초 안, 환경음 −40, 효과음 −18).
+- **연출** `src/render/phantom_show.py` PhantomShow — LandingCinematic 대신 (환상만). 실제 시간(+오디오 지연 보정) 기준 시계로 마커에 맞춰 단계 실행,
+  슬로모션은 입자·물고기 움직임 배속으로 표현. 카드(이름 한 글자씩·크기 숫자·보라 인장·보상 아이콘 날아옴)까지 그리고, 클릭 → `_end_fight`(1.5초 색 복귀, 첫 포획이면 튜토리얼).
+- **층** (환상 16 ≥ 전설 11 + 4): 슬로모션·멈춘 물방울·물기둥·비늘 무지개·빛줄기·오로라·빛 폭발·충격파·별 입자·고유 이펙트·카메라·글로우(반 해상도 더하기)·잔상·뜰채·카드 인장·보상 궤적.
+- **전설 연출은 건드리지 않는다.**
