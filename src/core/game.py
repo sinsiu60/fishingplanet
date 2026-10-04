@@ -72,6 +72,8 @@ class Game:
         self.save = None            # 현재 SaveGame (메뉴에선 None)
         self.autosave_t = 0.0
         self.scenes = SceneManager()
+        from src.tutorial.guide import Guide
+        self.guide = Guide(self)    # 가이드 튜토리얼 (DESIGN.md 40)
         # 슬로우모션용 (퍼펙트 0.3초 슬로우 등). 틱 간격은 그대로, 쌓이는 시간만 줄인다.
         self.time_scale = 1.0
         self.slow_timer = 0.0  # 실제 시간 기준 남은 슬로우모션
@@ -273,6 +275,8 @@ class Game:
                     pass
                 elif self.lifecycle.handle_event(event):
                     pass
+                elif not self.guide.pass_event(event):
+                    pass   # 건너뛰기 버튼·확인 창
                 elif self.scenes.current:
                     self.scenes.current.handle_event(event)
 
@@ -285,6 +289,7 @@ class Game:
                 accumulator -= self.tick_dt
                 ticks += 1
             t1 = time.perf_counter() if perf else 0.0
+            self.guide.update(frame_time)
             self.music.update()
             self.zones.update(frame_time)
             self.adaptive.update(frame_time, quiet=self.music.target is not None or self.music.current is not None)
@@ -293,10 +298,13 @@ class Game:
             t2 = time.perf_counter() if perf else 0.0
 
             if self.scenes.current:
+                from src.tutorial import targets
+                targets.begin()
                 if perf:
                     self._perf_profile_draw()
                 else:
                     self.scenes.current.draw(self.screen.canvas)
+                self.guide.draw(self.screen.canvas)
             if self.fade > 0:
                 self.fade = max(0.0, self.fade - frame_time)
                 veil = _opaque(self.screen.canvas.get_size())

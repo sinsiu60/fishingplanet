@@ -1060,8 +1060,8 @@ class FishingScene(Scene):
             from src.scene.voyage import VoyageScene
             self.game.scenes.push(VoyageScene(self.game, self))
             return
-        if self.card is not None or self.help:
-            # 튜토리얼 카드·도움말: 게임 정지 (예고 시간도 흐르지 않음)
+        if self.card is not None or self.help or self.game.guide.frozen():
+            # 튜토리얼 카드·도움말·가이드 정지 지시: 게임 정지 (예고 시간도 흐르지 않음)
             if self.card is not None:
                 self.card["t"] += dt
             mx, my = self.game.input.pointer_raw
@@ -2716,6 +2716,7 @@ class FishingScene(Scene):
                 tut.draw_help(canvas, more=bool(self.save.data.get("patterns_seen")))
         if self.touch:
             self._draw_touch_controls(canvas)
+        self._mark_targets(canvas)
         hud.draw_cursor(canvas, self.mouse)
 
     def _rod_geo(self) -> dict:
@@ -2985,6 +2986,68 @@ class FishingScene(Scene):
         if self.debug:
             pad_side = self.touch and not self.settings.get("touch_left")
             fight_hud.draw_debug(canvas, f, self.ctl.debug_lines(self.t), 100 if pad_side else 4)
+
+    def _mark_targets(self, canvas) -> None:
+        """튜토리얼 강조 대상 자리 (DESIGN.md 40-2)."""
+        from src.tutorial import targets as T
+        cam, c, f = self.cam, self.cast, self.fight
+        W, H = canvas.get_size()
+        hz = int(cam.horizon)
+        mp = self.screen_fx.map
+        if f is None:
+            T.mark("fish.water", (0, hz, W, H - hz))
+            if c.state not in (CastState.READY, CastState.CHARGING, CastState.SWING):
+                p = cam.project(c.bx, c.bz, c.bh)
+                if p:
+                    x, y = mp((p[0], p[1]))
+                    T.mark("fish.bobber", (x - 12, y - 14, 24, 24))
+            if self._side_menu_on():
+                from src.ui import side_menu
+                rects = self._side_menu_rects()
+                for k, r in rects:
+                    T.mark("fish.menu." + k, r)
+                if self.collect_k > 0.9:
+                    for k, r in side_menu.drawer_layout(rects):
+                        T.mark("fish.menu." + k, r)
+            if self.touch:
+                for ct in getattr(self.game.input, "controls", []):
+                    if ct.id == "bag":
+                        T.mark("fish.bag", ct.rect)
+            return
+        if self.touch:
+            for ct in getattr(self.game.input, "controls", []):
+                if ct.id == "pad":
+                    T.mark("fight.pad", ct.rect)
+        if f.phase == "fight":
+            ox = self.game.screen.safe_x
+            if self.touch and self.settings.get("touch_left"):
+                ox = W - self.GAUGE_W - ox
+            y, h = 44, 140
+            T.mark("fight.gauge.tension", (ox + 4, y - 2, 20, h + 18))
+            red_h = int(h - f.green_high / 100 * h)
+            T.mark("fight.gauge.tension.red", (ox + 6, y, 16, max(4, red_h)))
+            T.mark("fight.gauge.line", (ox + 32, y - 2, 13, h + 18))
+            fx, fy = mp(self._fish_screen())
+            T.mark("fight.fish", (fx - 22, fy - 16, 44, 30))
+            T.mark("fight.slots", (fx - 34, fy - 52, 68, 40))
+            T.mark("fight.slot.reel", (fx - 34, fy - 52, 68, 40))
+            T.mark("fight.distance", (W - 60 - (self.hud_inset if self.touch else 0), 2, 52, 14))
+            if not self.touch:
+                hx, hy = self._rod_geo()["hand"]
+                T.mark("fight.reel", (hx - 26, hy - 22, 52, 44))
+        elif f.phase == "net":
+            T.mark("fight.net", (W // 2 - 70, H // 2 - 40, 140, 100))
+            T.mark("fight.fish", (W // 2 - 50, H // 2 - 30, 100, 70))
+        elif f.phase == "caught":
+            T.mark("catch.card", (W // 2 - 110, 12, 220, 60))
+            T.mark("catch.size", (W // 2 - 40, 36, 80, 16))
+            T.mark("catch.rank", (W - 70 - 22, 54 - 22, 44, 50))
+            badges = fight_hud.catch_badges(self.catch_news)
+            if badges and badges[0][0].startswith("NEW!"):
+                T.mark("catch.dex_new", (8, 24 - 8, 110, 16))
+            pr = self._print_btn()
+            if pr is not None:
+                T.mark("catch.print_btn", pr)
 
     def _equipped_float(self) -> dict | None:
         """엘드라시온에서 장착한 특수 찌 (샤르미온에선 효과도 외형도 없음)."""

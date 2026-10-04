@@ -4120,6 +4120,24 @@ amb_harbor_bell     people           -16   -18.8     800   -23.9  ok
 
 PC: 낚시 화면 오른쪽 메뉴 '수집' → 왼쪽으로 열리는 서랍의 '도감' (Tab 키로 바로). 모바일: 오른쪽 아래 '가방' → '수집' → '도감'. TG-04 1단계·TG-PH 2단계는 문구 그대로, 강조만 수집 → 도감 순서로 옮긴다 (모바일은 가방 → 수집 → 도감) — 사용자 결정.
 
+### 40-6. 가이드 엔진 구현 (TU2)
+
+| 파일 | 내용 |
+|------|------|
+| `tools/tutorial_build.py` | TUTORIAL.md → `data/tutorials.json`(40개) · `data/tutorial_inputs.json`(16개). 문구는 문서에서 그대로 뽑고, 강조 대상·넘어가는 조건만 표(SPEC·OTHER)로 붙임 |
+| `src/tutorial/guide.py` | `game.guide`: 대기열(한 번에 하나) · 스토리 장면 중 시작 안 함 · 단계 진행 · 건너뛰기 확인 창(이어지는 TG-01→02→03 도 함께) · 세이브 `tutorial.{done,active,enabled,replay}` |
+| `src/tutorial/targets.py` | 장면이 그릴 때 `mark(ID, rect)` (UI 상자 장면은 `mark_ui`) → 가이드가 그 자리를 밝힘. `dex.open` = PC 수집 → 서랍 도감 / 모바일 가방 → 수집 → 도감 순서로 바뀜 |
+| `src/tutorial/conds.py` | 시작 조건 · `input:` 판정(입력 계층의 held·rod_pitch·circle_sample 그대로) · 정지 단계에 통과시킬 행동 · 조작 그림 종류·위치 |
+| `src/tutorial/overlay.py` | 검정 70% + 구멍 + 노란 테두리 1.6초 깜빡임 · 안내 상자(#101424, 얼굴 40x40, 2줄, 폭 220~400, 화살표, 자동 위치) · PC 마우스 / 모바일 손가락 그림 · '좋아요!' |
+| `src/tutorial/scripts.py` | 대본 물고기: 튜토리얼의 `fish` 값을 낚시 코드가 `scripts.plan(game, 키)` 로 읽음 · `script` 이름별 start/tick/on_step · `on_done` 할 일 |
+| `src/tutorial/legacy.py` | 옛 세이브(가이드 이전): 이미 쓴 시스템은 완료 처리, 패턴은 숙련 첫 단계 이상만 |
+| `src/scene/tutorial_replay.py` | 설정 '튜토리얼 다시 보기' 목록 (환상은 본 뒤에만). 디버그면 [바로] + 단계 번호로 그 단계부터 즉시 실행 |
+
+- 입력 거르기: 원시 이벤트(`pass_event` — 건너뛰기·확인 창·장면 전용 키) → 행동(`Scene.handle_event` 에서 `allow_action`). 강조 = 대상 안의 누름과 대상 행동(Tab·가방 버튼 등)만, 대상이 화면에 없으면 막지 않음(갇힘 방지). 정지 = 지시한 조작만, 틀리면 조작 그림이 한 번 더 강조.
+- 시간 정지: `FishingScene.update` 맨 앞에서 `game.guide.frozen()` 이면 카드·도움말과 같은 자리에서 멈춤. 일시정지·설정·스토리 장면이 위에 뜨면 가이드도 숨고 멈춤 → 돌아오면 같은 단계 (세이브 `tutorial.active`).
+- 설정: '튜토리얼 안내' 켜기/끄기(세이브마다) · '튜토리얼 다시 보기'(옛 '처음부터 다시 보기' 대신). 다시 보기를 고르면 그 튜토리얼의 시작 순간(낚시 튜토리얼은 다음 낚시)에 다시 나옴.
+- 포획 카드 안내 글: "살림망에 보관했어요 (하루네 낚시점에서 판매)" (판매는 하루네 낚시점·엘라 공방에서만).
+
 ### 40-5. TUTORIAL.md 설계 (원문 그대로)
 
 ## 📐 [가이드 시스템]

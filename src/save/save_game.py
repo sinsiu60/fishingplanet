@@ -92,6 +92,9 @@ def migrate(data: dict, slot: int | None = None) -> dict:
                     pass
         data.setdefault("visited", list(data.get("unlocked_spots", ["reservoir"])))
         data["version"] = 4
+    if "tutorial" not in data:
+        from src.tutorial import legacy
+        legacy.migrate(data)   # 가이드 튜토리얼 이전 세이브: 이미 쓴 시스템은 완료 처리 (DESIGN.md 40)
     if "legend_sales" not in data:
         # 전설 감가(A+D) 이전에 잡아 둔 살림망 전설은 제값으로 (규칙이 생기기 전에 잡은 것)
         legends = {f["id"] for f in load_json("fish.json")["fish"] if f["rarity"] == "legend"}
@@ -229,6 +232,7 @@ def new_data() -> dict:
         "prints": {},                                    # 어탁: 물고기 id → {size, date, spot, season, kind}
         "visited": ["reservoir"],                        # 이동 컷신: 첫 방문 기록
         "dialogue": {"heard": [], "recent": {}, "flags": {}},  # 들은 1회성 대사·NPC별 최근 대사·대사용 진행 기록
+        "tutorial": {"done": [], "active": None, "enabled": True, "replay": []},   # 가이드 튜토리얼 (DESIGN.md 40)
         "season_seen": None,                             # 마지막으로 마을에서 본 계절 (계절 바뀜 알림)
         "events": {"day": -1, "plan": None, "active": None, "seen": {}},  # 날씨 이벤트 (오늘 계획·진행 중·본 횟수)
     }

@@ -1,9 +1,9 @@
 """설정.
 
-PC     : 탭 세 개 — [화면] 화면 연출, 화면 배율, 튜토리얼 다시 보기, 소리 자막, 세이브 옮기기
+PC     : 탭 세 개 — [화면] 화면 연출, 화면 배율, 튜토리얼 안내·다시 보기, 소리 자막, 세이브 옮기기
                     [소리] 전체·음악·효과음·환경음 볼륨, 신호 강조, 오디오 지연 보정, 사운드 테스트 룸 (32장 S3)
                     [접근성] 예고 시간 배율, 첫 만남 카드, 신호 크기, 색약 모드, 소리 신호 (31장 C6)
-모바일 : 탭 네 개 — [화면] 화면 연출, 소리 자막, 튜토리얼 / [소리] PC와 같음
+모바일 : 탭 네 개 — [화면] 화면 연출, 소리 자막, 튜토리얼 안내·다시 보기 / [소리] PC와 같음
                     [터치·기기] 터치 버튼 크기·진하기, 왼손잡이, 진동(끔/약/중/강), 화면 갱신(30/60), 세이브 옮기기
                     [접근성] PC와 같음
 """
@@ -48,7 +48,8 @@ class SettingsScene(Scene):
              (lambda: self._cycle("season_lock", (None, "spring", "summer", "autumn", "winter"), -1),
               lambda: self._cycle("season_lock", (None, "spring", "summer", "autumn", "winter"), 1))),
         ]
-        tutorial = ("튜토리얼", "button", lambda: "처음부터 다시 보기", self._reset_tutorial)
+        tutorial = ("튜토리얼 다시 보기", "button", lambda: "목록", self._open_tutorials)
+        guide = ("튜토리얼 안내", "toggle", lambda: self.game.guide.enabled(), self._toggle_guide)
         captions = ("소리 자막 (예고음 글자로)", "toggle", lambda: s.get("sound_captions"), self._toggle_captions)
         transfer = ("세이브 옮기기 (PC·모바일)", "button", lambda: "열기", self._open_transfer)
         tab = self.tabs.labels[self.tabs.index]
@@ -59,9 +60,9 @@ class SettingsScene(Scene):
         if not IS_MOBILE:
             scale = ("화면 배율", "step", lambda: f"{self.game.screen.scale}배 (최대 {self._max_scale()})",
                      (lambda: self._scale(-1), lambda: self._scale(1)))
-            return sound + [scale, tutorial, captions, transfer]
+            return sound + [scale, guide, tutorial, captions, transfer]
         if tab == "화면":
-            return sound + [captions, tutorial]
+            return sound + [captions, guide, tutorial]
         size = ("터치 버튼 크기", "step", lambda: ("작게", "보통", "크게")[s.get("touch_size")],
                 (lambda: self._step("touch_size", -1, 2), lambda: self._step("touch_size", 1, 2)))
         alpha = ("터치 버튼 진하기", "step", lambda: ("흐리게", "보통", "진하게")[s.get("touch_alpha")],
@@ -265,12 +266,20 @@ class SettingsScene(Scene):
             self.game.screen.set_scale(new)
             self.s.set("scale", new)
 
-    def _reset_tutorial(self) -> None:
-        self.s.set("tutorial_seen", [])
-        for scene in self.game.scenes.stack:
-            if hasattr(scene, "tutorial"):
-                scene.tutorial.seen.clear()
-        self.msg, self.msg_t = "튜토리얼을 처음부터 다시 보여드려요", 2.0
+    def _toggle_guide(self) -> None:
+        """튜토리얼 안내 켜기/끄기 (세이브 tutorial.enabled — 끄면 새 튜토리얼도 시작 안 함)."""
+        if self.game.save is None:
+            self.msg, self.msg_t = "게임을 불러온 뒤에 바꿀 수 있어요", 2.0
+            return
+        st = self.game.guide.st()
+        st["enabled"] = not st["enabled"]
+
+    def _open_tutorials(self) -> None:
+        if self.game.save is None:
+            self.msg, self.msg_t = "게임을 불러온 뒤에 볼 수 있어요", 2.0
+            return
+        from src.scene.tutorial_replay import TutorialReplayScene
+        self.game.scenes.push(TutorialReplayScene(self.game))
 
     def _open_transfer(self) -> None:
         from src.scene.save_transfer import SaveTransferScene

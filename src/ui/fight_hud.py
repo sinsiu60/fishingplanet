@@ -294,7 +294,7 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
             pygame.draw.rect(canvas, (90, 50, 140), (w // 2 - tw // 2 - 2, 166, tw + 4, 20), 1, border_radius=5)
         text(canvas, f"「{news['title']}」", (w // 2, 176), (255, 214, 90), 11, "center")  # 장착한 칭호
     if t > 1.2:
-        text(canvas, "살림망에 보관했어요 (B: 상점에서 판매)", (w // 2, 240), (170, 180, 200), 11, "center")
+        text(canvas, "살림망에 보관했어요 (하루네 낚시점에서 판매)", (w // 2, 240), (170, 180, 200), 11, "center")
     if t > CATCH_READY_T + 0.5 and int(t * 2) % 2 == 0:
         text(canvas, "클릭해서 계속", (w // 2, 256), (170, 180, 200), 11, "center")
 

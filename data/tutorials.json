@@ -1,0 +1,1514 @@
+{
+ "_설명": "튜토리얼 (TUTORIAL.md 원문 그대로, tools/tutorial_build.py 가 만듦 — 손으로 고치지 말 것). DESIGN.md 40.",
+ "tutorials": {
+  "TG-01": {
+   "title": "첫 캐스팅 · 챔질",
+   "who": "haru",
+   "start": "event:spot_enter:reservoir",
+   "need_cond": "new_game",
+   "script": "tg01_bite",
+   "next": "TG-02",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "fish.water",
+     "text": "여기가 동네 저수지예요. 찌를 던져 볼까요?",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "fish.water",
+     "text": "누르고 있으면 던질 힘이 모여요. {캐스팅}",
+     "expr": "neutral",
+     "until": "event:cast_landed",
+     "allow": "cast"
+    },
+    {
+     "kind": "wait",
+     "target": "fish.bobber",
+     "text": "찌를 잘 보세요. 물고기가 오면 움직여요.",
+     "expr": "neutral",
+     "until": "event:nibble"
+    },
+    {
+     "kind": "freeze",
+     "target": "fish.bobber",
+     "text": "톡톡! 아직이에요. 물고기가 **간만 보는 중**이에요.",
+     "expr": "surprised",
+     "until": "tap"
+    },
+    {
+     "kind": "wait",
+     "target": "fish.bobber",
+     "text": "진짜로 물면 찌가 **쑥** 들어가요.",
+     "expr": "neutral",
+     "until": "event:bite"
+    },
+    {
+     "kind": "freeze",
+     "target": "fish.bobber",
+     "text": "지금이에요! **쑥** 들어갔어요! {탭}",
+     "expr": "surprised",
+     "until": "input:hook"
+    }
+   ]
+  },
+  "TG-02": {
+   "title": "첫 파이팅",
+   "who": "haru",
+   "start": "event:fight_start",
+   "after": [
+    "TG-01"
+   ],
+   "script": "tg02_fight",
+   "next": "TG-03",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.gauge.tension",
+      "fight.gauge.line"
+     ],
+     "text": "이건 **장력 게이지**예요. 바늘이 **초록 칸** 안에 있으면 안전해요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "fight.gauge.line",
+     "text": "빨간 칸에 오래 있으면 **줄이 닳아요**. 다 닳으면 끊어져요!",
+     "expr": "surprised",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": "fight.reel",
+     "text": "이제 감아 볼까요? {감기}",
+     "expr": "happy",
+     "until": "input:reel"
+    },
+    {
+     "kind": "wait",
+     "target": "fight.gauge.tension",
+     "text": "계속 감아요. 바늘을 잘 보세요.",
+     "expr": "neutral",
+     "until": "event:tension_red"
+    },
+    {
+     "kind": "freeze",
+     "target": "fight.gauge.tension.red",
+     "text": "빨간 칸이에요! 잠깐 쉬면 장력이 내려가요. {손떼기}",
+     "expr": "surprised",
+     "until": "input:release"
+    },
+    {
+     "kind": "wait",
+     "target": "fight.gauge.tension",
+     "text": "초록 칸으로 돌아오면 다시 감아요.",
+     "expr": "neutral",
+     "until": "event:tired"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slot.reel"
+     ],
+     "text": "물고기가 **지쳤어요**! 이때 감으면 쭉 끌려와요. {감기}",
+     "expr": "happy",
+     "until": "input:reel"
+    },
+    {
+     "kind": "wait",
+     "target": "fight.distance",
+     "text": "거의 다 왔어요!",
+     "expr": "happy",
+     "until": "event:net_phase"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.net"
+     ],
+     "text": "지금이에요! 뜰채로 건지세요! {탭}",
+     "expr": "surprised",
+     "until": "input:hook"
+    }
+   ]
+  },
+  "TG-03": {
+   "title": "첫 포획 결과",
+   "who": "haru",
+   "start": "event:catch_shown",
+   "after": [
+    "TG-02"
+   ],
+   "next": "TG-04",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "catch.card",
+     "text": "첫 물고기예요! 축하해요!",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "catch.size",
+     "text": "같은 물고기라도 **크기**가 다 달라요. 크면 더 비싸요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "catch.rank",
+     "text": "이건 **랭크**예요. 깔끔하게 잡을수록 높아요. **S랭크**는 판매가가 2배!",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "catch.dex_new",
+     "text": "처음 잡은 물고기는 **도감**에 기록돼요. 한번 볼까요?",
+     "expr": "happy",
+     "until": "tap",
+     "on_done": "close_catch"
+    }
+   ]
+  },
+  "TG-04": {
+   "title": "도감",
+   "who": "haru",
+   "start": "event:tg_done:TG-03",
+   "after": [
+    "TG-03"
+   ],
+   "on_done": "goal_sell",
+   "steps": [
+    {
+     "kind": "spotlight",
+     "target": "dex.open",
+     "text": "도감을 열어 볼까요? {도감열기}",
+     "expr": "happy",
+     "until": "scene:DexScene",
+     "allow_keys": [
+      "menu:dex"
+     ]
+    },
+    {
+     "kind": "info",
+     "target": "dex.tabs",
+     "text": "낚시터마다 사는 물고기가 달라요. 탭을 눌러 낚시터를 바꿀 수 있어요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "dex.cards.unknown",
+     "text": "검은 그림은 **아직 못 잡은 물고기**예요. 잡으면 모습이 보여요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "dex.card.first",
+     "text": "방금 잡은 붕어예요. 눌러 보세요.",
+     "expr": "happy",
+     "until": "cond:dex_sel_first"
+    },
+    {
+     "kind": "info",
+     "target": "dex.detail.name",
+     "text": "이름, 등급, **난이도**예요. 별이 많을수록 잡기 어려워요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "dex.detail.habitat",
+     "text": "언제, 어떤 날씨에, 몇 cm까지 나오는지예요. **잘 잡히는 계절**도 있어요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "dex.detail.records",
+     "text": "내가 잡은 **가장 큰 크기**, **최고 랭크**, **잡은 수**예요.",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "dex.detail.stars",
+     "text": "물고기마다 **별이 5개** 있어요. 첫 포획, S랭크, 대물… 목표를 이루면 하나씩 채워져요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "dex.detail.mastery",
+     "text": "같은 물고기를 많이 잡으면 **숙련**이 올라요. 단계마다 새 정보가 열려요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "dex.detail.unlocks",
+     "text": "더 잡으면 **예고 힌트**와 **좋아하는 리듬**을 알 수 있어요. 싸울 때 큰 도움이 돼요!",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "dex.boss",
+     "text": "이건 이 낚시터의 **주인, 전설 물고기**예요. 언젠가 꼭 만나 봐요.",
+     "expr": "surprised",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": [
+      "dex.spot_stars",
+      "dex.btn.stars"
+     ],
+     "text": "별을 모으면 **별 보상**을 받을 수 있어요.",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "dex.close",
+     "text": "다 봤어요! 이제 닫아 볼까요?",
+     "expr": "happy",
+     "until": "closed:DexScene"
+    }
+   ]
+  },
+  "TG-05": {
+   "title": "패턴 사전",
+   "who": "haru",
+   "start": "event:dex_open",
+   "need_cond": "any_pattern_done",
+   "after": [
+    "TG-04"
+   ],
+   "steps": [
+    {
+     "kind": "spotlight",
+     "target": "dex.btn.patterns",
+     "text": "배운 **물고기 패턴**은 여기서 다시 볼 수 있어요. 눌러 보세요.",
+     "expr": null,
+     "until": "cond:dex_patterns"
+    },
+    {
+     "kind": "info",
+     "target": "dex.patterns",
+     "text": "신호 모양과 해야 할 조작이 정리돼 있어요. 헷갈리면 언제든 보세요!",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-06": {
+   "title": "판매",
+   "who": "haru",
+   "start": "event:interior_ready:haru",
+   "after": [
+    "TG-04"
+   ],
+   "need_cond": "has_fish",
+   "next": "TG-07",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "interior.portrait",
+     "text": "오, 첫 물고기 잡았구먼! 여기서 팔면 돈이 돼요.",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "interior.menu.sell",
+     "text": "{탭} \"팔기\"를 눌러 봐요.",
+     "expr": "neutral",
+     "until": "cond:shop_sell"
+    },
+    {
+     "kind": "info",
+     "target": "shop.list",
+     "text": "가방에 있는 물고기들이에요. 왼쪽 **색 띠**는 등급이에요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "shop.row.first",
+     "text": "붕어를 골라 봐요.",
+     "expr": "neutral",
+     "until": "cond:shop_sel_first"
+    },
+    {
+     "kind": "info",
+     "target": "shop.detail.calc",
+     "text": "**기본가 × 랭크 배수**가 판매가예요. S랭크면 2배!",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "shop.btn.lock",
+     "text": "아끼는 물고기는 **잠가** 두면 실수로 안 팔려요. 귀한 물고기는 자동으로 잠겨요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "shop.btn.sell",
+     "text": "이번엔 팔아 볼까요?",
+     "expr": "happy",
+     "until": "event:sold"
+    },
+    {
+     "kind": "info",
+     "target": "shop.money",
+     "text": "돈이 들어왔어요! 여기서 소지금을 볼 수 있어요.",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "shop.btn.bulk",
+     "text": "물고기가 많아지면 **일괄 판매**로 한 번에 팔아요. 잠긴 건 빼고요.",
+     "expr": "neutral",
+     "until": "tap",
+     "on_done": "shop_to_buy"
+    }
+   ]
+  },
+  "TG-07": {
+   "title": "구매",
+   "who": "haru",
+   "start": "event:tg_done:TG-06",
+   "after": [
+    "TG-06"
+   ],
+   "on_done": "goal_baek",
+   "steps": [
+    {
+     "kind": "spotlight",
+     "target": "shop.tab.rod",
+     "text": "이제 장비를 볼까요? \"낚싯대\"를 눌러 봐요.",
+     "expr": "happy",
+     "until": "cond:shop_tab_rod"
+    },
+    {
+     "kind": "info",
+     "target": "shop.list.tier",
+     "text": "**T1, T2…** 숫자가 클수록 좋은 장비예요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "shop.row.glass",
+     "text": "다음 낚싯대를 골라 봐요.",
+     "expr": "neutral",
+     "until": "cond:shop_sel_glass"
+    },
+    {
+     "kind": "info",
+     "target": "shop.detail.compare",
+     "text": "위 막대가 **고른 장비**, 아래 막대가 **지금 장비**예요. 길수록 좋아요.",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "shop.detail.price",
+     "text": "사고 나면 돈이 얼마 남는지도 보여요.",
+     "expr": "neutral",
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "shop.tabs.gear",
+     "text": "릴, 줄, 뜰채, 미끼도 바꿀 수 있어요. 돈이 모이면 하나씩 바꿔 봐요!",
+     "expr": "happy",
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "shop.close",
+     "text": "오늘은 여기까지! 백 노인도 한번 만나 봐요. 오두막에 계셔.",
+     "expr": "happy",
+     "until": "closed:ShopScene"
+    }
+   ]
+  },
+  "TG-P1": {
+   "title": "돌진",
+   "who": "haru",
+   "start": "event:first:telegraph:rush",
+   "pattern": "telegraph:rush",
+   "how": "input:drag_down",
+   "raw": {
+    "warn": "물결이 **안쪽으로 빨려들고**, 줄 위로 빛이 다가와요. **돌진** 신호예요!",
+    "act": "지금이에요! 줄을 풀어 주세요. {드랙내리기}",
+    "ok": "좋아요! 줄이 버텨 냈어요."
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "물결이 **안쪽으로 빨려들고**, 줄 위로 빛이 다가와요. **돌진** 신호예요!",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 줄을 풀어 주세요. {드랙내리기}",
+     "until": "input:drag_down"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 줄이 버텨 냈어요.",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P2": {
+   "title": "점프",
+   "who": "haru",
+   "start": "event:first:telegraph:jump",
+   "pattern": "telegraph:jump",
+   "how": "input:lower",
+   "raw": {
+    "warn": "수면 아래가 **부글부글** 끓어요. 곧 **점프**해요!",
+    "act": "지금이에요! 링이 맞았어요. {숙이기}",
+    "ok": "좋아요! 퍼펙트예요!"
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "수면 아래가 **부글부글** 끓어요. 곧 **점프**해요!",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 링이 맞았어요. {숙이기}",
+     "until": "input:lower"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 퍼펙트예요!",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P3": {
+   "title": "방향 전환",
+   "who": "haru",
+   "start": "event:first:telegraph:turn",
+   "pattern": "telegraph:turn",
+   "how": "input:turn",
+   "raw": {
+    "warn": "줄이 한쪽으로 쏠려요. **방향 전환** 신호예요!",
+    "act": "지금이에요! 표시된 방향으로! {왼쪽} (방향은 실제 화살표대로 {왼쪽}/{오른쪽})",
+    "ok": "좋아요! 놓치지 않았어요."
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "줄이 한쪽으로 쏠려요. **방향 전환** 신호예요!",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 표시된 방향으로! {왼쪽} (방향은 실제 화살표대로 {왼쪽}/{오른쪽})",
+     "until": "input:turn"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 놓치지 않았어요.",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P4": {
+   "title": "힘 모으기 → 지침",
+   "who": "haru",
+   "start": "event:first:action:charge",
+   "pattern": "action:charge",
+   "how": "input:reel",
+   "raw": {
+    "warn": "물고기가 **멈췄어요**. 힘을 모으는 중이에요.",
+    "act": "지금이에요! 지친 틈에 감으세요! {감기}",
+    "ok": "좋아요! 쭉 끌려왔어요."
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "물고기가 **멈췄어요**. 힘을 모으는 중이에요.",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 지친 틈에 감으세요! {감기}",
+     "until": "input:reel"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 쭉 끌려왔어요.",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P5": {
+   "title": "① 머리 흔들기",
+   "who": "haru",
+   "start": "event:first:pattern:shake",
+   "pattern": "pattern:shake",
+   "how": "hold:shake",
+   "raw": {
+    "warn": "줄이 **파르르** 떨려요. **머리 흔들기**예요!",
+    "act": "지금은 아무것도 하지 마세요! {손떼기} (떨림이 끝날 때까지 화면에 \"참는 중…\" 표시)",
+    "ok": "좋아요! 바늘이 빠지지 않았어요."
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "줄이 **파르르** 떨려요. **머리 흔들기**예요!",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금은 아무것도 하지 마세요! {손떼기} (떨림이 끝날 때까지 화면에 \"참는 중…\" 표시)",
+     "until": "hold:shake"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 바늘이 빠지지 않았어요.",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P6": {
+   "title": "② 잠수",
+   "who": "haru",
+   "start": "event:first:pattern:dive",
+   "pattern": "pattern:dive",
+   "how": "input:up",
+   "raw": {
+    "warn": "그림자가 **작아지며** 깊이 들어가요. **잠수** 신호예요!",
+    "act": "지금이에요! 낚싯대를 세우세요! {위}",
+    "ok": "좋아요! 바위에 쓸리지 않았어요."
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "그림자가 **작아지며** 깊이 들어가요. **잠수** 신호예요!",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 낚싯대를 세우세요! {위}",
+     "until": "input:up"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 바위에 쓸리지 않았어요.",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P7": {
+   "title": "③ 수면 질주",
+   "who": "haru",
+   "start": "event:first:pattern:surface",
+   "pattern": "pattern:surface",
+   "how": "input:down",
+   "raw": {
+    "warn": "수면에 **V자 물살**이 생겨요. **수면 질주** 신호예요!",
+    "act": "지금이에요! 낚싯대를 낮추세요! {아래}",
+    "ok": "좋아요! 거리가 줄었어요."
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "수면에 **V자 물살**이 생겨요. **수면 질주** 신호예요!",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 낚싯대를 낮추세요! {아래}",
+     "until": "input:down"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 거리가 줄었어요.",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P8": {
+   "title": "④ 역주행",
+   "who": "haru",
+   "start": "event:first:pattern:reverse",
+   "pattern": "pattern:reverse",
+   "how": "input:mash",
+   "raw": {
+    "warn": "그림자가 **이쪽으로** 와요! 줄이 늘어져요.",
+    "act": "지금이에요! 늘어진 줄을 빨리 감으세요! {연타} (화면에 연타 횟수 0/6)",
+    "ok": "좋아요! 한 번에 끌어왔어요."
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "그림자가 **이쪽으로** 와요! 줄이 늘어져요.",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 늘어진 줄을 빨리 감으세요! {연타} (화면에 연타 횟수 0/6)",
+     "until": "input:mash"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 한 번에 끌어왔어요.",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P9": {
+   "title": "⑤ 줄 비틀기",
+   "who": "haru",
+   "start": "event:first:pattern:twist",
+   "pattern": "pattern:twist",
+   "how": "input:circle",
+   "raw": {
+    "warn": "물고기가 **빙글빙글** 돌아요. 줄이 꼬여요!",
+    "act": "지금이에요! 꼬임을 풀어요! {원} (원 진행 표시)",
+    "ok": "좋아요! 꼬임이 풀렸어요."
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "물고기가 **빙글빙글** 돌아요. 줄이 꼬여요!",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 꼬임을 풀어요! {원} (원 진행 표시)",
+     "until": "input:circle"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 꼬임이 풀렸어요.",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P10": {
+   "title": "⑥ 연쇄 콤보",
+   "who": "haru",
+   "start": "event:first:pattern:chain",
+   "pattern": "pattern:chain",
+   "how": "chain",
+   "raw": {
+    "warn": "아이콘이 **3개** 떴어요. 이 순서대로 공격해 와요!",
+    "act": "각 행동 순간마다 정지: \"첫 번째!\", \"두 번째!\", \"마지막!\" + 해당 조작",
+    "ok": "좋아요! 콤보를 다 막았어요!"
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "아이콘이 **3개** 떴어요. 이 순서대로 공격해 와요!",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "각 행동 순간마다 정지: \"첫 번째!\", \"두 번째!\", \"마지막!\" + 해당 조작",
+     "until": "chain"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 콤보를 다 막았어요!",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P11": {
+   "title": "⑦ 숨기",
+   "who": "haru",
+   "start": "event:first:pattern:hide",
+   "pattern": "pattern:hide",
+   "how": "hide",
+   "raw": {
+    "warn": "물고기가 **바위 밑에** 숨었어요. 당기면 줄만 닳아요.",
+    "act": "1차: 살짝 풀어서 안심시켜요. {드랙내리기} → 2차(나오는 순간): 나왔어요! 지금 감으세요! {감기}",
+    "ok": "좋아요! 기습 성공!"
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "물고기가 **바위 밑에** 숨었어요. 당기면 줄만 닳아요.",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "1차: 살짝 풀어서 안심시켜요. {드랙내리기} → 2차(나오는 순간): 나왔어요! 지금 감으세요! {감기}",
+     "until": "hide"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 기습 성공!",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P12": {
+   "title": "⑧ 펌핑 리듬",
+   "who": "haru",
+   "start": "event:first:pattern:pump",
+   "pattern": "pattern:pump",
+   "how": "pump",
+   "raw": {
+    "warn": "**둥, 둥** 박자에 맞춰 당기고 있어요.",
+    "act": "첫 두 박자 사이마다 정지: \"지금! 박자 사이에 감으세요!\" {감기}",
+    "ok": "좋아요! 박자를 탔어요!"
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "**둥, 둥** 박자에 맞춰 당기고 있어요.",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "첫 두 박자 사이마다 정지: \"지금! 박자 사이에 감으세요!\" {감기}",
+     "until": "pump"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 박자를 탔어요!",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P13": {
+   "title": "⑨ 공중 몸부림",
+   "who": "haru",
+   "start": "event:first:pattern:thrash",
+   "pattern": "pattern:thrash",
+   "how": "thrash",
+   "raw": {
+    "warn": "아주 **높이** 뛰어올라요! 링이 **두 번** 나와요.",
+    "act": "1차: \"첫 번째 링!\" {숙이기} → 2차: \"한 번 더!\" {숙이기}",
+    "ok": "좋아요! 더블 퍼펙트!"
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "아주 **높이** 뛰어올라요! 링이 **두 번** 나와요.",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "1차: \"첫 번째 링!\" {숙이기} → 2차: \"한 번 더!\" {숙이기}",
+     "until": "thrash"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 더블 퍼펙트!",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P14": {
+   "title": "⑩ 줄 물어뜯기",
+   "who": "haru",
+   "start": "event:first:pattern:bite",
+   "pattern": "pattern:bite",
+   "how": "input:drag_min",
+   "raw": {
+    "warn": "이빨이 **번쩍**! 줄을 물어뜯으려 해요!",
+    "act": "지금이에요! 줄을 순간 확 풀어요! {순간최저}",
+    "ok": "좋아요! 헛물었어요!"
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "이빨이 **번쩍**! 줄을 물어뜯으려 해요!",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 줄을 순간 확 풀어요! {순간최저}",
+     "until": "input:drag_min"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 헛물었어요!",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P15": {
+   "title": "⑪ 가짜 지침",
+   "who": "haru",
+   "start": "event:first:fake_tired",
+   "pattern": "fake_tired",
+   "how": "fake",
+   "raw": {
+    "warn": "멈췄는데… **지느러미가 아직 움직여요**. 이건 **가짜**예요! 감지 마세요.",
+    "act": "(탭으로 넘김) → 진짜 지침 순간 정지: \"지느러미가 멈췄어요. 진짜예요! 감으세요!\" {감기}",
+    "ok": "좋아요! 속지 않았어요."
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "멈췄는데… **지느러미가 아직 움직여요**. 이건 **가짜**예요! 감지 마세요.",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "(탭으로 넘김) → 진짜 지침 순간 정지: \"지느러미가 멈췄어요. 진짜예요! 감으세요!\" {감기}",
+     "until": "fake"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 속지 않았어요.",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-P16": {
+   "title": "⑫ 이중 패턴",
+   "who": "haru",
+   "start": "event:first:pattern:dual",
+   "pattern": "pattern:dual",
+   "how": "dual",
+   "raw": {
+    "warn": "신호가 **두 개** 동시에! 왼쪽은 왼손, 오른쪽은 오른손이에요.",
+    "act": "지금이에요! 두 개 다! (각 슬롯 옆에 해당 조작 이름을 따로 표시)",
+    "ok": "좋아요! 양손 다 해냈어요!"
+   },
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "신호가 **두 개** 동시에! 왼쪽은 왼손, 오른쪽은 오른손이에요.",
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금이에요! 두 개 다! (각 슬롯 옆에 해당 조작 이름을 따로 표시)",
+     "until": "dual"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "좋아요! 양손 다 해냈어요!",
+     "until": "auto:1.5"
+    }
+   ]
+  },
+  "TG-08": {
+   "title": "루어 액션",
+   "who": "haru",
+   "start": "event:lure_idle",
+   "need_cond": "second_fishing",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fish.bobber",
+     "text": "기다리기만 해도 되지만, 찌를 움직이면 더 빨리 와요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "freeze",
+     "target": "fight.reel",
+     "text": "살짝 움직여 볼까요? {저킹}",
+     "expr": null,
+     "until": "input:jerk"
+    },
+    {
+     "kind": "wait",
+     "target": "fish.shadow",
+     "text": "그림자가 다가오면 관심 있다는 뜻이에요!",
+     "expr": null,
+     "until": "event:bite"
+    }
+   ]
+  },
+  "TG-09": {
+   "title": "수면 징후",
+   "who": "haru",
+   "start": "event:sign_seen",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fish.signs",
+     "text": "저기 봐요! 새 떼 아래엔 물고기가 모여 있어요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "fish.signs",
+     "text": "저 근처로 던져 볼까요? {캐스팅}",
+     "expr": null,
+     "until": "event:cast_landed",
+     "allow": "cast"
+    }
+   ]
+  },
+  "TG-10": {
+   "title": "보물상자",
+   "who": "haru",
+   "start": "event:chest_card",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "catch.chest",
+     "text": "보물상자예요! 물고기가 물고 나왔어요.",
+     "expr": null,
+     "until": "tap",
+     "on_done": "close_catch"
+    },
+    {
+     "kind": "spotlight",
+     "target": "chest.menu",
+     "text": "여기서 열 수 있어요. {탭}",
+     "expr": null,
+     "until": "scene:ChestScene"
+    },
+    {
+     "kind": "spotlight",
+     "target": "chest.box",
+     "text": "눌러서 열어 봐요!",
+     "expr": null,
+     "until": "event:chest_opened"
+    },
+    {
+     "kind": "info",
+     "target": "chest.grade",
+     "text": "갈색·파랑·보라·금색 순으로 귀해요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "chest.pity",
+     "text": "운이 없어도, 여기 숫자가 차면 좋은 상자가 꼭 나와요.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-11": {
+   "title": "의뢰 게시판",
+   "who": "haru",
+   "start": "event:quests_open",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "quests.daily",
+     "text": "매일 새 의뢰가 3개 올라와요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "quests.cond",
+     "text": "조건대로 잡으면 성공이에요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "quests.reward",
+     "text": "보상과 **의뢰 포인트**를 줘요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "quests.refresh",
+     "text": "마음에 안 들면 하루 한 번 바꿀 수 있어요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "quests.weekly",
+     "text": "일주일에 한 번, 어려운 의뢰도 있어요.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-12": {
+   "title": "강화",
+   "who": "haru",
+   "start": "event:interior_ready:haru",
+   "need_cond": "has_materials",
+   "after": [
+    "TG-07"
+   ],
+   "steps": [
+    {
+     "kind": "spotlight",
+     "target": "interior.menu.enhance",
+     "text": "{탭} 장비를 더 좋게 만들 수 있어요.",
+     "expr": null,
+     "until": "cond:shop_enhance"
+    },
+    {
+     "kind": "spotlight",
+     "target": "shop.list",
+     "text": "강화할 장비를 고르고",
+     "expr": null,
+     "until": "cond:shop_sel_any"
+    },
+    {
+     "kind": "info",
+     "target": "shop.enhance.cost",
+     "text": "골드와 **물고기 소재**가 필요해요. 소재는 물고기를 **분해**하면 나와요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "shop.enhance.stars",
+     "text": "+3까지 올릴 수 있고, **실패는 없어요**.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-13": {
+   "title": "어탁",
+   "who": "haru",
+   "start": "event:record_card",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "catch.print_btn",
+     "text": "신기록이에요! 먹물로 **어탁**을 남길 수 있어요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "spotlight",
+     "target": "catch.print_btn",
+     "text": "{탭}",
+     "expr": null,
+     "until": "event:print_made"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "어탁은 마을 **어탁 갤러리**에 걸려요.",
+     "expr": null,
+     "until": "auto:3"
+    }
+   ]
+  },
+  "TG-14": {
+   "title": "주인공의 집",
+   "who": "haru",
+   "start": "event:home_ready",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "home.menu.journal",
+     "text": "그날그날의 마음이 일지에 남아요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "home.menu.memories",
+     "text": "본 장면을 다시 볼 수 있어요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "home.menu.notebook",
+     "text": "모은 수첩을 읽을 수 있어요.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-15": {
+   "title": "계절",
+   "who": "haru",
+   "start": "event:village_enter",
+   "need_cond": "season_changed",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "village.season",
+     "text": "계절이 바뀌었어요! 지금만 나오는 물고기가 있어요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "village.season.fish",
+     "text": "이번 계절 한정 물고기예요.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-16": {
+   "title": "날씨 이벤트",
+   "who": "haru",
+   "start": "event:weather_event",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "village.sky",
+     "text": "특별한 날씨예요! 이때만 나오는 물고기가 있어요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "village.banner",
+     "text": "짧게 끝나니 서둘러요!",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-17": {
+   "title": "변이 물고기",
+   "who": "haru",
+   "start": "event:mutation_card",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "catch.mutation",
+     "text": "**변이**예요! 같은 물고기라도 특별한 개체예요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "catch.mutation",
+     "text": "도감에 따로 기록돼요.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-18": {
+   "title": "특수 찌",
+   "who": "ella",
+   "start": "event:interior_ready:ella",
+   "need_cond": "c402_done",
+   "steps": [
+    {
+     "kind": "spotlight",
+     "target": "shop.tab.float",
+     "text": "여기서 특수 찌를 살 수 있어요. {탭}",
+     "expr": null,
+     "until": "cond:shop_tab_float"
+    },
+    {
+     "kind": "spotlight",
+     "target": "shop.row.paralysis_float",
+     "text": "마비 찌를 골라요.",
+     "expr": null,
+     "until": "cond:shop_sel_paralysis"
+    },
+    {
+     "kind": "spotlight",
+     "target": "shop.btn.action",
+     "text": "구매하세요.",
+     "expr": null,
+     "until": "cond:float_owned",
+     "short_text": "물고기를 팔면 살 수 있어요. 판매 탭에 가 볼까요?"
+    },
+    {
+     "kind": "spotlight",
+     "target": "shop.btn.action",
+     "text": "장착해야 효과가 있어요.",
+     "expr": null,
+     "until": "cond:float_equipped"
+    },
+    {
+     "kind": "wait",
+     "target": null,
+     "text": "이제 지친 물고기가 도망가지 않을 거예요.",
+     "expr": null,
+     "until": "auto:3"
+    }
+   ]
+  },
+  "TG-PH": {
+   "title": "환상의 물고기",
+   "who": "baek",
+   "start": "event:phantom_caught",
+   "steps": [
+    {
+     "kind": "info",
+     "target": "catch.card",
+     "text": "보라빛 비늘을 가진 그 물고기는 **환상의 물고기**입니다. 각 낚시터에는 좀처럼 모습을 드러내지 않는 환상의 물고기가 한 마리씩 살고 있어요.",
+     "expr": null,
+     "until": "tap"
+    },
+    {
+     "kind": "info",
+     "target": "catch.card",
+     "text": "물결이 숨을 죽이는 순간, 그들이 다가옵니다. 그 낚시터의 주인을 낚아낸 곳에서는 조금 더 자주 모습을 보인다고 하네요.",
+     "expr": null,
+     "until": "tap",
+     "on_done": "close_catch"
+    },
+    {
+     "kind": "spotlight",
+     "target": "dex.open",
+     "text": "도감에 새 칸이 생겼네. {도감열기}",
+     "expr": null,
+     "until": "scene:DexScene",
+     "allow_keys": [
+      "menu:dex"
+     ]
+    },
+    {
+     "kind": "spotlight",
+     "target": "dex.btn.phantom",
+     "text": "여기일세. 눌러 보게.",
+     "expr": null,
+     "until": "cond:dex_phantom"
+    },
+    {
+     "kind": "info",
+     "target": "dex.phantom.count",
+     "text": "낚시터마다 한 마리씩… 열두 마리라더군.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-19:tangle": {
+   "title": "환경 기믹: 갈대 엉킴",
+   "who": "ella",
+   "start": "event:first:gimmick:tangle",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fight.gimmick.tangle",
+     "text": "좌우로 오래 끌리면 **갈대에 엉켜요**. 이 게이지를 보세요.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-19:dark": {
+   "title": "환경 기믹: 어둠",
+   "who": "ella",
+   "start": "event:first:gimmick:dark",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fight.gimmick.dark",
+     "text": "어두워서 찌 주변만 보여요. **수정이 반짝이는 쪽**이 신호예요.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-19:current": {
+   "title": "환경 기믹: 물살",
+   "who": "ella",
+   "start": "event:first:gimmick:current",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fight.gimmick.current",
+     "text": "물살 때문에 장력이 **출렁여요**. 여유를 두고 감으세요.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-19:heat": {
+   "title": "환경 기믹: 열 손상",
+   "who": "ella",
+   "start": "event:first:gimmick:heat",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fight.gimmick.heat",
+     "text": "오래 싸우면 **줄이 열에 상해요**. 빨리 끝내요!",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  },
+  "TG-19:ice": {
+   "title": "환경 기믹: 얼음 구멍",
+   "who": "ella",
+   "start": "event:first:gimmick:ice",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fight.gimmick.ice",
+     "text": "구멍 밖으로 끌리면 **줄이 얼음에 쓸려요**. 방향을 지키세요.",
+     "expr": null,
+     "until": "tap"
+    }
+   ]
+  }
+ }
+}

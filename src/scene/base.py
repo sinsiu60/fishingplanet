@@ -17,6 +17,9 @@ class Scene:
         for action in (result if isinstance(result, list) else (result,)):
             if self.game.scenes.current is not self:
                 break  # 앞 행동으로 화면이 바뀌었으면 나머지는 버린다 (탭 = 누름+뗌)
+            guide = getattr(self.game, "guide", None)
+            if guide is not None and not guide.allow_action(self, action):
+                continue   # 튜토리얼 가이드가 막은 입력 (강조 밖·정지 지시와 다른 조작)
             if self.UI_FRAME and action.pos is not None:
                 r = self.game.screen.ui_rect
                 action.pos = (action.pos[0] - r.x, action.pos[1] - r.y)
