@@ -1,0 +1,30 @@
+{
+ "_설명": "전설 포획 연출 (DESIGN.md 34장, LEGEND_CATCH_SHOW.md). markers = 단계 시각(초) = 전설의 노래 음악 마커 (tools/audio/make_legend_song.py 가 같은 숫자를 읽음). slow = [시작, 끝, 배속]. 환상 전용(정적·멈춘 물방울·오로라·한 글자씩 이름·보라 인장)은 쓰지 않는다.",
+ "variants": {
+  "full": {"_설명": "그 종 첫 포획, 약 5초, 1.5초 뒤 건너뛰기", "len": 5.0, "skip_after": 1.5, "slow": [0.0, 0.6, 0.5],
+           "markers": {"hit": 0.0, "rise": 0.3, "scales": 0.8, "climax": 1.4, "card": 1.9, "record": 2.6, "rewards": 3.2, "afterglow": 3.5, "wait": 5.0}},
+  "short": {"_설명": "재포획, 약 2.5초 (쾅 → 절정 → 카드), 바로 건너뛰기", "len": 2.5, "skip_after": 0.0, "slow": [0.0, 0.3, 0.6],
+            "markers": {"hit": 0.0, "rise": 0.15, "scales": 0.4, "climax": 0.7, "card": 1.0, "record": 1.4, "rewards": 1.7, "afterglow": 1.9, "wait": 2.5}},
+  "final": {"_설명": "대륙 최종 보스(용등·오르시엘) 첫 포획: 전체 버전 → 닫으면 기존 엔딩으로 (페이드 + 노래 여운이 엔딩 음악으로 이어짐)", "len": 5.0, "skip_after": 1.5, "slow": [0.0, 0.6, 0.5],
+            "markers": {"hit": 0.0, "rise": 0.3, "scales": 0.8, "climax": 1.4, "card": 1.9, "record": 2.6, "rewards": 3.2, "afterglow": 3.5, "wait": 5.0}}
+ },
+ "final_fish": ["dragon_carp", "orsiel"],
+ "ending_fade_sec": 1.2,
+ "loop_len": 4.0,
+ "caps": {"pc": 1000, "mobile": 450},
+ "fx": {"splash": 140, "rays": 10, "dust_burst": 160, "dust_rate": 26, "shake_px": 7, "shake_sec": 0.45, "zoom": 0.04, "glow_scale": 0.5, "glow_mult": 0.6},
+ "unique": {
+  "golden_carp": {"kind": "gold_rain", "color": [255, 214, 110], "n": 60},
+  "tiger_mandarin": {"kind": "claw", "color": [255, 196, 90]},
+  "silver_bass": {"kind": "lightning", "color": [255, 236, 170]},
+  "marlin": {"kind": "spear", "color": [255, 220, 140]},
+  "coelacanth": {"kind": "rune", "color": [240, 200, 120], "n": 12},
+  "dragon_carp": {"kind": "dragon", "color": [255, 220, 120], "n": 90},
+  "silva": {"kind": "reeds_bow", "color": [230, 225, 200], "n": 46},
+  "prisia": {"kind": "crystal_pillar", "color": [200, 230, 255], "n": 5},
+  "aeris": {"kind": "cloud_part", "color": [255, 240, 200]},
+  "ignis": {"kind": "fire_pillar", "color": [255, 150, 60], "n": 50},
+  "borealis": {"kind": "ice_shards", "color": [210, 240, 255], "n": 40},
+  "orsiel": {"kind": "sea_part", "color": [255, 214, 120]}
+ }
+}
