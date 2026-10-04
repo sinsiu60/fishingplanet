@@ -1,0 +1,81 @@
+{
+ "_설명": "make_legend_song.py 가 실제로 음을 놓은 시각 (초). 게임 연출은 data/legend_catch_timeline.json 의 같은 값을 쓴다.",
+ "files": {
+  "legend_catch_full_sharmion": {
+   "len": 5.5,
+   "peak_db": -2.0,
+   "rms_db": -13.1,
+   "markers": {
+    "hit": 0.0,
+    "rise": 0.3,
+    "scales": 0.8,
+    "climax": 1.4,
+    "card": 1.9,
+    "record": 2.6,
+    "rewards": 3.2,
+    "afterglow": 3.5,
+    "wait": 5.0
+   }
+  },
+  "legend_catch_short_sharmion": {
+   "len": 3.0,
+   "peak_db": -2.0,
+   "rms_db": -13.6,
+   "markers": {
+    "hit": 0.0,
+    "rise": 0.15,
+    "scales": 0.4,
+    "climax": 0.7,
+    "card": 1.0,
+    "record": 1.4,
+    "rewards": 1.7,
+    "afterglow": 1.9,
+    "wait": 2.5
+   }
+  },
+  "legend_catch_loop_sharmion": {
+   "len": 4.0,
+   "peak_db": -12.0,
+   "rms_db": -20.8,
+   "markers": {}
+  },
+  "legend_catch_full_eldrasion": {
+   "len": 5.5,
+   "peak_db": -2.0,
+   "rms_db": -12.9,
+   "markers": {
+    "hit": 0.0,
+    "rise": 0.3,
+    "scales": 0.8,
+    "climax": 1.4,
+    "card": 1.9,
+    "record": 2.6,
+    "rewards": 3.2,
+    "afterglow": 3.5,
+    "wait": 5.0
+   }
+  },
+  "legend_catch_short_eldrasion": {
+   "len": 3.0,
+   "peak_db": -2.0,
+   "rms_db": -12.3,
+   "markers": {
+    "hit": 0.0,
+    "rise": 0.15,
+    "scales": 0.4,
+    "climax": 0.7,
+    "card": 1.0,
+    "record": 1.4,
+    "rewards": 1.7,
+    "afterglow": 1.9,
+    "wait": 2.5
+   }
+  },
+  "legend_catch_loop_eldrasion": {
+   "len": 4.0,
+   "peak_db": -12.0,
+   "rms_db": -21.9,
+   "markers": {}
+  }
+ }
+}
