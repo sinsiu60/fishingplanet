@@ -12,7 +12,7 @@
            "voice": {"sound": "ui_voice_haru", "cps": 30, "every": 2, "vol": 0.55}},
   "baek": {"sign": "노인 어부의 오두막", "bg": "baek_hut", "cont": "sharmion", "menu": ["talk", "old_tales", "leave"],
            "voice": {"sound": "ui_voice_baek", "cps": 13, "every": 2, "vol": 0.6}},
-  "ella": {"sign": "아스테라 수정 공방", "bg": "ella_workshop", "cont": "eldrasion", "menu": ["buy", "enhance", "talk", "leave"],
+  "ella": {"sign": "아스테라 수정 공방", "bg": "ella_workshop", "cont": "eldrasion", "menu": ["buy", "sell", "enhance", "talk", "leave"],
            "voice": {"sound": "ui_voice_ella", "cps": 21, "every": 3, "vol": 0.45}},
   "home": {"sign": "{player}의 집", "bg": "home_room", "cont": "sharmion", "menu": ["journal", "memories", "notebook", "leave"],
            "voice": {"sound": "ui_voice_haru", "cps": 30, "every": 99, "vol": 0.0}},

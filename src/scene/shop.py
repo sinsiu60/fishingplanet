@@ -104,8 +104,8 @@ class ShopScene(Scene):
         fr = self.frame
         self.wide = fr.w >= 440
         self.tab_ids = [t[0] for t in TABS if tabs is None or t[0] in tabs]
-        # 판매·분해는 하루네 낚시점 안에서만. 야외(낚시터·마을)는 살림망 보기만 + 특급 배송 일괄 판매 (하루 n번)
-        self.can_sell = host is not None and getattr(host, "npc", None) == "haru"
+        # 판매·분해는 하루네 낚시점 · 엘라 공방 안에서만. 야외(낚시터·마을)는 살림망 보기만 + 특급 배송 일괄 판매 (하루 n번)
+        self.can_sell = host is not None and getattr(host, "npc", None) in ("haru", "ella")
         names = dict(TABS)
         if not self.can_sell:
             names["sell"] = "살림망"
@@ -314,7 +314,7 @@ class ShopScene(Scene):
             if idx is None:
                 return
             if not self.can_sell:
-                self._say("판매는 하루네 낚시점에서 할 수 있어요", ui.BAD)
+                self._say("판매는 하루네 낚시점·엘라 공방에서 할 수 있어요", ui.BAD)
                 return
             gained = self.save.sell(idx)
             self.game.sfx.play("sfx_coin")
@@ -397,7 +397,7 @@ class ShopScene(Scene):
         if idx is None:
             return
         if not self.can_sell:
-            self._say("분해는 하루네 낚시점에서 할 수 있어요", ui.BAD)
+            self._say("분해는 하루네 낚시점·엘라 공방에서 할 수 있어요", ui.BAD)
             return
         got = self.save.disassemble(idx)
         if got is None:
@@ -434,7 +434,7 @@ class ShopScene(Scene):
         from src.save import delivery
         if not self.can_sell:
             if delivery.level(self.save) == 0:
-                self._say("특급 배송 시스템이 있으면 여기서도 팔 수 있어요 (하루네 낚시점 강화 탭)", ui.BAD)
+                self._say("특급 배송 시스템이 있으면 여기서도 팔 수 있어요 (가게 강화 탭)", ui.BAD)
                 return
             if delivery.uses_left(self.save) <= 0:
                 self._say("오늘 특급 배송을 다 썼어요 · 내일 다시", ui.BAD)
@@ -1033,7 +1033,7 @@ class ShopScene(Scene):
         if self.can_sell:
             su.button(canvas, self.sell_btn.rect, su.fit(f"팔기 {final:,}원", self.sell_btn.rect.w - 6), "fill", self.mouse)
         else:   # 야외: 살림망 보기만
-            su.button(canvas, self.sell_btn.rect, su.fit("하루네에서 판매", self.sell_btn.rect.w - 6), "dim", self.mouse)
+            su.button(canvas, self.sell_btn.rect, su.fit("가게에서 판매", self.sell_btn.rect.w - 6), "dim", self.mouse)
         lr = self.lock_btn.rect
         hov = lr.collidepoint(self.mouse)
         canvas.fill(ui.SHADOW, lr.move(1, 1))
@@ -1052,7 +1052,7 @@ class ShopScene(Scene):
         if not self.can_sell:
             canvas.fill(su.CELL_BG, dr)
             pygame.draw.rect(canvas, (46, 54, 84), dr, 1)
-            text(canvas, su.fit("분해는 하루네 낚시점에서", dr.w - 6), (dr.x + 4, dr.centery), su.SUB, 11, "midleft")
+            text(canvas, su.fit("분해는 하루네·엘라 공방에서", dr.w - 6), (dr.x + 4, dr.centery), su.SUB, 11, "midleft")
         elif got is None:
             canvas.fill(su.CELL_BG, dr)
             pygame.draw.rect(canvas, (46, 54, 84), dr, 1)
@@ -1121,7 +1121,7 @@ class ShopScene(Scene):
         canvas.fill(su.SEL_BG if hov else (su.WIN_BG if en else su.CELL_BG), r)
         pygame.draw.rect(canvas, su.YELLOW if hov else (su.BORDER if en else (54, 62, 90)), r, 1)
         if lv == 0:
-            text(canvas, su.fit("판매는 하루네 낚시점에서", r.w - 10), (r.x + 5, r.centery), su.SUB, 11, "midleft")
+            text(canvas, su.fit("판매는 하루네·엘라 공방에서", r.w - 10), (r.x + 5, r.centery), su.SUB, 11, "midleft")
             return
         lab = su.btext(canvas, "특급 배송…", (r.x + 5, r.centery), su.WHITE if en else su.SUB, 11, "midleft")
         s = f"오늘 {left}/{lv}회"
