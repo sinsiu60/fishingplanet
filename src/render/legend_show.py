@@ -215,6 +215,11 @@ class LegendShow:
         w, h = canvas.get_size()
         m, t = self.m, self.t
         stage = canvas.copy()
+        if getattr(self, "_lum_t", -9.0) + 0.5 <= self.clock:   # 배경 밝기 (0.5초마다): 밝은 낮엔 빛줄기를 덜 더함 (하얗게 바래지 않게)
+            r_, g_, b_ = pygame.transform.average_color(pygame.transform.scale(canvas, (32, 18)))[:3]
+            self._lum = 0.299 * r_ + 0.587 * g_ + 0.114 * b_
+            self._lum_t = self.clock
+        self.ray_gain = clamp(1.3 - self._lum / 170, 0.45, 1.0)
         light = pygame.Surface((w, h))
         light.fill((0, 0, 0))
         fx, fy = self.fish_pos()
@@ -275,7 +280,7 @@ class LegendShow:
         for i in range(n):
             a = -math.pi / 2 + (i - (n - 1) / 2) * (math.pi * 1.7 / n)
             wa = 0.13 + 0.03 * math.sin(self.clock * 1.5 + i * 1.3)
-            col = tuple(int(v * k * (0.24 if i % 2 else 0.14)) for v in (255, 170, 50))
+            col = tuple(int(v * k * self.ray_gain * (0.24 if i % 2 else 0.14)) for v in (255, 170, 50))
             pygame.draw.polygon(light, col, [(fx, fy), (fx + math.cos(a - wa / 2) * L, fy + math.sin(a - wa / 2) * L),
                                              (fx + math.cos(a + wa / 2) * L, fy + math.sin(a + wa / 2) * L)])
 
