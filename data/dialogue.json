@@ -1,5 +1,5 @@
 {
- "_설명": "NPC 대사 (DESIGN.md 35-3·35-12). cond: spot_unlocked·legend_caught(id/any)·legend_caught_eld·gear_tier_ge[종류,티어]·mastery_ge·dex_stars_ge·prints_ge/prints_lt·gold_print·legend_print·phantom_print·lost_streak_ge·quest_fail_streak_ge·quests_done_ge·catches_ge·keepnet_ge·continent_unlocked·period·weather·season·event·phantom_tutorial. once = 한 번만(들은 기록 저장), prio: 3 새 달성 반응 > 2 계절·이벤트 > 1 일반 잡담. 환상 튜토리얼 전(phantom_tutorial false)에는 '환상' 단어 금지 — 흐릿한 소문만.",
+ "_설명": "NPC 대사 (DESIGN.md 35-3·35-12). cond: spot_unlocked·legend_caught(id/any)·legend_caught_eld·gear_tier_ge[종류,티어]·mastery_ge·dex_stars_ge·prints_ge/prints_lt·gold_print·legend_print·phantom_print·lost_streak_ge·quest_fail_streak_ge·quests_done_ge·catches_ge·keepnet_ge·continent_unlocked·period·weather·season·event·phantom_tutorial. once = 한 번만(들은 기록 저장), prio: 3 새 달성 반응 > 2 계절·이벤트 > 1 일반 잡담. 환상 튜토리얼 전(phantom_tutorial false)에는 '환상' 단어 금지 — 흐릿한 소문만. expr = 초상화 표정 (haru neutral/happy/surprised · baek neutral/smile/sharp · ella neutral/smile/closed · oren neutral/excited/thinking, 없으면 neutral). kind = chat(기본, 잡담·인사) / greet_first(건물 첫 입장 1회) / bye(나가기) / react_buy·react_sell·react_enhance·react_short(상점 반응) / old_tales·legend_tales·season_tales(내부 대화 메뉴 이야기 묶음, 조건으로 해금). seq = 여러 줄 [[표정, 대사], …] (text 대신). 대사 안 {purple}…{/} = 보라색 강조 (환상 힌트).",
  "lines": [
   {
    "id": "haru_01",
@@ -12,7 +12,8 @@
     ]
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "surprised"
   },
   {
    "id": "haru_02",
@@ -25,7 +26,8 @@
     ]
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "happy"
   },
   {
    "id": "haru_03",
@@ -38,7 +40,8 @@
     ]
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "surprised"
   },
   {
    "id": "haru_04",
@@ -48,7 +51,8 @@
     "legend_caught": "any"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "happy"
   },
   {
    "id": "haru_05",
@@ -58,7 +62,8 @@
     "spot_unlocked": "valley"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "surprised"
   },
   {
    "id": "haru_06",
@@ -68,7 +73,8 @@
     "spot_unlocked": "offshore"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "happy"
   },
   {
    "id": "haru_07",
@@ -78,7 +84,8 @@
     "lost_streak_ge": 3
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "haru_08",
@@ -88,7 +95,8 @@
     "keepnet_ge": 15
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "happy"
   },
   {
    "id": "haru_09",
@@ -100,7 +108,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "happy"
   },
   {
    "id": "haru_10",
@@ -115,7 +124,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "happy"
   },
   {
    "id": "haru_11",
@@ -127,7 +137,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "haru_12",
@@ -139,7 +150,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "surprised"
   },
   {
    "id": "haru_13",
@@ -151,7 +163,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "haru_14",
@@ -163,7 +176,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "happy"
   },
   {
    "id": "haru_15",
@@ -175,7 +189,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "haru_16",
@@ -187,7 +202,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "haru_17",
@@ -199,7 +215,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "happy"
   },
   {
    "id": "haru_18",
@@ -211,7 +228,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "haru_19",
@@ -223,7 +241,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "surprised"
   },
   {
    "id": "haru_20",
@@ -235,7 +254,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "happy"
   },
   {
    "id": "haru_21",
@@ -245,7 +265,8 @@
     "event": "meteor"
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "surprised"
   },
   {
    "id": "haru_22",
@@ -255,7 +276,8 @@
     "event": "red_moon"
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "surprised"
   },
   {
    "id": "haru_23",
@@ -263,7 +285,8 @@
    "text": "어서 와! 오늘은 뭘 낚으러 가나? 장비는 내 가게가 최고지!",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "happy"
   },
   {
    "id": "haru_24",
@@ -271,7 +294,8 @@
    "text": "이 낚싯대 좀 봐, 반짝반짝하지? 하하!",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "happy"
   },
   {
    "id": "haru_25",
@@ -279,7 +303,8 @@
    "text": "줄은 아끼지 말라고. 끊어지면 다 소용없거든.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "haru_26",
@@ -287,7 +312,8 @@
    "text": "우리 가게 미끼는 지렁이도 엘리트야. 진짜라니까.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "happy"
   },
   {
    "id": "haru_27",
@@ -295,7 +321,8 @@
    "text": "내가 젊었을 땐 말이야, 맨손으로 잉어를… 아, 됐고.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "haru_28",
@@ -303,7 +330,8 @@
    "text": "아침 일찍 나가 봐. 물고기도 아침밥은 먹거든!",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "happy"
   },
   {
    "id": "haru_29",
@@ -316,7 +344,8 @@
     ]
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "happy"
   },
   {
    "id": "haru_30",
@@ -328,7 +357,8 @@
     ]
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "haru_31",
@@ -336,7 +366,8 @@
    "text": "백 노인? 말은 없어도 낚시 실력은 진짜야.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "haru_32",
@@ -344,7 +375,8 @@
    "text": "소라가 또 의뢰를 잔뜩 붙였더라. 바쁘다 바빠, 하하.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "happy"
   },
   {
    "id": "baek_01",
@@ -354,7 +386,8 @@
     "legend_caught": "any"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "sharp"
   },
   {
    "id": "baek_02",
@@ -364,7 +397,8 @@
     "legend_caught": "dragon_carp"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "smile"
   },
   {
    "id": "baek_03",
@@ -374,7 +408,8 @@
     "mastery_ge": 5
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "smile"
   },
   {
    "id": "baek_04",
@@ -384,7 +419,8 @@
     "phantom_tutorial": false
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "sharp"
   },
   {
    "id": "baek_05",
@@ -394,7 +430,8 @@
     "phantom_tutorial": false
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "baek_06",
@@ -404,7 +441,8 @@
     "phantom_tutorial": false
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "sharp"
   },
   {
    "id": "baek_07",
@@ -414,7 +452,8 @@
     "phantom_tutorial": false
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "sharp"
   },
   {
    "id": "baek_08",
@@ -424,7 +463,8 @@
     "phantom_tutorial": true
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "sharp"
   },
   {
    "id": "baek_09",
@@ -434,7 +474,8 @@
     "phantom_tutorial": true
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "baek_10",
@@ -446,7 +487,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "baek_11",
@@ -458,7 +500,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "baek_12",
@@ -470,7 +513,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "baek_13",
@@ -482,7 +526,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "baek_14",
@@ -494,7 +539,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "baek_15",
@@ -506,7 +552,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "baek_16",
@@ -518,7 +565,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "baek_17",
@@ -530,7 +578,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "baek_18",
@@ -542,7 +591,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "baek_19",
@@ -554,7 +604,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "baek_20",
@@ -566,7 +617,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "sharp"
   },
   {
    "id": "baek_21",
@@ -578,7 +630,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "baek_22",
@@ -588,7 +641,8 @@
     "event": "silver_fog"
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "sharp"
   },
   {
    "id": "baek_23",
@@ -598,7 +652,8 @@
     "event": "red_moon"
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "sharp"
   },
   {
    "id": "baek_24",
@@ -606,7 +661,8 @@
    "text": "…바다는 기다리는 자에게만 말을 거네.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "baek_25",
@@ -614,7 +670,8 @@
    "text": "서두르지 말게. 물고기도 서두르는 걸 알아.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "baek_26",
@@ -622,7 +679,8 @@
    "text": "줄이 팽팽할 때 힘을 빼는 법을 배우게.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "baek_27",
@@ -630,7 +688,8 @@
    "text": "…",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "baek_28",
@@ -638,7 +697,8 @@
    "text": "이 그물? 오십 년 됐지. 아직 쓸 만해.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "smile"
   },
   {
    "id": "baek_29",
@@ -650,7 +710,8 @@
     ]
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "baek_30",
@@ -662,7 +723,8 @@
     ]
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "sharp"
   },
   {
    "id": "baek_31",
@@ -672,7 +734,8 @@
     "catches_ge": 100
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "smile"
   },
   {
    "id": "sora_01",
@@ -1331,7 +1394,8 @@
    "text": "어서 오세요. 수정은 주인을 알아본답니다.",
    "cond": {},
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "smile"
   },
   {
    "id": "ella_02",
@@ -1344,7 +1408,8 @@
     ]
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "smile"
   },
   {
    "id": "ella_03",
@@ -1357,7 +1422,8 @@
     ]
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "neutral"
   },
   {
    "id": "ella_04",
@@ -1367,7 +1433,8 @@
     "legend_caught_eld": true
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "closed"
   },
   {
    "id": "ella_05",
@@ -1377,7 +1444,8 @@
     "legend_caught": "orsiel"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "neutral"
   },
   {
    "id": "ella_06",
@@ -1389,7 +1457,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "ella_07",
@@ -1401,7 +1470,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "ella_08",
@@ -1413,7 +1483,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "ella_09",
@@ -1425,7 +1496,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "ella_10",
@@ -1437,7 +1509,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "ella_11",
@@ -1449,7 +1522,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "closed"
   },
   {
    "id": "ella_12",
@@ -1461,7 +1535,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "closed"
   },
   {
    "id": "ella_13",
@@ -1473,7 +1548,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "ella_14",
@@ -1485,7 +1561,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "closed"
   },
   {
    "id": "ella_15",
@@ -1497,7 +1574,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "ella_16",
@@ -1509,7 +1587,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "ella_17",
@@ -1521,7 +1600,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "ella_18",
@@ -1531,7 +1611,8 @@
     "event": "meteor"
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "closed"
   },
   {
    "id": "ella_19",
@@ -1541,7 +1622,8 @@
     "event": "double_rainbow"
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "smile"
   },
   {
    "id": "ella_20",
@@ -1549,7 +1631,8 @@
    "text": "이 등불, 마력이 흐를 때만 빛나요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "ella_21",
@@ -1557,7 +1640,8 @@
    "text": "천천히 둘러보세요. 서두를 필요는 없으니까요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "closed"
   },
   {
    "id": "ella_22",
@@ -1565,7 +1649,8 @@
    "text": "수정은 깨지기 쉽지만, 빛은 깨지지 않아요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "closed"
   },
   {
    "id": "ella_23",
@@ -1573,7 +1658,8 @@
    "text": "특수 찌가 없으면 이 바다의 물고기는 붙잡기 어려워요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "ella_24",
@@ -1581,7 +1667,8 @@
    "text": "오렌 선생님은 책 속에 사세요. 가끔 꺼내 드려야 해요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "smile"
   },
   {
    "id": "ella_25",
@@ -1593,7 +1680,8 @@
     ]
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "smile"
   },
   {
    "id": "ella_26",
@@ -1606,7 +1694,8 @@
     ]
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "ella_27",
@@ -1618,7 +1707,8 @@
     ]
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "ella_28",
@@ -1626,7 +1716,8 @@
    "text": "샤르미온에서 오셨죠? 바다 냄새가 달라요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "smile"
   },
   {
    "id": "ella_29",
@@ -1634,7 +1725,8 @@
    "text": "하늘섬의 폭포 물로 수정을 닦으면 빛이 오래가요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "ella_30",
@@ -1644,7 +1736,8 @@
     "catches_ge": 200
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "closed"
   },
   {
    "id": "ella_31",
@@ -1652,7 +1745,8 @@
    "text": "이 대륙의 물고기는 저마다 이야기가 있어요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "smile"
   },
   {
    "id": "oren_first",
@@ -1660,7 +1754,8 @@
    "text": "오, 새 손님이군요. 이 대륙의 전설은 바다보다 오래되었지요.",
    "cond": {},
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "excited"
   },
   {
    "id": "oren_02",
@@ -1670,7 +1765,8 @@
     "legend_caught": "silva"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "excited"
   },
   {
    "id": "oren_03",
@@ -1680,7 +1776,8 @@
     "legend_caught": "prisia"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "excited"
   },
   {
    "id": "oren_04",
@@ -1690,7 +1787,8 @@
     "legend_caught": "ignis"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "excited"
   },
   {
    "id": "oren_05",
@@ -1700,7 +1798,8 @@
     "legend_caught": "orsiel"
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "excited"
   },
   {
    "id": "oren_06",
@@ -1710,7 +1809,8 @@
     "phantom_tutorial": false
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "thinking"
   },
   {
    "id": "oren_07",
@@ -1720,7 +1820,8 @@
     "phantom_tutorial": false
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "thinking"
   },
   {
    "id": "oren_08",
@@ -1730,7 +1831,8 @@
     "phantom_tutorial": true
    },
    "once": true,
-   "prio": 3
+   "prio": 3,
+   "expr": "excited"
   },
   {
    "id": "oren_09",
@@ -1742,7 +1844,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "oren_10",
@@ -1754,7 +1857,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "excited"
   },
   {
    "id": "oren_11",
@@ -1766,7 +1870,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "oren_12",
@@ -1778,7 +1883,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "oren_13",
@@ -1790,7 +1896,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "thinking"
   },
   {
    "id": "oren_14",
@@ -1802,7 +1909,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "oren_15",
@@ -1814,7 +1922,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "oren_16",
@@ -1826,7 +1935,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "thinking"
   },
   {
    "id": "oren_17",
@@ -1838,7 +1948,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "oren_18",
@@ -1850,7 +1961,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "oren_19",
@@ -1862,7 +1974,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "thinking"
   },
   {
    "id": "oren_20",
@@ -1874,7 +1987,8 @@
     ]
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "neutral"
   },
   {
    "id": "oren_21",
@@ -1884,7 +1998,8 @@
     "event": "meteor"
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "thinking"
   },
   {
    "id": "oren_22",
@@ -1894,7 +2009,8 @@
     "event": "red_moon"
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "thinking"
   },
   {
    "id": "oren_23",
@@ -1904,7 +2020,8 @@
     "event": "silver_fog"
    },
    "once": false,
-   "prio": 2
+   "prio": 2,
+   "expr": "thinking"
   },
   {
    "id": "oren_24",
@@ -1912,7 +2029,8 @@
    "text": "이 대륙의 전설은 바다보다 오래되었지요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "oren_25",
@@ -1920,7 +2038,8 @@
    "text": "계절이 바뀌면 물고기도 다른 노래를 부릅니다.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "oren_26",
@@ -1928,7 +2047,8 @@
    "text": "세계수의 뿌리는 하늘과 바다를 함께 붙들고 있다오.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "thinking"
   },
   {
    "id": "oren_27",
@@ -1936,7 +2056,8 @@
    "text": "이 두루마리? 천 년 된 낚시 일지랍니다. 글씨가 엉망이죠.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "excited"
   },
   {
    "id": "oren_28",
@@ -1944,7 +2065,8 @@
    "text": "엘라는 수정 이야기만 하면 눈이 반짝이지요.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "excited"
   },
   {
    "id": "oren_29",
@@ -1956,7 +2078,8 @@
     ]
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "neutral"
   },
   {
    "id": "oren_30",
@@ -1968,7 +2091,8 @@
     ]
    },
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "thinking"
   },
   {
    "id": "oren_31",
@@ -1976,7 +2100,8 @@
    "text": "전설 물고기마다 비늘에 시대가 새겨져 있답니다.",
    "cond": {},
    "once": false,
-   "prio": 1
+   "prio": 1,
+   "expr": "thinking"
   },
   {
    "id": "oren_32",
@@ -1986,7 +2111,867 @@
     "dex_stars_ge": 100
    },
    "once": false,
+   "prio": 1,
+   "expr": "neutral"
+  },
+  {
+   "id": "haru_greet_first",
+   "npc": "haru",
+   "kind": "greet_first",
+   "seq": [
+    [
+     "happy",
+     "어서 오라고! 하루네 낚시점에 온 걸 환영해!"
+    ],
+    [
+     "neutral",
+     "낚싯대든 미끼든, 필요한 건 다 있어."
+    ]
+   ],
+   "cond": {},
+   "once": true,
+   "prio": 4
+  },
+  {
+   "id": "baek_greet_first",
+   "npc": "baek",
+   "kind": "greet_first",
+   "seq": [
+    [
+     "neutral",
+     "……들어오게. 문은 닫고."
+    ],
+    [
+     "neutral",
+     "차는 없네. 물 냄새면 충분하지."
+    ]
+   ],
+   "cond": {},
+   "once": true,
+   "prio": 4
+  },
+  {
+   "id": "ella_greet_first",
+   "npc": "ella",
+   "kind": "greet_first",
+   "seq": [
+    [
+     "closed",
+     "어서 오세요. 아스테라 수정 공방이에요."
+    ],
+    [
+     "smile",
+     "찌도, 장비도, 수정이 골라 줄 거예요."
+    ]
+   ],
+   "cond": {},
+   "once": true,
+   "prio": 4
+  },
+  {
+   "id": "oren_greet_first",
+   "npc": "oren",
+   "kind": "greet_first",
+   "seq": [
+    [
+     "excited",
+     "오! 손님이다! 제 서재에 오신 걸 환영해요!"
+    ],
+    [
+     "neutral",
+     "책이 좀 많죠? 밟지만 않으시면 돼요."
+    ]
+   ],
+   "cond": {},
+   "once": true,
+   "prio": 4
+  },
+  {
+   "id": "haru_bye_1",
+   "npc": "haru",
+   "kind": "bye",
+   "seq": [
+    [
+     "happy",
+     "또 오라고! 큰 놈 잡으면 자랑하러 오고!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
    "prio": 1
+  },
+  {
+   "id": "haru_bye_2",
+   "npc": "haru",
+   "kind": "bye",
+   "seq": [
+    [
+     "neutral",
+     "조심히 다녀와. 줄 확인하고!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_bye_3",
+   "npc": "haru",
+   "kind": "bye",
+   "seq": [
+    [
+     "happy",
+     "다음엔 더 좋은 거 들여놓을게!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_bye_1",
+   "npc": "baek",
+   "kind": "bye",
+   "seq": [
+    [
+     "neutral",
+     "…가게. 물이 기다리네."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_bye_2",
+   "npc": "baek",
+   "kind": "bye",
+   "seq": [
+    [
+     "neutral",
+     "서두르지 말고."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_bye_3",
+   "npc": "baek",
+   "kind": "bye",
+   "seq": [
+    [
+     "smile",
+     "허허, 또 오게."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_bye_1",
+   "npc": "ella",
+   "kind": "bye",
+   "seq": [
+    [
+     "closed",
+     "바다가 당신 편이길."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_bye_2",
+   "npc": "ella",
+   "kind": "bye",
+   "seq": [
+    [
+     "smile",
+     "또 오세요. 수정이 기억할 거예요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_bye_3",
+   "npc": "ella",
+   "kind": "bye",
+   "seq": [
+    [
+     "neutral",
+     "조심히 다녀오세요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_bye_1",
+   "npc": "oren",
+   "kind": "bye",
+   "seq": [
+    [
+     "excited",
+     "새 전설을 들고 오세요! 기록해 둘게요!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_bye_2",
+   "npc": "oren",
+   "kind": "bye",
+   "seq": [
+    [
+     "neutral",
+     "앗, 벌써요? 그럼 또 봬요!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_bye_3",
+   "npc": "oren",
+   "kind": "bye",
+   "seq": [
+    [
+     "neutral",
+     "길 조심하세요. 책도 조심하고요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_react_buy_1",
+   "npc": "haru",
+   "kind": "react_buy",
+   "seq": [
+    [
+     "happy",
+     "좋은 선택이야! 그거 손맛 끝내준다고!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_react_buy_2",
+   "npc": "haru",
+   "kind": "react_buy",
+   "seq": [
+    [
+     "happy",
+     "하하, 고맙구먼! 잘 써!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_react_sell_1",
+   "npc": "haru",
+   "kind": "react_sell",
+   "seq": [
+    [
+     "happy",
+     "오, 싱싱한데? 값 잘 쳐줬어!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_react_sell_2",
+   "npc": "haru",
+   "kind": "react_sell",
+   "seq": [
+    [
+     "happy",
+     "이 녀석 꽤 묵직하구먼!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_react_enhance_1",
+   "npc": "haru",
+   "kind": "react_enhance",
+   "seq": [
+    [
+     "happy",
+     "반짝반짝해졌지? 내 솜씨야!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_react_enhance_2",
+   "npc": "haru",
+   "kind": "react_enhance",
+   "seq": [
+    [
+     "happy",
+     "이제 더 버틸 거야. 믿어 봐!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_react_short_1",
+   "npc": "haru",
+   "kind": "react_short",
+   "seq": [
+    [
+     "surprised",
+     "어이쿠, 돈이 좀 모자라구먼."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_react_buy_1",
+   "npc": "ella",
+   "kind": "react_buy",
+   "seq": [
+    [
+     "smile",
+     "좋은 인연이 되길 바라요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_react_buy_2",
+   "npc": "ella",
+   "kind": "react_buy",
+   "seq": [
+    [
+     "smile",
+     "수정이 기뻐하네요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_react_sell_1",
+   "npc": "ella",
+   "kind": "react_sell",
+   "seq": [
+    [
+     "smile",
+     "이 비늘, 빛이 곱네요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_react_sell_2",
+   "npc": "ella",
+   "kind": "react_sell",
+   "seq": [
+    [
+     "smile",
+     "좋은 물고기예요. 고마워요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_react_enhance_1",
+   "npc": "ella",
+   "kind": "react_enhance",
+   "seq": [
+    [
+     "smile",
+     "수정이 장비에 스며들었어요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_react_enhance_2",
+   "npc": "ella",
+   "kind": "react_enhance",
+   "seq": [
+    [
+     "smile",
+     "더 단단해졌어요. 느껴지세요?"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_react_short_1",
+   "npc": "ella",
+   "kind": "react_short",
+   "seq": [
+    [
+     "neutral",
+     "조금 모자라네요. 다음에 오세요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_tale_1",
+   "npc": "baek",
+   "kind": "old_tales",
+   "seq": [
+    [
+     "neutral",
+     "내가 처음 낚싯대를 잡은 게 열 살 때였지."
+    ],
+    [
+     "smile",
+     "대나무를 깎아서 만들었어. 첫 물고기는 손가락만 했지."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_tale_2",
+   "npc": "baek",
+   "kind": "old_tales",
+   "seq": [
+    [
+     "neutral",
+     "계곡 바위 틈엔 쏘가리가 살지."
+    ],
+    [
+     "sharp",
+     "산신이라 불리는 놈이 있다더군. 줄무늬가 범 같다고."
+    ]
+   ],
+   "cond": {
+    "spot_unlocked": "valley"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_tale_3",
+   "npc": "baek",
+   "kind": "old_tales",
+   "seq": [
+    [
+     "neutral",
+     "방파제가 생기기 전엔 저 바다를 나룻배로 건넜네."
+    ],
+    [
+     "smile",
+     "파도가 높은 날엔 노를 저으며 노래를 불렀지."
+    ]
+   ],
+   "cond": {
+    "spot_unlocked": "breakwater"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_tale_4",
+   "npc": "baek",
+   "kind": "old_tales",
+   "seq": [
+    [
+     "neutral",
+     "먼바다엔 창처럼 빠른 놈이 있지."
+    ],
+    [
+     "sharp",
+     "줄이 풀리는 소리가 비명 같았네. 지금도 귀에 선해."
+    ]
+   ],
+   "cond": {
+    "spot_unlocked": "offshore"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_tale_5",
+   "npc": "baek",
+   "kind": "old_tales",
+   "seq": [
+    [
+     "neutral",
+     "심해는… 빛이 닿지 않는 곳이야."
+    ],
+    [
+     "neutral",
+     "거기서 올라온 놈들은 눈이 크고, 말이 없지."
+    ]
+   ],
+   "cond": {
+    "spot_unlocked": "deep"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_tale_6",
+   "npc": "baek",
+   "kind": "old_tales",
+   "seq": [
+    [
+     "smile",
+     "전설을 잡았다고? 허허."
+    ],
+    [
+     "neutral",
+     "옛날엔 전설 하나 잡으면 마을 잔치를 열었네."
+    ]
+   ],
+   "cond": {
+    "legend_caught": "any"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_tale_7",
+   "npc": "baek",
+   "kind": "old_tales",
+   "seq": [
+    [
+     "sharp",
+     "가끔 {purple}물결이 숨을 죽이는 날{/}이 있지."
+    ],
+    [
+     "neutral",
+     "…그런 날엔 찌에서 눈을 떼지 말게."
+    ]
+   ],
+   "cond": {
+    "phantom_tutorial": false,
+    "catches_ge": 30
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_tale_8",
+   "npc": "baek",
+   "kind": "old_tales",
+   "seq": [
+    [
+     "sharp",
+     "숨을 죽인 물 아래엔 보랏빛 물고기가 있다네."
+    ],
+    [
+     "neutral",
+     "잡으려 들면 도망가. 기다리는 자에게만 오지."
+    ]
+   ],
+   "cond": {
+    "phantom_tutorial": true
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_legend_1",
+   "npc": "oren",
+   "kind": "legend_tales",
+   "seq": [
+    [
+     "thinking",
+     "갈대왕 실바는 습지의 바람을 다스린대요."
+    ],
+    [
+     "excited",
+     "그가 지나가면 갈대가 한쪽으로 눕는다고 해요!"
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_legend_2",
+   "npc": "oren",
+   "kind": "legend_tales",
+   "seq": [
+    [
+     "thinking",
+     "결정어왕 프리시아의 비늘은 진짜 수정이래요."
+    ],
+    [
+     "neutral",
+     "동굴의 메아리가 그를 지켜 준다는 기록이 있어요."
+    ]
+   ],
+   "cond": {
+    "spot_unlocked": "crystal_cave"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_legend_3",
+   "npc": "oren",
+   "kind": "legend_tales",
+   "seq": [
+    [
+     "excited",
+     "천공어 에어리스는 폭포를 거슬러 하늘까지 오른대요!"
+    ],
+    [
+     "thinking",
+     "구름이 갈라지는 날을 노려 보세요."
+    ]
+   ],
+   "cond": {
+    "spot_unlocked": "sky_falls"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_legend_4",
+   "npc": "oren",
+   "kind": "legend_tales",
+   "seq": [
+    [
+     "thinking",
+     "불꽃상어 이그니스는 용암 속에서 태어났다는 설이 있어요."
+    ],
+    [
+     "neutral",
+     "그 지느러미에 닿은 물은 끓어오른대요."
+    ]
+   ],
+   "cond": {
+    "spot_unlocked": "volcano"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_legend_5",
+   "npc": "oren",
+   "kind": "legend_tales",
+   "seq": [
+    [
+     "thinking",
+     "극광어 보레알리스는 얼음 아래에서 빛을 낸대요."
+    ],
+    [
+     "excited",
+     "극야기 밤에 봤다는 기록도 있어요!"
+    ]
+   ],
+   "cond": {
+    "spot_unlocked": "ice_sea"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_legend_6",
+   "npc": "oren",
+   "kind": "legend_tales",
+   "seq": [
+    [
+     "thinking",
+     "천해왕 오르시엘. 이 대륙 모든 전설의 끝이에요."
+    ],
+    [
+     "neutral",
+     "기록마다 모습이 달라요. 본 사람이 거의 없거든요."
+    ]
+   ],
+   "cond": {
+    "spot_unlocked": "world_tree"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_legend_7",
+   "npc": "oren",
+   "kind": "legend_tales",
+   "seq": [
+    [
+     "thinking",
+     "고대 문헌에 '숨을 죽이는 물'이라는 말이 나와요."
+    ],
+    [
+     "neutral",
+     "무슨 뜻인지는… 아직 모르겠어요."
+    ]
+   ],
+   "cond": {
+    "phantom_tutorial": false
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_legend_8",
+   "npc": "oren",
+   "kind": "legend_tales",
+   "seq": [
+    [
+     "thinking",
+     "숨을 죽이는 물… 문헌엔 '환상'이라는 이름으로 나와요."
+    ],
+    [
+     "excited",
+     "열두 마리가 있다는데, 정말일까요?"
+    ]
+   ],
+   "cond": {
+    "phantom_tutorial": true
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_season_1",
+   "npc": "oren",
+   "kind": "season_tales",
+   "seq": [
+    [
+     "neutral",
+     "이 대륙의 계절은 넷이에요. 개화기, 성하기, 수확기, 극야기."
+    ],
+    [
+     "thinking",
+     "샤르미온과 이름은 달라도, 흐름은 같다고 해요."
+    ]
+   ],
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_season_2",
+   "npc": "oren",
+   "kind": "season_tales",
+   "seq": [
+    [
+     "neutral",
+     "개화기엔 세계수가 첫 꽃을 피워요."
+    ],
+    [
+     "excited",
+     "그 꽃잎이 바다에 닿으면 수정꽃 나비고기가 몰려온대요!"
+    ]
+   ],
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_season_3",
+   "npc": "oren",
+   "kind": "season_tales",
+   "seq": [
+    [
+     "thinking",
+     "성하기엔 마력이 가장 짙어져요."
+    ],
+    [
+     "neutral",
+     "마력 뱀장어가 깨어나는 것도 이때죠."
+    ]
+   ],
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_season_4",
+   "npc": "oren",
+   "kind": "season_tales",
+   "seq": [
+    [
+     "neutral",
+     "수확기엔 갈대가 금빛으로 물들어요."
+    ],
+    [
+     "excited",
+     "금빛 갈대메기가 그 사이에 숨는대요!"
+    ]
+   ],
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_season_5",
+   "npc": "oren",
+   "kind": "season_tales",
+   "seq": [
+    [
+     "thinking",
+     "극야기엔 해가 거의 뜨지 않아요."
+    ],
+    [
+     "neutral",
+     "대신 별빛 대구가 별을 따라 올라오죠."
+    ]
+   ],
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
   }
  ]
 }

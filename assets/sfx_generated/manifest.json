@@ -175,8 +175,21 @@
  "ui_buy": "1fb2d2c37e806eda",
  "ui_click": "82f7744ee76c3065",
  "ui_dex_new": "30fbedb351511ee6",
+ "ui_door": "e61cf492c8f035df",
  "ui_enhance": "0447268d8ad10585",
  "ui_equip": "d7f125ef2bc22853",
  "ui_error": "150da260102b6ebc",
- "ui_tab": "63df011fe5ed9e34"
+ "ui_tab": "63df011fe5ed9e34",
+ "ui_voice_baek0": "53f6e6408395fbef",
+ "ui_voice_baek1": "61145a59b6a1fcb8",
+ "ui_voice_baek2": "2b081cd3b7e4752a",
+ "ui_voice_ella0": "7448b471e7f603ea",
+ "ui_voice_ella1": "8140626de4db890a",
+ "ui_voice_ella2": "472cb38dbe1e2f42",
+ "ui_voice_haru0": "830612ac39b44224",
+ "ui_voice_haru1": "b7e82a05b2d589d1",
+ "ui_voice_haru2": "266f212b6f2b6431",
+ "ui_voice_oren0": "a367f1bd13a0b9c2",
+ "ui_voice_oren1": "17004c4cb087b33b",
+ "ui_voice_oren2": "d3fa79fe0f14ccc5"
 }

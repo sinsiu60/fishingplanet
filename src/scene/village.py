@@ -77,13 +77,29 @@ class VillageScene(Scene):
         if self in self.game.scenes.stack:
             self.game.scenes.stack.remove(self)
 
+    INTERIOR = ("haru", "baek", "ella", "oren")   # 건물 안 대화 화면 (35-3a) — 소라·갈매기 박사는 말풍선
+
+    def enter(self, npc_id: str, **kw):
+        """건물 안으로: 문 소리 + 0.4초 페이드 → 내부 대화 화면."""
+        from src.scene.interior import InteriorScene
+        self.bubble = None
+        sc = InteriorScene(self.game, self.fishing, npc_id, village=self, **kw)
+        self.game.scenes.push(sc)
+        return sc
+
     def _act(self, kind: str, pid: str) -> None:
         self.game.sfx.play("ui_click")
         if kind == "npc":
-            self._talk(pid)
+            if pid in self.INTERIOR:
+                self.enter(pid)
+            else:
+                self._talk(pid)
             return
         place = next(p for p in self.cfg["places"] if p["id"] == pid)
         a = place["action"]
+        if place.get("npc") in self.INTERIOR and a in ("shop", "talk"):
+            self.enter(place["npc"])
+            return
         if a == "dock":
             from src.scene.map_scene import MapScene
             self.game.scenes.push(MapScene(self.game, self.fishing, from_village=self))

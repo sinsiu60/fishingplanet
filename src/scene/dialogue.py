@@ -106,14 +106,42 @@ def cond_ok(cond: dict, save, ctx: dict) -> bool:
     return True
 
 
-def candidates(save, npc_id: str, ctx: dict) -> list[dict]:
+def seq_of(ln: dict) -> list[tuple[str, str]]:
+    """대사 한 항목 → [(표정, 문장), …] (seq 가 있으면 여러 줄, 아니면 text 한 줄)."""
+    if ln.get("seq"):
+        return [(e or "neutral", t) for e, t in ln["seq"]]
+    return [(ln.get("expr", "neutral"), ln["text"])]
+
+
+def plain(ln: dict) -> str:
+    """디버그·목록용 한 줄 (여러 줄이면 / 로 이음)."""
+    return " / ".join(t for _, t in seq_of(ln))
+
+
+def candidates(save, npc_id: str, ctx: dict, kind: str = "chat") -> list[dict]:
     heard = set(state(save)["heard"])
-    return [ln for ln in lines() if ln["npc"] == npc_id and not (ln["once"] and ln["id"] in heard)
-            and cond_ok(ln["cond"], save, ctx)]
+    return [ln for ln in lines() if ln["npc"] == npc_id and ln.get("kind", "chat") == kind
+            and not (ln["once"] and ln["id"] in heard) and cond_ok(ln["cond"], save, ctx)]
 
 
-def choose(save, npc_id: str, ctx: dict, prefer_season: bool = False, rnd=_RNG, commit: bool = True) -> dict | None:
-    cands = candidates(save, npc_id, ctx)
+def tale(save, npc_id: str, kind: str, ctx: dict, rnd=_RNG) -> dict | None:
+    """이야기 묶음(옛이야기·전설 이야기·계절 이야기): 해금된 것 중 아직 안 들은 것을 순서대로, 다 들었으면 아무거나 다시.
+    계절 이야기는 지금 계절 것(prio 2)을 먼저."""
+    cands = candidates(save, npc_id, ctx, kind)
+    if not cands:
+        return None
+    told = state(save).setdefault("tales", [])
+    cands.sort(key=lambda ln: -ln.get("prio", 1))
+    new = [ln for ln in cands if ln["id"] not in told]
+    pick = new[0] if new else rnd.choice(cands)
+    if pick["id"] not in told:
+        told.append(pick["id"])
+    return pick
+
+
+def choose(save, npc_id: str, ctx: dict, prefer_season: bool = False, rnd=_RNG, commit: bool = True,
+           kind: str = "chat") -> dict | None:
+    cands = candidates(save, npc_id, ctx, kind)
     if not cands:
         return None
     st = state(save)
@@ -135,11 +163,18 @@ def choose(save, npc_id: str, ctx: dict, prefer_season: bool = False, rnd=_RNG, 
 
 
 def pick(game, npc_id: str, cont: str, prefer_season: bool = False) -> list[str]:
-    ln = choose(game.save, npc_id, context(game, cont), prefer_season)
+    return [t for _, t in pick_seq(game, npc_id, cont, prefer_season)]
+
+
+def pick_seq(game, npc_id: str, cont: str, prefer_season: bool = False, kind: str = "chat") -> list[tuple[str, str]]:
+    """[(표정, 문장), …] — 내부 대화 화면용 (말풍선은 pick)."""
+    ln = choose(game.save, npc_id, context(game, cont), prefer_season, kind=kind)
     if ln is None:
+        if kind != "chat":
+            return []
         n = load_json("villages.json")[cont]["npcs"].get(npc_id, {})
-        return [random.choice(n.get("lines", ["…"]))]
-    return [ln["text"]]
+        return [("neutral", random.choice(n.get("lines", ["…"])))]
+    return seq_of(ln)
 
 
 def gallery_comment(save, fish: dict) -> str:

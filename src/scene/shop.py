@@ -80,30 +80,43 @@ MUT_COL = (255, 190, 120)  # 변이 물고기 이름 색
 class ShopScene(Scene):
     UI_FRAME = True
 
-    def __init__(self, game, fishing, tab: str | None = None):
+    def __init__(self, game, fishing, tab: str | None = None, frame=None, host=None, tabs: list[str] | None = None,
+                 title: str = "상점"):
+        """frame = 상점 패널 자리 (UI 상자 기준, 기본 = 화면 전체 상자). host = 건물 안 대화 화면 (35-3a):
+        뒤 배경·초상화를 host 가 그리고, 사고·팔고·강화하면 host.react(종류) 로 NPC가 반응. tabs = 보일 탭 id 만 (사기/팔기/강화)."""
         super().__init__(game)
         self.fishing = fishing
         self.save = game.save
+        self.host = host
+        self.title = title
         self.mouse = (0, 0)
         self.age = 0.0  # 열림 애니메이션
-        self.tabs = ui.Tabs(16, 30, [t[1] for t in TABS], width=54)
-        if tab:
-            self.tabs.index = next(i for i, t in enumerate(TABS) if t[0] == tab)
+        self.frame = pygame.Rect(frame or (8, 6, 464, 258))
+        fr = self.frame
+        lw = 236 if fr.w >= 464 else int((fr.w - 24) * 0.52)
+        self.LIST = pygame.Rect(fr.x + 8, fr.y + 46, lw, fr.h - 72)
+        self.DETAIL = pygame.Rect(self.LIST.right + 8, fr.y + 46, fr.right - 8 - (self.LIST.right + 8), fr.h - 72)
+        self.tab_ids = [t[0] for t in TABS if tabs is None or t[0] in tabs]
+        names = dict(TABS)
+        tw = 54 if len(self.tab_ids) * 56 <= fr.w - 16 else (fr.w - 16) // len(self.tab_ids) - 2
+        self.tabs = ui.Tabs(fr.x + 8, fr.y + 24, [names[t] for t in self.tab_ids], width=tw)
+        if tab and tab in self.tab_ids:
+            self.tabs.index = self.tab_ids.index(tab)
         self.sel = 0
         self.scroll = 0
         self.confirm = None  # 비늘 경고를 본 장비 id (한 번 더 누르면 구매)
         self.msg, self.msg_col, self.msg_t = "", ui.TEXT, 0.0
-        self.close_btn = ui.Button((404, 244, 60, 16), "닫기 (B)", self._close)
-        self.action_btn = ui.Button((DETAIL.x + 8, DETAIL.bottom - 40, DETAIL.w - 16, 17), "", self._action)
-        self.sell_all_btn = ui.Button((DETAIL.x + 8, DETAIL.bottom - 20, DETAIL.w - 16, 17), "", self._sell_all)
-        half = (DETAIL.w - 20) // 2
-        self.sell_btn = ui.Button((DETAIL.x + 8, DETAIL.bottom - 40, half, 17), "팔기", self._action)
-        self.dis_btn = ui.Button((DETAIL.x + 12 + half, DETAIL.bottom - 40, half, 17), "분해", self._disassemble)
+        self.close_btn = ui.Button((fr.right - 68, fr.bottom - 20, 60, 16), "닫기" if host else "닫기 (B)", self._close)
+        self.action_btn = ui.Button((self.DETAIL.x + 8, self.DETAIL.bottom - 40, self.DETAIL.w - 16, 17), "", self._action)
+        self.sell_all_btn = ui.Button((self.DETAIL.x + 8, self.DETAIL.bottom - 20, self.DETAIL.w - 16, 17), "", self._sell_all)
+        half = (self.DETAIL.w - 20) // 2
+        self.sell_btn = ui.Button((self.DETAIL.x + 8, self.DETAIL.bottom - 40, half, 17), "팔기", self._action)
+        self.dis_btn = ui.Button((self.DETAIL.x + 12 + half, self.DETAIL.bottom - 40, half, 17), "분해", self._disassemble)
 
     # ── 데이터 ──
     @property
     def kind(self) -> str:
-        return TABS[self.tabs.index][0]
+        return self.tab_ids[self.tabs.index]
 
     def items(self) -> list:
         if self.kind == "sell":
@@ -130,11 +143,19 @@ class ShopScene(Scene):
         self.msg, self.msg_col, self.msg_t = msg, col, 2.0
         if col == ui.BAD:
             self.game.sfx.play("ui_error")  # 안 됨 (돈·소재 부족 등)
+            if self.host is not None and ("돈" in msg):
+                self.host.react("short")
+
+    def _react(self, kind: str) -> None:
+        if self.host is not None:
+            self.host.react(kind)   # 건물 안: NPC 웃음 표정 + 짧은 반응 대사
 
     # ── 동작 ──
     def _close(self) -> None:
         self.game.save_now()
         self.game.scenes.pop()
+        if self.host is not None:
+            self.host.shop_closed()
 
     def _action(self) -> None:
         items = self.items()
@@ -153,6 +174,7 @@ class ShopScene(Scene):
                    "scales": ("전설 비늘이 부족해요", ui.BAD), "locked": ("엘드라시온 대륙에서 판매", ui.BAD)}.get(res)
             if res == "ok":
                 self.game.sfx.play("ui_buy")
+                self._react("buy")
             if msg:
                 self._say(*msg)
             return
@@ -161,6 +183,7 @@ class ShopScene(Scene):
             res = self.save.enhance(kind, gear)
             if res == "ok":
                 self.game.sfx.play("ui_enhance")
+                self._react("enhance")
                 self._say(f"{gear['name']} +{self.save.enhance_level(gear['id'])} 강화 성공!", ui.GOOD)
             elif res == "money":
                 self._say("돈이 부족해요", ui.BAD)
@@ -170,6 +193,7 @@ class ShopScene(Scene):
         if self.kind == "sell":
             gained = self.save.sell(self.sel)
             self.game.sfx.play("sfx_coin")
+            self._react("sell")
             self._say(f"+{ui.money_text(gained)}", ui.GOOD)
             self.sel = max(0, min(self.sel, len(self.items()) - 1))
             return
@@ -189,6 +213,7 @@ class ShopScene(Scene):
         result = self.save.buy(self.kind, item)
         if result == "ok":
             self.game.sfx.play("ui_buy")
+            self._react("buy")
             self._say(f"{item['name']} 구매 · 장착!", ui.GOOD)
         elif result == "money":
             self._say("돈이 부족해요", ui.BAD)
@@ -210,6 +235,7 @@ class ShopScene(Scene):
         if self.save.data["keepnet"]:
             total = self.save.sell_all()
             self.game.sfx.play("sfx_coin")
+            self._react("sell")
             self._say(f"모두 팔았어요 +{ui.money_text(total)}", ui.GOOD)
             self.sel = 0
 
@@ -219,7 +245,7 @@ class ShopScene(Scene):
             self._close()
         elif a.name == "scroll":
             n = len(self.items())
-            visible = LIST.h // ROW_H
+            visible = self.LIST.h // ROW_H
             self.scroll = max(0, min(max(0, n - visible), self.scroll - a.value))
         elif a.name == "primary":
             m = a.pos
@@ -232,31 +258,37 @@ class ShopScene(Scene):
             for b in buttons:
                 if b.click(m):
                     return
-            if LIST.collidepoint(m):
-                i = (m[1] - LIST.y) // ROW_H + self.scroll
+            if self.LIST.collidepoint(m):
+                i = (m[1] - self.LIST.y) // ROW_H + self.scroll
                 if 0 <= i < len(self.items()):
                     self.sel = i
                     self.game.sfx.play("ui_click")
 
     def update(self, dt: float) -> None:
+        if self.host is not None:
+            self.host.update(dt)   # 건물 안: 초상화 깜빡임·숨쉬기 계속
         self.age += dt
         self.mouse = self.ui_pointer()
         self.msg_t = max(0.0, self.msg_t - dt)
 
     # ── 그리기 ──
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
+        if self.host is not None:
+            self.host.draw_shop_backdrop(canvas)   # 건물 안: 배경 + 왼쪽 초상화 + 반응 대사
+        else:
+            self.fishing.draw(canvas)
+            ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
         canvas = self.ui_canvas(canvas)
-        ui.panel(canvas, (8, 6, 464, 258))
-        text(canvas, "상점", (16, 16), ui.ACCENT, 16, "midleft")
-        text(canvas, f"소지금 {ui.money_text(self.save.money)}", (464, 16), ui.ACCENT, 11, "midright")
+        fr = self.frame
+        ui.panel(canvas, fr)
+        text(canvas, self.title, (fr.x + 8, fr.y + 10), ui.ACCENT, 16, "midleft")
+        text(canvas, f"소지금 {ui.money_text(self.save.money)}", (fr.right - 8, fr.y + 10), ui.ACCENT, 11, "midright")
         self.tabs.draw(canvas, self.mouse)
-        ui.panel(canvas, LIST, fill=(16, 20, 36))
-        ui.panel(canvas, DETAIL, fill=(16, 20, 36))
+        ui.panel(canvas, self.LIST, fill=(16, 20, 36))
+        ui.panel(canvas, self.DETAIL, fill=(16, 20, 36))
         items = self.items()
         self.sel = max(0, min(self.sel, len(items) - 1)) if items else 0
-        visible = LIST.h // ROW_H
+        visible = self.LIST.h // ROW_H
         if self.kind == "sell":
             self._draw_sell(canvas, items, visible)
         elif self.kind == "float":
@@ -266,17 +298,17 @@ class ShopScene(Scene):
         else:
             self._draw_gear(canvas, items, visible)
         if self.msg_t > 0:
-            text(canvas, self.msg, (LIST.x, 252), self.msg_col, 11, "midleft")
+            text(canvas, self.msg, (self.LIST.x, fr.bottom - 12), self.msg_col, 11, "midleft")
         self.close_btn.draw(canvas, self.mouse)
         draw_cursor(canvas, self.mouse)
 
     def _row_rect(self, i: int) -> pygame.Rect:
-        return pygame.Rect(LIST.x + 2, LIST.y + 2 + (i - self.scroll) * ROW_H, LIST.w - 4, ROW_H - 1)
+        return pygame.Rect(self.LIST.x + 2, self.LIST.y + 2 + (i - self.scroll) * ROW_H, self.LIST.w - 4, ROW_H - 1)
 
     def _draw_sell(self, canvas, items, visible) -> None:
         if not items:
-            text(canvas, "살림망이 비어 있어요", LIST.center, ui.DIM, 11, "center")
-            text(canvas, "물고기를 잡으면 여기에 보관돼요", (DETAIL.centerx, DETAIL.centery), ui.DIM, 11, "center")
+            text(canvas, "살림망이 비어 있어요", self.LIST.center, ui.DIM, 11, "center")
+            text(canvas, "물고기를 잡으면 여기에 보관돼요", (self.DETAIL.centerx, self.DETAIL.centery), ui.DIM, 11, "center")
             self.sell_all_btn.enabled = self.sell_btn.enabled = self.dis_btn.enabled = False
             return
         self.sell_btn.enabled = True
@@ -288,18 +320,20 @@ class ShopScene(Scene):
             if sel or r.collidepoint(self.mouse):
                 canvas.fill(ui.PANEL_LIGHT, r)
             name = (mut_label(it["mut"]) + " " + fish["name"]) if it.get("mut") else fish["name"]
-            text(canvas, name[:9], (r.x + 4, r.centery), MUT_COL if it.get("mut") else RARITY_COL[fish["rarity"]], 11,
+            text(canvas, name[:9] if self.LIST.w >= 220 else name[:6], (r.x + 4, r.centery), MUT_COL if it.get("mut") else RARITY_COL[fish["rarity"]], 11,
                  "midleft")
-            text(canvas, f"{it['size']:.1f}cm", (r.x + 120, r.centery), ui.TEXT, 11, "midleft")
-            text(canvas, it["rank"], (r.x + 168, r.centery), RANK_COLORS[it["rank"]], 11, "midleft")
+            narrow = self.LIST.w < 220   # 건물 안 상점 패널 (좁음): 크기 칸을 빼고 랭크만
+            if not narrow:
+                text(canvas, f"{it['size']:.1f}cm", (r.x + 120, r.centery), ui.TEXT, 11, "midleft")
+            text(canvas, it["rank"], (r.right - 52 if narrow else r.x + 168, r.centery), RANK_COLORS[it["rank"]], 11, "midleft")
             text(canvas, f"{self.save.sale_price(it):,}", (r.right - 4, r.centery), ui.ACCENT, 11, "midright")
         it = items[self.sel]
         fish = self.fish_by_id(it["id"])
-        draw_fish_fit(canvas, (DETAIL.x + 6, DETAIL.y + 8, DETAIL.w - 12, 58), fish, 110)
+        draw_fish_fit(canvas, (self.DETAIL.x + 6, self.DETAIL.y + 8, self.DETAIL.w - 12, 58), fish, 110)
         name = (mut_label(it["mut"]) + " " + fish["name"]) if it.get("mut") else fish["name"]
-        text(canvas, name, (DETAIL.centerx, DETAIL.y + 76), RARITY_COL[fish["rarity"]], 11, "center")
-        text(canvas, f"{it['size']:.1f}cm · {it['rank']}랭크", (DETAIL.centerx, DETAIL.y + 92), ui.TEXT, 11, "center")
-        text(canvas, f"판매가 {ui.money_text(self.save.sale_price(it))}", (DETAIL.centerx, DETAIL.y + 110), ui.ACCENT, 11,
+        text(canvas, name, (self.DETAIL.centerx, self.DETAIL.y + 76), RARITY_COL[fish["rarity"]], 11, "center")
+        text(canvas, f"{it['size']:.1f}cm · {it['rank']}랭크", (self.DETAIL.centerx, self.DETAIL.y + 92), ui.TEXT, 11, "center")
+        text(canvas, f"판매가 {ui.money_text(self.save.sale_price(it))}", (self.DETAIL.centerx, self.DETAIL.y + 110), ui.ACCENT, 11,
              "center")
         notes = []
         if it["rank"] == "S":
@@ -322,10 +356,10 @@ class ShopScene(Scene):
                 notes.append(f"{mut_label([m])} ×{3 if m == 'giant' else 5}")
         if notes:
             text(canvas, " · ".join(notes) + " 적용" * (it["rank"] == "S" or self.save.lunch_active()),
-                 (DETAIL.centerx, DETAIL.y + 124), RANK_COLORS["S"], 11, "center")
+                 (self.DETAIL.centerx, self.DETAIL.y + 124), RANK_COLORS["S"], 11, "center")
         got = self.save.disassemble_yield(self.sel)
         dis = ", ".join(f"{MAT_KO[k]} {v}" for k, v in got.items()) if got else "전설은 분해 불가"
-        text(canvas, f"분해: {dis}", (DETAIL.centerx, DETAIL.y + 138), ui.DIM, 11, "center")
+        text(canvas, f"분해: {dis}", (self.DETAIL.centerx, self.DETAIL.y + 138), ui.DIM, 11, "center")
         total = sum(self.save.sale_prices(items))
         self.dis_btn.enabled = got is not None
         self.sell_all_btn.label, self.sell_all_btn.enabled = f"모두 팔기 ({len(items)}마리 · {total:,}원)", True
@@ -361,18 +395,19 @@ class ShopScene(Scene):
         it = items[self.sel]
         cur = self.save.equipped(kind)
         owned = self.save.owns(kind, it["id"])
-        x, y = DETAIL.x + 8, DETAIL.y + 8
+        x, y = self.DETAIL.x + 8, self.DETAIL.y + 8
         lvl = self.save.enhance_level(it["id"]) if owned else 0
         text(canvas, it["name"] + (f" +{lvl}" if lvl else ""), (x, y + 4), ui.ACCENT, 11, "midleft")
-        text(canvas, f"T{it['tier']}" if it.get("tier") else "전설 미끼", (DETAIL.right - 8, y + 4), ui.ACCENT, 11,
+        text(canvas, f"T{it['tier']}" if it.get("tier") else "전설 미끼", (self.DETAIL.right - 8, y + 4), ui.ACCENT, 11,
              "midright")
         yy = y + 20
-        for ln in wrap_text(it["desc"], DETAIL.w - 16)[:2]:
+        for ln in wrap_text(it["desc"], self.DETAIL.w - 16)[:2]:
             text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
             yy += 13
         yy += 4
         if kind == "bait":
-            for ln in stat_lines(kind, it)[:5]:
+            rows = [w for ln in stat_lines(kind, it) for w in wrap_text(ln, self.DETAIL.w - 16)]
+            for ln in rows[:6]:
                 text(canvas, ln, (x, yy), ui.TEXT, 11, "midleft")
                 yy += 13
         else:
@@ -386,13 +421,13 @@ class ShopScene(Scene):
                 if not same and abs(d) > 1e-6:
                     good = (d > 0) == up
                     dtxt = ("+" if d > 0 else "-") + fmt.format(abs(d)).lstrip("×±")
-                    text(canvas, dtxt, (DETAIL.right - 8, yy), ui.GOOD if good else ui.BAD, 11, "midright")
+                    text(canvas, dtxt, (self.DETAIL.right - 8, yy), ui.GOOD if good else ui.BAD, 11, "midright")
                 yy += 13
             if not same:
                 text(canvas, f"(지금: {cur['name']})", (x, yy + 2), ui.DIM, 11, "midleft")
         if it.get("scales"):
             have = self.save.data["scales"]
-            text(canvas, f"전설 비늘 {it['scales']}개 필요 (보유 {have})", (x, DETAIL.bottom - 72),
+            text(canvas, f"전설 비늘 {it['scales']}개 필요 (보유 {have})", (x, self.DETAIL.bottom - 72),
                  ui.TEXT if have >= it["scales"] else ui.BAD, 11, "midleft")
         reason = not owned and (self.save.gear_locked_reason(it)
                                 or (kind == "bait" and self.save.bait_locked_reason(it)))
@@ -402,14 +437,14 @@ class ShopScene(Scene):
             self.action_btn.label, self.action_btn.enabled = "장착하기", True
         elif reason:
             self.action_btn.label, self.action_btn.enabled = "잠김", False
-            for i, ln in enumerate(wrap_text(reason, DETAIL.w - 16)[:2]):
-                text(canvas, ln, (x, DETAIL.bottom - 58 + i * 12), ui.BAD, 11, "midleft")
+            for i, ln in enumerate(wrap_text(reason, self.DETAIL.w - 16)[:2]):
+                text(canvas, ln, (x, self.DETAIL.bottom - 58 + i * 12), ui.BAD, 11, "midleft")
         else:
             self.action_btn.label = f"구매 ({it['price']:,}원)"
             self.action_btn.enabled = self.save.money >= it["price"] and self.save.data["scales"] >= it.get("scales", 0)
             need = self.save.scale_warning(it)
             if need:
-                text(canvas, f"주의: 남은 특수 찌에 비늘 {need}개 필요", (x, DETAIL.bottom - 58), ui.BAD, 11,
+                text(canvas, f"주의: 남은 특수 찌에 비늘 {need}개 필요", (x, self.DETAIL.bottom - 58), ui.BAD, 11,
                      "midleft")
                 if self.confirm == it["id"]:
                     self.action_btn.label = "그래도 구매"
@@ -441,23 +476,23 @@ class ShopScene(Scene):
                 status, scol = f"{it['price']:,}원", ui.ACCENT if self.save.money >= it["price"] else ui.BAD
             text(canvas, status, (r.right - 4, r.centery), scol, 11, "midright")
         it = items[self.sel]
-        x, y = DETAIL.x + 8, DETAIL.y + 8
+        x, y = self.DETAIL.x + 8, self.DETAIL.y + 8
         text(canvas, it["name"], (x, y + 4), tuple(it["color"]), 11, "midleft")
-        text(canvas, f"S{it['tier']}", (DETAIL.right - 8, y + 4), ui.ACCENT, 11, "midright")
+        text(canvas, f"S{it['tier']}", (self.DETAIL.right - 8, y + 4), ui.ACCENT, 11, "midright")
         yy = y + 20
-        for ln in wrap_text(it["desc"], DETAIL.w - 16)[:3]:
+        for ln in wrap_text(it["desc"], self.DETAIL.w - 16)[:3]:
             text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
             yy += 13
         yy += 4
         spots = [s for s in load_json("spots.json")["spots"] if s.get("continent") == "eldrasion"]
         ok = [s["short"] for s in spots if s.get("float_req", 9) <= it["tier"]]
-        for ln in wrap_text("쓸 수 있는 곳: " + (", ".join(ok) if ok else "-"), DETAIL.w - 16)[:3]:
+        for ln in wrap_text("쓸 수 있는 곳: " + (", ".join(ok) if ok else "-"), self.DETAIL.w - 16)[:3]:
             text(canvas, ln, (x, yy), ui.TEXT, 11, "midleft")
             yy += 13
         text(canvas, "전설은 한 단계 위 찌가 필요해요", (x, yy + 2), ui.DIM, 11, "midleft")
         if it.get("scales"):
             have = self.save.data["scales"]
-            text(canvas, f"전설 비늘 {it['scales']}개 필요 (보유 {have})", (x, DETAIL.bottom - 34),
+            text(canvas, f"전설 비늘 {it['scales']}개 필요 (보유 {have})", (x, self.DETAIL.bottom - 34),
                  ui.TEXT if have >= it["scales"] else ui.BAD, 11, "midleft")
         if fl.get("equipped") == it["id"]:
             self.action_btn.label, self.action_btn.enabled = "장착 중", False
@@ -475,7 +510,7 @@ class ShopScene(Scene):
         text(canvas, "  ".join(f"{MAT_KO[k]} {mats.get(k, 0)}" for k in ("sharmion", "eldrasion", "rare")),
              (240, 16), ui.DIM, 11, "center")
         if not items:
-            text(canvas, "강화할 장비가 없어요", LIST.center, ui.DIM, 11, "center")
+            text(canvas, "강화할 장비가 없어요", self.LIST.center, ui.DIM, 11, "center")
             self.action_btn.enabled = False
             return
         for i in range(self.scroll, min(len(items), self.scroll + visible)):
@@ -489,9 +524,9 @@ class ShopScene(Scene):
             text(canvas, f"+{lvl}" if lvl else "", (r.right - 4, r.centery), ui.ACCENT, 11, "midright")
         kind, g = items[self.sel]
         lvl = self.save.enhance_level(g["id"])
-        x, y = DETAIL.x + 8, DETAIL.y + 8
+        x, y = self.DETAIL.x + 8, self.DETAIL.y + 8
         text(canvas, f"{g['name']} +{lvl}", (x, y + 4), ui.ACCENT, 11, "midleft")
-        text(canvas, "★" * lvl + "☆" * (rules()["max_level"] - lvl), (DETAIL.right - 8, y + 4), ui.ACCENT, 11,
+        text(canvas, "★" * lvl + "☆" * (rules()["max_level"] - lvl), (self.DETAIL.right - 8, y + 4), ui.ACCENT, 11,
              "midright")
         cost = self.save.enhance_cost(kind, g)
         yy = y + 22
@@ -517,7 +552,7 @@ class ShopScene(Scene):
             if cost["rare"]:
                 text(canvas, f"희귀 소재 {mats.get('rare', 0)}/{cost['rare']}", (x, yy),
                      ui.TEXT if have_rare else ui.BAD, 11, "midleft")
-            text(canvas, "강화는 실패하지 않아요", (x, DETAIL.bottom - 56), ui.DIM, 11, "midleft")
+            text(canvas, "강화는 실패하지 않아요", (x, self.DETAIL.bottom - 56), ui.DIM, 11, "midleft")
             self.action_btn.label = f"+{lvl + 1} 강화"
             self.action_btn.enabled = have_gold and have_mat and have_rare
         self.action_btn.draw(canvas, self.mouse)

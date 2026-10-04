@@ -98,6 +98,7 @@ class SettingsScene(Scene):
         if self.game.save is not None:
             rows.append(("테스트: NPC 대사", "button", lambda: "열기", self._open_dialogue_test))
             rows.append(("테스트: 날씨 이벤트", "button", self._event_label, self._cycle_event))
+            rows.append(("테스트: 건물 안 대화", "button", self._interior_label, self._open_interior))
         if self.game.save is not None:
             rows.append(("테스트: 환상 낚은 기록", "button",
                          lambda: "지웠어요" if getattr(self, "_ph_wiped", False) else "지우기", self._ask_phantom_reset))
@@ -119,8 +120,10 @@ class SettingsScene(Scene):
         offset = ("오디오 지연 보정", "step", lambda: f"{s.get('audio_offset_ms'):+d}ms",
                   (lambda: self._offset(-10), lambda: self._offset(10)))
         test = ("사운드 테스트 룸", "button", lambda: "열기", self._open_sound_test)
+        voice = ("말소리 (건물 안 대화)", "toggle", lambda: s.get("voice_blips"),
+                 lambda: s.set("voice_blips", not s.get("voice_blips")))
         return [vol("전체 음량", "volume"), vol("음악", "vol_music"), vol("효과음", "vol_sfx"), vol("환경음", "vol_amb"),
-                mode, zing, fmus, boost, offset, test]
+                mode, zing, fmus, voice, boost, offset, test]
 
     def _vol(self, key: str, d: float) -> None:
         self.s.set(key, round(min(1.0, max(0.0, self.s.get(key) + d)), 1))
@@ -173,6 +176,23 @@ class SettingsScene(Scene):
             weather_events.stop(self.game.save)
         else:
             weather_events.start(self.game.save, nxt, fishing.clock.day, fishing.clock.hour)
+
+    INTERIOR_ORDER = ("haru", "baek", "ella", "oren")
+
+    def _interior_label(self) -> str:
+        from src.core.config import load_json
+        nid = self.INTERIOR_ORDER[getattr(self, "_int_i", 0) % 4]
+        return load_json("interiors.json")["npcs"][nid]["sign"] + " 열기"
+
+    def _open_interior(self) -> None:
+        """테스트: 건물 안 대화 화면 (누를 때마다 다음 NPC). 나가면 설정으로 돌아옴."""
+        fishing = next((s for s in self.game.scenes.stack if hasattr(s, "clock") and hasattr(s, "weather_sys")), None)
+        if fishing is None:
+            return
+        from src.scene.interior import InteriorScene
+        i = getattr(self, "_int_i", 0)
+        self._int_i = i + 1
+        self.game.scenes.push(InteriorScene(self.game, fishing, self.INTERIOR_ORDER[i % 4]))
 
     def _open_dialogue_test(self) -> None:
         from src.scene.dialogue_debug import DialogueDebugScene
