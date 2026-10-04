@@ -25,6 +25,60 @@ def text(canvas, s: str, pos, color, size: int = 11, anchor: str = "topleft", sh
     return rect
 
 
+# ── 색 태그 글자: "{purple}물이 조용해지거든{/}, 줄을…" (대사 강조 — 환상 힌트 등) ──
+TAG_RE = __import__("re").compile(r"\{(purple|gold|/)\}")
+TAG_COLORS_DARK_BG = {"purple": (205, 150, 255), "gold": (255, 214, 110)}    # 어두운 대화창 위
+TAG_COLORS_LIGHT_BG = {"purple": (120, 50, 190), "gold": (150, 100, 20)}     # 밝은 말풍선·종이 위
+
+
+def strip_tags(s: str) -> str:
+    return TAG_RE.sub("", s)
+
+
+def wrap_rich(s: str, max_w: int, size: int = 11) -> list[str]:
+    """wrap_text 와 같지만 색 태그는 폭에서 뺀다. 줄을 넘는 태그는 다음 줄 앞에 다시 열어 준다."""
+    font = get_font(size)
+    lines, cur = [], ""
+    for word in localize(s).split(" "):
+        cand = f"{cur} {word}".strip()
+        if cur and font.size(strip_tags(cand))[0] > max_w:
+            lines.append(cur)
+            cur = word
+        else:
+            cur = cand
+    if cur:
+        lines.append(cur)
+    out, open_tag = [], None
+    for ln in lines:
+        body = (f"{{{open_tag}}}" if open_tag else "") + ln
+        for m in TAG_RE.finditer(ln):
+            open_tag = None if m.group(1) == "/" else m.group(1)
+        out.append(body)
+    return out
+
+
+def rich_text(canvas, s: str, pos, color, size: int = 11, anchor: str = "midleft", visible: int | None = None,
+              tag_colors: dict | None = None) -> pygame.Rect:
+    """색 태그가 섞인 한 줄. visible = 보이는 글자 수 (한 글자씩 출력, 태그 제외)."""
+    tag_colors = tag_colors or TAG_COLORS_DARK_BG
+    font = get_font(size)
+    plain = strip_tags(s)
+    rect = font.render(plain, False, color).get_rect(**{anchor: pos})
+    x, cur, left = rect.x, color, (len(plain) if visible is None else visible)
+    pieces = TAG_RE.split(s)   # 텍스트, 태그이름, 텍스트, …
+    for i, part in enumerate(pieces):
+        if i % 2 == 1:
+            cur = color if part == "/" else tag_colors.get(part, color)
+            continue
+        if not part or left <= 0:
+            continue
+        seg = part[:left]
+        left -= len(seg)
+        r = text(canvas, seg, (x, rect.centery), cur, size, "midleft")
+        x = r.right
+    return rect
+
+
 def wrap_text(s: str, max_w: int, size: int = 11) -> list[str]:
     """픽셀 폭 기준 줄바꿈 (공백 단위)."""
     s = localize(s)

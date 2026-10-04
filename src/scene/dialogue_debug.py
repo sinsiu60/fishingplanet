@@ -6,7 +6,7 @@ from src.core import season as seasons
 from src.scene import dialogue
 from src.scene.base import Scene
 from src.ui import widgets as ui
-from src.ui.hud import draw_cursor, text, wrap_text
+from src.ui.hud import draw_cursor, strip_tags, text, wrap_text
 
 NPCS = (("haru", "하루"), ("baek", "백 노인"), ("sora", "소라"), ("gull", "갈매기 박사"), ("ella", "엘라"), ("oren", "오렌"))
 EVENTS = (None, "meteor", "double_rainbow", "red_moon", "silver_fog")
@@ -49,7 +49,7 @@ class DialogueDebugScene(Scene):
 
     def _preview(self):
         ln = dialogue.choose(self.game.save, NPCS[self.npc][0], self._ctx(), commit=False)
-        self.preview = ln["text"] if ln else "(조건에 맞는 대사 없음)"
+        self.preview = strip_tags(ln["text"]) if ln else "(조건에 맞는 대사 없음)"
 
     def handle_action(self, a):
         if a.name == "back":
@@ -86,7 +86,7 @@ class DialogueDebugScene(Scene):
             from src.scene.inventory import fit
             cond = ",".join(f"{k}={v}" for k, v in ln["cond"].items()) or "-"
             text(c, fit(cond, 116), (92, y + 6), (170, 170, 200), 11, "midleft")
-            text(c, fit(ln["text"], 254), (214, y + 6), ui.TEXT if ok else ui.DIM, 11, "midleft")
+            text(c, fit(strip_tags(ln["text"]), 254), (214, y + 6), ui.TEXT if ok else ui.DIM, 11, "midleft")
         labels = (f"계절 {self.ov['season'] or '자동'}", f"때 {self.ov['period'] or '자동'}", f"이벤트 {self.ov['event'] or '없음'}",
                   f"환상 {'자동' if self.ov['phantom_tutorial'] is None else ('후' if self.ov['phantom_tutorial'] else '전')}")
         for b, lab in zip(self.btns, labels):

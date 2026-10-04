@@ -14,7 +14,8 @@ from src.render import village as vr
 from src.render.weather_fx import themed_palette
 from src.scene.base import Scene
 from src.ui import widgets as ui
-from src.ui.hud import draw_cursor, text, wrap_text
+from src.ui import hud
+from src.ui.hud import draw_cursor, text
 
 DRAG_SLOP = 6
 
@@ -335,7 +336,7 @@ class VillageScene(Scene):
         n = self.cfg["npcs"][b["npc"]]
         sx = n["x"] - self.ox
         line = b["lines"][min(b["i"], len(b["lines"]) - 1)]
-        rows = wrap_text(line, 220)[:2]
+        rows = hud.wrap_rich(line, 220)[:2]
         bw = 236
         bx = int(clamp(sx - bw / 2, 6, canvas.get_width() - bw - 6))
         by = vr.FEET - 92
@@ -347,8 +348,9 @@ class VillageScene(Scene):
         text(canvas, n["name"], (r.x + 6, r.y + 7), (150, 90, 40), 11, "midleft")
         shown = int(b["t"] * 40)
         for j, ln in enumerate(rows):
-            vis = ln[:max(0, shown - sum(len(x) for x in rows[:j]))]
-            text(canvas, vis, (r.x + 6, r.y + 20 + j * 13), (40, 36, 30), 11, "midleft")
+            vis = max(0, shown - sum(len(hud.strip_tags(x)) for x in rows[:j]))
+            hud.rich_text(canvas, ln, (r.x + 6, r.y + 20 + j * 13), (40, 36, 30), 11, "midleft", visible=vis,
+                          tag_colors=hud.TAG_COLORS_LIGHT_BG)
         if len(b["lines"]) > 1:
             text(canvas, f"{b['i'] + 1}/{len(b['lines'])} ▶", (r.right - 4, r.y + 7), (150, 140, 120), 11, "midright")
 

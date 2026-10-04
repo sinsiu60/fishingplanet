@@ -379,7 +379,7 @@
   {
    "id": "baek_04",
    "npc": "baek",
-   "text": "물이 갑자기 조용해지거든, 줄을 놓지 말게.",
+   "text": "{purple}물이 갑자기 조용해지거든{/}, 줄을 놓지 말게.",
    "cond": {
     "phantom_tutorial": false
    },
