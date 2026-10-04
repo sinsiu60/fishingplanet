@@ -60,3 +60,88 @@ def plan(game, key: str):
 def step_is(game, tid: str, i: int | None = None) -> bool:
     g = getattr(game, "guide", None)
     return g is not None and g.run is not None and g.run["id"] == tid and (i is None or g.run["i"] == i)
+
+
+# ───────────────────────── 낚시 기본 (TG-01 ~ TG-03) ─────────────────────────
+def _fishing(game):
+    for sc in reversed(game.scenes.stack):
+        if type(sc).__name__ == "FishingScene":
+            return sc
+    return None
+
+
+class _TG02:
+    """첫 파이팅 대본 (붕어): 패턴 없음 → 감는 동안 장력이 빨간 칸까지 → 손을 떼고 초록으로 돌아오면 지침 → 거리 0 → 뜰채."""
+
+    @staticmethod
+    def _plan(game):
+        return game.guide.data["TG-02"].get("fish", {}).get("fight", {})
+
+    @staticmethod
+    def start(game, run) -> None:
+        fs = _fishing(game)
+        f = fs.fight if fs is not None else None
+        if f is None:
+            return
+        b = f.brain
+        b.actions = {}                       # 패턴 없이
+        b.fake_cue_p = b.fake_rush_p = b.fake_tired_p = 0.0
+        b.first_rush_done, b.first_rush_on = True, False
+        b.chain_left = 0
+        if b.state in ("telegraph", "charge", "rush"):
+            b._enter("idle", 1.0)
+        b.phases = []
+
+    @staticmethod
+    def tick(game, run, dt: float) -> bool:
+        fs = _fishing(game)
+        f = fs.fight if fs is not None else None
+        if f is None:
+            return False
+        p = _TG02._plan(game)
+        i = run["i"]
+        # 튜토리얼 중엔 지지 않게 (줄·바늘이 끝까지 가지 않음)
+        f.line = max(f.line, f.line_max * 0.35)
+        f.hook = min(f.hook, 60.0)
+        f.snag = min(f.snag, 60.0)
+        if f.phase == "fight":
+            b = f.brain
+            if i <= 2:
+                f.script_pull = 0.0
+            elif i == 3:   # 계속 감아요 → 장력이 빨간 칸까지
+                f.script_pull = min(p.get("red_pull_max", 45), f.script_pull + p.get("red_pull_rate", 18) * dt)
+            else:
+                f.script_pull = 0.0
+            if i == 5 and b.state not in ("tired", "exhausted"):
+                ctx = run["ctx"]
+                ctx["green_t"] = ctx.get("green_t", 0.0) + dt if f.zone() == "green" or not f.reeling else 0.0
+                if ctx["green_t"] >= p.get("tired_after_green", 1.5) and run["t"] > 1.0:
+                    b._enter("tired", 999.0)   # 지침 (뜰채까지 계속)
+                    need = f.cfg["net_min_stamina"]
+                    f.stamina = min(f.stamina, f.stamina_max * need * 0.8)
+                    b.events.append("tired")
+            if i >= 6 and b.state not in ("tired", "exhausted"):
+                b._enter("tired", 999.0)
+        elif f.phase == "net" and i == 8 and not run["ctx"].get("net_set"):
+            run["ctx"]["net_set"] = True
+            f.net_t = f.net_period + 0.02   # 물고기가 멈춘 순간 (지금 누르면 건져짐)
+        return False
+
+    @staticmethod
+    def stop(game) -> None:
+        fs = _fishing(game)
+        if fs is not None and fs.fight is not None:
+            fs.fight.script_pull = 0.0
+
+
+script("tg02_fight")(_TG02)
+
+
+def _close_catch(game) -> None:
+    """TG-03 마지막: 포획 카드 닫기 → TG-04."""
+    fs = _fishing(game)
+    if fs is not None and fs.fight is not None and fs.fight.phase in ("caught", "lost"):
+        fs._end_fight()
+
+
+ACTIONS["close_catch"] = _close_catch

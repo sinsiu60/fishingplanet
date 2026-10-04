@@ -46,6 +46,7 @@ class VillageScene(Scene):
         self.bubble = None         # {"npc", "lines", "i", "t"}
         self.panel = None          # 계절 알림판 {"t"}
         fishing.backdrop = self.draw_world
+        fishing._tut_spot = None   # 마을에서 다시 낚시터로 가면 '낚시터 입장' (가이드 튜토리얼)
         fishing.bite.stop()
         fishing.cast.reset()
         game.adaptive.set_context(cont, None)   # 마을: 대륙 테마

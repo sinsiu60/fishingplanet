@@ -67,11 +67,16 @@ def quoted(cell: str) -> list[str]:
 SPEC = {
     "TG-01": {"title": "첫 캐스팅 · 챔질", "who": "haru", "start": "event:spot_enter:reservoir", "need_cond": "new_game",
               "script": "tg01_bite", "next": "TG-02",
+              # 물고기 행동: 착수 4초 뒤 가짜 입질(톡톡) 1번 → 3초 뒤 진짜 입질(쑥) — 대기 1.5 + 접근 2.0 + 0.5 = 4초
+              "fish": {"bite": {"fish": "crucian", "wait": 1.5, "approach": 2.0, "first_nibble": 0.5, "nibbles": 1,
+                                "gap": 3.0}},
               "steps": [("fish.water", "tap"), ("fish.water", "event:cast_landed", {"allow": "cast"}),
                         ("fish.bobber", "event:nibble"), ("fish.bobber", "tap"), ("fish.bobber", "event:bite"),
                         ("fish.bobber", "input:hook")]},
     "TG-02": {"title": "첫 파이팅", "who": "haru", "start": "event:fight_start", "after": ["TG-01"], "script": "tg02_fight",
               "next": "TG-03",
+              # 물고기 행동: 붕어, 패턴 없이 시작 → 장력이 빨간 칸까지 오르게 조금 세게 → 지침 → 거리 0
+              "fish": {"fight": {"fish": "crucian", "red_pull_max": 45, "red_pull_rate": 18, "tired_after_green": 1.5}},
               "steps": [(["fight.gauge.tension", "fight.gauge.line"], "tap"), ("fight.gauge.line", "tap"),
                         ("fight.reel", "input:reel"), ("fight.gauge.tension", "event:tension_red"),
                         ("fight.gauge.tension.red", "input:release"), ("fight.gauge.tension", "event:tired"),

@@ -457,7 +457,15 @@ class FishingScene(Scene):
         f.brain.force_pattern(pid)
         self.toasts.show(f"[테스트] 패턴 발동: {pattern_fx.action_name(pid)}", INFO, 1.2, 11)
 
+    def tut_busy(self) -> bool:
+        """가이드 튜토리얼이 기다릴 때: 카드·도움말·환상·전설 포획 연출 중 (src/tutorial/conds.py)."""
+        return self.card is not None or self.help or self.catch_show is not None or self.voyage_pending
+
     def _open_card(self, key: str, focus: str | None) -> None:
+        if self.game.guide.run is not None and key != "welcome":
+            self.tutorial.seen.discard(key)   # 가이드 튜토리얼 중엔 예전 카드를 띄우지 않음 (다음 기회에)
+            self.settings.set("tutorial_seen", sorted(self.tutorial.seen))
+            return
         self.card = {"key": key, "focus": focus, "t": 0.0}
 
     def _open_signal_card(self, key: str) -> None:
@@ -960,8 +968,8 @@ class FishingScene(Scene):
         self.bite.shadow = None
         self.end_t = 0.0
         self.slack_t = self.red_t = 0.0
-        if self.tutorial.want("fight_intro"):
-            self._open_card("fight_intro", "gauge")
+        if self.training is None:
+            self.game.guide.event("fight_start")   # TG-02 (예전 'fight_intro' 카드 대신)
         self._preload_catch_song(fish)
 
     # ── 어탁 (35-2) ──
@@ -1039,9 +1047,6 @@ class FishingScene(Scene):
             if not runner.before_final_ending(self.game, self, last["fish"], last.get("size", 0.0), final):
                 final()
         self.screen_fx.reset()
-        if last and self.card is None and len(self.game.scenes.stack) and self.game.scenes.current is self \
-                and self.tutorial.want("catch_intro"):
-            self._open_card("catch_intro", None)   # 첫 포획: 살림망 · 판매(하루네 낚시점) · 도감 안내
         if last and phantom.is_phantom(last["fish"]):
             self.phantom_fx.restore()  # 포획 컷이 끝나면 1.5초에 걸쳐 원래 색
             if not phantom.state(self.save)["tutorial"]:
@@ -1060,6 +1065,9 @@ class FishingScene(Scene):
             from src.scene.voyage import VoyageScene
             self.game.scenes.push(VoyageScene(self.game, self))
             return
+        if self.game.scenes.current is self and self.backdrop is None and getattr(self, "_tut_spot", None) != self.spot_id:
+            self._tut_spot = self.spot_id
+            self.game.guide.event(f"spot_enter:{self.spot_id}")   # 가이드 튜토리얼 (TG-01: 동네 저수지 첫 입장)
         if self.card is not None or self.help or self.game.guide.frozen():
             # 튜토리얼 카드·도움말·가이드 정지 지시: 게임 정지 (예고 시간도 흐르지 않음)
             if self.card is not None:
@@ -1491,6 +1499,8 @@ class FishingScene(Scene):
                     self.sfx.play("ui_dex_new", 0.5)  # NEW! 도감 등록 배지와 함께 (N3: 작게)
                 elif news.get("record"):
                     self.sfx.play("sfx_record", 0.85)  # 최대 크기 경신 배지와 함께
+            if f.phase == "caught" and prev < 1.6 <= self.end_t and self.training is None:
+                self.game.guide.event("catch_shown")   # TG-03: 배지까지 다 뜬 뒤
             return
         reeling = self.game.input.held("reel") and f.phase == "fight"
         if f.phase == "fight" and f.zone() == "red":
@@ -1521,9 +1531,12 @@ class FishingScene(Scene):
             return
         # 처음으로 느슨/빨간 구간에 머물면 설명
         zone = f.zone()
+        if zone == "red" and getattr(self, "_tut_zone", None) != "red" and self.training is None:
+            self.game.guide.event("tension_red")   # TG-02
+        self._tut_zone = zone
         self.slack_t = self.slack_t + dt if zone == "slack" else 0.0
         self.red_t = self.red_t + dt if zone == "red" else 0.0
-        if self.card is None:
+        if self.card is None and self.game.guide.run is None:
             if self.slack_t > SLACK_RED_CARD_SEC and self.tutorial.want("slack"):
                 self._open_card("slack", "gauge")
             elif self.red_t > SLACK_RED_CARD_SEC and self.tutorial.want("red"):
@@ -1826,7 +1839,9 @@ class FishingScene(Scene):
             buffs["lucky_casts"] -= 1
         self.bite.window_extra = 0.95 if self.save.charm_on("pinwheel_float") else 1.0
         ph = None
-        if self.training is None and self.force_i < 0:
+        from src.tutorial import scripts
+        self.bite.script = scripts.plan(self.game, "bite") if self.training is None else None   # TG-01 대본 입질
+        if self.training is None and self.force_i < 0 and not self.bite.script:
             test = self.settings.get("test_phantom")  # 설정 → 접근성 '테스트: 다음 착수에 환상 물고기'
             ph = phantom.roll(self.save, self.spot_id, force=self.force_phantom or test)
             self.force_phantom = False
@@ -1844,6 +1859,7 @@ class FishingScene(Scene):
             self.bite.extra_pool = self._extra_fish()   # 계절·날씨 이벤트 한정 물고기 (35-4)
             self.bite.start((c.bx, c.bz), c.current_distance())
         self.idle_ripple_t = 0.0
+        self.game.guide.event("cast_landed")
 
     def _splash_at(self, x: float, z: float, big: float) -> None:
         self.ripples.spawn(x, z, size=big, life=1.8, rings=3 if big >= 0.8 else 2)
@@ -1853,6 +1869,8 @@ class FishingScene(Scene):
 
     def _on_bite_event(self, ev: str) -> None:
         c = self.cast
+        if self.training is None:
+            self.game.guide.event(ev)   # nibble · bite (TG-01)
         if ev == "legend_approach":
             self.toasts.show("수면 아래 거대한 그림자가...!", (255, 214, 120), 3.0)
             fish = self.bite.fish
@@ -2154,6 +2172,10 @@ class FishingScene(Scene):
     def _on_fight_event(self, ev: str) -> None:
         f = self.fight
         x, z = f.fish_xz()
+        if self.training is None:
+            self.game.guide.event(ev)   # tired · net_start … (가이드 튜토리얼)
+            if ev == "net_start":
+                self.game.guide.event("net_phase")
         self._mastery_event(ev)
         self.signal_audio.on_event(ev)
         self.sfx.boost = 2 if "clear" in f.mutations and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
@@ -2175,7 +2197,9 @@ class FishingScene(Scene):
         qr = getattr(self, "quest_run", None)
         if qr is not None:
             qr.on_event(ev)
-        if ev in tut.CARDS and self.card is None and self.tutorial.want(ev):
+        if ev in ("tired", "net_start"):
+            pass   # 첫 지침·첫 뜰채 카드는 가이드 튜토리얼(TG-02)로 바뀜
+        elif ev in tut.CARDS and self.card is None and self.tutorial.want(ev):
             if ev.startswith("telegraph:"):
                 if self.settings.get("signal_cards"):  # 접근성: 첫 만남 카드 끄기 (31장 C6)
                     self._open_signal_card(ev)
@@ -2700,11 +2724,6 @@ class FishingScene(Scene):
             hud.text(canvas, cap, r.center, (200, 230, 255), anchor="center")
         if self.debug and f is None and c.state == CastState.LANDED:
             fight_hud.draw_debug_lines(canvas, ["루어 (대기 중)"] + self.ctl.debug_lines(self.t)[2:])
-        if f is None and self.card is None:
-            if not self.tutorial.is_seen("guide_cast") and c.state in (CastState.READY, CastState.CHARGING):
-                tut.draw_guide(canvas, "guide_cast", t)
-            elif not self.tutorial.is_seen("guide_wait") and c.state == CastState.LANDED:
-                tut.draw_guide(canvas, "guide_wait", t)
         if self.training is not None:
             self.training.draw(canvas, self.mouse)
         if self.card is not None:
@@ -3470,6 +3489,8 @@ class FishingScene(Scene):
         pygame.draw.polygon(canvas, edge, tail)
         canvas.fill((14, 18, 34), (x - 2, y - 2, W + 4, H + 4))
         canvas.blit(surf, (x, y))
+        from src.tutorial import targets
+        targets.mark("fish.bobber", (x, y, W, H))   # 찌 확대 창도 찌 강조에 포함
         pygame.draw.rect(canvas, edge, (x - 2, y - 2, W + 4, H + 4), 2, border_radius=4)
         if biting:
             hud.text(canvas, "!", (x + W - 8, y + 8), (255, 214, 90), 16, "center")

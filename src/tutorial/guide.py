@@ -98,7 +98,8 @@ class Guide:
         if not st["enabled"] and not replay and not self.force_debug:
             return False
         if not replay:
-            if any(a not in st["done"] for a in tut.get("after", [])):
+            cur = self.run["id"] if self.run is not None else None
+            if any(a not in st["done"] and a != cur for a in tut.get("after", [])):   # 진행 중인 앞 튜토리얼은 곧 끝남
                 return False
         if tut.get("need_cond") and not conds.check(self.game, tut["need_cond"], None) and not replay:
             return False
@@ -231,7 +232,11 @@ class Guide:
     # ── 입력 ──
     def skip_rect(self) -> pygame.Rect:
         w = self.game.screen.canvas.get_width()
-        return pygame.Rect(w - 62, 4, 58, 15)
+        x = w - 62
+        if self.game.input.kind == "touch":   # 모바일: 오른쪽 위 가방 버튼 왼쪽
+            from src.core.config import load_json
+            x -= load_json("mobile_config.json")["hud_inset_px"] + self.game.screen.safe_x
+        return pygame.Rect(x, 4, 58, 15)
 
     def _modal_rects(self):
         c = self.game.screen.canvas

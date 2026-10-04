@@ -160,6 +160,9 @@ class BiteController:
         self.period, self.weather = "day", "clear"
         self.spot = "reservoir"
         self.force_fish: dict | None = None  # 테스트용 강제 물고기
+        # 튜토리얼 대본 (TG-01): {"fish", "wait", "approach", "first_nibble", "nibbles", "gap"} — 착수 몇 초 뒤 가짜 입질·진짜 입질이
+        # 정확히 오게. 대본 중엔 이른 챔질도 놀래지 않는다 (가이드가 '아직이에요'로 알려 줌)
+        self.script: dict | None = None
         self.bait: dict | None = None        # 장착한 미끼
         self.rare_bonus = 0.0                # 행운의 떡밥 (+%p)
         self.window_extra = 1.0              # 바람개비 찌: 0.95
@@ -202,6 +205,7 @@ class BiteController:
 
     def stop(self) -> None:
         """줄 회수 등으로 대기 종료."""
+        self.script = None
         self.active = False
         self.legend = False
         self.phantom = None
@@ -217,8 +221,8 @@ class BiteController:
         """좌클릭(챔질). 결과: 'hooked' / 'scared' / 'empty'."""
         if not self.active:
             return "empty"
-        if self.phantom is not None and self.state in (BiteState.WAIT, BiteState.APPROACH, BiteState.NIBBLE):
-            return "empty"  # 환상어: 진짜 입질 전 클릭은 놀래지 않는다 (가짜 입질이 없으니 기다리면 된다)
+        if (self.phantom is not None or self.script) and self.state in (BiteState.WAIT, BiteState.APPROACH, BiteState.NIBBLE):
+            return "empty"  # 환상어·튜토리얼 대본: 진짜 입질 전 클릭은 놀래지 않는다
         if self.state == BiteState.BITE:
             self.state = BiteState.HOOKED
             self.events.append("hooked")
@@ -234,6 +238,8 @@ class BiteController:
         wmult = self.cfg["weather_bite_mult"].get(self.weather, 1.0)
         wait = self._rand(self.cfg["wait_sec"]) / wmult
         self.timer = wait + self.cooldown
+        if self.script:
+            self.timer = self.script["wait"]
         self.wait_cap = self.cfg["wait_sec"][1] / wmult + self.cooldown  # 루어를 잘못 써도 이 이상 안 기다린다
         self.wait_elapsed = 0.0
         self.cooldown = 0.0
@@ -382,7 +388,11 @@ class BiteController:
                 self.legend = False
                 legend = legend_candidate(self.spot, self.period, self.weather, self.cast_distance, self.bait)
                 lurker = self.shadow if self.shadow and self.shadow.get("lurk") else None
-                if self.force_fish is not None:
+                if self.script:
+                    from src.save.save_game import fish_by_id
+                    self.fish = fish_by_id(self.script["fish"])
+                    legend = None
+                elif self.force_fish is not None:
                     self.fish = self.force_fish
                 elif legend and self.rnd.random() < load_json("fishing_config.json")["legend"]["chance"]:
                     self.fish = legend
@@ -406,6 +416,8 @@ class BiteController:
                     # 전설: 거대한 그림자가 천천히 다가온다
                     self.approach_dur *= load_json("fishing_config.json")["legend"]["approach_mult"]
                     self.events.append("legend_approach")
+                if self.script:
+                    self.approach_dur = self.script["approach"]
                 self.timer = self.approach_dur
                 ang = self.rnd.uniform(0, math.tau)
                 d0 = cfg["approach_start_distance_m"]
@@ -440,6 +452,8 @@ class BiteController:
                 self.timer = self._rand(cfg["nibble_interval_sec"])
                 if self.phantom is not None:
                     self.nibbles_left, self.timer = 0, 0.15  # 가짜 입질 없이 바로 진짜 입질
+                elif self.script:
+                    self.nibbles_left, self.timer = self.script["nibbles"], self.script["first_nibble"]
 
         elif self.state == BiteState.NIBBLE:
             sh = self.shadow
@@ -458,7 +472,7 @@ class BiteController:
                     self.nibble_t = 0.0
                     self.tip_pull = 3.0
                     self.events.append("nibble")
-                    self.timer = self._rand(cfg["nibble_interval_sec"])
+                    self.timer = self.script["gap"] if self.script else self._rand(cfg["nibble_interval_sec"])
                 else:
                     self.state = BiteState.BITE
                     # 예민한 물고기(감성돔 등)는 챔질 창이 짧다

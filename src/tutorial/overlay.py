@@ -82,7 +82,7 @@ def box(canvas, text: str, who: str, expr: str, rects, kind: str, t: float, smal
     u = _union(rects)
     gap = 12
     if small:
-        x, y = (W - bw) // 2, 24
+        x, y = (W - bw) // 2, 32
         if u is not None and pygame.Rect(x, y, bw, bh).colliderect(u):
             y = min(H - bh - 6, u.bottom + gap)
     elif u is None:
@@ -249,6 +249,6 @@ def ok_banner(canvas, text: str, k: float) -> None:
     a = int(255 * min(1.0, k * 3))
     img.set_alpha(a)
     sh.set_alpha(a)
-    y = 50 - int((1 - k) * 6)
+    y = 72 - int((1 - k) * 6)
     canvas.blit(sh, (W // 2 - img.get_width() // 2 + 1, y + 1))
     canvas.blit(img, (W // 2 - img.get_width() // 2, y))

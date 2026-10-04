@@ -8,6 +8,16 @@
    "need_cond": "new_game",
    "script": "tg01_bite",
    "next": "TG-02",
+   "fish": {
+    "bite": {
+     "fish": "crucian",
+     "wait": 1.5,
+     "approach": 2.0,
+     "first_nibble": 0.5,
+     "nibbles": 1,
+     "gap": 3.0
+    }
+   },
    "steps": [
     {
      "kind": "info",
@@ -63,6 +73,14 @@
    ],
    "script": "tg02_fight",
    "next": "TG-03",
+   "fish": {
+    "fight": {
+     "fish": "crucian",
+     "red_pull_max": 45,
+     "red_pull_rate": 18,
+     "tired_after_green": 1.5
+    }
+   },
    "steps": [
     {
      "kind": "freeze",

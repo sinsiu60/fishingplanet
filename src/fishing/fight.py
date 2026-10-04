@@ -61,6 +61,7 @@ class Fight:
         self.line = float(self.line_max)
         self.line_damage = 0.0
         self.hook = 0.0
+        self.script_pull = 0.0
         self.hook_floor = 0.0  # 신호 대응 실패로 쌓인, 줄어들지 않는 바늘 게이지 (한 번에 1/3)
         # 힘센 물고기의 울렁임 (장력이 천천히 크게 오르내림) — 좋은 낚싯대(넓은 초록)일수록 버티기 쉽다
         self.heave_amp = heave_amp(fish, self.cfg, self.gear.get("rod_tier"))
@@ -705,6 +706,7 @@ class Fight:
                 break
         target += sum(p.tension_add(self) for p in self.pats)  # 펌핑: 박마다 당김
         target += self.gim.tension_offset(self)  # 부유섬 물살
+        target += self.script_pull  # 튜토리얼 대본 (TG-02: 장력이 빨간 칸까지 오르게 조금 세게)
         self.target = target
         k = 1 - math.exp(-dt / cfg["tension_response_sec"])
         self.tension = clamp(self.tension + (target - self.tension) * k, 0, 110)
