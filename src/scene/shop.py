@@ -1,24 +1,36 @@
-"""상점: 살림망 물고기 판매·분해, 장비 구매·교체(티어별), 강화."""
+"""상점: 살림망 물고기 판매·분해, 장비 구매·교체(티어별), 강화.
+
+화면 배치는 SHOP_UI.md (목업 tools/art/reference/shop/): 동전 소지금 · 탭 구분선 · 선택 줄(노란 테두리 + 찌 커서) ·
+구매 목록(장착 중 상자 장비 맨 위, 작은 장비 그림, 상태 5종) · 상세(그림 받침, 티어 배지, 능력치 비교 막대, 상태별 버튼) ·
+판매 목록(필터 칩, 정렬, 두 단 줄, 같은 종 묶기, 잠금) · 일괄 판매 확인 창. 가격·판매·구매·강화·분해 계산은 SaveGame 그대로.
+"""
 import pygame
 
 from src.core.config import load_json
+from src.render import gear_icon
 from src.render.fish_draw import RANK_COLORS, draw_fish_fit
 from src.fishing.bite import bait_tier_mult
 from src.save.save_game import baits, enhanced, equipment, rules
 from src.fishing.mutation import label as mut_label
+from src.platform.detect import IS_MOBILE
 from src.scene.base import Scene
+from src.ui import shop_ui as su
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
 
 TABS = [("sell", "판매"), ("rod", "낚싯대"), ("reel", "릴"), ("line", "줄"), ("net", "뜰채"), ("bait", "미끼"),
         ("float", "특수 찌"), ("enhance", "강화")]
+GROUP = {"sell": 0, "rod": 1, "reel": 1, "line": 1, "net": 1, "bait": 1, "float": 1, "enhance": 2}   # 탭 구분선
 KIND_KO = {"rod": "낚싯대", "reel": "릴", "line": "줄", "net": "뜰채", "bait": "미끼"}
 MAT_KO = {"sharmion": "샤르미온 소재", "eldrasion": "엘드라시온 소재", "rare": "희귀 소재"}
-ROW_H = 17
-LIST = pygame.Rect(16, 52, 236, 186)
-DETAIL = pygame.Rect(260, 52, 204, 186)
-RARITY_COL = {"common": (230, 230, 230), "uncommon": (130, 230, 150), "rare": (130, 190, 255),
-              "phantom": (190, 120, 255), "legend": (255, 214, 90)}
+ROW_H = 19          # 구매·강화 목록 한 줄
+SELL_H = 28         # 판매 목록 한 줄 (두 단)
+RARITY_COL = su.RARITY
+RARITY_ORDER = {"legend": 0, "phantom": 1, "rare": 2, "uncommon": 3, "common": 4}
+SORTS = [("price", "가격 높은 순"), ("rarity", "희귀도 순"), ("size", "크기 순"), ("recent", "최근 획득 순")]
+FILTERS = [("all", "전체", su.WHITE), ("phantom", "환상", su.RARITY["phantom"]), ("legend", "전설", su.RARITY["legend"]),
+           ("rare", "희귀", su.RARITY["rare"]), ("mut", "변이", su.MUT), ("lock", "잠금", su.GRAY)]
+BULK_DEFAULT = ("common", "uncommon", "rare")   # 일괄 판매 기본 체크
 
 
 def stat_lines(kind: str, item: dict) -> list[str]:
@@ -74,9 +86,6 @@ def score(kind: str, item: dict) -> float:
             "line": lambda i: i["durability"], "net": lambda i: i["window"]}.get(kind, lambda i: 0)(item)
 
 
-MUT_COL = (255, 190, 120)  # 변이 물고기 이름 색
-
-
 class ShopScene(Scene):
     UI_FRAME = True
 
@@ -93,25 +102,63 @@ class ShopScene(Scene):
         self.age = 0.0  # 열림 애니메이션
         self.frame = pygame.Rect(frame or (8, 6, 464, 258))
         fr = self.frame
-        lw = 236 if fr.w >= 464 else int((fr.w - 24) * 0.52)
-        self.LIST = pygame.Rect(fr.x + 8, fr.y + 46, lw, fr.h - 72)
-        self.DETAIL = pygame.Rect(self.LIST.right + 8, fr.y + 46, fr.right - 8 - (self.LIST.right + 8), fr.h - 72)
+        self.wide = fr.w >= 440
         self.tab_ids = [t[0] for t in TABS if tabs is None or t[0] in tabs]
         names = dict(TABS)
-        tw = 54 if len(self.tab_ids) * 56 <= fr.w - 16 else (fr.w - 16) // len(self.tab_ids) - 2
-        self.tabs = ui.Tabs(fr.x + 8, fr.y + 24, [names[t] for t in self.tab_ids], width=tw)
+        # 탭: 같은 줄, 판매 │ 장비 6종 │ 강화 사이 세로 구분선 (목업: 위 25~42)
+        seps = sum(1 for a, b in zip(self.tab_ids, self.tab_ids[1:]) if GROUP[a] != GROUP[b])
+        n = len(self.tab_ids)
+        tw = min(50, (fr.w - 16 - seps * 8 - (n - 1) * 2) // n)
+        self.tabs = ui.Tabs(fr.x + 8, fr.y + 19, [names[t] for t in self.tab_ids], width=tw, height=17)
+        x = fr.x + 8
+        self.tab_seps = []
+        for i, t in enumerate(self.tab_ids):
+            if i and GROUP[self.tab_ids[i - 1]] != GROUP[t]:
+                self.tab_seps.append(x + 2)
+                x += 8
+            self.tabs.rects[i] = pygame.Rect(x, fr.y + 19, tw, 17)
+            x += tw + 2
         if tab and tab in self.tab_ids:
             self.tabs.index = self.tab_ids.index(tab)
         self.sel = 0
         self.scroll = 0
         self.confirm = None  # 비늘 경고를 본 장비 id (한 번 더 누르면 구매)
         self.msg, self.msg_col, self.msg_t = "", ui.TEXT, 0.0
-        self.close_btn = ui.Button((fr.right - 68, fr.bottom - 20, 60, 16), "닫기" if host else "닫기 (B)", self._close)
-        self.action_btn = ui.Button((self.DETAIL.x + 8, self.DETAIL.bottom - 40, self.DETAIL.w - 16, 17), "", self._action)
-        self.sell_all_btn = ui.Button((self.DETAIL.x + 8, self.DETAIL.bottom - 20, self.DETAIL.w - 16, 17), "", self._sell_all)
-        half = (self.DETAIL.w - 20) // 2
-        self.sell_btn = ui.Button((self.DETAIL.x + 8, self.DETAIL.bottom - 40, half, 17), "팔기", self._action)
-        self.dis_btn = ui.Button((self.DETAIL.x + 12 + half, self.DETAIL.bottom - 40, half, 17), "분해", self._disassemble)
+        # 판매 탭 상태
+        self.filter = "all"
+        self.sort = 0
+        self.expanded = None          # 펼친 묶음 (id, 변이, 잠금)
+        self.chip_rects: list = []
+        self.sort_rect = pygame.Rect(0, 0, 0, 0)
+        self.bulk = None              # 일괄 판매 확인 창 {"rar": set}
+        self.bulk_scroll = 0
+        self.dscroll, self.dpages = 0, 1   # 상세 능력치·설명이 칸을 넘칠 때 넘김
+        self.close_btn = ui.Button((fr.right - 66, fr.bottom - 21, 58, 16), "닫기" if host else "닫기 (B)", self._close)
+        self._layout()
+
+    def _layout(self) -> None:
+        """탭마다 목록·상세 자리 (판매 탭은 칩 줄만큼 아래로)."""
+        fr = self.frame
+        top = fr.y + (56 if self.kind == "sell" else 42)
+        bottom = fr.bottom - 26
+        if self.wide:
+            lw = 240
+        else:
+            lw = int((fr.w - 22) * 0.53)
+        self.LIST = pygame.Rect(fr.x + 6, top, lw, bottom - top)
+        self.DETAIL = pygame.Rect(self.LIST.right + 8, top, fr.right - 7 - (self.LIST.right + 8), bottom - top)
+        D = self.DETAIL
+        self.action_btn = ui.Button((D.x + 6, D.bottom - 20, D.w - 12, 16), "", self._action)
+        sw = int((D.w - 12) * 0.62)
+        o = self._sell_off()
+        self.sell_btn = ui.Button((D.x + 6, D.y + 138 + o, sw, 16), "팔기", self._action)
+        self.lock_btn = ui.Button((D.x + 10 + sw, D.y + 138 + o, D.w - 16 - sw, 16), "잠금", self._toggle_lock)
+        self.dis_btn = ui.Button((D.x + 6, D.y + 158 + o, D.w - 12, 14 if self.wide else 26), "분해", self._disassemble)
+        self.sell_all_btn = ui.Button((self.LIST.x, fr.bottom - 21, self.LIST.w, 16), "", self._open_bulk)
+
+    def _sell_off(self) -> int:
+        """판매 상세: 좁은 패널은 물고기 그림을 10px 줄여 분해 이유 두 줄 자리를 만든다."""
+        return 0 if self.wide else -10
 
     # ── 데이터 ──
     @property
@@ -135,6 +182,20 @@ class ShopScene(Scene):
             return out
         return sorted(equipment()[self.kind], key=lambda g: g["tier"])
 
+    def _extra(self) -> dict | None:
+        """지금 장착한 장비가 상점 티어 목록에 없으면(상자 장비) 그 장비 — 목록 맨 위 따로 한 줄."""
+        if self.kind not in ("rod", "reel", "line", "net"):
+            return None
+        cur = self.save.equipped(self.kind)
+        return cur if all(g["id"] != cur["id"] for g in equipment()[self.kind]) else None
+
+    def _rows(self) -> list:
+        """화면 줄 (선택 sel 의 기준). 구매: [상자 장비?] + 티어 목록. 판매: 묶음/한 마리 줄."""
+        if self.kind == "sell":
+            return self._sell_rows()
+        ex = self._extra()
+        return ([ex] if ex else []) + self.items()
+
     def fish_by_id(self, fid: str) -> dict:
         from src.save.save_game import fish_by_id
         return fish_by_id(fid)  # 환상어(data/phantom.json)도
@@ -150,6 +211,91 @@ class ShopScene(Scene):
         if self.host is not None:
             self.host.react(kind)   # 건물 안: NPC 웃음 표정 + 짧은 반응 대사
 
+    # ── 판매 목록 (필터 · 정렬 · 묶기) ──
+    def _pass(self, it: dict, key: str) -> bool:
+        if key == "all":
+            return True
+        if key == "mut":
+            return bool(it.get("mut"))
+        if key == "lock":
+            return bool(it.get("lock"))
+        return self.fish_by_id(it["id"])["rarity"] == key
+
+    def _sort_key(self, i: int, it: dict):
+        mode = SORTS[self.sort][0]
+        if mode == "price":
+            return -self.save.sale_price(it)
+        if mode == "rarity":
+            return (RARITY_ORDER.get(self.fish_by_id(it["id"])["rarity"], 9), -self.save.sale_price(it))
+        if mode == "size":
+            return -it["size"]
+        return -i   # 최근 획득 = 살림망 뒤쪽
+
+    def _sell_rows(self) -> list:
+        """[{"idxs": [살림망 번호…], "group": bool}] — 같은 종(변이·잠금 같음)은 한 줄 '이름 ×n', 펼친 묶음은 한 마리씩."""
+        net = self.save.data["keepnet"]
+        idxs = [i for i, it in enumerate(net) if self._pass(it, self.filter)]
+        idxs.sort(key=lambda i: self._sort_key(i, net[i]))
+        groups: dict = {}
+        order = []
+        for i in idxs:
+            it = net[i]
+            k = (it["id"], tuple(it.get("mut") or ()), bool(it.get("lock")))
+            if k not in groups:
+                groups[k] = []
+                order.append(k)
+            groups[k].append(i)
+        rows = []
+        for k in order:
+            g = groups[k]
+            if len(g) > 1 and k != self.expanded:
+                rows.append({"idxs": g, "group": True, "key": k})
+            else:
+                rows += [{"idxs": [i], "group": False, "key": k, "member": len(g) > 1} for i in g]
+        return rows
+
+    def _sel_index(self) -> int | None:
+        """판매 탭: 선택한 줄의 살림망 번호 (묶음이면 맨 앞 = 정렬상 첫째)."""
+        rows = self._sell_rows()
+        if not rows:
+            return None
+        return rows[max(0, min(self.sel, len(rows) - 1))]["idxs"][0]
+
+    def _select(self, i: int) -> None:
+        """줄 고르기 (판매 묶음 줄이면 펼쳐서 첫 마리)."""
+        rows = self._rows()
+        if not rows:
+            self.sel = 0
+            return
+        self.sel = max(0, min(i, len(rows) - 1))
+        if self.kind == "sell":
+            r = rows[self.sel]
+            if r["group"]:
+                self.expanded = r["key"]
+            elif not r.get("member"):
+                self.expanded = None
+            rows = self._rows()
+            self.sel = next((j for j, x in enumerate(rows) if x["idxs"][0] == r["idxs"][0]), 0)
+        vis = self._visible()
+        if self.sel < self.scroll + self._pinned():
+            self.scroll = max(0, self.sel - self._pinned())
+        elif self.sel >= self.scroll + vis + self._pinned():
+            self.scroll = self.sel - vis - self._pinned() + 1
+
+    def _rh(self) -> int:
+        """구매·강화 한 줄 높이: 넓으면 한 단(19), 좁은 패널(건물 안)은 이름이 잘리지 않게 두 단(27)."""
+        return ROW_H if self.wide else 27
+
+    def _pinned(self) -> int:
+        return 1 if self.kind != "sell" and self._extra() else 0
+
+    def _visible(self) -> int:
+        """스크롤되는 줄 수 (고정 줄·아래 요약 줄 빼고)."""
+        if self.kind == "sell":
+            return (self.LIST.h - 4) // SELL_H
+        h = self.LIST.h - 2 - 14 - self._rh() * self._pinned()
+        return h // self._rh()
+
     # ── 동작 ──
     def _close(self) -> None:
         self.game.save_now()
@@ -158,10 +304,20 @@ class ShopScene(Scene):
             self.host.shop_closed()
 
     def _action(self) -> None:
-        items = self.items()
-        if not items:
+        if self.kind == "sell":
+            idx = self._sel_index()
+            if idx is None:
+                return
+            gained = self.save.sell(idx)
+            self.game.sfx.play("sfx_coin")
+            self._react("sell")
+            self._say(f"+{ui.money_text(gained)}", ui.GOOD)
+            self.sel = max(0, min(self.sel, len(self._rows()) - 1))
             return
-        item = items[min(self.sel, len(items) - 1)]
+        rows = self._rows()
+        if not rows:
+            return
+        item = rows[min(self.sel, len(rows) - 1)]
         if self.kind == "float":
             fl = self.save.data["float"]
             if item["id"] in fl["owned"]:
@@ -190,14 +346,9 @@ class ShopScene(Scene):
             elif res == "materials":
                 self._say("소재가 부족해요 (판매 탭에서 물고기 분해)", ui.BAD)
             return
-        if self.kind == "sell":
-            gained = self.save.sell(self.sel)
-            self.game.sfx.play("sfx_coin")
-            self._react("sell")
-            self._say(f"+{ui.money_text(gained)}", ui.GOOD)
-            self.sel = max(0, min(self.sel, len(self.items()) - 1))
-            return
         if self.save.owns(self.kind, item["id"]):
+            if self.save.data["gear"][self.kind] == item["id"]:
+                return
             self.save.equip(self.kind, item["id"])
             self.game.sfx.play("ui_equip")
             self._say(f"{item['name']} 장착", ui.GOOD)
@@ -223,46 +374,178 @@ class ShopScene(Scene):
             self._say(self.save.gear_locked_reason(item) or self.save.bait_locked_reason(item), ui.BAD)
 
     def _disassemble(self) -> None:
-        got = self.save.disassemble(self.sel)
+        idx = self._sel_index()
+        if idx is None:
+            return
+        got = self.save.disassemble(idx)
         if got is None:
-            self._say("전설은 분해할 수 없어요", ui.BAD)
+            self._say(self._no_dis_reason(idx), ui.BAD)
             return
         self.game.sfx.play("ui_click")
         self._say("분해: " + ", ".join(f"{MAT_KO[k]} +{v}" for k, v in got.items()), ui.GOOD)
-        self.sel = max(0, min(self.sel, len(self.items()) - 1))
+        self.sel = max(0, min(self.sel, len(self._rows()) - 1))
+
+    def _no_dis_reason(self, idx: int) -> str:
+        rar = self.fish_by_id(self.save.data["keepnet"][idx]["id"])["rarity"]
+        return f"{su.RARITY_KO.get(rar, '이')} 물고기는 분해할 수 없어요"
+
+    def _toggle_lock(self) -> None:
+        idx = self._sel_index()
+        if idx is None:
+            return
+        it = self.save.data["keepnet"][idx]
+        it["lock"] = not it.get("lock")
+        self.game.sfx.play("ui_click")
+        key = (it["id"], tuple(it.get("mut") or ()), bool(it["lock"]))
+        self.expanded = key
+        rows = self._rows()
+        self.sel = next((j for j, r in enumerate(rows) if idx in r["idxs"]), 0)
+        self._say("잠금 · 일괄 판매에서 빠져요" if it["lock"] else "잠금 해제", ui.TEXT)
 
     def _sell_all(self) -> None:
-        if self.save.data["keepnet"]:
-            total = self.save.sell_all()
-            self.game.sfx.play("sfx_coin")
-            self._react("sell")
-            self._say(f"모두 팔았어요 +{ui.money_text(total)}", ui.GOOD)
-            self.sel = 0
+        """(호환) 잠금 제외 전부 팔기."""
+        self.bulk = {"rar": set(RARITY_ORDER)}
+        self._bulk_confirm()
+
+    # ── 일괄 판매 확인 창 ──
+    def _open_bulk(self) -> None:
+        if not self._bulk_pool():
+            self._say("잠금 제외 팔 물고기가 없어요", ui.BAD)
+            return
+        self.bulk = {"rar": set(BULK_DEFAULT)}
+        self.bulk_scroll = 0
+        self.game.sfx.play("ui_click")
+
+    def _bulk_pool(self) -> list[dict]:
+        return [it for it in self.save.data["keepnet"] if not it.get("lock")]
+
+    def _bulk_items(self) -> list[dict]:
+        rar = self.bulk["rar"] if self.bulk else set()
+        return [it for it in self._bulk_pool() if self.fish_by_id(it["id"])["rarity"] in rar]
+
+    def _bulk_confirm(self) -> None:
+        todo = self._bulk_items()
+        if not todo:
+            self.bulk = None
+            return
+        net = self.save.data["keepnet"]
+        total = 0
+        for it in todo:   # 살림망 순서대로 한 마리씩 (판매가·전설 감가는 save.sell 그대로)
+            idx = next(i for i, x in enumerate(net) if x is it)
+            total += self.save.sell(idx)
+        self.bulk = None
+        self.sel = 0
+        self.expanded = None
+        self.game.sfx.play("sfx_coin")
+        self._react("sell")
+        self._say(f"{len(todo)}마리 팔았어요 +{ui.money_text(total)}", ui.GOOD)
+
+    def _bulk_rects(self):
+        fr = self.frame
+        w, h = min(300, fr.w - 20), 196
+        P = pygame.Rect(0, 0, w, h)
+        P.center = fr.center
+        checks = []
+        x = P.x + 10
+        for r in ("common", "uncommon", "rare", "phantom", "legend"):
+            tw = su.width(su.RARITY_KO[r]) + 14
+            checks.append((r, pygame.Rect(x, P.y + 24, tw, 13)))
+            x += tw + 6
+        lst = pygame.Rect(P.x + 8, P.y + 42, P.w - 16, P.h - 86)
+        ok = pygame.Rect(P.right - 140, P.bottom - 22, 64, 16)
+        cancel = pygame.Rect(P.right - 70, P.bottom - 22, 62, 16)
+        return P, checks, lst, ok, cancel
+
+    def _bulk_click(self, m) -> None:
+        P, checks, lst, ok, cancel = self._bulk_rects()
+        for r, rc in checks:
+            if rc.collidepoint(m):
+                self.bulk["rar"] ^= {r}
+                self.bulk_scroll = 0
+                self.game.sfx.play("ui_click")
+                return
+        if ok.collidepoint(m) and self._bulk_items():
+            self._bulk_confirm()
+        elif cancel.collidepoint(m) or not P.collidepoint(m):
+            self.bulk = None
+            self.game.sfx.play("ui_click")
 
     # ── 입력 ──
+    def handle_event(self, event) -> None:
+        if event.type == pygame.KEYDOWN and self.bulk is None:
+            if event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_w, pygame.K_s):
+                d = -1 if event.key in (pygame.K_UP, pygame.K_w) else 1
+                self._select(self.sel + d)
+                self.game.sfx.play("ui_click")
+                return
+            if event.key == pygame.K_l and self.kind == "sell":
+                self._toggle_lock()
+                return
+        if event.type == pygame.KEYDOWN and self.bulk is not None and event.key == pygame.K_RETURN:
+            self._bulk_confirm()
+            return
+        super().handle_event(event)
+
     def handle_action(self, a) -> None:
+        if self.bulk is not None:
+            if a.name == "back" or a.is_("menu", "shop"):
+                self.bulk = None
+            elif a.name == "scroll":
+                n = len(self._bulk_lines())
+                vis = (self._bulk_rects()[2].h - 4) // 13
+                self.bulk_scroll = max(0, min(max(0, n - vis), self.bulk_scroll - a.value))
+            elif a.name == "primary":
+                self._bulk_click(a.pos)
+            return
         if a.name == "back" or a.is_("menu", "shop"):
             self._close()
+        elif a.name == "confirm":
+            self._action()
         elif a.name == "scroll":
-            n = len(self.items())
-            visible = self.LIST.h // ROW_H
-            self.scroll = max(0, min(max(0, n - visible), self.scroll - a.value))
+            if self.kind != "sell" and self.DETAIL.collidepoint(self.mouse):
+                self.dscroll = max(0, min(self.dpages - 1, self.dscroll - a.value))
+                return
+            n = len(self._rows()) - self._pinned()
+            self.scroll = max(0, min(max(0, n - self._visible()), self.scroll - a.value))
         elif a.name == "primary":
             m = a.pos
             if self.tabs.click(m):
-                self.sel, self.scroll = 0, 0
+                self.sel, self.scroll, self.expanded = 0, 0, None
+                self._layout()
                 self.game.sfx.play("ui_tab")
                 return
-            buttons = (self.close_btn, self.sell_btn, self.dis_btn, self.sell_all_btn) if self.kind == "sell" \
-                else (self.close_btn, self.action_btn)
+            if self.kind == "sell":
+                for key, r in self.chip_rects:
+                    if r.collidepoint(m):
+                        self.filter, self.sel, self.scroll, self.expanded = key, 0, 0, None
+                        self.game.sfx.play("ui_tab")
+                        return
+                if self.sort_rect.collidepoint(m):
+                    self.sort = (self.sort + 1) % len(SORTS)
+                    self.sel, self.scroll = 0, 0
+                    self.game.sfx.play("ui_click")
+                    return
+            buttons = (self.close_btn, self.sell_btn, self.lock_btn, self.dis_btn, self.sell_all_btn) \
+                if self.kind == "sell" else (self.close_btn, self.action_btn)
             for b in buttons:
                 if b.click(m):
                     return
+            if self.kind != "sell" and self.dpages > 1 and self._info_area().collidepoint(m):
+                self.dscroll = (self.dscroll + 1) % self.dpages   # 능력치 넘기기
+                self.game.sfx.play("ui_click")
+                return
             if self.LIST.collidepoint(m):
-                i = (m[1] - self.LIST.y) // ROW_H + self.scroll
-                if 0 <= i < len(self.items()):
-                    self.sel = i
+                i = self._row_at(m)
+                if i is not None and i < len(self._rows()):
+                    self._select(i)
                     self.game.sfx.play("ui_click")
+
+    def _row_at(self, m) -> int | None:
+        for i in range(len(self._rows())):
+            r = self._row_rect(i)
+            if r is not None and r.collidepoint(m):
+                return i
+        return None
 
     def update(self, dt: float) -> None:
         if self.host is not None:
@@ -280,279 +563,642 @@ class ShopScene(Scene):
             ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
         canvas = self.ui_canvas(canvas)
         fr = self.frame
-        ui.panel(canvas, fr)
-        text(canvas, self.title, (fr.x + 8, fr.y + 10), ui.ACCENT, 16, "midleft")
-        text(canvas, f"소지금 {ui.money_text(self.save.money)}", (fr.right - 8, fr.y + 10), ui.ACCENT, 11, "midright")
-        self.tabs.draw(canvas, self.mouse)
-        ui.panel(canvas, self.LIST, fill=(16, 20, 36))
-        ui.panel(canvas, self.DETAIL, fill=(16, 20, 36))
-        items = self.items()
-        self.sel = max(0, min(self.sel, len(items) - 1)) if items else 0
-        visible = self.LIST.h // ROW_H
+        canvas.fill(ui.SHADOW, fr.move(2, 2))
+        canvas.fill(su.WIN_BG, fr)
+        pygame.draw.rect(canvas, su.BORDER, fr, 1)
+        text(canvas, su.fit(self.title, fr.w - 110, 16), (fr.x + 8, fr.y + 9), ui.ACCENT, 16, "midleft")
+        su.price(canvas, self.save.money, (fr.right - 9, fr.y + 9), su.YELLOW, bold=True, big=True)
+        self._draw_tabs(canvas)
+        for r in (self.LIST, self.DETAIL):
+            canvas.fill(su.CELL_BG, r)
+            pygame.draw.rect(canvas, su.BORDER, r, 1)
+        rows = self._rows()
+        self.sel = max(0, min(self.sel, len(rows) - 1)) if rows else 0
         if self.kind == "sell":
-            self._draw_sell(canvas, items, visible)
-        elif self.kind == "float":
-            self._draw_float(canvas, items, visible)
+            self._draw_sell(canvas, rows)
         elif self.kind == "enhance":
-            self._draw_enhance(canvas, items, visible)
+            self._draw_enhance(canvas, rows)
         else:
-            self._draw_gear(canvas, items, visible)
-        if self.msg_t > 0:
-            text(canvas, self.msg, (self.LIST.x, fr.bottom - 12), self.msg_col, 11, "midleft")
+            self._draw_buy(canvas, rows)
+        self._draw_bottom(canvas)
         self.close_btn.draw(canvas, self.mouse)
+        if self.bulk is not None:
+            self._draw_bulk(canvas)
         draw_cursor(canvas, self.mouse)
 
-    def _row_rect(self, i: int) -> pygame.Rect:
-        return pygame.Rect(self.LIST.x + 2, self.LIST.y + 2 + (i - self.scroll) * ROW_H, self.LIST.w - 4, ROW_H - 1)
-
-    def _draw_sell(self, canvas, items, visible) -> None:
-        if not items:
-            text(canvas, "살림망이 비어 있어요", self.LIST.center, ui.DIM, 11, "center")
-            text(canvas, "물고기를 잡으면 여기에 보관돼요", (self.DETAIL.centerx, self.DETAIL.centery), ui.DIM, 11, "center")
-            self.sell_all_btn.enabled = self.sell_btn.enabled = self.dis_btn.enabled = False
-            return
-        self.sell_btn.enabled = True
-        for i in range(self.scroll, min(len(items), self.scroll + visible)):
-            it = items[i]
-            fish = self.fish_by_id(it["id"])
-            r = self._row_rect(i)
-            sel = i == self.sel
-            if sel or r.collidepoint(self.mouse):
-                canvas.fill(ui.PANEL_LIGHT, r)
-            name = (mut_label(it["mut"]) + " " + fish["name"]) if it.get("mut") else fish["name"]
-            text(canvas, name[:9] if self.LIST.w >= 220 else name[:6], (r.x + 4, r.centery), MUT_COL if it.get("mut") else RARITY_COL[fish["rarity"]], 11,
-                 "midleft")
-            narrow = self.LIST.w < 220   # 건물 안 상점 패널 (좁음): 크기 칸을 빼고 랭크만
-            if not narrow:
-                text(canvas, f"{it['size']:.1f}cm", (r.x + 120, r.centery), ui.TEXT, 11, "midleft")
-            text(canvas, it["rank"], (r.right - 52 if narrow else r.x + 168, r.centery), RANK_COLORS[it["rank"]], 11, "midleft")
-            text(canvas, f"{self.save.sale_price(it):,}", (r.right - 4, r.centery), ui.ACCENT, 11, "midright")
-        it = items[self.sel]
-        fish = self.fish_by_id(it["id"])
-        draw_fish_fit(canvas, (self.DETAIL.x + 6, self.DETAIL.y + 8, self.DETAIL.w - 12, 58), fish, 110)
-        name = (mut_label(it["mut"]) + " " + fish["name"]) if it.get("mut") else fish["name"]
-        text(canvas, name, (self.DETAIL.centerx, self.DETAIL.y + 76), RARITY_COL[fish["rarity"]], 11, "center")
-        text(canvas, f"{it['size']:.1f}cm · {it['rank']}랭크", (self.DETAIL.centerx, self.DETAIL.y + 92), ui.TEXT, 11, "center")
-        text(canvas, f"판매가 {ui.money_text(self.save.sale_price(it))}", (self.DETAIL.centerx, self.DETAIL.y + 110), ui.ACCENT, 11,
-             "center")
-        notes = []
-        if it["rank"] == "S":
-            notes.append("S랭크 ×2")
-        if self.save.lunch_active():
-            notes.append("도시락 +10%")
-        if it.get("twin"):
-            notes.append("쌍둥이 바늘")
-        if fish["rarity"] == "legend":
-            from src.save.save_game import legend_economy
-            cfg = legend_economy()
-            if not it.get("first"):
-                notes.append(f"재포획 ×{cfg['resell_mult']:g}")
-            n = self.save.legend_sold_today(it["id"])
-            if n:
-                d = cfg["daily_decay"]
-                notes.append(f"오늘 {n + 1}번째 ×{d[min(len(d) - 1, n)]:g}")
-        for m in it.get("mut", []):
-            if m in ("giant", "golden"):
-                notes.append(f"{mut_label([m])} ×{3 if m == 'giant' else 5}")
-        if notes:
-            text(canvas, " · ".join(notes) + " 적용" * (it["rank"] == "S" or self.save.lunch_active()),
-                 (self.DETAIL.centerx, self.DETAIL.y + 124), RANK_COLORS["S"], 11, "center")
-        got = self.save.disassemble_yield(self.sel)
-        dis = ", ".join(f"{MAT_KO[k]} {v}" for k, v in got.items()) if got else "전설은 분해 불가"
-        text(canvas, f"분해: {dis}", (self.DETAIL.centerx, self.DETAIL.y + 138), ui.DIM, 11, "center")
-        total = sum(self.save.sale_prices(items))
-        self.dis_btn.enabled = got is not None
-        self.sell_all_btn.label, self.sell_all_btn.enabled = f"모두 팔기 ({len(items)}마리 · {total:,}원)", True
-        self.sell_btn.draw(canvas, self.mouse)
-        self.dis_btn.draw(canvas, self.mouse)
-        self.sell_all_btn.draw(canvas, self.mouse)
-
-    def _draw_gear(self, canvas, items, visible) -> None:
-        kind = self.kind
-        equipped = self.save.data["gear"][kind]
-        for i in range(self.scroll, min(len(items), self.scroll + visible)):
-            it = items[i]
-            r = self._row_rect(i)
-            if i == self.sel or r.collidepoint(self.mouse):
-                canvas.fill(ui.PANEL_LIGHT, r)
-            owned = self.save.owns(kind, it["id"])
-            locked = not owned and (self.save.gear_locked_reason(it)
-                                    or (kind == "bait" and self.save.bait_locked_reason(it)))
-            col = ui.DIM if locked else ui.TEXT
-            tier = f"T{it['tier']}" if it.get("tier") else "전설"
-            lvl = self.save.enhance_level(it["id"]) if owned else 0
-            text(canvas, tier, (r.x + 4, r.centery), ui.DIM if locked else ui.ACCENT, 11, "midleft")
-            text(canvas, it["name"] + (f" +{lvl}" if lvl else ""), (r.x + 34, r.centery), col, 11, "midleft")
-            if it["id"] == equipped:
-                status, scol = "장착 중", ui.GOOD
-            elif owned:
-                status, scol = "보유", ui.TEXT
-            elif locked:
-                status, scol = ("엘드라시온" if self.save.gear_locked_reason(it) else "잠김"), ui.DIM
+    def _draw_tabs(self, canvas) -> None:
+        for i, (r, label) in enumerate(zip(self.tabs.rects, self.tabs.labels)):
+            sel = i == self.tabs.index
+            hov = r.collidepoint(self.mouse)
+            canvas.fill(su.SEL_BG if sel or hov else su.CELL_BG, r)
+            pygame.draw.rect(canvas, su.YELLOW if sel else su.BORDER, r, 1)
+            if sel:
+                su.btext(canvas, label, r.center, su.YELLOW, 11, "center")
             else:
-                status, scol = f"{it['price']:,}원", ui.ACCENT if self.save.money >= it["price"] else ui.BAD
-            text(canvas, status, (r.right - 4, r.centery), scol, 11, "midright")
-        it = items[self.sel]
-        cur = self.save.equipped(kind)
-        owned = self.save.owns(kind, it["id"])
-        x, y = self.DETAIL.x + 8, self.DETAIL.y + 8
-        lvl = self.save.enhance_level(it["id"]) if owned else 0
-        text(canvas, it["name"] + (f" +{lvl}" if lvl else ""), (x, y + 4), ui.ACCENT, 11, "midleft")
-        text(canvas, f"T{it['tier']}" if it.get("tier") else "전설 미끼", (self.DETAIL.right - 8, y + 4), ui.ACCENT, 11,
-             "midright")
-        yy = y + 20
-        for ln in wrap_text(it["desc"], self.DETAIL.w - 16)[:2]:
-            text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
-            yy += 13
-        yy += 4
-        if kind == "bait":
-            rows = [w for ln in stat_lines(kind, it) for w in wrap_text(ln, self.DETAIL.w - 16)]
-            for ln in rows[:6]:
-                text(canvas, ln, (x, yy), ui.TEXT, 11, "midleft")
-                yy += 13
+                text(canvas, label, r.center, su.WHITE if hov else su.GRAY, 11, "center")
+        for x in self.tab_seps:
+            canvas.fill(su.BORDER, (x, self.tabs.rects[0].y + 3, 1, 11))
+
+    def _draw_bottom(self, canvas) -> None:
+        fr = self.frame
+        y = fr.bottom - 13
+        if self.kind == "sell":
+            gap = pygame.Rect(self.LIST.right + 6, y - 6, self.close_btn.rect.x - self.LIST.right - 12, 12)
+            if self.msg_t > 0 and gap.w > 30:
+                text(canvas, su.fit(self.msg, gap.w), (gap.x, y), self.msg_col, 11, "midleft")
+            return
+        if self.msg_t > 0:
+            text(canvas, su.fit(self.msg, self.close_btn.rect.x - fr.x - 16), (fr.x + 8, y), self.msg_col, 11, "midleft")
+        elif not IS_MOBILE:
+            verb = "강화" if self.kind == "enhance" else "구매"
+            text(canvas, f"↑↓ 선택   Enter {verb}   {'Esc' if self.host else 'B'} 닫기", (fr.x + 8, y), su.SUB, 11,
+                 "midleft")
+
+    def _row_rect(self, i: int) -> pygame.Rect | None:
+        """i 번째 줄 자리 (화면 밖이면 None). 구매: 고정 줄(상자 장비) + 스크롤 줄."""
+        L = self.LIST
+        if self.kind == "sell":
+            j = i - self.scroll
+            if not 0 <= j < self._visible():
+                return None
+            return pygame.Rect(L.x + 2, L.y + 2 + j * SELL_H, L.w - 8, SELL_H - 1)
+        p = self._pinned()
+        rh = self._rh()
+        if i < p:
+            return pygame.Rect(L.x + 2, L.y + 2, L.w - 4, rh - 1)
+        j = i - p - self.scroll
+        if not 0 <= j < self._visible():
+            return None
+        return pygame.Rect(L.x + 2, L.y + 2 + p * rh + j * rh, L.w - 4, rh - 1)
+
+    # ── 구매 탭 ──
+    def _gear_state(self, it: dict) -> str:
+        """equipped · owned · buy · short · locked"""
+        kind = self.kind
+        if kind == "float":
+            fl = self.save.data["float"]
+            if fl.get("equipped") == it["id"]:
+                return "equipped"
+            if it["id"] in fl["owned"]:
+                return "owned"
+            if "eldrasion" not in self.save.data["unlocked_continents"]:
+                return "locked"
         else:
-            # 지금 장착한 장비(강화 포함)와 비교: +는 초록, -는 빨강
-            mine = self.save.effective(kind, it)
-            now = self.save.effective(kind, cur)
-            same = it["id"] == cur["id"]
-            for (label, v, fmt, up), (_, v0, _, _) in zip(stat_rows(kind, mine), stat_rows(kind, now)):
-                text(canvas, f"{label} {fmt.format(v)}", (x, yy), ui.TEXT, 11, "midleft")
-                d = v - v0
-                if not same and abs(d) > 1e-6:
-                    good = (d > 0) == up
-                    dtxt = ("+" if d > 0 else "-") + fmt.format(abs(d)).lstrip("×±")
-                    text(canvas, dtxt, (self.DETAIL.right - 8, yy), ui.GOOD if good else ui.BAD, 11, "midright")
-                yy += 13
-            if not same:
-                text(canvas, f"(지금: {cur['name']})", (x, yy + 2), ui.DIM, 11, "midleft")
-        if it.get("scales"):
-            have = self.save.data["scales"]
-            text(canvas, f"전설 비늘 {it['scales']}개 필요 (보유 {have})", (x, self.DETAIL.bottom - 72),
-                 ui.TEXT if have >= it["scales"] else ui.BAD, 11, "midleft")
-        reason = not owned and (self.save.gear_locked_reason(it)
-                                or (kind == "bait" and self.save.bait_locked_reason(it)))
-        if it["id"] == self.save.data["gear"][kind]:
-            self.action_btn.label, self.action_btn.enabled = "장착 중", False
-        elif owned:
-            self.action_btn.label, self.action_btn.enabled = "장착하기", True
-        elif reason:
-            self.action_btn.label, self.action_btn.enabled = "잠김", False
-            for i, ln in enumerate(wrap_text(reason, self.DETAIL.w - 16)[:2]):
-                text(canvas, ln, (x, self.DETAIL.bottom - 58 + i * 12), ui.BAD, 11, "midleft")
-        else:
-            self.action_btn.label = f"구매 ({it['price']:,}원)"
-            self.action_btn.enabled = self.save.money >= it["price"] and self.save.data["scales"] >= it.get("scales", 0)
-            need = self.save.scale_warning(it)
+            if self.save.data["gear"][kind] == it["id"]:
+                return "equipped"
+            if self.save.owns(kind, it["id"]):
+                return "owned"
+            if self.save.gear_locked_reason(it) or (kind == "bait" and self.save.bait_locked_reason(it)):
+                return "locked"
+        return "buy" if self.save.money >= it["price"] else "short"
+
+    def _locked_label(self, it: dict) -> str:
+        if self.kind == "float" or self.save.gear_locked_reason(it):
+            return "엘드라시온"
+        return "잠김"
+
+    def _tier_label(self, it: dict) -> str:
+        if self.kind == "float":
+            return f"S{it['tier']}"
+        return f"T{it['tier']}" if it.get("tier") else "전설"
+
+    def _draw_buy(self, canvas, rows) -> None:
+        L = self.LIST
+        kind = self.kind
+        ex = self._extra()
+        hl = kind == "float" and self.save.data["flags"].get("float_highlight")
+        counts = {"owned": 0, "buy": 0, "locked": 0}
+        for i, it in enumerate(rows):
+            st = "equipped" if (ex is not None and i == 0) else self._gear_state(it)
+            counts["owned"] += st in ("owned", "equipped")
+            counts["buy"] += st == "buy"
+            counts["locked"] += st == "locked"
+            r = self._row_rect(i)
+            if r is None:
+                continue
+            su.row_bg(canvas, r, i == self.sel, r.collidepoint(self.mouse))
+            if hl and it.get("tier") == 1 and int(self.age * 4) % 2 == 0:
+                pygame.draw.rect(canvas, (255, 230, 120), r, 1)  # 튜토리얼: 마비 찌 반짝임
+            locked = st == "locked"
+            cy = r.centery
+            # 두 단(좁은 패널): 위 = 이름, 아래 = 상태 / 한 단: 이름 · 상태 같은 줄
+            ny, sy = (r.y + 8, r.y + 19) if not self.wide else (cy, cy)
+            ty = cy if self.wide else ny
+            if ex is not None and i == 0:   # 장착 중인 상자 장비: 티어 자리에 청록 ★
+                pygame.draw.polygon(canvas, su.CYAN, _star(r.x + 15, ty, 5))
+            else:
+                su.btext(canvas, self._tier_label(it), (r.x + 9, ty), su.GRAY if locked else su.YELLOW, 11, "midleft")
+            icy = cy if self.wide else sy
+            gear_icon.draw(canvas, kind, it, (r.x + 30, icy - 7, 14, 14), dark=locked)
+            right = r.right - 4
+            if st == "equipped":
+                sx = su.badge(canvas, "장착 중", (right, sy), su.GREEN).x
+            elif st == "owned":
+                sx = right - su.width("보유") - 9
+                su.check(canvas, sx, sy)
+                text(canvas, "보유", (right, sy), su.WHITE, 11, "midright")
+            elif locked:
+                lab = self._locked_label(it)
+                sx = right - su.width(lab) - 9
+                su.lock(canvas, sx, sy)
+                text(canvas, lab, (right, sy), su.GRAY, 11, "midright")
+            else:
+                sx = su.price(canvas, it["price"], (right, sy), su.WHITE if st == "buy" else su.RED).x
+            lvl = self.save.enhance_level(it["id"]) if st in ("owned", "equipped") and kind != "float" else 0
+            nx = r.x + 46 if self.wide else r.x + 30
+            nw = (sx - nx - 2) if self.wide else (r.right - 4 - nx)
+            name = it["name"]
+            if lvl and self.wide:   # 강화 단계: 넓으면 이름 뒤 (자리가 모자라면 붙여서)
+                name = f"{name} +{lvl}" if su.width(f"{name} +{lvl}") <= nw else f"{name}+{lvl}"
+            elif lvl:               # 좁은 패널: 아래 단 그림 옆
+                su.btext(canvas, f"+{lvl}", (r.x + 47, sy), su.YELLOW, 11, "midleft")
+            text(canvas, su.fit(name, nw), (nx, ny), su.GRAY if locked else su.WHITE, 11, "midleft")
+            if ex is not None and i == 0:
+                canvas.fill(su.BORDER, (L.x + 6, r.bottom, L.w - 12, 1))
+        n = len(rows) - self._pinned()
+        if n > self._visible():   # 스크롤 막대
+            self._scrollbar(canvas, n, self._visible(), L.y + 2 + self._pinned() * self._rh(), L.bottom - 16)
+        summary = f"보유 {counts['owned']} · 구매 가능 {counts['buy']} · 잠김 {counts['locked']}"
+        text(canvas, su.fit(summary, L.w - 12), (L.x + 6, L.bottom - 8), su.SUB, 11, "midleft")
+        if rows:
+            self._draw_buy_detail(canvas, rows[self.sel], ex is not None and self.sel == 0)
+
+    def _scrollbar(self, canvas, n: int, vis: int, y0: int, y1: int) -> None:
+        x = self.LIST.right - 4
+        canvas.fill((30, 36, 58), (x, y0, 2, y1 - y0))
+        h = max(8, (y1 - y0) * vis // n)
+        y = y0 + (y1 - y0 - h) * self.scroll // max(1, n - vis)
+        canvas.fill(su.BORDER, (x, y, 2, h))
+
+    # 상세 세로 자리 (목업 기준, 상세 칸 위 = 0): 그림 6~76 · 이름 88 · 설명 104 · 능력치 116~(아래-34) · 가격 아래-26 · 버튼 아래-20
+    INFO_TOP = 116
+
+    def _info_area(self) -> pygame.Rect:
+        D = self.DETAIL
+        return pygame.Rect(D.x + 6, D.y + self.INFO_TOP, D.w - 12, D.bottom - 34 - (D.y + self.INFO_TOP))
+
+    def _draw_buy_detail(self, canvas, it: dict, is_extra: bool) -> None:
+        D = self.DETAIL
+        kind = self.kind
+        st = "equipped" if is_extra else self._gear_state(it)
+        x = D.x + 6
+        if getattr(self, "_detail_of", None) != (kind, it["id"]):
+            self._detail_of, self.dscroll = (kind, it["id"]), 0
+        box = pygame.Rect(D.x + 6, D.y + 6, D.w - 12, 70)
+        su.pic_box(canvas, box)
+        gear_icon.draw(canvas, kind, it, (box.centerx - 32, box.centery - 32, 64, 64), dark=st == "locked")
+        # 이름 + 티어 배지
+        tier = "★" if is_extra else self._tier_label(it)
+        br = su.badge(canvas, tier, (D.right - 6, D.y + 88), su.YELLOW, bold=True)
+        lvl = self.save.enhance_level(it["id"]) if st in ("owned", "equipped") and kind != "float" else 0
+        name = it["name"] + (f" +{lvl}" if lvl else "")
+        ncol = tuple(it["color"]) if kind == "float" and st != "locked" else su.YELLOW
+        su.btext(canvas, su.fit(name, br.x - x - 6), (x, D.y + 88), ncol, 11, "midleft")
+        # 설명 한 줄 (주의할 것이 있으면 그 자리에: 잠김 이유 · 비늘)
+        warn = None
+        if st == "locked":
+            reason = (self.save.gear_locked_reason(it) or (kind == "bait" and self.save.bait_locked_reason(it))
+                      or "엘드라시온 대륙에서 판매")
+            warn = (reason, su.RED)
+        elif st in ("buy", "short"):
+            need = self.save.scale_warning(it) if kind != "float" else 0
             if need:
-                text(canvas, f"주의: 남은 특수 찌에 비늘 {need}개 필요", (x, self.DETAIL.bottom - 58), ui.BAD, 11,
-                     "midleft")
-                if self.confirm == it["id"]:
-                    self.action_btn.label = "그래도 구매"
+                warn = (f"주의: 남은 특수 찌에 비늘 {need}개 필요", su.RED)
+            elif it.get("scales"):
+                have = self.save.data["scales"]
+                warn = (f"전설 비늘 {it['scales']}개 필요 (보유 {have})", su.WHITE if have >= it["scales"] else su.RED)
+        desc, dcol = warn if warn else (it["desc"], su.GRAY)
+        text(canvas, su.fit(desc, D.w - 12), (x, D.y + 104), dcol, 11, "midleft")
+        # 능력치 (장비) / 설명 줄 (미끼·특수 찌) — 칸을 넘치면 휠·클릭으로 넘김
+        area = self._info_area()
+        if kind in ("rod", "reel", "line", "net"):
+            self._draw_compare(canvas, it, area)
+        else:
+            if kind == "bait":
+                lines = [w for ln in stat_lines(kind, it) for w in wrap_text(ln, area.w - 14)]
+            else:   # 특수 찌: 쓸 수 있는 곳
+                spots = [s for s in load_json("spots.json")["spots"] if s.get("continent") == "eldrasion"]
+                ok = [s["short"] for s in spots if s.get("float_req", 9) <= it["tier"]]
+                lines = wrap_text("쓸 수 있는 곳: " + (", ".join(ok) if ok else "-"), area.w - 14)
+                lines.append("전설은 한 단계 위 찌가 필요해요")
+            per = area.h // 13
+            self.dpages = max(1, len(lines) - per + 1)
+            self.dscroll = min(self.dscroll, self.dpages - 1)
+            for j, ln in enumerate(lines[self.dscroll:self.dscroll + per]):
+                text(canvas, ln, (x, area.y + 6 + j * 13), su.SUB if ln.startswith("전설은") else su.WHITE, 11, "midleft")
+            if len(lines) > per:
+                self._more_arrows(canvas, area, self.dscroll > 0, self.dscroll < self.dpages - 1)
+        # 가격 + 구매 후
+        py = D.bottom - 26
+        if st in ("buy", "short", "locked"):
+            pr = su.price(canvas, it["price"], (x, py), su.WHITE if st == "buy" else (su.RED if st == "short" else su.GRAY),
+                          anchor="midleft", bold=True, big=True)
+            after = f"구매 후 {self.save.money - it['price']:,}원"
+            if st == "buy" and pr.right + 6 + su.width(after) <= D.right - 6:
+                text(canvas, after, (D.right - 6, py), su.SUB, 11, "midright")
+        # 상태별 버튼
+        b = self.action_btn
+        scales_ok = self.save.data["scales"] >= it.get("scales", 0)
+        if st == "equipped":
+            b.label, b.enabled, style = "장착 중", False, "dim"
+        elif st == "owned":
+            b.label, b.enabled, style = "장착하기", True, "outline"
+        elif st == "locked":
+            b.label, b.enabled, style = ("엘드라시온에서 해금" if self._locked_label(it) == "엘드라시온" else "잠김"), False, "dim"
+        elif st == "short":
+            b.label, b.enabled, style = f"소지금이 {it['price'] - self.save.money:,}원 부족해요", False, "dim"
+        elif not scales_ok:
+            b.label, b.enabled, style = "전설 비늘이 부족해요", False, "dim"
+        else:
+            b.label, b.enabled, style = ("그래도 구매" if self.confirm == it["id"] else "구매하기"), True, "fill"
         if self.confirm and self.confirm != it["id"]:
             self.confirm = None
-        self.action_btn.draw(canvas, self.mouse)
+        label = b.label if su.width(b.label) <= b.rect.w - 6 else b.label.replace("소지금이 ", "")
+        su.button(canvas, b.rect, su.fit(label, b.rect.w - 6), style, self.mouse)
 
-    def _draw_float(self, canvas, items, visible) -> None:
-        fl = self.save.data["float"]
-        locked = "eldrasion" not in self.save.data["unlocked_continents"]
-        hl = self.save.data["flags"].get("float_highlight")
-        for i in range(self.scroll, min(len(items), self.scroll + visible)):
-            it = items[i]
+    def _more_arrows(self, canvas, area: pygame.Rect, up: bool, down: bool) -> None:
+        """칸을 넘칠 때 오른쪽 위·아래 작은 화살표 (휠·클릭으로 넘김)."""
+        x = area.right - 5
+        if up:
+            pygame.draw.polygon(canvas, su.GRAY, [(x - 3, area.y + 4), (x + 3, area.y + 4), (x, area.y + 1)])
+        if down:
+            y = area.bottom - 3
+            pygame.draw.polygon(canvas, su.YELLOW, [(x - 3, y - 3), (x + 3, y - 3), (x, y)])
+
+    def _draw_compare(self, canvas, it: dict, area: pygame.Rect) -> None:
+        """능력치 비교 (능력치마다): 이름 · 선택 장비 수치(굵게) · 차이(▲초록/▼빨강) ·
+        막대 2개(선택 = 노랑 굵게, 지금 = 회색 얇게, 같은 기준) · '지금 n · 이름'. 칸에 하나씩, 넘치면 휠·클릭."""
+        kind = self.kind
+        x = area.x
+        cur = self.save.equipped(kind)
+        mine = self.save.effective(kind, it)
+        now = self.save.effective(kind, cur)
+        same = it["id"] == cur["id"]
+        allv: dict = {}
+        for g in equipment()[kind] + [cur, it]:
+            for label, v, _, _ in stat_rows(kind, self.save.effective(kind, g)):
+                allv[label] = max(allv.get(label, 0), abs(v))
+        pairs = list(zip(stat_rows(kind, mine), stat_rows(kind, now)))[:3]
+        per = max(1, area.h // 34)
+        self.dpages = max(1, len(pairs) - per + 1)
+        self.dscroll = min(self.dscroll, self.dpages - 1)
+        for j, ((label, v, fmt, up), (_, v0, _, _)) in enumerate(pairs[self.dscroll:self.dscroll + per]):
+            yy = area.y + 6 + j * 34
+            text(canvas, label, (x, yy), su.WHITE, 11, "midleft")
+            d = v - v0
+            dx = area.right
+            if not same and abs(d) > 1e-6:
+                good = (d > 0) == up
+                col = su.GREEN if good else su.RED
+                dtxt = ("+" if d > 0 else "-") + fmt.format(abs(d)).lstrip("×±−")
+                r = su.btext(canvas, dtxt, (dx, yy), col, 11, "midright")
+                ax = r.x - 8
+                if d > 0:
+                    pygame.draw.polygon(canvas, col, [(ax, yy + 2), (ax + 6, yy + 2), (ax + 3, yy - 2)])
+                else:
+                    pygame.draw.polygon(canvas, col, [(ax, yy - 2), (ax + 6, yy - 2), (ax + 3, yy + 2)])
+                dx = ax - 6
+            su.btext(canvas, fmt.format(v), (dx, yy), su.WHITE, 11, "midright")
+            full = max(1e-6, allv.get(label, 1.0))
+            bw = area.w
+            canvas.fill((30, 36, 58), (x, yy + 7, bw, 4))
+            canvas.fill(su.YELLOW, (x, yy + 7, int(bw * min(1.0, abs(v) / full)), 4))
+            canvas.fill((30, 36, 58), (x, yy + 12, bw, 2))
+            canvas.fill(su.GRAY, (x, yy + 12, int(bw * min(1.0, abs(v0) / full)), 2))
+            pages = f"{self.dscroll + 1}/{self.dpages}" if self.dpages > 1 else ""
+            pw = su.width(pages) + 4 if pages else 0
+            text(canvas, su.fit(f"지금 {fmt.format(v0)} · {cur['name']}", area.w - pw), (x, yy + 22), su.SUB, 11, "midleft")
+            if pages:
+                text(canvas, pages, (area.right, yy + 22), su.YELLOW, 11, "midright")
+
+    # ── 판매 탭 ──
+    def _draw_sell(self, canvas, rows) -> None:
+        L, D = self.LIST, self.DETAIL
+        net = self.save.data["keepnet"]
+        # 필터 칩 + 정렬
+        fr = self.frame
+        cy = L.y - 7
+        sort_s = f"정렬: {SORTS[self.sort][1]}"
+        sw = su.width(sort_s) + 10
+        self.sort_rect = pygame.Rect(fr.right - 8 - sw, cy - 6, sw, 12)
+        text(canvas, sort_s, (self.sort_rect.x, cy), su.WHITE if self.sort_rect.collidepoint(self.mouse) else su.GRAY, 11,
+             "midleft")
+        ax = self.sort_rect.right - 6
+        pygame.draw.polygon(canvas, su.GRAY, [(ax, cy - 2), (ax + 5, cy - 2), (ax + 2, cy + 2)])
+        self.chip_rects = []
+        x = L.x
+        for key, lab, col in FILTERS:
+            n = sum(1 for it in net if self._pass(it, key))
+            if n == 0 and key != "all":
+                continue
+            s = f"{lab}{n}"
+            if x + su.width(s) + 4 > self.sort_rect.x - 4:
+                break
+            r = su.chip(canvas, s, x, cy, col, self.filter == key)
+            self.chip_rects.append((key, r))
+            x = r.right + 3
+        if self.filter != "all" and all(k != self.filter for k, _ in self.chip_rects):
+            self.filter = "all"
+        pool = self._bulk_pool()
+        self.sell_all_btn.enabled = bool(pool)
+        self._draw_bulk_button(canvas, pool)
+        if not rows:
+            msg = "살림망이 비어 있어요" if not net else "이 조건의 물고기가 없어요"
+            text(canvas, msg, L.center, ui.DIM, 11, "center")
+            if not net:
+                text(canvas, "물고기를 잡으면 여기에 보관돼요", D.center, ui.DIM, 11, "center")
+            self.sell_btn.enabled = self.dis_btn.enabled = self.lock_btn.enabled = False
+            return
+        self.sell_btn.enabled = self.lock_btn.enabled = True
+        for i, row in enumerate(rows):
             r = self._row_rect(i)
-            if i == self.sel or r.collidepoint(self.mouse):
-                canvas.fill(ui.PANEL_LIGHT, r)
-            if hl and it["tier"] == 1 and int(self.age * 4) % 2 == 0:
-                pygame.draw.rect(canvas, (255, 230, 120), r, 1)  # 튜토리얼: 마비 찌 반짝임
-            col = tuple(it["color"])
-            text(canvas, f"S{it['tier']}", (r.x + 4, r.centery), ui.DIM if locked else col, 11, "midleft")
-            text(canvas, it["name"], (r.x + 30, r.centery), ui.DIM if locked else ui.TEXT, 11, "midleft")
-            if fl.get("equipped") == it["id"]:
-                status, scol = "장착 중", ui.GOOD
-            elif it["id"] in fl["owned"]:
-                status, scol = "보유", ui.TEXT
-            elif locked:
-                status, scol = "엘드라시온", ui.DIM
-            else:
-                status, scol = f"{it['price']:,}원", ui.ACCENT if self.save.money >= it["price"] else ui.BAD
-            text(canvas, status, (r.right - 4, r.centery), scol, 11, "midright")
-        it = items[self.sel]
-        x, y = self.DETAIL.x + 8, self.DETAIL.y + 8
-        text(canvas, it["name"], (x, y + 4), tuple(it["color"]), 11, "midleft")
-        text(canvas, f"S{it['tier']}", (self.DETAIL.right - 8, y + 4), ui.ACCENT, 11, "midright")
-        yy = y + 20
-        for ln in wrap_text(it["desc"], self.DETAIL.w - 16)[:3]:
-            text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
-            yy += 13
-        yy += 4
-        spots = [s for s in load_json("spots.json")["spots"] if s.get("continent") == "eldrasion"]
-        ok = [s["short"] for s in spots if s.get("float_req", 9) <= it["tier"]]
-        for ln in wrap_text("쓸 수 있는 곳: " + (", ".join(ok) if ok else "-"), self.DETAIL.w - 16)[:3]:
-            text(canvas, ln, (x, yy), ui.TEXT, 11, "midleft")
-            yy += 13
-        text(canvas, "전설은 한 단계 위 찌가 필요해요", (x, yy + 2), ui.DIM, 11, "midleft")
-        if it.get("scales"):
-            have = self.save.data["scales"]
-            text(canvas, f"전설 비늘 {it['scales']}개 필요 (보유 {have})", (x, self.DETAIL.bottom - 34),
-                 ui.TEXT if have >= it["scales"] else ui.BAD, 11, "midleft")
-        if fl.get("equipped") == it["id"]:
-            self.action_btn.label, self.action_btn.enabled = "장착 중", False
-        elif it["id"] in fl["owned"]:
-            self.action_btn.label, self.action_btn.enabled = "장착하기", True
-        elif locked:
-            self.action_btn.label, self.action_btn.enabled = "잠김", False
-        else:
-            self.action_btn.label = f"구매 ({it['price']:,}원)"
-            self.action_btn.enabled = self.save.money >= it["price"] and self.save.data["scales"] >= it.get("scales", 0)
-        self.action_btn.draw(canvas, self.mouse)
+            if r is None:
+                continue
+            su.row_bg(canvas, r, i == self.sel, r.collidepoint(self.mouse))
+            self._draw_sell_row(canvas, r, row)
+        if len(rows) > self._visible():
+            self._scrollbar(canvas, len(rows), self._visible(), L.y + 2, L.bottom - 2)
+        idx = rows[self.sel]["idxs"][0]
+        self._draw_sell_detail(canvas, idx, net[idx])
 
-    def _draw_enhance(self, canvas, items, visible) -> None:
+    def _draw_sell_row(self, canvas, r: pygame.Rect, row: dict) -> None:
+        net = self.save.data["keepnet"]
+        its = [net[i] for i in row["idxs"]]
+        it = its[0]
+        fish = self.fish_by_id(it["id"])
+        rar = fish["rarity"]
+        col = su.RARITY.get(rar, su.WHITE)
+        canvas.fill(col, (r.x + 9, r.y + 3, 2, r.h - 6))
+        su.fish_icon(canvas, r.x + 13, r.centery, col)
+        tx = r.x + 31
+        y1, y2 = r.y + 8, r.y + 20
+        # 위 단: 등급 → 변이 배지 → 자물쇠 | 크기 + 랭크 배지
+        xx = text(canvas, su.RARITY_KO.get(rar, ""), (tx, y1), col, 11, "midleft").right + 3
+        if it.get("mut"):
+            ms = "◆" + mut_label(it["mut"]) if self.wide else "◆"
+            xx = text(canvas, ms, (xx, y1), su.MUT, 11, "midleft").right + 3
+        if it.get("lock"):
+            su.lock(canvas, xx, y1, su.GRAY)
+        rank = max((x["rank"] for x in its), key=lambda k: "CBAS".index(k))
+        rr = pygame.Rect(r.right - 11, y1 - 5, 9, 11)
+        canvas.fill(RANK_COLORS[rank], rr)
+        text(canvas, rank, rr.center, su.DARK_TEXT, 11, "center", shadow=False)
+        group = row["group"]
+        size = max(x["size"] for x in its)
+        if group:
+            p = max(self.save.sale_price(x) for x in its)
+            ps = f"~{p:,}원"
+        else:
+            ps = f"{self.save.sale_price(it):,}원"
+        name = fish["name"] + (f" ×{len(its)}" if group else "")
+        if self.wide:   # 위 단 오른쪽 = 크기, 아래 단 = 이름 | 가격
+            text(canvas, f"{'~' if group else ''}{size:.1f}cm", (rr.x - 3, y1), su.SUB, 11, "midright")
+            pr = su.btext(canvas, ps, (r.right - 3, y2), su.WHITE, 11, "midright")
+            text(canvas, su.fit(name, pr.x - tx - 4), (tx, y2), su.WHITE, 11, "midleft")
+        else:           # 좁은 패널: 가격을 위 단으로 (크기는 상세에) → 이름이 줄 폭을 다 쓴다
+            su.btext(canvas, ps, (rr.x - 3, y1), su.WHITE, 11, "midright")
+            text(canvas, su.fit(name, r.right - 3 - tx), (tx, y2), su.WHITE, 11, "midleft")
+
+    def _draw_sell_detail(self, canvas, idx: int, it: dict) -> None:
+        D = self.DETAIL
+        fish = self.fish_by_id(it["id"])
+        rar = fish["rarity"]
+        col = su.RARITY.get(rar, su.WHITE)
+        o = self._sell_off()
+        box = pygame.Rect(D.x + 6, D.y + 6, D.w - 12, 56 + o)
+        su.pic_box(canvas, box)
+        draw_fish_fit(canvas, box.inflate(-8, -6), fish, 110)
+        name = fish["name"]
+        su.btext(canvas, su.fit(name, D.w - 12), (D.centerx, D.y + o + 70), col, 11, "center")
+        # 배지 줄: 등급 · 변이 · 랭크 · 신기록
+        badges = [(su.RARITY_KO.get(rar, ""), col)]
+        if it.get("mut"):
+            badges.append(("◆" + mut_label(it["mut"]), su.MUT))
+        badges.append((f"{it['rank']}랭크", RANK_COLORS[it["rank"]]))
+        if it.get("record"):
+            badges.append(("신기록", su.YELLOW))
+        tw = sum(su.width(s) + 9 for s, _ in badges) - 3
+        while tw > D.w - 12 and len(badges) > 2:
+            badges.pop()
+            tw = sum(su.width(s) + 9 for s, _ in badges) - 3
+        bx = D.centerx - tw // 2
+        for s, c in badges:
+            bx = su.badge(canvas, s, (bx, D.y + o + 85), c, anchor="midleft").right + 3
+        text(canvas, f"{it['size']:.1f}cm", (D.centerx, D.y + o + 99), su.WHITE, 11, "center")
+        # 가격 계산 상자
+        calc = pygame.Rect(D.x + 6, D.y + o + 107, D.w - 12, 27)
+        canvas.fill(su.WIN_BG, calc)
+        pygame.draw.rect(canvas, (46, 54, 84), calc, 1)
+        final = self.save.sale_price(it)
+        parts, k = self._price_factors(it, fish)
+        base = int(round(it["price"] / k)) if k else it["price"]
+        line = f"기본가 {base:,}원" + "".join(f" × {p}" for p in parts)
+        text(canvas, su.fit(line, calc.w - 8), (calc.x + 4, calc.y + 7), su.SUB, 11, "midleft")
+        text(canvas, "= 판매가", (calc.x + 4, calc.y + 19), su.SUB, 11, "midleft")
+        su.btext(canvas, f"{final:,}원", (calc.right - 4, calc.y + 19), su.YELLOW, 11, "midright")
+        # 팔기 + 잠금
+        su.button(canvas, self.sell_btn.rect, su.fit(f"팔기 {final:,}원", self.sell_btn.rect.w - 6), "fill", self.mouse)
+        lr = self.lock_btn.rect
+        hov = lr.collidepoint(self.mouse)
+        canvas.fill(ui.SHADOW, lr.move(1, 1))
+        canvas.fill(su.SEL_BG if hov else su.WIN_BG, lr)
+        pygame.draw.rect(canvas, su.YELLOW if hov else su.BORDER, lr, 1)
+        lab = "잠금 해제" if it.get("lock") else "잠금"
+        lab = lab if su.width(lab) + 12 <= lr.w else ("해제" if it.get("lock") else "잠금")
+        lw = su.width(lab) + 9
+        lx = lr.centerx - lw // 2
+        su.lock(canvas, lx, lr.centery, su.WHITE)
+        text(canvas, lab, (lx + 9, lr.centery), su.WHITE, 11, "midleft")
+        # 분해
+        got = self.save.disassemble_yield(idx)
+        dr = self.dis_btn.rect
+        self.dis_btn.enabled = got is not None
+        if got is None:
+            canvas.fill(su.CELL_BG, dr)
+            pygame.draw.rect(canvas, (46, 54, 84), dr, 1)
+            s = f"분해  {self._no_dis_reason(idx)}"
+            if su.width(s) <= dr.w - 8:
+                text(canvas, s, (dr.x + 4, dr.centery), su.SUB, 11, "midleft")
+            else:   # 좁은 패널: 두 줄
+                ls = wrap_text(s, dr.w - 8)[:2]
+                for j, ln in enumerate(ls):
+                    text(canvas, ln, (dr.x + 4, dr.centery + (j - (len(ls) - 1) / 2) * 12), su.SUB, 11, "midleft")
+        else:
+            hov = dr.collidepoint(self.mouse)
+            canvas.fill(su.SEL_BG if hov else su.WIN_BG, dr)
+            pygame.draw.rect(canvas, su.YELLOW if hov else su.BORDER, dr, 1)
+            s = "분해  " + ", ".join(f"{MAT_KO[k]} +{v}" for k, v in got.items())
+            text(canvas, su.fit(s, dr.w - 6), (dr.x + 4, dr.centery), su.WHITE, 11, "midleft")
+
+    def _price_factors(self, it: dict, fish: dict) -> tuple[list[str], float]:
+        """가격 계산 상자 글자: 잡을 때 붙은 배율(랭크·변이)은 기본가로 되돌려 보이고, 팔 때 배율(도시락·전설)은 그대로."""
+        parts, k = [], 1.0
+        rm = load_json("fishing_config.json")["rank"]["price_mult"].get(it["rank"], 1.0)
+        if rm != 1.0:
+            parts.append(f"{it['rank']}랭크 {rm:g}배")
+            k *= rm
+        from src.fishing.mutation import cfg as mcfg
+        mk = mcfg()["kinds"]
+        for m in it.get("mut", []):
+            v = {"giant": mk["giant"].get("price_total_mult"), "golden": mk["golden"].get("price_mult")}.get(m)
+            if v:
+                parts.append(f"{mut_label([m])} {v:g}배")
+                k *= v
+        if self.save.lunch_active():
+            parts.append("도시락 1.1배")
+        lm = self.save.legend_sale_mult(it)
+        if abs(lm - 1.0) > 1e-6:
+            parts.append(f"전설 {lm:g}배")
+        return parts, k
+
+    def _draw_bulk_button(self, canvas, pool: list) -> None:
+        r = self.sell_all_btn.rect
+        en = bool(pool)
+        hov = en and r.collidepoint(self.mouse)
+        canvas.fill(ui.SHADOW, r.move(1, 1))
+        canvas.fill(su.SEL_BG if hov else su.WIN_BG, r)
+        pygame.draw.rect(canvas, su.YELLOW if hov else su.BORDER, r, 1)
+        lab = su.btext(canvas, "일괄 판매…", (r.x + 5, r.centery), su.WHITE if en else su.SUB, 11, "midleft")
+        total = sum(self.save.sale_prices(pool))
+        s = f"잠금 제외 {len(pool)}마리 · {total:,}원"
+        if su.width(s) > r.right - lab.right - 12:
+            s = f"{len(pool)}마리 · {total:,}원"
+        text(canvas, su.fit(s, r.right - lab.right - 12), (r.right - 5, r.centery), su.SUB, 11, "midright")
+
+    def _bulk_lines(self) -> list[tuple[str, int, int, str]]:
+        """확인 창 목록: (이름, 마리 수, 합계, 등급) — 같은 종은 한 줄."""
+        todo = self._bulk_items()
+        prices = self.save.sale_prices(todo)
+        out: dict = {}
+        for it, p in zip(todo, prices):
+            f = self.fish_by_id(it["id"])
+            nm = (mut_label(it["mut"]) + " " + f["name"]) if it.get("mut") else f["name"]
+            e = out.setdefault(nm, [0, 0, f["rarity"]])
+            e[0] += 1
+            e[1] += p
+        return [(k, v[0], v[1], v[2]) for k, v in out.items()]
+
+    def _draw_bulk(self, canvas) -> None:
+        P, checks, lst, ok, cancel = self._bulk_rects()
+        dim = pygame.Surface(self.frame.size, pygame.SRCALPHA)
+        dim.fill((6, 8, 20, 150))
+        canvas.blit(dim, self.frame.topleft)
+        canvas.fill(ui.SHADOW, P.move(2, 2))
+        canvas.fill(su.WIN_BG, P)
+        pygame.draw.rect(canvas, su.YELLOW, P, 1)
+        su.btext(canvas, "일괄 판매", (P.x + 10, P.y + 11), su.YELLOW, 11, "midleft")
+        text(canvas, "잠금한 물고기는 빠져요", (P.right - 10, P.y + 11), su.SUB, 11, "midright")
+        for r, rc in checks:
+            on = r in self.bulk["rar"]
+            box = pygame.Rect(rc.x, rc.y + 2, 9, 9)
+            canvas.fill(su.CELL_BG, box)
+            pygame.draw.rect(canvas, su.RARITY[r], box, 1)
+            if on:
+                su.check(canvas, box.x + 1, box.centery, su.RARITY[r])
+            text(canvas, su.RARITY_KO[r], (rc.x + 12, rc.centery), su.RARITY[r] if on else su.GRAY, 11, "midleft")
+        canvas.fill(su.CELL_BG, lst)
+        pygame.draw.rect(canvas, su.BORDER, lst, 1)
+        lines = self._bulk_lines()
+        vis = (lst.h - 4) // 13
+        self.bulk_scroll = max(0, min(self.bulk_scroll, max(0, len(lines) - vis)))
+        for j, (nm, n, total, rar) in enumerate(lines[self.bulk_scroll:self.bulk_scroll + vis]):
+            y = lst.y + 8 + j * 13
+            canvas.fill(su.RARITY.get(rar, su.WHITE), (lst.x + 4, y - 4, 2, 9))
+            pr = text(canvas, f"{total:,}원", (lst.right - 6, y), su.WHITE, 11, "midright")
+            text(canvas, su.fit(f"{nm} ×{n}", pr.x - lst.x - 16), (lst.x + 10, y), su.WHITE, 11, "midleft")
+        if not lines:
+            text(canvas, "고른 등급의 물고기가 없어요", lst.center, su.SUB, 11, "center")
+        elif len(lines) > vis:
+            text(canvas, f"… 외 {len(lines) - vis}종 (휠)", (lst.right - 6, lst.bottom + 6), su.SUB, 11, "midright")
+        n = sum(x[1] for x in lines)
+        total = sum(x[2] for x in lines)
+        text(canvas, "합계", (P.x + 10, P.bottom - 30), su.GRAY, 11, "midleft")
+        su.btext(canvas, f"{n}마리 · {total:,}원", (P.x + 36, P.bottom - 30), su.YELLOW, 11, "midleft")
+        su.button(canvas, ok, "팔기", "fill" if lines else "dim", self.mouse)
+        su.button(canvas, cancel, "취소", "outline", self.mouse)
+
+    # ── 강화 탭 ──
+    def _draw_enhance(self, canvas, rows) -> None:
+        L = self.LIST
         mats = self.save.data["materials"]
-        text(canvas, "  ".join(f"{MAT_KO[k]} {mats.get(k, 0)}" for k in ("sharmion", "eldrasion", "rare")),
-             (240, 16), ui.DIM, 11, "center")
-        if not items:
-            text(canvas, "강화할 장비가 없어요", self.LIST.center, ui.DIM, 11, "center")
+        short = {"sharmion": "샤르미온", "eldrasion": "엘드라시온", "rare": "희귀"}
+        mline = "소재 " + " · ".join(f"{short[k]} {mats.get(k, 0)}" for k in ("sharmion", "eldrasion", "rare"))
+        if su.width(mline) > L.w - 12:
+            mline = " · ".join(f"{s} {mats.get(k, 0)}" for k, s in (("sharmion", "샤르미온"), ("eldrasion", "엘드라"),
+                                                                      ("rare", "희귀")))
+        text(canvas, su.fit(mline, L.w - 12), (L.x + 6, L.bottom - 8), su.SUB, 11, "midleft")
+        if not rows:
+            text(canvas, "강화할 장비가 없어요", L.center, ui.DIM, 11, "center")
             self.action_btn.enabled = False
             return
-        for i in range(self.scroll, min(len(items), self.scroll + visible)):
-            kind, g = items[i]
+        for i, (kind, g) in enumerate(rows):
             r = self._row_rect(i)
-            if i == self.sel or r.collidepoint(self.mouse):
-                canvas.fill(ui.PANEL_LIGHT, r)
+            if r is None:
+                continue
+            su.row_bg(canvas, r, i == self.sel, r.collidepoint(self.mouse))
             lvl = self.save.enhance_level(g["id"])
-            text(canvas, KIND_KO[kind], (r.x + 4, r.centery), ui.DIM, 11, "midleft")
-            text(canvas, f"T{g['tier']} {g['name']}", (r.x + 46, r.centery), ui.TEXT, 11, "midleft")
-            text(canvas, f"+{lvl}" if lvl else "", (r.right - 4, r.centery), ui.ACCENT, 11, "midright")
-        kind, g = items[self.sel]
+            ny, sy = (r.centery, r.centery) if self.wide else (r.y + 8, r.y + 19)
+            su.btext(canvas, f"T{g['tier']}", (r.x + 9, ny), su.YELLOW, 11, "midleft")
+            gear_icon.draw(canvas, kind, g, (r.x + 30, sy - 7, 14, 14))
+            right = r.right - 4
+            if lvl:
+                right = su.btext(canvas, f"+{lvl}", (right, sy), su.YELLOW, 11, "midright").x - 4
+            kr = text(canvas, KIND_KO[kind], (right, sy), su.SUB, 11, "midright")
+            nx = r.x + 48 if self.wide else r.x + 30
+            nw = (kr.x - nx - 4) if self.wide else (r.right - 4 - nx)
+            text(canvas, su.fit(g["name"], nw), (nx, ny), su.WHITE, 11, "midleft")
+        n = len(rows)
+        if n > self._visible():
+            self._scrollbar(canvas, n, self._visible(), L.y + 2, L.bottom - 16)
+        D = self.DETAIL
+        kind, g = rows[self.sel]
         lvl = self.save.enhance_level(g["id"])
-        x, y = self.DETAIL.x + 8, self.DETAIL.y + 8
-        text(canvas, f"{g['name']} +{lvl}", (x, y + 4), ui.ACCENT, 11, "midleft")
-        text(canvas, "★" * lvl + "☆" * (rules()["max_level"] - lvl), (self.DETAIL.right - 8, y + 4), ui.ACCENT, 11,
-             "midright")
+        x = D.x + 6
+        box = pygame.Rect(D.x + 6, D.y + 6, D.w - 12, 70)
+        su.pic_box(canvas, box)
+        gear_icon.draw(canvas, kind, g, (box.centerx - 32, box.centery - 32, 64, 64))
+        stars = "★" * lvl + "☆" * (rules()["max_level"] - lvl)
+        text(canvas, stars, (box.right - 4, box.y + 8), su.YELLOW, 11, "midright")
+        su.btext(canvas, su.fit(f"{g['name']} +{lvl}", D.w - 12), (x, D.y + 88), su.YELLOW, 11, "midleft")
         cost = self.save.enhance_cost(kind, g)
-        yy = y + 22
+        yy = D.y + 106
         now = enhanced(kind, g, lvl)
         nxt = enhanced(kind, g, lvl + 1) if cost else now
         for (label, v0, fmt, up), (_, v1, _, _) in zip(stat_rows(kind, now), stat_rows(kind, nxt)):
-            line = f"{label} {fmt.format(v0)}" + (f" → {fmt.format(v1)}" if cost else "")
-            text(canvas, line, (x, yy), ui.GOOD if cost and v1 != v0 else ui.TEXT, 11, "midleft")
+            text(canvas, label, (x, yy), su.WHITE, 11, "midleft")
+            s = f"{fmt.format(v0)}" + (f" → {fmt.format(v1)}" if cost else "")
+            (su.btext if cost and v1 != v0 else text)(canvas, s, (D.right - 6, yy), su.GREEN if cost and v1 != v0 else su.WHITE,
+                                                     11, "midright")
             yy += 13
-        yy += 6
+        yy += 4
+        b = self.action_btn
         if cost is None:
-            text(canvas, "최대 강화 (+3)", (x, yy), ui.GOOD, 11, "midleft")
-            self.action_btn.label, self.action_btn.enabled = "최대 강화", False
+            text(canvas, "최대 강화 (+3)", (x, yy), su.GREEN, 11, "midleft")
+            b.label, b.enabled, style = "최대 강화", False, "dim"
         else:
             have_gold = self.save.money >= cost["gold"]
             have_mat = mats.get(cost["continent"], 0) >= cost["materials"]
             have_rare = mats.get("rare", 0) >= cost["rare"]
-            text(canvas, f"골드 {cost['gold']:,}원", (x, yy), ui.TEXT if have_gold else ui.BAD, 11, "midleft")
+            su.price(canvas, cost["gold"], (x, yy), su.WHITE if have_gold else su.RED, anchor="midleft", bold=True)
             yy += 13
             text(canvas, f"{MAT_KO[cost['continent']]} {mats.get(cost['continent'], 0)}/{cost['materials']}",
-                 (x, yy), ui.TEXT if have_mat else ui.BAD, 11, "midleft")
+                 (x, yy), su.WHITE if have_mat else su.RED, 11, "midleft")
             yy += 13
             if cost["rare"]:
                 text(canvas, f"희귀 소재 {mats.get('rare', 0)}/{cost['rare']}", (x, yy),
-                     ui.TEXT if have_rare else ui.BAD, 11, "midleft")
-            text(canvas, "강화는 실패하지 않아요", (x, self.DETAIL.bottom - 56), ui.DIM, 11, "midleft")
-            self.action_btn.label = f"+{lvl + 1} 강화"
-            self.action_btn.enabled = have_gold and have_mat and have_rare
-        self.action_btn.draw(canvas, self.mouse)
+                     su.WHITE if have_rare else su.RED, 11, "midleft")
+            text(canvas, "강화는 실패하지 않아요", (x, D.bottom - 31), su.SUB, 11, "midleft")
+            b.label = f"+{lvl + 1} 강화"
+            b.enabled = have_gold and have_mat and have_rare
+            style = "fill" if b.enabled else "dim"
+        su.button(canvas, b.rect, b.label, style, self.mouse)
+
+
+def _star(cx: int, cy: int, r: int) -> list:
+    import math
+    pts = []
+    for i in range(10):
+        a = -math.pi / 2 + i * math.pi / 5
+        rr = r if i % 2 == 0 else r * 0.45
+        pts.append((cx + math.cos(a) * rr, cy + math.sin(a) * rr))
+    return pts

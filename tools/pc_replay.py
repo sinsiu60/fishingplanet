@@ -88,6 +88,11 @@ if scen == "eldra":
     sg.data["spot"] = "marsh"
 else:
     sg.data["chests"] = {"common": 1}
+# 스토리(DESIGN.md 36): 프롤로그는 이미 본 세이브로 (새 세이브면 프롤로그 컷신부터 시작해 아래 스크립트와 어긋난다)
+from src.story import story  # noqa: E402
+_st = story.state(sg)
+_st["seen_scenes"] = ["P-01", "P-02", "P-03", "P-04", "P-05"]
+_st["player_name"], _st["chapter"] = "하늘", 1
 sg.save()
 st = Settings()
 st.data["tutorial_seen"] = sorted(set(tut.CARDS) | set(tut.GUIDES))

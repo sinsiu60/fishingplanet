@@ -592,6 +592,10 @@ class SaveGame:
             news["hint"] = entry["count"]
         self.data["keepnet"].append({"id": fid, "size": result["size"], "rank": result["rank"],
                                      "price": result["price"]})
+        if news["record"]:
+            self.data["keepnet"][-1]["record"] = True   # 상점: 신기록 배지
+        if news["record"] or fish["rarity"] == "legend":
+            self.data["keepnet"][-1]["lock"] = True     # 상점: 전설·크기 신기록은 자동 잠금 (일괄 판매에서 빠짐)
         if fish.get("limited"):   # 한정 물고기: 잡은 대륙 (분해 소재용 — 이벤트 물고기는 두 대륙 공통)
             self.data["keepnet"][-1]["cont"] = spot_continent(fish["spot"])
         if fish["rarity"] == "legend":
@@ -616,11 +620,14 @@ class SaveGame:
     def _record_phantom(self, result: dict) -> dict:
         """환상어: 일반 도감(dex)·도감 % 에 넣지 않고 환상 도감에만 (33장). 살림망·통계는 같게."""
         from src.fishing import phantom
+        prev = dict(phantom.state(self)["caught"].get(result["fish"]["id"]) or {})   # 기록 전 최대 크기
         got = phantom.record(self, result)
         news = {"new": False, "record": False, "hint": 0, "gold": False, "phantom": True,
                 "phantom_new": got["new"], "phantom_first_ever": got["first_ever"]}
         self.data["keepnet"].append({"id": result["fish"]["id"], "size": result["size"], "rank": result["rank"],
-                                     "price": result["price"]})
+                                     "price": result["price"], "lock": True})   # 환상어는 자동 잠금
+        if prev and result["size"] > prev.get("max_size", 0.0):
+            self.data["keepnet"][-1]["record"] = True
         st = self.data["stats"]
         st["catches"] += 1
         st["perfects"] += result.get("perfects", 0)
