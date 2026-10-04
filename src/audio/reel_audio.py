@@ -147,7 +147,10 @@ class ReelPlayer:
 
     # ── 원샷 ──
     def _gain(self) -> float:
-        return self.sfx.bus_gain("sfx")
+        g = self.sfx.bus_gain("sfx")
+        if getattr(self.sfx, "boss_mode", False):   # 전용 곡이 커진 만큼 릴은 −2dB (DESIGN.md 43)
+            g *= 10 ** (self.sfx.cfg.get("boss", {}).get("reel_db", -2) / 20)
+        return g
 
     def _one(self, key: str, vol: float):
         snd = self.snd.get(key)

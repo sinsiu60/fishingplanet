@@ -18,10 +18,12 @@
   "hook": {"mus": -3, "amb": -4, "sec": 0.3},
   "perfect": {"mus": -3, "amb": -8, "sfx": -3, "sec": 0.4},
   "fight": {"amb": -4},
+  "boss_fight": {"amb": -6},
   "snap": {"mus": -3, "amb": -24, "sfx": -12, "sec": 0.45},
   "focus": {"mus": -2, "amb": -2, "sec": 0.3},
   "success": {"sfx": -3, "amb": -3, "mus": -3, "sec": 0.5}
  },
+ "boss": {"_설명": "전설·환상 전용 곡 파이팅 동안 (BOSS_BGM.md 1번, DESIGN.md 43): 음악 덕킹은 이 값까지만, 릴 소리 dB, 환경음은 duck.boss_fight (계속 낮춤). 신호 버스는 그대로 최우선.", "duck_mus": -2, "reel_db": -2},
  "sig_boost_gain": 1.3,
  "variation": {"pitch_pct": [-4, -2, 2, 4], "vol_db": 2.0,
                "names": ["sfx_splash", "sfx_splash_small", "sfx_nibble", "sfx_bubbles", "sfx_scrape", "sfx_judge_miss", "sfx_impact",

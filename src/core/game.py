@@ -67,6 +67,8 @@ class Game:
         self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
         from src.audio.adaptive_music import AdaptiveMusic
         self.adaptive = AdaptiveMusic(self.sfx)  # 적응형 음악 층 (32장 S6)
+        from src.audio.boss_music import BossMusic
+        self.boss = BossMusic(self.sfx, self.adaptive)   # 전설·환상 전용 파이팅 곡 (DESIGN.md 43)
         from src.audio.zones import AudioZones
         self.zones = AudioZones(self)            # 소리 구역: 바깥 ↔ 실내 (DESIGN.md 39)
         bootlog.mark("음악 준비")
@@ -218,6 +220,7 @@ class Game:
         self.sfx.set_volumes(s.get("volume"), s.get("vol_music"), s.get("vol_sfx"), s.get("vol_amb"),
                              bool(s.get("signal_boost")))
         self.sfx.offset_s = s.get("audio_offset_ms") / 1000  # 진동·신호 소리 시각 보정 (S5)
+        self.sfx.settings_boss_vol = float(s.get("vol_boss"))  # 전설·환상 전용 곡 (DESIGN.md 43)
 
     def slowmo(self, real_sec: float, scale: float) -> None:
         self.slow_timer = real_sec
@@ -322,6 +325,7 @@ class Game:
         self.music.update()
         self.zones.update(frame_time)
         self.adaptive.update(frame_time, quiet=self.music.target is not None or self.music.current is not None)
+        self.boss.update(frame_time)   # 전설·환상 전용 곡 (DESIGN.md 43)
         self.sfx.update(frame_time, slow=self.time_scale < 0.99)  # 믹서: 덕킹·리미터·버스 볼륨
         self.haptics.update(frame_time)  # 소리 어택에 맞춘 진동 (32장 S5)
         t2 = time.perf_counter() if perf else 0.0

@@ -1148,7 +1148,7 @@ class FishingScene(Scene):
                 if self.cast.state != CastState.READY else 0.3
         if fighting != getattr(self, "_amb_fight", False):
             self._amb_fight = fighting
-            self.sfx.set_base_duck("fight" if fighting else None)  # 파이팅 중 환경음 −4dB
+            self.sfx.set_base_duck((("boss_fight" if self.game.boss.active else "fight") if fighting else None))  # 파이팅 중 환경음 −4dB
             # 동시 재생 한도 (N3): 일반 파이팅 3 (주인공 1 + 보조 2) / 전설 4, 파이팅 밖은 없음
             legend = fighting and self.fight.fish.get("rarity") == "legend"
             self.sfx.set_budget(("legend" if legend else "fight") if fighting else None)

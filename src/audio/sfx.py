@@ -152,6 +152,8 @@ class Sfx:
         self.bus_vol = {"master": self.volume, "mus": 1.0, "sfx": 1.0, "amb": 1.0}
         self.sig_boost = False
         self.duck_db = {b: 0.0 for b in c["priority"]}  # 지금 낮춘 양 (dB, 음수)
+        self.boss_mode = False        # 전설·환상 전용 곡 파이팅 중 (덕킹·릴 음량 규칙, DESIGN.md 43)
+        self.settings_boss_vol = 1.0  # 설정 '전설·환상 음악 음량'
         self.duck_hold: dict[str, float] = {}
         self.duck_rate: dict[str, float] = {}   # 복귀 속도 dB/초
         self.base_duck = {b: 0.0 for b in c["priority"]}  # 계속 낮춤 (파이팅 중 환경음 등)
@@ -343,6 +345,8 @@ class Sfx:
         for bus, db in d.items():
             if bus == "sec":
                 continue
+            if bus == "mus" and self.boss_mode:
+                db = max(db, self.cfg.get("boss", {}).get("duck_mus", -2))   # 전설·환상 전용 곡: 음악은 −2dB 만 (DESIGN.md 43)
             self.duck_db[bus] = min(self.duck_db.get(bus, 0.0), db)
             self.duck_hold[bus] = max(self.duck_hold.get(bus, 0.0), hold if hold is not None else d.get("sec", 0.3))
             self.duck_rate[bus] = 30.0 if not release else max(1.0, -db / release)

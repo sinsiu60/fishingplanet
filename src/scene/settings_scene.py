@@ -128,8 +128,8 @@ class SettingsScene(Scene):
         test = ("사운드 테스트 룸", "button", lambda: "열기", self._open_sound_test)
         voice = ("말소리 (건물 안 대화)", "toggle", lambda: s.get("voice_blips"),
                  lambda: s.set("voice_blips", not s.get("voice_blips")))
-        return [vol("전체 음량", "volume"), vol("음악", "vol_music"), vol("효과음", "vol_sfx"), vol("환경음", "vol_amb"),
-                mode, zing, fmus, voice, boost, offset, test]
+        return [vol("전체 음량", "volume"), vol("음악", "vol_music"), vol("전설·환상 음악 음량", "vol_boss"), vol("효과음", "vol_sfx"),
+                vol("환경음", "vol_amb"), mode, zing, fmus, voice, boost, offset, test]
 
     def _vol(self, key: str, d: float) -> None:
         self.s.set(key, round(min(1.0, max(0.0, self.s.get(key) + d)), 1))
@@ -228,6 +228,8 @@ class SettingsScene(Scene):
             y0, step, bh = 82, 15, 14
         if len(self.rows) > 10:  # PC 화면 탭 11줄 (시작 로고 짧게): 더 촘촘히 — 뒤로 버튼과 안 겹치게
             y0, step, bh = 80, 14, 13
+        if len(self.rows) > 11:  # 소리 탭 12줄 (전설·환상 음악 음량)
+            y0, step, bh = 79, 12.5, 12
         self.rows_y = [y0 + i * step for i in range(len(self.rows))]
         self.buttons = []
         for (label, kind, value, act), y in zip(self.rows, self.rows_y):

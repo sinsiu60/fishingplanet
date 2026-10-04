@@ -34,6 +34,7 @@ jobs:
           python tools/bake_sfx.py --check
           python tools/bake_music.py --check
           python tools/bake_indoor.py --check
+          python tools/bake_boss.py --check
           python tools/sound_audit.py --strict
           python tools/tutorial_check.py
       - name: 아이콘
@@ -84,6 +85,7 @@ jobs:
           python tools/bake_sfx.py --check
           python tools/bake_music.py --check
           python tools/bake_indoor.py --check
+          python tools/bake_boss.py --check
       - name: 폰과 같은 pygame 2.6 에서 소리·장면 확인 (pygame-ce 전용 API 쓰면 여기서 실패)
         env:
           SDL_VIDEODRIVER: dummy

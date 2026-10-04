@@ -20,7 +20,8 @@ DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": N
             "test_phantom": False, "travel_cutscene": "full", "season_lock": None, "voice_blips": True,  # 테스트: 다음 착수 한 번 환상 물고기 강제 (설정 → 접근성)  # 화면 효과 줄이기 (환상 파장 대신 0.8초 페이드)  # 찌 확대 말풍선 (찌·다가오는 그림자를 크게)  # 일반 파이팅 음악 (32-16 Z4) — 끄면 대기 층 낮추기만  # 신호음: 0 자연음 / 1 보조음 / 2 강조 (SOUND_CLEANUP N2)
             # 성능 표시 (FPS·단계별 처리 시간, v0.8.8)
             "perf_overlay": False,
-            "splash_short": False}   # 시작 로고 '시우 공방' 짧게 (1.2초, SPLASH.md)
+            "splash_short": False,   # 시작 로고 '시우 공방' 짧게 (1.2초, SPLASH.md)
+            "vol_boss": 1.0}         # 전설·환상 전용 곡 음량 0~1 (음악 음량과 곱, DESIGN.md 43)
 
 TELE_MULTS = (1.0, 1.25, 1.5)
 

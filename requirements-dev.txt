@@ -2,3 +2,5 @@
 # 오디오 팩을 다시 만들 때만 (tools/audio/cut_reel_clips.py · make_success_sfx.py · make_perfect_pop.py — 수동 실행) scipy 필요
 -r requirements.txt
 scipy
+# 전설·환상 전용 BGM 굽기·음량 측정 (tools/bake_boss.py · boss_loudness.py — LUFS)
+pyloudnorm

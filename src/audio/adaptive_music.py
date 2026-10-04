@@ -62,6 +62,7 @@ class AdaptiveMusic:
         self.sgain = 1.0           # 상황별 음악 배율 (state_gain, 부드럽게 바뀜)
         self.fm = self.cfg.get("fight_music", {})
         self.crisis = False        # Z4 위기 (장면이 판정)
+        self.suspended = False     # 전설·환상 전용 곡(boss_music)이 채널을 빌려 쓰는 동안 멈춤 (DESIGN.md 43)
         self.zone_gain = 1.0       # 소리 구역 (DESIGN.md 39): 실내면 0 쪽으로 — 바깥 음악은 멈추지 않고 소리만 줄여 두었다가 나오면 그 자리부터
         if self.enabled:
             base = sfx.n_sig
@@ -133,6 +134,15 @@ class AdaptiveMusic:
         self.intensity = max(0.0, min(1.0, intensity))
         self.phase = phase
         self.daylight = daylight
+
+    def suspend(self, on: bool) -> None:
+        """전용 곡 재생기가 예약 채널을 빌림(on) / 돌려줌(off — 다음 프레임에 지금 맥락으로 처음부터 다시)."""
+        if on and not self.suspended:
+            ctx = self.ctx or self.ctx_next
+            self.stop()
+            self.ctx_next = ctx
+            self.ctx_fade = 0.0
+        self.suspended = on
 
     def stop(self) -> None:
         if self.enabled:
@@ -226,7 +236,7 @@ class AdaptiveMusic:
         self.sting_left = snd.get_length()
 
     def update(self, dt: float, quiet: bool = False) -> None:
-        if not self.enabled:
+        if not self.enabled or self.suspended:
             return
         self.clock += dt
         self.state_t += dt
