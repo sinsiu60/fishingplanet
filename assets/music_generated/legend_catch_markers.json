@@ -14,7 +14,7 @@
     "record": 2.6,
     "rewards": 3.2,
     "afterglow": 3.5,
-    "wait": 5.0
+    "wait": 4.6
    }
   },
   "legend_catch_short_sharmion": {
@@ -30,7 +30,7 @@
     "record": 1.4,
     "rewards": 1.7,
     "afterglow": 1.9,
-    "wait": 2.5
+    "wait": 2.2
    }
   },
   "legend_catch_loop_sharmion": {
@@ -52,7 +52,7 @@
     "record": 2.6,
     "rewards": 3.2,
     "afterglow": 3.5,
-    "wait": 5.0
+    "wait": 4.6
    }
   },
   "legend_catch_short_eldrasion": {
@@ -68,7 +68,7 @@
     "record": 1.4,
     "rewards": 1.7,
     "afterglow": 1.9,
-    "wait": 2.5
+    "wait": 2.2
    }
   },
   "legend_catch_loop_eldrasion": {

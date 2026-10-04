@@ -601,7 +601,7 @@ class FishingScene(Scene):
         self.phantom_loop_ch = None
         self.phantom_fx.k_from = self.phantom_fx.k = 1.0  # 연출 동안 보라 100%
 
-    def _start_legend_show(self, f) -> None:
+    def _start_legend_show(self, f, intro=None) -> None:
         """전설 포획 연출 (34장): 보스 테마는 끊기지 않고 '전설의 노래' 끝맺음 타격(같은 으뜸음)으로 이어진다."""
         from src.render.legend_show import LegendShow, pick_variant
         from src.audio import legend_song
@@ -612,7 +612,8 @@ class FishingScene(Scene):
         w, h = self.cam.width, self.cam.height
         self.catch_show = LegendShow(f.fish, f.result, self.catch_news, variant, w, h, mobile=self.touch,
                                      reduce=self.settings.get("reduce_fx"), delay=delay,
-                                     low=getattr(self.game, "slow_device", False) or self.settings.get("fps") == 30)
+                                     low=getattr(self.game, "slow_device", False) or self.settings.get("fps") == 30,
+                                     intro=intro)
         self.fight_audio.stop()
         self.signal_audio.stop()
         sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)
@@ -1436,7 +1437,17 @@ class FishingScene(Scene):
         # dive: 기포·물결이 멈춘다 (아무것도 안 그림 — 그게 신호)
 
     def _update_landing(self, dt: float) -> None:
-        for ev in self.landing.update(dt):
+        handoff = getattr(self.landing, "legend_handoff", False)
+        for ev in self.landing.update(dt * getattr(self.landing, "speed", 1.0)):
+            if handoff and ev in ("launch", "done"):
+                # 그물에서 튀어 오르는 순간 = 전설의 노래 '쾅' (팡파르 대신, 보스 테마는 여기까지 이어짐)
+                intro = self.landing
+                self.landing = None
+                self.end_t = 0.0
+                self._start_legend_show(self.fight, intro)
+                return
+            if handoff and ev == "fanfare":
+                continue
             if ev == "hit":
                 cls = self.landing.cls
                 # 뜰채 성공: 물보라 + 퍼덕임 + 짧은 승리음 (크기 등급만큼 크게·묵직하게)
@@ -2164,9 +2175,11 @@ class FishingScene(Scene):
                 # 전설 비늘: 첫 포획 5개, 이후 2개 (T7·T8, 봉인 찌 재료) — 전설 포획 카드에 보상 아이콘으로
                 legend_scales = 2 if self.save.caught(f.fish["id"]) else 5
                 self.save.data["scales"] += legend_scales
-            if not phantom.is_phantom(f.fish) and f.fish["rarity"] != "legend":  # 환상·전설은 전용 포획 연출 (아래)
+            if not phantom.is_phantom(f.fish):  # 환상어는 전용 포획 연출 (아래 PhantomShow)
                 self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46, chest=self.chest_drop,
                                                 golden=golden)
+                # 전설: 뜰채로 끌어올린 뒤 그물에서 튀어 오르는 순간(launch) 전설 포획 연출로 넘어감 (34장)
+                self.landing.legend_handoff = f.fish["rarity"] == "legend"
             f.result["fish"] = shown
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
@@ -2178,6 +2191,11 @@ class FishingScene(Scene):
                 self.catch_news["legend_line"] = phantom.hints()["legend_line"]
             if phantom.is_phantom(f.fish):
                 self.catch_news.update(phantom.on_catch(self.save, f.fish, ph_first))
+            if getattr(self.landing, "legend_handoff", False):
+                # 다시 잡은 전설: 뜰채 끌어올리기도 빠르게 (환상 재포획 3.5초보다 짧게 — 희귀함 순서)
+                from src.render.legend_show import pick_variant as _lv
+                if _lv(f.fish, self.catch_news, self.save) == "short":
+                    self.landing.speed = load_json("legend_catch_timeline.json")["short_landing_speed"]
             if muts:
                 self._record_mutation(f, muts)
             qr = getattr(self, "quest_run", None)
@@ -2193,8 +2211,6 @@ class FishingScene(Scene):
             self.game.save_now()  # 보상·도감은 연출 전에 저장 (건너뛰기·백그라운드에도 안전)
             if phantom.is_phantom(f.fish):
                 self._start_phantom_show(f)
-            elif f.fish["rarity"] == "legend":
-                self._start_legend_show(f)
         elif ev == "escape_start":
             # 마지막 발악: 눈이 번쩍 + 물보라 폭발 + 화면 흔들림
             pos = self._fish_screen()

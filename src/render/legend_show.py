@@ -45,9 +45,12 @@ class LegendShow:
 
     def __init__(self, fish: dict, result: dict, news: dict, variant: str, w: int, h: int, *,
                  mobile: bool = False, reduce: bool = False, delay: float = 0.0, rnd: random.Random | None = None,
-                 low: bool = False):
+                 low: bool = False, intro=None):
+        """intro: 뜰채로 끌어올린 LandingCinematic (게임에서) — 그물에서 튀어 오르는 순간이 이 연출의 0초('쾅'),
+        뜰채는 그 자리에서 아래로 빠진다. 없으면(테스트 룸) 수면에서 바로 솟는다."""
         self.fish, self.result, self.news = fish, result, news or {}
         self.variant = variant
+        self.intro = intro
         c = tl()
         self.v = c["variants"][variant]
         self.m = self.v["markers"]
@@ -77,6 +80,7 @@ class LegendShow:
         self.skipped = False
         self.sx = 0.0
         self.water_y = int(h * 0.62)
+        self.y_start = int(h * 0.52) if intro is not None else self.water_y + 8   # 그물 자리 / 수면
         self.shake = 0.0
         self.final = variant == "final"
         self._fish_pose = None
@@ -143,10 +147,13 @@ class LegendShow:
             # 쾅: 물보라 폭발 (힘차게 위로 터지고 떨어짐) + 묵직한 흔들림 1회
             cx = self.w / 2
             n = min(self._budget(), self.fx["splash"] // half)
+            net = self.intro is not None
             for _ in range(max(0, n)):
                 a = r.uniform(-math.pi * 0.92, -math.pi * 0.08)
                 spd = r.uniform(90, 300)
-                self.splash.append([cx + r.uniform(-60, 60), self.water_y, math.cos(a) * spd * 0.9, math.sin(a) * spd,
+                # 그물에서: 물이 사방으로 쏟아짐 / 수면에서: 위로 폭발
+                y0 = self.y_start + (r.uniform(0, 18) if net else 0)
+                self.splash.append([cx + r.uniform(-60, 60), y0, math.cos(a) * spd * 0.9, math.sin(a) * spd,
                                     r.uniform(0.9, 1.6), 1.6, "drop", r.uniform(1, 3)])
             if not self.reduce:
                 self.shake = 1.0
@@ -171,7 +178,7 @@ class LegendShow:
             p[1] += p[3] * dt * sp
             p[3] += 520 * dt * sp
             p[4] -= dt * sp
-        self.splash = [p for p in self.splash if p[4] > 0 and p[1] < self.water_y + 12]
+        self.splash = [p for p in self.splash if p[4] > 0 and p[1] < max(self.water_y + 12, self.y_start + 60)]
         for p in self.dust:   # 금가루: 터졌다가 천천히 내려옴
             p[0] += p[2] * dt * sp
             p[1] += p[3] * dt * sp
@@ -192,7 +199,7 @@ class LegendShow:
         m = self.m
         u = clamp((self.t - m["hit"]) / max(0.3, m["scales"] - m["hit"] + 0.2), 0, 1)
         k = 1 - (1 - u) ** 3 + 0.06 * math.sin(math.pi * u)  # 힘차게 올라 살짝 넘쳤다 자리 잡음
-        y = lerp(self.water_y + 8, self.h * 0.40, k)
+        y = lerp(self.y_start, self.h * 0.40, k)
         if self.t > m["card"] - 0.3:
             y = lerp(y, self.h * 0.30, smoothstep((self.t - (m["card"] - 0.3)) / 0.5))
         bob = math.sin(self.clock * 1.4) * 2 * u
@@ -205,13 +212,26 @@ class LegendShow:
     # ── 그리기 ──
     def draw(self, canvas: pygame.Surface, pal: dict) -> None:
         t0 = time.perf_counter()
-        self._draw(canvas)
+        self._draw(canvas, pal)
         ms = (time.perf_counter() - t0) * 1000
         self.draw_ms = ms if self.draw_ms == 0 else self.draw_ms * 0.9 + ms * 0.1
         if self.mobile and self.draw_ms > 22 and self.t > 0.5:
             self._lower()
 
-    def _draw(self, canvas: pygame.Surface) -> None:
+    def _draw_net(self, stage, pal) -> None:
+        """뜰채: 물고기가 튀어 오른 자리에서 아래로 빠짐 (LandingCinematic 의 뜰채 그림 그대로)."""
+        if self.intro is None or not pal:
+            return
+        u = self.t / 0.8
+        if u >= 1:
+            return
+        y = self.y_start + 14 + 420 * max(0.0, u) ** 2
+        try:
+            self.intro._draw_net(stage, pal, self.w / 2, y, self.intro.net_r, False, None)
+        except (KeyError, AttributeError):
+            pass
+
+    def _draw(self, canvas: pygame.Surface, pal: dict | None = None) -> None:
         w, h = canvas.get_size()
         m, t = self.m, self.t
         stage = canvas.copy()
@@ -228,9 +248,21 @@ class LegendShow:
         tint = pygame.Surface((w, h))
         tint.fill(tuple(int(v * warm) for v in (255, 170, 40)))
         stage.blit(tint, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+        if self.intro is not None and t < 0.5:
+            # 뜰채 단계에서 어두워졌던 하늘·금빛 기둥이 0.5초에 걸쳐 걷힘 (화면 전환이 튀지 않게)
+            dk = 1 - smoothstep(clamp(t / 0.5, 0, 1))
+            dim = pygame.Surface((w, h))
+            dim.fill((10, 6, 20))
+            dim.set_alpha(int(150 * dk))
+            stage.blit(dim, (0, 0))
+            for i in range(70):
+                c = tuple(int(v * dk * 0.3 * (1 - i / 70)) for v in (255, 220, 120))
+                pygame.draw.line(light, c, (w / 2 - i, 0), (w / 2 - i, h))
+                pygame.draw.line(light, c, (w / 2 + i, 0), (w / 2 + i, h))
         self._draw_unique_back(stage, light)
         self._draw_rays(light, fx, fy, _env(t, m["scales"] - 0.2, m["climax"], m["afterglow"], m["wait"] + 0.8))
         self._draw_splash(stage, light, back=True)
+        self._draw_net(stage, pal)
         self._draw_fish(stage, fx, fy)
         self._draw_splash(stage, light, back=False)
         self._draw_unique_front(stage, light)
