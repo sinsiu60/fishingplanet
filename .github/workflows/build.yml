@@ -33,6 +33,7 @@ jobs:
         run: |
           python tools/bake_sfx.py --check
           python tools/bake_music.py --check
+          python tools/bake_indoor.py --check
           python tools/sound_audit.py --strict
       - name: 아이콘
         run: python tools/make_icon.py build/icon.ico
@@ -81,6 +82,7 @@ jobs:
         run: |
           python tools/bake_sfx.py --check
           python tools/bake_music.py --check
+          python tools/bake_indoor.py --check
       - name: 폰과 같은 pygame 2.6 에서 소리·장면 확인 (pygame-ce 전용 API 쓰면 여기서 실패)
         env:
           SDL_VIDEODRIVER: dummy
@@ -116,6 +118,11 @@ jobs:
           want=$(ls assets/sfx_space/*.ogg | wc -l)
           echo "APK 공간 소리 ${nsp}/${want}개"
           [ "$nsp" -eq "$want" ] || { echo "::error::APK 에 공간 소리가 빠짐 (${nsp}/${want})"; exit 1; }
+          # 소리 구역 실내 버전 (assets/sfx_indoor, DESIGN.md 39)
+          nin=$(tar tf "$T/assets/private.tar" | grep -c 'sfx_indoor/.*\.ogg$' || true)
+          win=$(ls assets/sfx_indoor/*.ogg | wc -l)
+          echo "APK 실내 소리 ${nin}/${win}개"
+          [ "$nin" -eq "$win" ] || { echo "::error::APK 에 실내 소리가 빠짐 (${nin}/${win})"; exit 1; }
           # 오디오 최종 팩 (assets/sfx/reel·success·success_stems + audio_manifest.json) 이 다 들어갔는지
           nrr=$(tar tf "$T/assets/private.tar" | grep -c '\(^\|/\)sfx/\(reel\|success\|success_stems\)/[^/]*\.wav$\|\(^\|/\)sfx/audio_manifest\.json$' || true)
           wrr=$( ( find assets/sfx/reel assets/sfx/success assets/sfx/success_stems -name '*.wav'; ls assets/sfx/audio_manifest.json ) | wc -l)

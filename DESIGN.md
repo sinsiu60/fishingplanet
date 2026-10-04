@@ -3951,3 +3951,106 @@ Y2 도감 별·숙련·포인트·칭호 화면 → Y3 어탁 → Y4 마을·NPC
 | 첫 포획 안내 | `tutorial.py` catch_intro | 첫 물고기 결과 뒤 카드 1회: 살림망 · 판매 장소 · 특급 배송 · 도감 기록·힌트 · 도감 별 |
 | 한 손 쥐기 | `fish_draw.draw_catch_cut` | 손가락이 몸통 앞을 덮던 모양 → 손바닥은 배 아래, 엄지는 옆구리에 비스듬히. 손보다 작은 물고기는 펼친 손바닥 위 |
 | 이어하기 | `menu.py` | 슬롯 3개 중에서 골라 들어감 (최근 슬롯 표시). '불러오기' 버튼은 이어하기로 합침 |
+
+
+---
+
+## 39. 사운드: 위치별 음악 · 실내 환경음 차폐 (AUDIO_ZONES.md, Z1~Z5 — 32장 사운드에 이어서)
+
+### 39-1. 현재 구조 분석 (Z1)
+
+| 항목 | 이번 작업 전 |
+|------|------|
+| 장소 전환 | 마을(VillageScene)이 매 프레임 `fishing.ambience.update(마을 키)` + `adaptive.set_context(대륙)`·`set("menu")`. 건물 안(InteriorScene)은 장면 스택 위에 올라가 마을 update 가 멈추고, 실내는 `adaptive.set("menu")` 만 → **바깥 바탕 반복음·대륙 테마가 그대로** 울림 (조각 소리만 멈춤). 문 소리 `ui_door` 한 종류 |
+| 버스 | `data/audio_config.json bus_rules`: sig(신호, 예약 채널 0~3) · mus(음악 층 14채널 예약 + 스트리밍) · amb(환경음) · sfx · reward · ui(대화 말소리 `ui_voice_*` 포함). 버스별 볼륨·덕킹·리미터는 `Sfx.bus_gain` |
+| 날씨 소리 | `Ambience` (data/ambience.json): 낚시터·마을 바탕 + 날씨 바탕(비·폭풍) + 조각(빗방울·돌풍), 천둥은 낚시 화면 번개(`Lightning`) → `ambience.strike()` 거리 지연. 마을엔 번개·천둥 없음. 안개 = 믹서 '먹먹' (실시간 이동평균 저역) |
+| 미리 굽기 | `tools/bake_sfx.py` (레시피 → assets/sfx_generated, 공간별 → assets/sfx_space), `tools/bake_music.py` (음악 층 → assets/music_generated). CI 가 `--check` |
+| 실시간 필터 | 없음 (pygame 믹서는 채널 음량·좌우만). 안개·슬로우모션 변형은 처음 쓸 때 numpy 로 만든 Sound 캐시 → 실내 차폐는 **미리 구운 실내 버전 + 음량 비율 섞기**로 (모바일 부담 없음) |
+
+### 39-2. 설계 (AUDIO_ZONES.md 그대로)
+
+- 구역: `village_yunseul`·`village_astera`(바깥, 마을 음악·마을 환경음), `fishing`(바깥, 기존 그대로), 실내 `home`·`haru_shop`·`baek_hut`·`ella_workshop`·`oren_study`. UI 창(의뢰 게시판·도감·상점 창)은 구역을 바꾸지 않음, 건물 안 상점 패널은 실내 유지.
+- 차폐 (data/audio/zones.json occlusion): 빗소리 -12dB/700Hz · 천둥 -6dB/350Hz · 폭풍 바람 -12dB/400Hz · 일반 바람 -15dB/500Hz · 파도 -14dB/600Hz · 갈매기·새 -20dB/1500Hz · 마을 사람 -16dB/800Hz · 풀벌레·매미 -18dB/1200Hz, 부드러운 2차 저역 + 0.15초 방 울림. 바깥 효과음은 실내 버전이 없으면 내지 않음. UI·대화 말소리·실내 소리는 차폐 없음.
+- 실내 전용 소리: 지붕·창문 빗소리(비 약 / 폭풍 촘촘·크게) · 창문 덜컹(천둥과 같은 순간) · 창문 틈 바람(폭풍) · 방 공기(항상). 장소별: 집 시계·바닥 삐걱 / 낚시점 릴 달그락 / 오두막 화로 타닥·그물 / 공방 수정 '팅' 6~12초 / 서재 책장·촛불.
+- 장소 음악: 집 = 샤르미온 테마 느린 실내 버전(한 곡 뒤 1~2분 정적) · 낚시점 = 라디오(400~3000Hz + 지지직, -8dB) · 오두막 없음 · 공방 = 엘드라시온 테마 화음 패드 · 서재 = 3분마다 아주 작은 오르골. 스토리 장면이 음악을 정하면 장면 우선.
+- 들어갈 때: 0초 문 열기(바깥 버전) · 0~0.4초 환경음 바깥→실내 · 0~0.8초 음악 · 0.4초 실내 소리 페이드 인 · 0.5초 문 닫기(실내 '툭'). 나올 때: 0초 문 열기(실내 버전) · 실내 소리 0.3초 페이드 아웃 · 환경음 0.4초 · 음악 0.8초 (바깥 음악은 마디가 이어짐). 화면 페이드 0.4초와 같은 때.
+- 날씨: 실내에서 날씨가 바뀌면 1초 크로스페이드. 실내 천둥 = 먹먹한 천둥 + 창문 덜컹, 창문 있는 실내(집·낚시점)는 창밖 0.1초 약한 번쩍 → 0.5~1.5초 뒤 소리. 연속 번쩍임 없음(2초 간격), '화면 효과 줄이기'면 번쩍임 없음. 날씨 이벤트 연출음은 실내에서 없음.
+
+미리 구울 목록 (Z1-3): 바깥 → 실내 버전 22개 (`amb_bed_sea/ocean`, `amb_rain_bed`, `amb_storm_bed`, `amb_rain_drop`, `amb_gust`, `amb_thunder_near/far`, `amb_wave_crash`, `amb_gull`, `amb_bird#0~2`, `amb_owl`, `amb_crystal`, `amb_chatter0~2`, `amb_harbor_bell`, `amb_cricket`, `amb_cicada`, `amb_wind_cold`) · 라디오 1 (`mus_room_radio`) · 장소 음악 2 (`mus_room_home`, `mus_room_crystal`) · 실내 전용 23 (`room_*` 17, `door_*` 6). 낚시터 바탕은 실내가 낚시터 옆에 없어 굽지 않음.
+
+### 39-3. 구현 (Z2~Z4)
+
+| 부분 | 파일 | 내용 |
+|------|------|------|
+| 구역 설정 | `data/audio/zones.json` | 구역 8종 · 차폐 표 · 소리 이름→종류 · 실내 공통/장소별 소리(음량·간격) · 장소 음악 · 창문·문 종류 · 천둥 간격 |
+| 구역 관리자 | `src/audio/zones.py` (`game.zones`, Game 매 프레임) | 장면 스택에서 구역 결정(InteriorScene, 작별 페이드 시작 = 바깥으로), `sfx.indoor`(0~1) 0.4초 · `adaptive.zone_gain` 0.8초, 실내 소리·장소 음악, 실내에 있는 동안 마을 환경음 계속, 폭풍 천둥(마을·실내), 창밖 번쩍임(`window_flash`), 문 소리 타임라인, 마을에 있는 동안 그 마을 건물 소리 미리 읽기(문 열 때 멈칫 없음), 사운드 테스트 룸 시험(`test`) |
+| 믹서 | `src/audio/sfx.py` | 반복음에 실내 버전('~indoor')이 있으면 **같은 순간 같이 시작**해 두 채널을 같이 돌리고 음량 비율만 바꿈 (끊김·처음부터 없음). 채널이 모자라 짝을 못 얻으면 실내에선 바깥 버전을 -18dB 로. 실내 버전·녹음 파일 읽기 (`assets/sfx_indoor`, `assets/sfx/indoor` 우선) |
+| 환경음 | `src/audio/ambience.py` | 실내면 조각·천둥을 실내 버전으로(없으면 안 냄) + 천둥에 창문 덜컹, 바탕 1초 크로스페이드(일정한 속도), 천둥 시간차 지정(`strike(delay)`), `amb_chatter` 묶음 이름 수정(예전엔 안 울렸음) |
+| 음악 | `src/audio/adaptive_music.py` | `zone_gain` — 실내에선 바깥 음악을 멈추지 않고 소리만 내렸다가 나오면 그 자리부터 |
+| 굽기 | `tools/bake_indoor.py` (→ assets/sfx_indoor), `tools/gen_room_recipes.py` (→ sfx_recipes.json room_*·door_*, `bake_sfx.py` 로 굽기) | 실내 버전: 원형(반복음) FFT 저역 + 방 울림 + 음량 dB, 길이는 바깥 버전과 같음. 라디오·집 곡·공방 패드는 대륙 테마에서 만듦. CI `--check` + APK 포함 확인 |
+| 화면 | `src/scene/interior.py`, `src/render/interior.py` | 문 소리는 구역 관리자로 옮김, 창밖 번쩍임(`env.flash`) |
+| 스토리 | `cutscene.py`, `finale.py` | 음악을 정하는 장면에 `story_music` → 장소 음악이 비켜 줌 |
+| 테스트 | `src/scene/sound_test.py` | 3쪽 '소리 구역': 장소(바깥 마을 2 ↔ 실내 5) · 날씨 4 · 천둥 · 섞임·반복음 표시 |
+
+### 39-4. 검증 (Z5)
+
+1) 측정 (`python tools/audio_zone_check.py`): 음량 설정 = 표 그대로, 전체 = 고음 깎기 손실까지 포함한 실제 차이, 고음 = 깎기 주파수 위 에너지 차이 (전체보다 더 줄어 '먹먹함').
+
+```
+소리                  종류              음량설정    전체dB    깎기Hz    고음dB
+amb_bed_sea         waves            -14   -16.5     600   -23.3  ok
+amb_bed_ocean       waves            -14   -16.1     600   -21.2  ok
+amb_rain_bed        rain             -12   -30.6     700   -34.5  ok
+amb_storm_bed       storm_wind       -12   -21.1     400   -30.5  ok
+amb_bird#0          birds            -20   -30.9    1500   -31.0  ok
+amb_bird#1          birds            -20   -33.4    1500   -33.5  ok
+amb_bird#2          birds            -20   -36.3    1500   -36.5  ok
+amb_owl             birds            -20   -20.8    1500       -  ok
+amb_cricket         insects          -18   -41.7    1200   -41.8  ok
+amb_gull            birds            -20   -24.4    1500   -24.6  ok
+amb_wave_crash      waves            -14   -17.7     600   -25.5  ok
+amb_crystal         birds            -20   -27.0    1500   -27.0  ok
+amb_gust            storm_wind       -12   -28.9     400   -29.7  ok
+amb_rain_drop       rain             -12   -28.8     700   -29.2  ok
+amb_thunder_near    thunder           -6    -8.4     350   -17.4  ok
+amb_thunder_far     thunder           -6    -7.1     350   -12.7  ok
+amb_cicada          insects          -18   -40.1    1200   -40.3  ok
+amb_wind_cold       wind             -15   -35.8     500   -36.5  ok
+amb_chatter0        people           -16   -19.7     800   -23.0  ok
+amb_chatter1        people           -16   -20.0     800   -22.7  ok
+amb_chatter2        people           -16   -19.7     800   -22.9  ok
+amb_harbor_bell     people           -16   -18.8     800   -23.9  ok
+
+실내 소리 음량 (말소리 가장 작은 것 -37.3dB, 기준 -40.3dB 아래)
+  room_air                  -45.9  ok
+  room_window_wind          -40.8  ok
+  room_window_rattle        -40.7  ok
+  room_rain_roof_light      -42.8  ok
+  room_rain_roof_heavy      -40.6  ok
+  room_clock                -50.2  ok
+  room_floor_creak          -40.6  ok
+  room_reel_rattle          -44.0  ok
+  room_fire                 -40.7  ok
+  room_fire_pop0            -42.7  ok
+  room_net_sway             -40.6  ok
+  room_crystal_ting         -40.7  ok
+  room_page                 -40.6  ok
+  room_candle               -50.4  ok
+결과: ok
+```
+
+빗소리처럼 고음이 대부분인 소리는 벽에 막혀 -30dB 가까이 줄고, 그 자리를 실내 '지붕·창문 빗소리'가 채운다 (보조 프롬프트로 조절: zones.json occlusion dB / Hz → `python tools/bake_indoor.py`).
+
+2) 전환: 마을 ↔ 실내 5곳 × 10번 (0.6초·1.2초 머물기, 실시간) — 바깥 바탕이 같은 채널·같은 소리로 계속(다시 시작 0), 나온 뒤 남은 실내 소리 0, 섞임·음악 복귀 50/50. 최대 동시 채널 11/40, 프레임 최악 14.6ms (미리 읽기 전 58.6ms).
+3) 날씨: 맑음·비·폭풍·안개 × 실내 5곳 = 20/20 (방 공기 + 비 = 지붕 빗소리 약 / 폭풍 = 강 + 창문 틈 바람 / 안개·맑음 = 없음 + 장소 소리).
+4) 천둥: 집 1.03초 · 낚시점 1.13초 (번쩍 → 먹먹한 천둥 + 덜컹), 오두막·공방·서재 번쩍임 없음, 화면 효과 줄이기 = 번쩍임 없음, 2초 안 연속 번쩍임 없음.
+5) 스토리 장면 음악 지정 → 장소 음악 비켜 줌 → 끝나면 복귀.
+6) 마을에서 상점·도감·의뢰 게시판 창 = 바깥 그대로, 건물 안 상점 패널 = 실내 유지.
+7) 모바일 미리보기(phone21): 최대 동시 채널 10/40, 프레임 최악 11.2ms.
+- 실내 소리 음량: 모든 room_* 가 대화 말소리(가장 작은 것 -37.3dB)보다 3dB 이상 작게 (audio_zone_check 가 같이 확인).
+
+8) 직접 들어볼 체크리스트
+- [ ] 폭풍 치는 밤에 집에 들어가면 "안에 들어와서 다행이다" 싶은 아늑함이 드는가 (사운드 테스트 룸 3쪽: 장소 '주인공의 집', 날씨 '폭풍', 천둥)
+- [ ] 하루네 낚시점 라디오가 가게 안에서 틀어둔 소리처럼 들리는가
+- [ ] 오두막 화로 소리와 바깥 빗소리가 어울리는가
+- [ ] 문을 열고 나올 때 바깥 소리가 갑자기 튀지 않는가

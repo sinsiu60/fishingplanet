@@ -66,6 +66,8 @@ class Game:
         self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
         from src.audio.adaptive_music import AdaptiveMusic
         self.adaptive = AdaptiveMusic(self.sfx)  # 적응형 음악 층 (32장 S6)
+        from src.audio.zones import AudioZones
+        self.zones = AudioZones(self)            # 소리 구역: 바깥 ↔ 실내 (DESIGN.md 39)
         bootlog.mark("음악 준비")
         self.save = None            # 현재 SaveGame (메뉴에선 None)
         self.autosave_t = 0.0
@@ -284,6 +286,7 @@ class Game:
                 ticks += 1
             t1 = time.perf_counter() if perf else 0.0
             self.music.update()
+            self.zones.update(frame_time)
             self.adaptive.update(frame_time, quiet=self.music.target is not None or self.music.current is not None)
             self.sfx.update(frame_time, slow=self.time_scale < 0.99)  # 믹서: 덕킹·리미터·버스 볼륨
             self.haptics.update(frame_time)  # 소리 어택에 맞춘 진동 (32장 S5)

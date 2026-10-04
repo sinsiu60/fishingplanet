@@ -259,6 +259,7 @@ class CutsceneScene(Scene):
             sfx.loop(n, True, vol)
             self.loops.append(n)
         elif name.startswith("music:"):
+            self.story_music = name[6:]   # 장면이 음악을 정함 → 장소 음악은 비켜 줌 (소리 구역, DESIGN.md 39)
             self.game.adaptive.set_context(name[6:], None)   # 샤르미온 대륙 테마
             self.game.adaptive.set("menu")
         else:

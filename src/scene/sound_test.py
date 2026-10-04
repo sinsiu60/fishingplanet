@@ -47,7 +47,17 @@ class SoundTestScene(Scene):
         self.mus_i = 0
         self.btn_mus = ui.Button((246, 250, 150, 15), "", self._next_mus)
         self.page = 0   # 0 연속음 / 1 성공음
-        self.btn_page = ui.Button((380, 102, 88, 13), "", lambda: setattr(self, "page", 1 - self.page))
+        self.btn_page = ui.Button((380, 102, 88, 13), "", self._next_page)
+        # 소리 구역 (DESIGN.md 39): 장소(바깥 마을 ↔ 실내 5곳) · 날씨 · 천둥
+        zc = game.zones.cfg["zones"]
+        self.zone_ids = [z for z in zc if zc[z].get("name")]
+        self.zone_i = 0
+        self.weathers = [("clear", "맑음"), ("rain", "비"), ("storm", "폭풍"), ("fog", "안개")]
+        self.weather_i = 0
+        self.btn_zone = ui.Button((246, 124, 222, 15), "", self._next_zone)
+        self.btn_weather = ui.Button((246, 144, 110, 15), "", self._next_weather)
+        self.btn_thunder = ui.Button((360, 144, 108, 15), "천둥 (폭풍)", lambda: game.zones.force_thunder())
+        self.btn_zone_off = ui.Button((246, 164, 222, 15), "구역 시험 끄기", self._zone_off)
         self.btn_rush = ui.Button((404, 222, 64, 13), "돌진", self._rush_sim)
         self.rush_t = -1.0
         self.glow: list[float] = []      # 노란 빛 미리보기 시작 시각 (self.t)
@@ -73,6 +83,10 @@ class SoundTestScene(Scene):
         self.top = max(0, min(max(0, len(self.names()) - ROWS), self.top + d))
 
     def _back(self) -> None:
+        self._zone_off()
+        self._back2()
+
+    def _back2(self) -> None:
         if self.fa is not None:
             self.fa.stop()
         if getattr(self, "_space", None) is not None and self._space != self._space0:
@@ -118,6 +132,25 @@ class SoundTestScene(Scene):
                 self.glow.append(self.t + max(0.0, (info["second_impact_ms"] or 460) / 1000 + off))
             self.game.haptics.vibrate("perfect", 1.0, delay=max(0.0, info["impact_ms"] / 1000 + off))
 
+    def _next_page(self) -> None:
+        self.page = (self.page + 1) % 3
+        if self.page != 2:
+            self._zone_off()
+
+    def _zone_test(self) -> None:
+        self.game.zones.test = {"zone": self.zone_ids[self.zone_i], "weather": self.weathers[self.weather_i][0]}
+
+    def _next_zone(self) -> None:
+        self.zone_i = (self.zone_i + 1) % len(self.zone_ids)
+        self._zone_test()
+
+    def _next_weather(self) -> None:
+        self.weather_i = (self.weather_i + 1) % len(self.weathers)
+        self._zone_test()
+
+    def _zone_off(self) -> None:
+        self.game.zones.test = None
+
     def _toggle_fa(self) -> None:
         self.fa_on = not self.fa_on
         if not self.fa_on and self.fa is not None:
@@ -136,7 +169,8 @@ class SoundTestScene(Scene):
             for b in (self.btn_back, self.btn_up, self.btn_dn, self.btn_mus, self.btn_page):
                 if b.click(m):
                     return
-            for b in ([self.btn_fa, self.btn_rush] if self.page == 0 else self.succ_btns):
+            zb = [self.btn_zone, self.btn_weather, self.btn_thunder, self.btn_zone_off]
+            for b in ([self.btn_fa, self.btn_rush] if self.page == 0 else self.succ_btns if self.page == 1 else zb):
                 if b.click(m):
                     return
             names = self.names()
@@ -231,8 +265,25 @@ class SoundTestScene(Scene):
                 gl = pygame.Surface((222, 30), pygame.SRCALPHA)
                 gl.fill((255, 226, 110, int(220 * a)))
                 canvas.blit(gl, (246, 216))
-        self.btn_page.label = "▶ 성공음" if self.page == 0 else "▶ 연속음"
+        self.btn_page.label = ("▶ 성공음", "▶ 소리 구역", "▶ 연속음")[self.page]
         self.btn_page.draw(canvas, self.mouse)
+        if self.page == 2:
+            z = self.game.zones
+            text(canvas, "소리 구역 (실내/바깥 전환)", (246, 108), ui.ACCENT, 11, "midleft")
+            zid = self.zone_ids[self.zone_i]
+            zc = z.cfg["zones"][zid]
+            kind = "실내" if zc.get("type") == "indoor" else "바깥"
+            self.btn_zone.label = f"장소: {zc['name']} ({kind}) ▶"
+            self.btn_weather.label = f"날씨: {self.weathers[self.weather_i][1]} ▶"
+            for b in (self.btn_zone, self.btn_weather, self.btn_thunder, self.btn_zone_off):
+                b.draw(canvas, self.mouse)
+            on = "시험 중" if z.test else "꺼짐 (게임 장면 그대로)"
+            text(canvas, f"{on} · 실내 섞임 {self.sfx.indoor:.2f} · 바깥 음악 ×{self.game.adaptive.zone_gain:.2f}",
+                 (246, 186), ui.TEXT, 11, "midleft")
+            loops = ", ".join(sorted(n.replace("amb_", "").replace("room_", "") for n in self.sfx.loops))
+            from src.ui.hud import wrap_text
+            for i, ln in enumerate(wrap_text("반복: " + (loops or "-"), 220)[:3]):
+                text(canvas, ln, (246, 200 + i * 12), ui.DIM, 11, "midleft")
         if self.page == 1:
             text(canvas, "성공음 (등급 × 연속 단계)", (246, 108), ui.ACCENT, 11, "midleft")
             for r, lab in enumerate(self.succ_labels):

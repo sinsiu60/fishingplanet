@@ -47,6 +47,10 @@ def _window_view(canvas, rect, env, sea: bool = True) -> None:
         for k in range(3):   # 윤슬
             x = r.x + int((env["t"] * 9 + k * 23) % max(1, r.w - 6))
             canvas.fill(lerp_color(pal["water_top"], (255, 255, 255), 0.5), (x, r.y + sky_h + 3 + k * 4, 5, 1))
+    if env.get("flash", 0) > 0:   # 실내 천둥: 창밖이 0.1초 약하게 하얗게 (바깥 번개보다 약하게)
+        fl = pygame.Surface(r.size, pygame.SRCALPHA)
+        fl.fill((235, 240, 255, int(120 * min(1.0, env["flash"]))))
+        canvas.blit(fl, r.topleft)
     if env["night"] > 0.4:
         rnd = random.Random(r.x * 7 + r.y)
         for _ in range(max(2, r.w * sky_h // 220)):

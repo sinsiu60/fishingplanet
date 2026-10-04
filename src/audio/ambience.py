@@ -4,6 +4,9 @@
   - 날씨: 비·폭풍 = 바탕 하나 더 + 빗방울 조각 (+ 폭풍 바람), 안개 = 믹서 '먹먹' (환경음·효과음 고음 깎음) + 조각 드물게·바탕 작게.
   - 천둥: 번개(섬광) 뒤 거리만큼 늦게 — 가까우면 빨리·크게 '쩍', 멀면 늦게·작게 '우르릉' (thunder_delay).
   - 파이팅 중: 조각 간격 ×2.5 (바탕은 믹서가 계속 −4dB), 전설이면 전체 ×0.4.
+  - 소리 구역 (DESIGN.md 39): 실내(sfx.indoor ≥ 0.5)면 조각·천둥은 미리 구운 실내 버전('~indoor')으로, 실내 버전이 없는 바깥 소리는 내지 않는다.
+    실내 천둥엔 창문 덜컹(room_window_rattle)이 같이. 바탕은 믹서가 바깥·실내 버전을 같이 돌린다 (sfx.loop).
+  - 날씨·장소가 바뀌면 바탕은 1초 동안 서로 섞이며 바뀐다.
 """
 import random
 
@@ -19,6 +22,9 @@ class Ambience:
         self.timers: dict[str, float] = {}     # 조각 → 남은 초
         self.key = None
         self.thunder: list[list] = []          # [남은 초, 이름, 음량]
+        self.cur: dict[str, float] = {}        # 바탕 지금 음량 (1초 크로스페이드)
+        self.span: dict[str, float] = {}       # 바탕마다 마지막 목표 음량 (페이드를 일정한 속도로)
+        self.xfade = 1.0
 
     def _frags(self, spot: str, weather: str, season: str | None = None) -> list:
         out = list(self.cfg["spots"].get(spot, {}).get("frags", []))
@@ -28,17 +34,18 @@ class Ambience:
         return out
 
     def stop(self) -> None:
-        for name in self.beds:
+        for name in set(self.beds) | set(self.cur):
             self.sfx.loop(name, False)
         self.beds = {}
+        self.cur = {}
         self.key = None
         self.thunder = []
         self.sfx.muffle = False
 
-    def strike(self) -> float:
-        """번개가 쳤다 → 천둥 예약. 돌려주는 값 = 시간차(초)."""
+    def strike(self, delay: float | None = None) -> float:
+        """번개가 쳤다 → 천둥 예약. 돌려주는 값 = 시간차(초). delay: 실내처럼 시간차를 정해 줄 때."""
         lo, hi = self.cfg["thunder"]["delay"]
-        d = self.rnd.uniform(lo, hi)
+        d = self.rnd.uniform(lo, hi) if delay is None else max(lo, min(hi, delay))
         near = d < self.cfg["thunder"]["near_below"]
         k = 1 - (d - lo) / (hi - lo)
         self.thunder.append([d, "amb_thunder_near" if near else "amb_thunder_far", 0.55 + 0.45 * k])
@@ -57,11 +64,21 @@ class Ambience:
         wb = c["weather"].get(weather, {}).get("bed")
         if wb:
             want[wb[0]] = wb[1] * mult
-        for name in list(self.beds):
-            if name not in want:
+        # 바탕: 지금 음량 → 목표로 1초 크로스페이드 (새 바탕은 0에서, 빠지는 바탕은 0까지 내려간 뒤 끔)
+        for name in set(self.cur) | set(want):
+            goal = want.get(name, 0.0)
+            cur = self.cur.get(name, 0.0 if self.cur or self.key is not None else goal)
+            if goal > 0:
+                self.span[name] = goal
+            step = dt * max(self.span.get(name, cur), 0.05) / self.xfade
+            cur = min(goal, cur + step) if goal > cur else max(goal, cur - step)
+            if goal <= 0 and cur <= 0:
                 self.sfx.loop(name, False)
-        for name, vol in want.items():
-            self.sfx.loop(name, True, vol)
+                self.cur.pop(name, None)
+                self.span.pop(name, None)
+                continue
+            self.cur[name] = cur
+            self.sfx.loop(name, True, cur)
         self.beds = want
         # 조각: 낚시터·날씨가 바뀌면 처음 간격을 새로 뽑는다 (모두 한꺼번에 울리지 않게)
         key = (spot, weather, season)
@@ -78,13 +95,32 @@ class Ambience:
                 if when == "any" or (when == "night") == night:
                     snd = name
                     if name.endswith("#"):
-                        n = sum(1 for k in self.sfx.sounds if k.startswith(name))
-                        snd = f"{name}{self.rnd.randrange(max(1, n))}"
-                    self.sfx.play(snd, vol * self.rnd.uniform(0.7, 1.0) * mult,
-                                  pan=self.rnd.uniform(-c["pan"], c["pan"]))
+                        # 'amb_bird#' → amb_bird#0.. / 'amb_chatter#' → amb_chatter0.. (이름에 # 없는 묶음도)
+                        pre = name if any(k.startswith(name) for k in self.sfx.sounds) else name[:-1]
+                        n = sum(1 for k in self.sfx.sounds if k.startswith(pre) and k[len(pre):].isdigit())
+                        snd = f"{pre}{self.rnd.randrange(max(1, n))}"
+                    snd = self._zoned(snd)
+                    if snd:
+                        self.sfx.play(snd, vol * self.rnd.uniform(0.7, 1.0) * mult,
+                                      pan=self.rnd.uniform(-c["pan"], c["pan"]))
             self.timers[name] = t
         for th in self.thunder:
             th[0] -= dt
         for th in [x for x in self.thunder if x[0] <= 0]:
-            self.sfx.play(th[1], th[2])
+            snd = self._zoned(th[1])
+            if snd:
+                self.sfx.play(snd, th[2])
+            if self.indoor():   # 실내: 천둥 저음과 같은 순간 창문 '덜컥' (작게, data/audio/zones.json)
+                name, vol = load_json("audio/zones.json")["room_common"]["thunder_rattle"]
+                self.sfx.play(name, vol * th[2])
         self.thunder = [x for x in self.thunder if x[0] > 0]
+
+    def indoor(self) -> bool:
+        return getattr(self.sfx, "indoor", 0.0) >= 0.5
+
+    def _zoned(self, name: str) -> str | None:
+        """실내면 실내 버전 (없으면 None = 내지 않음), 바깥이면 그대로."""
+        if not self.indoor():
+            return name
+        alt = f"{name}~indoor"
+        return alt if alt in self.sfx.sounds else None

@@ -62,6 +62,7 @@ class AdaptiveMusic:
         self.sgain = 1.0           # 상황별 음악 배율 (state_gain, 부드럽게 바뀜)
         self.fm = self.cfg.get("fight_music", {})
         self.crisis = False        # Z4 위기 (장면이 판정)
+        self.zone_gain = 1.0       # 소리 구역 (DESIGN.md 39): 실내면 0 쪽으로 — 바깥 음악은 멈추지 않고 소리만 줄여 두었다가 나오면 그 자리부터
         if self.enabled:
             base = sfx.n_sig
             self.ch = {k: pygame.mixer.Channel(base + i) for i, k in enumerate(LAYERS)}
@@ -285,7 +286,7 @@ class AdaptiveMusic:
         fade_ctx = max(0.0, self.ctx_fade / CTX_FADE) if self.ctx_next is not None else 1.0
         want = self._sg(self.applied[0]) if self.applied else 1.0
         self.sgain += max(-dt, min(dt, want - self.sgain))  # 초당 1.0 만큼 (메뉴 → 낚시터 등)
-        bus = self.sfx.bus_gain("mus") * GAIN * self.sgain * (0.0 if quiet else 1.0) * fade_ctx
+        bus = self.sfx.bus_gain("mus") * GAIN * self.sgain * (0.0 if quiet else 1.0) * fade_ctx * self.zone_gain
         for k in LAYERS:
             goal = self.goal[k] * mult.get(k, 1.0)
             cur = self.level[k]
@@ -297,7 +298,7 @@ class AdaptiveMusic:
                     self._vol_q[k] = q
                     self.ch[k].set_volume(q / 128)
         if self.sting_left > 0:
-            q = round(min(1.0, GAIN * self._sg("sting") * self.sfx.bus_gain("mus") * (0.0 if quiet else 1.0)) * 128)
+            q = round(min(1.0, GAIN * self._sg("sting") * self.sfx.bus_gain("mus") * (0.0 if quiet else 1.0) * self.zone_gain) * 128)
             if self._vol_q.get("_sting") != q:
                 self._vol_q["_sting"] = q
                 self.ch_sting.set_volume(q / 128)

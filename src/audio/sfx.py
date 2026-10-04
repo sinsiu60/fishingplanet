@@ -109,8 +109,24 @@ class Sfx:
             except Exception as e:
                 if len(self.missing_baked) == 1:
                     bootlog.mark(f"  {name} 합성 실패: {e!r}")
+        self._load_indoor()
         from src.audio.reel_audio import register_success
         register_success(self)  # 패턴 성공음 'succ_*' (오디오 최종 팩 — assets/sfx/success, 그대로 재생)
+
+    def _load_indoor(self) -> None:
+        """소리 구역 (DESIGN.md 39): 실내 버전 '<이름>~indoor' · 실내 음악 (assets/sfx_indoor, tools/bake_indoor.py).
+        assets/sfx/indoor/ 의 녹음 파일이 우선 (room_·door_·mus_room_ 은 그 이름 그대로, 나머지는 그 소리의 실내 버전)."""
+        from src.core.paths import asset_path
+        for d, ext_ok in ((asset_path("sfx_indoor"), True), (asset_path("sfx", "indoor"), True)):
+            if not d.is_dir():
+                continue
+            for p in d.iterdir():
+                if p.suffix.lower() not in (".ogg", ".wav"):
+                    continue
+                stem = p.stem.replace("__", "#")
+                if d.name == "indoor" and "~" not in stem and not stem.startswith(("room_", "door_", "mus_room_")):
+                    stem += "~indoor"
+                self.sounds.add_lazy(stem, p)   # 녹음 파일(나중에 읽는 폴더)이 구운 것을 덮어씀
 
     def _to_pcm_stereo(self, st: np.ndarray) -> np.ndarray:
         """합성 엔진의 스테레오 float → 믹서 형식 (샘플레이트 맞춤, 모노 믹서면 섞음)."""
@@ -146,6 +162,7 @@ class Sfx:
         self.variants: dict[str, list] = {}
         self.slowed: dict[str, pygame.mixer.Sound] = {}
         self.muffle = False      # 안개: 효과음·환경음 고음을 깎은 '먹먹한' 변형으로 (32장 S7)
+        self.indoor = 0.0        # 소리 구역 (DESIGN.md 39): 0 바깥 ~ 1 실내 — 바깥·실내 버전 반복음의 음량 비율
         self.muffled: dict[str, pygame.mixer.Sound] = {}
         self._bus_cache: dict[str, str] = {}
         self.clock = 0.0
@@ -492,6 +509,13 @@ class Sfx:
         """채널 음량 반영. 값이 실제로 바뀔 때만 set_volume (믹서 단위 1/128로 비교).
         폰에선 set_volume 마다 오디오 장치를 잠가서(패닝 효과 등록) 매 프레임 수십 번 부르면 파이팅이 끊겼다 (v0.8.8)."""
         v = min(1.0, e["vol"] * self.bus_gain(e["bus"]))
+        z = e.get("zmix")
+        if z == "out":
+            v *= 1.0 - self.indoor
+        elif z == "in":
+            v *= self.indoor
+        elif z == "out_only":   # 실내 버전 채널을 못 얻었을 때: 실내에선 바깥 버전을 아주 작게만 (-18dB)
+            v *= 1.0 - self.indoor * 0.875
         if e["pan"] is None:
             lr = (v, None)
         else:
@@ -554,11 +578,13 @@ class Sfx:
             if e is not None and e["ch"].get_busy() and e["ch"].get_sound() is snd:
                 e["vol"] = volume
                 self._apply(e)
+                if e.get("pair") is not None:
+                    e["pair"]["vol"] = volume
+                    self._apply(e["pair"])
                 return
             if e is not None:
-                e["ch"].stop()
+                self._stop_loop(e)
                 self.loops.pop(name, None)
-                self.active = [a for a in self.active if a is not e]
             if not self._make_room(name, bus, grade=1):
                 return
             got = self._channel(bus) if bus == "sig" else self._free() or self._channel(bus)
@@ -573,9 +599,36 @@ class Sfx:
             self.active.append(e)
             self.loops[name] = e
             self._apply(e)
+            alt = f"{name}~indoor"
+            if alt in self.sounds:
+                # 실내 버전을 같은 순간에 같이 돌린다 (같은 길이) → 들어가고 나올 때 음량 비율만 바꿈 (끊김·처음부터 없음)
+                got2 = self._free()
+                e["zmix"] = "out_only"
+                if got2 is not None:
+                    i2, ch2 = got2
+                    s2 = self.sounds[alt]
+                    s2.set_volume(1.0)
+                    ch.play(snd, loops=-1)          # 둘을 같은 순간에 다시 시작 (위치 맞춤)
+                    ch2.play(s2, loops=-1)
+                    e["zmix"] = "out"
+                    pe = {"ch": ch2, "idx": i2, "name": alt, "bus": bus, "prio": e["prio"], "t0": self.clock,
+                          "vol": volume, "pan": None, "loop": True, "zmix": "in"}
+                    e["pair"] = pe
+                    self.active = [a for a in self.active if a["idx"] != i2]
+                    self.active.append(pe)
+                    self._apply(e)
+                    self._apply(pe)
         elif e is not None:
-            e["ch"].stop()
+            self._stop_loop(e)
             self.loops.pop(name, None)
+
+    def _stop_loop(self, e: dict) -> None:
+        e["ch"].stop()
+        drop = [e]
+        if e.get("pair") is not None:
+            e["pair"]["ch"].stop()
+            drop.append(e["pair"])
+        self.active = [a for a in self.active if all(a is not d for d in drop)]
 
     def stats(self) -> dict:
         """사운드 테스트 룸·검증용: 버스별 재생 중 수, 리미터, 덕킹."""

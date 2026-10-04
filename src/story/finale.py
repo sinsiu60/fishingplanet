@@ -34,6 +34,7 @@ class ChoiceScene(Scene):
         self.choice = None
         self.ct = 0.0
         game.adaptive.stop()          # 음악 없음
+        self.story_music = "none"     # 장면이 음악을 정함 (소리 구역은 장소 음악을 내지 않음)
         game.sfx.loop("st_spring", True, 0.35)   # 샘물 소리
         w = game.screen.canvas.get_width()
         h = game.screen.canvas.get_height()
@@ -168,6 +169,7 @@ class EpilogueScene(Scene):
         self.st = 0.0
         self.mouse = (0, 0)
         self.thumb = draw_sunset_thumb()
+        self.story_music = "epilogue"   # 에필로그가 음악을 정함 (DESIGN.md 39)
         game.adaptive.set_context("sharmion", None)
         game.adaptive.set("menu")
 

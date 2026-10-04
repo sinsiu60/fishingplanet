@@ -10,7 +10,7 @@ source.dir = .
 source.include_exts = py,json,ttf,txt,png,ogg,wav,mp3
 source.exclude_dirs = tools, build, dist, bin, .venv, .github, .buildozer, android, __pycache__
 source.exclude_patterns = *.bat,*.md,requirements*.txt,dist_readme.txt
-version = 1.0.2
+version = 1.1.0
 
 # pygame-ce는 p4a 레시피가 없어서 pygame을 쓴다 — 로컬 레시피(android/recipes/pygame)로 2.6.1, 코드는 pygame 2.1.3·2.6.1 호환 확인 (DESIGN.md 26장)
 # numpy = 효과음 합성, pyjnius·android = 진동·화면 켜짐·공유 (src/platform/android.py)

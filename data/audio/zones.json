@@ -1,0 +1,49 @@
+{
+ "_설명": "소리 구역 (AUDIO_ZONES.md, DESIGN.md 39). 실내 = 건물 안 대화 화면(InteriorScene)이 떠 있는 동안. UI 창(의뢰 게시판·도감·상점 창)은 구역을 바꾸지 않는다. occlusion: 바깥 소리 종류별 [음량 dB, 고음 깎기 Hz] — Hz 는 미리 굽기(tools/bake_indoor.py), dB 는 재생할 때. names: 소리 이름 → 종류. outside: 실내에서 계속 돌리는 바깥 환경음(data/ambience.json 의 마을 키).",
+ "transition": {"amb_sec": 0.4, "music_sec": 0.8, "room_in_at": 0.4, "room_in_sec": 0.4, "room_out_sec": 0.3, "door_close_at": 0.5, "weather_xfade": 1.0},
+ "occlusion": {
+  "rain": [-12, 700], "thunder": [-6, 350], "storm_wind": [-12, 400], "wind": [-15, 500], "waves": [-14, 600],
+  "birds": [-20, 1500], "people": [-16, 800], "insects": [-18, 1200]
+ },
+ "names": {
+  "amb_rain_bed": "rain", "amb_rain_drop": "rain", "amb_storm_bed": "storm_wind", "amb_gust": "storm_wind",
+  "amb_thunder_near": "thunder", "amb_thunder_far": "thunder",
+  "amb_bed_sea": "waves", "amb_bed_ocean": "waves", "amb_wave_crash": "waves",
+  "amb_gull": "birds", "amb_bird#": "birds", "amb_owl": "birds", "amb_crystal": "birds",
+  "amb_chatter#": "people", "amb_harbor_bell": "people",
+  "amb_cricket": "insects", "amb_cicada": "insects", "amb_wind_cold": "wind"
+ },
+ "reverb": [0.22, 0.15],
+ "_음량": "실내 소리(room_*)는 대화 말소리(ui_voice_*, 가장 작은 것)보다 3dB 이상 작게 — tools/audio_zone_check.py 가 확인. 장소 음악은 바깥 대륙 테마 기준: 집 -4dB, 공방 -6dB, 라디오 -8dB, 서재 오르골은 말소리 -6dB.",
+ "room_common": {
+  "air": ["room_air", 0.10],
+  "rain": {"rain": ["room_rain_roof_light", 0.30], "storm": ["room_rain_roof_heavy", 0.24]},
+  "storm_wind": ["room_window_wind", 0.09],
+  "thunder_rattle": ["room_window_rattle", 0.065]
+ },
+ "zones": {
+  "village_yunseul": {"type": "outdoor", "music": "theme", "outside": "village_sharmion", "name": "윤슬 마을"},
+  "village_astera": {"type": "outdoor", "music": "theme", "outside": "village_eldrasion", "name": "아스테라 항구"},
+  "fishing": {"type": "outdoor", "music": "spot"},
+  "home": {"type": "indoor", "npc": "home", "name": "주인공의 집", "outside": "village_sharmion", "has_window": true, "door_sound": "wood",
+           "music": {"name": "mus_room_home", "vol": 0.44, "rest": [60, 120]},
+           "room_sounds": [["room_clock", "loop", 0.16], ["room_floor_creak", [18, 40], 0.09]]},
+  "haru_shop": {"type": "indoor", "npc": "haru", "name": "하루네 낚시점", "outside": "village_sharmion", "has_window": true, "door_sound": "wood",
+                "music": {"name": "mus_room_radio", "vol": 0.92, "db": -8},
+                "room_sounds": [["room_reel_rattle", [14, 30], 0.22]]},
+  "baek_hut": {"type": "indoor", "npc": "baek", "name": "노인 어부의 오두막", "outside": "village_sharmion", "has_window": false, "door_sound": "wood",
+               "music": "none",
+               "room_sounds": [["room_fire", "loop", 0.10], ["room_fire_pop#", [0.6, 2.6], 0.26], ["room_net_sway", [9, 20], 0.15]]},
+  "ella_workshop": {"type": "indoor", "npc": "ella", "name": "아스테라 수정 공방", "outside": "village_eldrasion", "has_window": false, "door_sound": "heavy",
+                    "music": {"name": "mus_room_crystal", "vol": 0.35},
+                    "room_sounds": [["room_crystal_ting", [6, 12], 0.075]]},
+  "oren_study": {"type": "indoor", "npc": "oren", "name": "오렌의 서재", "outside": "village_eldrasion", "has_window": false, "door_sound": "heavy",
+                 "music": {"name": "room_orgel", "oneshot_every": 180, "first": 25, "vol": 0.058},
+                 "room_sounds": [["room_page", [10, 24], 0.16], ["room_candle", [7, 16], 0.12]]}
+ },
+ "doors": {
+  "wood": {"open_out": "door_wood_open", "close_in": "door_wood_close_in", "open_in": "door_wood_open_in"},
+  "heavy": {"open_out": "door_heavy_open", "close_in": "door_heavy_close_in", "open_in": "door_heavy_open_in"}
+ },
+ "thunder": {"every": [7, 16], "indoor_delay": [0.5, 1.5], "flash_sec": 0.1, "flash_alpha": 120, "min_gap": 2.0}
+}

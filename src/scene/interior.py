@@ -97,8 +97,7 @@ class InteriorScene(Scene):
         self.leave_wait = 0.0
         self.shop = None                   # 열린 상점 패널 (ShopScene)
         self.react_line = None             # 상점 패널 옆 반응 대사 (표정, 문장, 시각)
-        game.sfx.play("ui_door", 0.7)
-        fishing.bite.stop()
+        fishing.bite.stop()   # 문 소리·실내 소리는 소리 구역(game.zones)이 (DESIGN.md 39)
         if script is not None:
             self.say(script)
         elif greet:
@@ -232,7 +231,6 @@ class InteriorScene(Scene):
         self.leaving = -1.0   # 작별 대사가 끝나면 페이드 시작
 
     def _finish_leave(self) -> None:
-        self.game.sfx.play("ui_door", 0.6)
         if self in self.game.scenes.stack:
             self.game.scenes.stack.remove(self)
         self.game.fade_in(self.c["fade_sec"] / 2)
@@ -346,7 +344,8 @@ class InteriorScene(Scene):
         ev = weather_events.active(self.save)
         pal = event_palette(pal, ev["id"] if ev else None, self.cont)
         return {"w": w, "top_h": top_h, "t": self.t, "night": vr._night(f.clock.hour), "pal": pal,
-                "season": self.season, "cont": self.cont}
+                "season": self.season, "cont": self.cont,
+                "flash": self.game.zones.window_flash if hasattr(self.game, "zones") else 0.0}   # 실내 천둥: 창밖 번쩍
 
     def _portrait_img(self) -> pygame.Surface:
         talking = self.typing() and self.line[0] == self.npc and int(self.t / self.c["mouth_sec"]) % 2 == 0
