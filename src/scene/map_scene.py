@@ -103,6 +103,7 @@ class MapScene(Scene):
         here = next(s for s in self.all_spots if s["id"] == fishing.spot_id)
         self.cont = here.get("continent", "sharmion")
         self.sel = next(i for i, s in enumerate(self.spots) if s["id"] == fishing.spot_id)
+        self.town_sel = False   # 지도 위 마을 칸을 골랐는지 (처음엔 지금 낚시터)
         self.cont_btns = [ui.Button((112, 9, 16, 15), "<", lambda: self._switch(-1)),
                           ui.Button((262, 9, 16, 15), ">", lambda: self._switch(1))]
         self.t = 0.0
@@ -111,7 +112,6 @@ class MapScene(Scene):
         self.go_btn = ui.Button((300, 214, 164, 17), "", self._go)
         self.rest_btn = ui.Button((300, 56, 164, 16), "텐트에서 쉬기", self._rest)
         self.train_btn = ui.Button((330, 250, 70, 15), "훈련 수조", self._train)
-        self.town_btn = ui.Button((300, 233, 164, 14), "", self._town)
 
     @property
     def spots(self) -> list:
@@ -128,6 +128,7 @@ class MapScene(Scene):
         self.cont = opened[(opened.index(self.cont) + d) % len(opened)]
         here = [i for i, s in enumerate(self.spots) if s["id"] == self.fishing.spot_id]
         self.sel = here[0] if here else 0
+        self.town_sel = False
         self.game.sfx.play("ui_click")
 
     @property
@@ -148,14 +149,19 @@ class MapScene(Scene):
     def _town(self) -> None:
         """마을로: 낚시터 → 마을 (보고 있는 대륙의 마을)."""
         self.game.sfx.play("ui_click")
-        if self.village is not None:
-            self._close()
+        if self.village is not None and self.village.cont == self.cont:
+            self._close()   # 지금 그 마을 부두에서 열었으면 지도만 닫기
             return
         from src.scene.travel import start_return
         self.game.scenes.pop()
+        if self.village is not None:
+            self.village.leave()   # 다른 대륙 마을로: 지금 마을을 닫고 항해
         start_return(self.game, self.fishing, self.cont)   # 돌아오는 길 컷신 → 마을
 
     def _go(self) -> None:
+        if self.town_sel:
+            self._town()
+            return
         sp = self.spot
         if sp["id"] == self.fishing.spot_id and self.village is None:
             return
@@ -206,13 +212,19 @@ class MapScene(Scene):
             self._close()
         elif a.name == "primary":
             m = a.pos
-            for b in (self.close_btn, self.go_btn, self.rest_btn, self.train_btn, self.town_btn) + tuple(self.cont_btns if self._multi() else ()):
+            for b in (self.close_btn, self.go_btn, self.rest_btn, self.train_btn) + tuple(self.cont_btns if self._multi() else ()):
                 if b.click(m):
                     return
+            tx, ty = self._town_node()
+            if math.hypot(m[0] - tx, m[1] - ty) < 13:
+                self.town_sel = True
+                self.game.sfx.play("ui_click")
+                return
             for i, sp in enumerate(self.spots):
                 x, y = self._node(sp)
                 if math.hypot(m[0] - x, m[1] - y) < 13:
                     self.sel = i
+                    self.town_sel = False
                     self.game.sfx.play("ui_click")
 
     def _multi(self) -> bool:
@@ -225,6 +237,13 @@ class MapScene(Scene):
         self.mouse = self.ui_pointer()
         self.game.adaptive.set_context(self.cont, None)  # 지도: 보고 있는 대륙 테마 (32장 S6)
         self.game.adaptive.set("menu")
+
+    def _village(self) -> dict:
+        return load_json("villages.json")[self.cont]
+
+    def _town_node(self) -> tuple[int, int]:
+        x, y = self._village().get("map_node", (100, 228))
+        return int(x), int(y)
 
     def _node(self, sp) -> tuple[int, int]:
         x, y = sp["map_pos"]
@@ -279,6 +298,7 @@ class MapScene(Scene):
                     x = a[0] + (b[0] - a[0]) * k / steps
                     y = a[1] + (b[1] - a[1]) * k / steps
                     canvas.fill(PATH, (int(x), int(y), 2, 2))
+        self._draw_town_node(canvas)
         for i, sp in enumerate(self.spots):
             x, y = nodes[i]
             secret = bool(sp.get("secret"))
@@ -287,7 +307,7 @@ class MapScene(Scene):
                 if not can_unlock_soon(self.save, sp):
                     # 비밀 장소는 조건을 채우기 전까지 희미한 물음표
                     text(canvas, "?", (x, y), (120, 130, 160), 16, "center")
-                    if i == self.sel:
+                    if i == self.sel and not self.town_sel:
                         pygame.draw.circle(canvas, ui.ACCENT, (x, y), 11, 1)
                     continue
             current = sp["id"] == self.fishing.spot_id
@@ -300,14 +320,38 @@ class MapScene(Scene):
                 pygame.draw.arc(canvas, (40, 44, 60), (x - 2, y - 4, 5, 6), 0, math.pi, 1)
                 if can_unlock_soon(self.save, sp) and int(self.t * 3) % 2 == 0:
                     pygame.draw.circle(canvas, ui.GOOD, (x, y), r + 3, 1)
-            if i == self.sel:
+            if i == self.sel and not self.town_sel:
                 rr = r + 4 + int(2 * math.sin(self.t * 5))
                 pygame.draw.circle(canvas, ui.ACCENT, (x, y), rr, 1)
-            if current:
+            if current and self.village is None:   # 마을에 있으면 '현재'는 마을 칸에만
                 text(canvas, "현재", (x, y - 13), ui.ACCENT, 11, "center")
             text(canvas, sp["short"], (x, y + 13), col, 11, "center")
             if unlocked and self.save.charm_on("phantom_eye"):
                 self._draw_phantom_eye(canvas, sp["id"], x + 10, y - 6)
+
+    def _draw_town_node(self, canvas) -> None:
+        """마을: 지붕 달린 집 기호 + 이름 (금색). 낚시터와 점선 길로 이어짐."""
+        x, y = self._town_node()
+        first = next((sp for sp in self.spots if sp["id"] == self.cont_info.get("first_spot")), None)
+        if first:
+            a, b = (x, y), self._node(first)
+            steps = int(math.hypot(b[0] - a[0], b[1] - a[1]) / 6)
+            for k in range(1, steps):
+                if k % 2 == 0:
+                    canvas.fill(PATH, (int(a[0] + (b[0] - a[0]) * k / steps), int(a[1] + (b[1] - a[1]) * k / steps), 2, 2))
+        here = self.village is not None and self.village.cont == self.cont
+        wall = (250, 236, 200) if self.cont == "sharmion" else (210, 214, 240)
+        roof = (190, 80, 60) if self.cont == "sharmion" else (90, 150, 190)
+        pygame.draw.rect(canvas, (12, 14, 26), (x - 6, y - 2, 14, 10))
+        canvas.fill(wall, (x - 7, y - 3, 14, 10))
+        pygame.draw.polygon(canvas, roof, [(x - 9, y - 2), (x, y - 10), (x + 9, y - 2)])
+        canvas.fill((70, 50, 40), (x - 2, y + 2, 4, 5))
+        if self.town_sel:
+            rr = 13 + int(2 * math.sin(self.t * 5))
+            pygame.draw.circle(canvas, ui.ACCENT, (x, y - 2), rr, 1)
+        if here:
+            text(canvas, "현재", (x, y - 19), ui.ACCENT, 11, "center")
+        text(canvas, self._village()["name"], (x, y + 15), (255, 226, 150), 11, "center")
 
     def _draw_phantom_eye(self, canvas, spot_id: str, x: int, y: int) -> None:
         """환상의 눈 (부적, 33장 P5): 그 낚시터 환상어를 잡았으면 채운 보라 점, 아니면 빈 점 +
@@ -365,6 +409,9 @@ class MapScene(Scene):
         sp = self.spot
         box = pygame.Rect(298, 80, 168, 156)
         ui.panel(canvas, box, fill=(16, 20, 36))
+        if self.town_sel:
+            self._draw_town_info(canvas, box)
+            return
         x, y = box.x + 6, box.y + 8
         secret_hidden = sp.get("secret") and not self.unlocked(sp) and not can_unlock_soon(self.save, sp)
         text(canvas, "???" if secret_hidden else sp["name"], (x, y + 2), ui.ACCENT, 11, "midleft")
@@ -408,7 +455,23 @@ class MapScene(Scene):
             self.go_btn.label = f"해금하기 ({cost:,}원)" if cost else "해금하기"
             self.go_btn.enabled = ok
         self.go_btn.draw(canvas, self.mouse)
-        if self.fishing.fight is None:
-            vname = load_json("villages.json").get(self.cont, {}).get("name", "마을")
-            self.town_btn.label = "마을로 돌아가기" if self.village is not None else f"{vname}로"
-            self.town_btn.draw(canvas, self.mouse)
+
+    def _draw_town_info(self, canvas, box) -> None:
+        v = self._village()
+        x, y = box.x + 6, box.y + 8
+        text(canvas, v["name"], (x, y + 2), (255, 226, 150), 11, "midleft")
+        yy = y + 18
+        for ln in wrap_text(v.get("subtitle", ""), box.w - 12)[:3]:
+            text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
+            yy += 12
+        yy += 4
+        for ln in ("낚시점 · 의뢰 게시판 · 어탁 갤러리", "계절 알림판 · 마을 사람들"):
+            text(canvas, ln, (x, yy), ui.TEXT, 11, "midleft")
+            yy += 13
+        self.go_btn.rect.topleft = (box.x + 2, box.bottom - 20)
+        self.go_btn.rect.size = (box.w - 4, 17)
+        if self.village is not None and self.village.cont == self.cont:
+            self.go_btn.label, self.go_btn.enabled = "마을로 돌아가기", True
+        else:
+            self.go_btn.label, self.go_btn.enabled = f"{v['name']}로 가기", self.fishing.fight is None
+        self.go_btn.draw(canvas, self.mouse)

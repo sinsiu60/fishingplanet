@@ -242,6 +242,6 @@ class TravelScene(Scene):
         if big:
             from src.ui.fight_fx import big_text
             big_text(canvas, self.name, (w // 2, y), col, 1.6)
-            text(canvas, self.subtitle, (w // 2, y + 20), tuple(int(v * a) for v in (220, 215, 200)), 11, "center")
+            text(canvas, self.subtitle, (w // 2, y + 20), tuple(int(v * a) for v in (220, 215, 200)), 11, "center", shadow=True)
         else:
             text(canvas, self.name, (w // 2, y), col, 16, "center")

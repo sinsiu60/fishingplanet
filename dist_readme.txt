@@ -1,4 +1,4 @@
-미니 피싱 (Mini Fishing) v1.0.1
+미니 피싱 (Mini Fishing) v1.0.2
 ================
 
 실행: MiniFishing.exe 를 더블클릭하세요. (Python 설치 필요 없음)

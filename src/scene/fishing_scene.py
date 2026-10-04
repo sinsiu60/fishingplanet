@@ -322,8 +322,8 @@ class FishingScene(Scene):
         band = pygame.Surface((w, 34), pygame.SRCALPHA)
         band.fill((10, 12, 26, int(150 * a)))
         canvas.blit(band, (0, 26))
-        hud.text(canvas, ev["banner"], (w // 2, 38), tuple(int(v * a) for v in (255, 240, 210)), 16, "center")
-        hud.text(canvas, f"{ev['name']} · {ev['benefit_text']}", (w // 2, 53), tuple(int(v * a) for v in (200, 220, 255)), 11, "center")
+        hud.text(canvas, ev["banner"], (w // 2, 38), tuple(int(v * a) for v in (255, 240, 210)), 16, "center", shadow=True)
+        hud.text(canvas, f"{ev['name']} · {ev['benefit_text']}", (w // 2, 53), tuple(int(v * a) for v in (200, 220, 255)), 11, "center", shadow=True)
 
     @property
     def season(self) -> str:

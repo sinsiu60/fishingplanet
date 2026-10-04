@@ -94,7 +94,7 @@ class EndingScene(Scene):
                     a = clamp((t - start) / 0.8, 0, 1)
                     y = 222 + i * 14 - 28
                     text(canvas, line, (w // 2, y + int((1 - a) * 6)), lerp_color((26, 30, 60), (240, 236, 250), a),
-                         11, "center")
+                         11, "center", shadow=True)
         else:
             self._draw_stats(canvas, t - STATS_T)
         # 처음 페이드 인

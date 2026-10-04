@@ -1,7 +1,7 @@
 {
  "_설명": "마을 (DESIGN.md 35-3, CONTENT_EXPANSION.md B-1·B-2). 파노라마 가로 width px, 장소·NPC x 위치는 파노라마 좌표. place.action: dock(지도) / shop / quests / gallery / talk(그 NPC와 대화) / season(계절 알림판). npc.lines = 기본 대사 (대사 시스템 data/dialogue.json 이 없을 때·조건 맞는 대사가 없을 때).",
  "sharmion": {
-  "name": "윤슬 마을", "subtitle": "햇빛에 반짝이는 물결이 보이는 작은 포구", "width": 1000, "style": "wood",
+  "name": "윤슬 마을", "subtitle": "햇빛에 반짝이는 물결이 보이는 작은 포구", "map_node": [100, 228], "width": 1000, "style": "wood",
   "ambience": "village_sharmion",
   "places": [
    {"id": "dock", "name": "부두", "x": 70, "w": 120, "action": "dock", "kind": "dock"},
@@ -23,7 +23,7 @@
   }
  },
  "eldrasion": {
-  "name": "아스테라 항구", "subtitle": "수정 등불이 걸린 고대 항구", "width": 1000, "style": "stone",
+  "name": "아스테라 항구", "subtitle": "수정 등불이 걸린 고대 항구", "map_node": [116, 197], "width": 1000, "style": "stone",
   "ambience": "village_eldrasion",
   "places": [
    {"id": "dock", "name": "부두", "x": 70, "w": 120, "action": "dock", "kind": "dock", "ship": true},

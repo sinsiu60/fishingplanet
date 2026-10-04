@@ -309,13 +309,13 @@ class VillageScene(Scene):
             band = pygame.Surface((w, 26), pygame.SRCALPHA)
             band.fill((10, 12, 26, int(160 * a)))
             canvas.blit(band, (0, 58))
-            text(canvas, f"{ev['banner']} — {ev['benefit_text']}", (w // 2, 71), tuple(int(v * a) for v in (255, 240, 210)), 11, "center")
+            text(canvas, f"{ev['banner']} — {ev['benefit_text']}", (w // 2, 71), tuple(int(v * a) for v in (255, 240, 210)), 11, "center", shadow=True)
         if self.season_banner > 0:
             a = min(1.0, self.season_banner / 0.5, (3.5 - self.season_banner) / 0.4)
             band = pygame.Surface((w, 26), pygame.SRCALPHA)
             band.fill((20, 16, 10, int(170 * a)))
             canvas.blit(band, (0, 30))
-            text(canvas, f"계절이 바뀌었어요 — {sname}", (w // 2, 43), tuple(int(v * a) for v in (255, 230, 170)), 16, "center")
+            text(canvas, f"계절이 바뀌었어요 — {sname}", (w // 2, 43), tuple(int(v * a) for v in (255, 230, 170)), 16, "center", shadow=True)
         if self.bubble is not None and self.bubble["t"] >= 0:
             self._draw_bubble(canvas)
         if self.panel is not None:

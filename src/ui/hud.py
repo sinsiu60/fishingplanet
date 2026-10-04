@@ -10,13 +10,17 @@ from src.platform.hints import localize
 SHADOW = (10, 12, 24)
 
 
-def text(canvas, s: str, pos, color, size: int = 11, anchor: str = "topleft") -> pygame.Rect:
+def text(canvas, s: str, pos, color, size: int = 11, anchor: str = "topleft", shadow: bool | None = None) -> pygame.Rect:
+    """shadow = None: 글자색이 밝으면 어두운 그림자, 어두운 글자(밝은 종이·말풍선 위)면 그림자 없음 — 검은 글자에 검은 그림자가
+    겹치면 획이 뭉개져 읽기 힘들다."""
     s = localize(s)  # 모바일이면 PC 조작 문구를 터치 문구로 (PC는 그대로)
     font = get_font(size)
     img = font.render(s, False, color)
-    shadow = font.render(s, False, SHADOW)
     rect = img.get_rect(**{anchor: pos})
-    canvas.blit(shadow, rect.move(1, 1))
+    if shadow is None:
+        shadow = 0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2] >= 120
+    if shadow:
+        canvas.blit(font.render(s, False, SHADOW), rect.move(1, 1))
     canvas.blit(img, rect)
     return rect
 
