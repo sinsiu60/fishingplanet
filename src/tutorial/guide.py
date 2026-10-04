@@ -65,10 +65,10 @@ class Guide:
             st["replay"].remove(tid)
         st["active"] = None
         tut = self.data[tid]
+        from src.tutorial import scripts
+        scripts.stop(self.game, tid)   # 진행 정보(run)가 남아 있을 때 — 패턴 튜토리얼이 비워 둔 물고기 행동 목록을 되돌림
         self.run = None
         self.modal = False
-        from src.tutorial import scripts
-        scripts.stop(self.game, tid)
         if not skipped and tut.get("on_done"):
             scripts.action(self.game, tut["on_done"])
         if self.game.save is not None:
@@ -85,11 +85,11 @@ class Guide:
         r = self.run
         if r is None:
             return
+        from src.tutorial import scripts
+        scripts.stop(self.game, r["id"])   # run 을 지우기 전에 (되돌릴 값이 run 안에 있음)
         self.run = None
         self.modal = False
         self.st()["active"] = None
-        from src.tutorial import scripts
-        scripts.stop(self.game, r["id"])
 
     def _chain(self, tid: str) -> list[str]:
         out = []
@@ -129,7 +129,7 @@ class Guide:
         """디버그·다시 보기: 지금 바로 (조건 무시)."""
         self.queue = [q for q in self.queue if q != tid]
         if self.run is not None:
-            self.run = None
+            self.abort()
         self._begin(tid)
 
     def _begin(self, tid: str) -> None:
