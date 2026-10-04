@@ -27,6 +27,16 @@ def run(p, url: str, out: str, name: str, touch: bool) -> list[str]:
     log: list[str] = []
     page.on("console", lambda m: log.append(f"[{m.type}] {m.text}"))
     page.on("pageerror", lambda e: log.append(f"[pageerror] {e}"))
+    # localhost 에서 열면 pygbag 이 '개발 모드'라 패키지(numpy)를 이 서버의 /cdn/ 에서 찾는다 → 실제 CDN 으로 돌려준다
+    # (GitHub Pages 에선 처음부터 실제 CDN 을 씀)
+    local_cdn = url.rstrip("/") + "/cdn/"
+
+    def to_cdn(route) -> None:
+        real = "https://pygame-web.github.io/cdn/" + route.request.url[len(local_cdn):]
+        log.append(f"[smoke] cdn → {real}")
+        route.fulfill(response=page.request.fetch(real))
+
+    page.route(local_cdn + "**", to_cdn)
     page.goto(url)
     vw, vh = page.viewport_size["width"], page.viewport_size["height"]
 
