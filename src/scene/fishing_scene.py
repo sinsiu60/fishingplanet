@@ -591,7 +591,8 @@ class FishingScene(Scene):
         delay = getattr(sfx, "latency", 0.0) + getattr(sfx, "offset_s", 0.0)
         w, h = self.cam.width, self.cam.height
         self.phantom_show = PhantomShow(f.fish, f.result, self.catch_news, variant, w, h, mobile=self.touch,
-                                        reduce=self.settings.get("reduce_fx"), delay=delay)
+                                        reduce=self.settings.get("reduce_fx"), delay=delay,
+                                        low=getattr(self.game, "slow_device", False) or self.settings.get("fps") == 30)
         self.fight_audio.stop()
         self.signal_audio.stop()
         sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)

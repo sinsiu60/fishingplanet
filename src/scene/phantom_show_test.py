@@ -75,7 +75,8 @@ class PhantomShowTestScene(Scene):
         delay = getattr(sfx, "latency", 0.0) + getattr(sfx, "offset_s", 0.0)
         self.show = PhantomShow(f, {"size": round(random.uniform(lo, hi), 1)}, dict(FAKE_NEWS[variant]), variant, w, h,
                                 mobile=self.game.input.kind == "touch",
-                                reduce=self.game.settings.get("reduce_fx"), delay=delay)
+                                reduce=self.game.settings.get("reduce_fx"), delay=delay,
+                                low=getattr(self.game, "slow_device", False) or self.game.settings.get("fps") == 30)
         sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)
         name = phantom_song.preload(sfx, variant, cont)
         self.song_ch = sfx.play(name, 1.0) if name else None

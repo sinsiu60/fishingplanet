@@ -9,6 +9,7 @@ LandingCinematic 대신 환상어만. 시계는 실제 시간(+ 오디오 출력
 """
 import math
 import random
+import time
 
 import pygame
 
@@ -48,7 +49,8 @@ def _env(t: float, a: float, b: float, c: float, d: float) -> float:
 
 class PhantomShow:
     def __init__(self, fish: dict, result: dict, news: dict, variant: str, w: int, h: int, *,
-                 mobile: bool = False, reduce: bool = False, delay: float = 0.0, rnd: random.Random | None = None):
+                 mobile: bool = False, reduce: bool = False, delay: float = 0.0, rnd: random.Random | None = None,
+                 low: bool = False):
         self.fish, self.result, self.news = fish, result, news or {}
         self.variant = variant
         c = tl()
@@ -59,6 +61,11 @@ class PhantomShow:
         self.w, self.h = w, h
         self.mobile, self.reduce = mobile, reduce
         self.cap = c["caps"]["mobile" if mobile else "pc"] // (2 if reduce else 1)
+        # 화질: 느린 기기·초당 30번 설정이면 처음부터 낮음, 모바일에서 그리기가 22ms 넘게 이어지면 자동으로 낮춤
+        self.low = False
+        self.draw_ms = 0.0
+        if low:
+            self._lower()
         self.delay = delay          # 오디오 출력 지연 + 보정: 그림을 그만큼 늦게
         self.clock = 0.0            # 실제 시간
         self.t = -delay             # 연출 시각 (음악 시각)
@@ -81,6 +88,12 @@ class PhantomShow:
         if variant == "extended":
             from src.fishing.phantom import all_phantoms
             self.ring_fish = all_phantoms()
+
+    def _lower(self) -> None:
+        """낮은 화질: 입자 상한 절반, 글로우 해상도 절반, 오로라 열 굵게."""
+        if not self.low:
+            self.low = True
+            self.cap //= 2
 
     # ── 시간 ──
     @property
@@ -207,6 +220,14 @@ class PhantomShow:
 
     # ── 그리기 ──
     def draw(self, canvas: pygame.Surface, pal: dict) -> None:
+        t0 = time.perf_counter()
+        self._draw(canvas, pal)
+        ms = (time.perf_counter() - t0) * 1000
+        self.draw_ms = ms if self.draw_ms == 0 else self.draw_ms * 0.9 + ms * 0.1
+        if self.mobile and self.draw_ms > 22 and self.t > 0.5:
+            self._lower()
+
+    def _draw(self, canvas: pygame.Surface, pal: dict) -> None:
         w, h = canvas.get_size()
         m, t = self.m, self.t
         stage = canvas.copy()
@@ -262,7 +283,7 @@ class PhantomShow:
     def _glow(self, canvas, light) -> None:
         """밝은 부분 주변이 은은하게 번짐: 반(모바일 ¼) 해상도로 줄였다 키운 빛을 더한다."""
         w, h = light.get_size()
-        sc = self.fx["glow_scale"] * (0.5 if self.mobile else 1.0)
+        sc = self.fx["glow_scale"] * (0.5 if self.mobile else 1.0) * (0.5 if self.low else 1.0)
         small = pygame.transform.smoothscale(light, (max(8, int(w * sc * 0.5)), max(8, int(h * sc * 0.5))))
         blur = pygame.transform.smoothscale(small, (w, h))
         blur.fill((150, 140, 170), special_flags=pygame.BLEND_RGB_MULT)
@@ -280,12 +301,13 @@ class PhantomShow:
             lut = [tuple(int(v * i / 15) for v in col) for i in range(16)]
             base = 18 + b * 12 + drop
             sp, ph = 0.6 + 0.1 * b, 1.3 * cl + b
-            for x in range(0, w, 6):
+            cw = 10 if self.low else 6
+            for x in range(0, w, cw):
                 top = base + math.sin(x * 0.02 + cl * sp + b) * 10 + math.sin(x * 0.051 - cl) * 5
                 ln = 26 + 14 * math.sin(x * 0.013 + b * 1.7 + cl * 0.4)
                 a = k * (0.35 + 0.25 * math.sin(x * 0.04 + ph))
                 if a > 0.02:
-                    light.fill(lut[min(15, int(a * 15))], (x, int(top), 6, int(ln)))
+                    light.fill(lut[min(15, int(a * 15))], (x, int(top), cw, int(ln)))
 
     def _draw_rays(self, light, fx, fy, k: float) -> None:
         if k <= 0.01:
@@ -377,7 +399,7 @@ class PhantomShow:
         if dt < 0 or dt > 1.6:
             return
         strong = 0.5 if self.reduce else 1.0
-        k = max(0.0, 1 - dt / 0.5) * strong
+        k = min(1.0, dt / 0.08) * max(0.0, 1 - max(0.0, dt - 0.08) / 0.5) * strong  # 0.08초 동안 차오름 (밝기 급변 제한)
         if k > 0:
             g = 1 + dt * 1.2
             R = int(84 * g) + 1
@@ -498,8 +520,8 @@ class PhantomShow:
                 sky.fill((*c, int(120 * k * (1 - u) ** 1.5)), (0, y, w, 3))
             stage.blit(sky, (0, 0))
             d = t - m["climax"]
-            if -0.1 < d < 1.0:  # 해 번쩍 (절정과 같은 1회)
-                kk = max(0.0, 1 - abs(d) / 1.0) * (0.5 if self.reduce else 1.0)
+            if 0 <= d < 1.0:  # 해 번쩍 (절정과 같은 1회, 0.1초 동안 차오름)
+                kk = min(1.0, d / 0.1) * (1 - d) * (0.5 if self.reduce else 1.0)
                 _add_circle(light, tuple(int(v * kk) for v in (255, 200, 230)), (w * 0.72, self.water_y - 6), 22)
         elif kind == "crystals":
             # 화면 가장자리에 자수정 결정이 자라남
