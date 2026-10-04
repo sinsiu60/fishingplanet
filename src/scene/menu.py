@@ -56,6 +56,17 @@ def start_game(game, save: SaveGame) -> None:
     game.scenes.stack.clear()
     fishing = FishingScene(game)
     game.scenes.push(fishing)
+    from src.story import story
+    story.bind(game)
+    if not story.active(save):   # 스토리 (DESIGN.md 36): 새 게임 = 프롤로그, 기존 세이브 = 소급 처리 + 이름 장면
+        if story.is_fresh(save):
+            story.begin_new(save)
+            from src.story import runner
+            runner.prologue(game, fishing)
+            game.fade_in(0.7)
+            return
+        story.migrate(save)
+        game.save.save()
     if not getattr(fishing, "voyage_pending", False):
         # 게임 시작 = 마을에서 (35-3): 부두 → 지도 → 낚시터
         from src.scene.village import VillageScene, village_for

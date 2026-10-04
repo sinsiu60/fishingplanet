@@ -99,6 +99,9 @@ class SettingsScene(Scene):
             rows.append(("테스트: NPC 대사", "button", lambda: "열기", self._open_dialogue_test))
             rows.append(("테스트: 날씨 이벤트", "button", self._event_label, self._cycle_event))
             rows.append(("테스트: 건물 안 대화", "button", self._interior_label, self._open_interior))
+            from src.story import debug as story_debug
+            if story_debug.enabled():   # 스토리 디버그 (릴리스에선 숨김)
+                rows.append(("디버그: 스토리", "button", lambda: "열기", self._open_story_debug))
         if self.game.save is not None:
             rows.append(("테스트: 환상 낚은 기록", "button",
                          lambda: "지웠어요" if getattr(self, "_ph_wiped", False) else "지우기", self._ask_phantom_reset))
@@ -176,6 +179,12 @@ class SettingsScene(Scene):
             weather_events.stop(self.game.save)
         else:
             weather_events.start(self.game.save, nxt, fishing.clock.day, fishing.clock.hour)
+
+    def _open_story_debug(self) -> None:
+        fishing = next((s for s in self.game.scenes.stack if hasattr(s, "clock") and hasattr(s, "weather_sys")), None)
+        if fishing is not None:
+            from src.story.debug import StoryDebugScene
+            self.game.scenes.push(StoryDebugScene(self.game, fishing))
 
     INTERIOR_ORDER = ("haru", "baek", "ella", "oren")
 

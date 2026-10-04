@@ -232,6 +232,11 @@ class ChestScene(Scene):
             if self.kind in ("exchange", "items") and self.action_btn.click(m):
                 return
             if self.kind == "diary":
+                if getattr(self, "story_row", None) is not None and self.story_row.collidepoint(m):
+                    from src.story.ui import PaperScene
+                    from src.story.story import load_json as _lj
+                    self.game.scenes.push(PaperScene(self.game, _lj("story/letters.json")["last_page"], backdrop=self.draw))
+                    return
                 self.diary_page = getattr(self, "diary_page", 0) + 1  # 클릭하면 다음 장
                 self.game.sfx.play("ui_click")
                 return
@@ -424,24 +429,38 @@ class ChestScene(Scene):
         from src.fishing import phantom
         h = load_json("phantom_hints.json")
         got = phantom.state(self.save)["notes"]
-        text(canvas, f"찾은 장 {len(got)}/{len(h['diary'])}", (240, 16), (210, 160, 255), 11, "center")
+        from src.story import story
+        named = story.active(self.save) and story.flag(self.save, "grandpa_named")   # 1막 끝(C1-06) 뒤: 할아버지의 수첩
+        book = "할아버지의 수첩" if named else "낡은 어부의 수첩"
+        text(canvas, f"{book} · 찾은 장 {len(got)}/{len(h['diary'])}", (240, 16), (210, 160, 255), 11, "center")
+        self.story_row = None
+        if story.active(self.save) and story.state(self.save)["items"].get("grandpa_last_page"):
+            # 이야기 칸: 해강의 마지막 장 (환상 수첩 12장 개수에 넣지 않음)
+            self.story_row = pygame.Rect(16, 222, 448, 16)
+            canvas.fill((40, 34, 24), self.story_row)
+            pygame.draw.rect(canvas, (200, 170, 110), self.story_row, 1)
+            text(canvas, "이야기 · 해강의 마지막 장 (눌러서 읽기)", (24, self.story_row.centery), (240, 220, 170), 11, "midleft")
         y = 52
         shown = [fid for fid in h["diary"] if fid in got]
         if not shown:
             text(canvas, "보물상자에서 가끔 낡은 수첩이 나온다고 한다…", (240, 140), ui.DIM, 11, "center")
             return
         spots = {s["id"]: s["name"] for s in load_json("spots.json")["spots"]}
-        pages = (len(shown) + 5) // 6
+        per = 4 if named else 6
+        pages = (len(shown) + per - 1) // per
         page = getattr(self, "diary_page", 0) % pages
-        for fid in shown[page * 6:page * 6 + 6]:
+        for fid in shown[page * per:page * per + per]:
             sp = phantom.by_id(fid)["spot"]
             text(canvas, f"— {spots.get(sp, '')}에서", (20, y), (190, 150, 240), 11, "midleft")
             for ln in wrap_text(h["diary"][fid], 430)[:2]:
                 y += 13
                 text(canvas, ln, (30, y), (225, 220, 235), 11, "midleft")
+            if named:   # 각 장 맨 아래 (본문은 그대로)
+                y += 13
+                text(canvas, "— 윤해강", (446, y), (200, 180, 150), 11, "midright")
             y += 18
         if pages > 1:
-            text(canvas, f"{page + 1}/{pages}쪽 (클릭: 다음 쪽)", (20, 236), ui.DIM, 11, "midleft")
+            text(canvas, f"{page + 1}/{pages}쪽 (클릭: 다음 쪽)", (20, 210 if self.story_row else 236), ui.DIM, 11, "midleft")
 
     # ── 개봉 연출 ──
     def _draw_anim(self, canvas) -> None:

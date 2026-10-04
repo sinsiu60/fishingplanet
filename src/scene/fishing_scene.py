@@ -1031,7 +1031,13 @@ class FishingScene(Scene):
             self.save.data["flags"]["final_ending_seen"] = True
             self.game.save_now()
             from src.scene.ending import EndingScene
-            self.game.scenes.push(EndingScene(self.game, self, kind="final"))
+            from src.story import runner
+
+            def final():
+                self.game.scenes.push(EndingScene(self.game, self, kind="final"))
+            # 스토리 C5-05: 오르시엘 포획 연출 직후, 기존 최종 엔딩 직전에 선택 (건너뛰기 없음)
+            if not runner.before_final_ending(self.game, self, last["fish"], last.get("size", 0.0), final):
+                final()
         self.screen_fx.reset()
         if last and phantom.is_phantom(last["fish"]):
             self.phantom_fx.restore()  # 포획 컷이 끝나면 1.5초에 걸쳐 원래 색
@@ -3018,6 +3024,10 @@ class FishingScene(Scene):
         skin = skin_colors(self.save, "float_skin")
         if skin:
             out = dict(out, bobber=skin[0], bobber_base=skin[1])  # 의뢰 상점 찌 외형
+            from src.save.quests import equipped, shop_item
+            it = shop_item(equipped(self.save)["float_skin"]) or {}
+            if it.get("band"):   # 해강의 찌 (스토리 C4-05): 대나무색 띠 + 빨간 점
+                out = dict(out, bobber_band=tuple(it["band"]), bobber_dot=tuple(it["dot"]))
         if self.save.cosmetic_on("sparkle_float"):
             glint = 0.5 + 0.5 * math.sin(self.t * 6)
             out = dict(out, bobber=lerp_color((255, 196, 60), (255, 250, 200), glint * 0.5))

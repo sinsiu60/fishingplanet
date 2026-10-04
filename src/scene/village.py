@@ -58,6 +58,20 @@ class VillageScene(Scene):
         self.ev_banner = None
         self.btns = []
         self.collect_open = False   # 위 '수집' 버튼 서랍
+        # 스토리 (DESIGN.md 36): 휴대폰 알림 1개 · 아스테라 첫 도착(C4-01)
+        from src.story import story
+        self.phone = None           # {"id", "t", "after"(이어지는 자막 남은 시간)}
+        self.story_seq = None       # C4-01: {"step", "t"}
+        if story.active(self.save):
+            story.poll(self.save)
+            if cont == "eldrasion" and not story.seen(self.save, "C4-01"):
+                self.story_seq = {"step": 0, "t": 0.0}
+            elif "M6" not in story.state(self.save)["phone_shown"]:
+                mid = story.next_phone(self.save)
+                if mid:
+                    self.phone = {"id": mid, "t": 0.0, "after": None}
+                    game.sfx.play("st_vibrate", 0.45)
+                    game.haptics.vibrate("phone")
         # 계절이 바뀐 뒤 처음 들어옴: 계절 알림 + 상점 주인의 계절 대사 (35-4)
         self.season_banner = 0.0
         if self.save.data.get("season_seen") != self.season:
@@ -100,6 +114,10 @@ class VillageScene(Scene):
         a = place["action"]
         if place.get("npc") in self.INTERIOR and a in ("shop", "talk"):
             self.enter(place["npc"])
+            return
+        if a == "home":   # 주인공의 집 (스토리): 낚시 일지 · 추억 · 수첩 · 나가기
+            from src.story.home import HomeScene
+            self.game.scenes.push(HomeScene(self.game, self.fishing, village=self))
             return
         if a == "dock":
             from src.scene.map_scene import MapScene
@@ -165,6 +183,13 @@ class VillageScene(Scene):
             self._click(pos)
 
     def _click(self, pos) -> None:
+        if self.story_seq is not None:
+            return
+        if self.phone is not None and self.phone["after"] is None:
+            w, h = self.game.screen.canvas.get_size()
+            if pygame.Rect(w - 146, h - 66, 140, 60).collidepoint(pos):
+                self._close_phone()
+                return
         if self.panel is not None:
             self.panel = None
             return
@@ -190,10 +215,40 @@ class VillageScene(Scene):
                 return
 
     # ── 시간 ──
+    def _close_phone(self) -> None:
+        msg = load_json("story/phone.json")["messages"][self.phone["id"]]
+        if msg.get("after"):   # 이어지는 자막 (M5: 단톡방을 조용히 나왔다)
+            self.phone["after"] = 3.0
+        else:
+            self.phone = None
+
+    def _story_update(self, dt: float) -> None:
+        if self.phone is not None:
+            self.phone["t"] += dt
+            if self.phone["after"] is None and self.phone["t"] >= 5.0:
+                self._close_phone()
+            elif self.phone is not None and self.phone["after"] is not None:
+                self.phone["after"] -= dt
+                if self.phone["after"] <= 0:
+                    self.phone = None
+        sq = self.story_seq
+        if sq is not None:   # C4-01: 자막 3초 → 휴대폰 '전파 없음'(막대 0개) → 자막 → 일지 J10
+            sq["t"] += dt
+            if sq["step"] == 0 and sq["t"] >= 3.0:
+                sq.update(step=1, t=0.0)
+                self.game.sfx.play("st_vibrate", 0.35)
+            elif sq["step"] == 1 and sq["t"] >= 2.5:
+                sq.update(step=2, t=0.0)
+            elif sq["step"] == 2 and sq["t"] >= 3.0:
+                from src.story import story
+                self.story_seq = None
+                story.complete(self.game, "C4-01")
+
     def update(self, dt: float) -> None:
         self.t += dt
+        self._story_update(dt)
         from src.ui import achv_toast
-        achv_toast.update(self.game, dt, self.game.scenes.current is self)
+        achv_toast.update(self.game, dt, self.game.scenes.current is self and self.story_seq is None)
         f = self.fishing
         f.clock.update(dt)      # 마을에서도 시간은 흐른다 (등불·창문 불빛)
         f.ambience.update(dt, self.cfg["ambience"], f.clock.period()[0], f.weather, season=self.season)
@@ -264,9 +319,12 @@ class VillageScene(Scene):
         self.efx.draw_low(canvas, self._eid(), self.cont, vr.HORIZON, False)
         vr._ground(canvas, pal, ox, w, h, style)
         hits = []
+        from src.story.story import player_name
         for p in self.cfg["places"]:
             sx = p["x"] - ox
             if -200 < sx < w + 200:
+                if "{player}" in p["name"]:
+                    p = dict(p, label=p["name"].replace("{player}", player_name(self.save)))
                 r = vr.draw_place(canvas, p, sx, pal, night, self.t, style, self.season,
                                   self.hover == ("place", p["id"]))
                 hits.append(("place", p["id"], r))
@@ -323,6 +381,7 @@ class VillageScene(Scene):
                 b = ui.Button((x0 - (i + 1) * 46 + 4, 25, 42, 14), lab, lambda k=key: self._menu(k))
                 b.draw(canvas, self.mouse)
                 self.btns.insert(0, b)
+        self._draw_story(canvas)
         from src.ui import achv_toast
         achv_toast.draw(self.game, canvas)
         # 양 끝 화살표
@@ -353,6 +412,36 @@ class VillageScene(Scene):
         if self.panel is not None:
             self._draw_season_panel(canvas)
         draw_cursor(canvas, self.mouse)
+
+    def _draw_story(self, canvas) -> None:
+        """다음 목표 (왼쪽 위 한 줄 + 찌 아이콘) · 휴대폰 알림 · C4-01 자막."""
+        from src.story import story
+        from src.story import ui as sui
+        if not story.active(self.save):
+            return
+        g = story.goal(self.save)
+        if g and self.story_seq is None:
+            x, y = 10, 30
+            canvas.fill((255, 255, 255), (x, y - 4, 4, 3))      # 작은 찌 (빨강·흰색)
+            canvas.fill((232, 74, 74), (x, y - 1, 4, 4))
+            canvas.fill((200, 200, 200), (x + 1, y - 7, 1, 3))
+            text(canvas, g, (x + 9, y), (240, 236, 220), 11, "midleft")
+        msgs = load_json("story/phone.json")["messages"]
+        if self.phone is not None:
+            m = msgs[self.phone["id"]]
+            if self.phone["after"] is None:
+                sui.draw_phone(canvas, m["from"], m["text"], self.phone["t"])
+            else:
+                sui.subtitle(canvas, m["after"], min(1.0, self.phone["after"] / 0.3))
+        sq = self.story_seq
+        if sq is not None:
+            sc = story.scene("C4-01")
+            if sq["step"] == 0:
+                sui.subtitle(canvas, sc["subs"][0], min(1.0, sq["t"] / 0.3, (3.0 - sq["t"]) / 0.3))
+            elif sq["step"] == 1:
+                sui.draw_phone(canvas, None, msgs["M6"]["text"], sq["t"])
+            else:
+                sui.subtitle(canvas, msgs["M6"]["after"], min(1.0, sq["t"] / 0.3, (3.0 - sq["t"]) / 0.3))
 
     def _menu(self, key: str) -> None:
         if key == "collection":

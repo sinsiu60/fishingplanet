@@ -26,10 +26,11 @@ T_LETTER, T_SAIL, T_ARRIVE, T_END = 0.0, 7.0, 13.0, 17.0
 class VoyageScene(Scene):
     UI_FRAME = True
 
-    def __init__(self, game, fishing):
+    def __init__(self, game, fishing, skip_letter: bool = False):
+        """skip_letter: 스토리 C3-04(할아버지의 편지)가 '엘드라시온의 소문' 편지를 대신함 → 출항 컷신부터."""
         super().__init__(game)
         self.fishing = fishing
-        self.t = 0.0
+        self.t = T_SAIL if skip_letter else 0.0
         self.mouse = (0, 0)
         self.done = False
         self.cont = next(c["name"] for c in load_json("continents.json")["continents"] if c["id"] == "eldrasion")
@@ -69,9 +70,14 @@ class VoyageScene(Scene):
         save = self.game.save
         save.unlock_continent("eldrasion")
         self.game.sfx.loop("amb_bed_ocean", False)
-        self.game.scenes.pop()
+        if self in self.game.scenes.stack:
+            self.game.scenes.stack.remove(self)
         self.fishing.travel("marsh")
         self.fishing.toasts.show(f"{self.cont}에 도착했다! (부적 칸 +1, 새 상점 장비)", (220, 200, 255), 4.0, 11)
+        from src.story import story
+        if story.active(save):   # 스토리: 아스테라 항구 첫 도착 (C4-01) — 파노라마 → 자막 → 휴대폰 '전파 없음'
+            from src.scene.village import VillageScene
+            self.game.scenes.push(VillageScene(self.game, self.fishing, "eldrasion"))
         self.game.fade_in(1.0)
         self.game.save_now()
 

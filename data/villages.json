@@ -1,24 +1,25 @@
 {
  "_설명": "마을 (DESIGN.md 35-3, CONTENT_EXPANSION.md B-1·B-2). 파노라마 가로 width px, 장소·NPC x 위치는 파노라마 좌표. place.action: dock(지도) / shop / quests / gallery / talk(그 NPC와 대화) / season(계절 알림판). npc.lines = 기본 대사 (대사 시스템 data/dialogue.json 이 없을 때·조건 맞는 대사가 없을 때).",
  "sharmion": {
-  "name": "윤슬 마을", "subtitle": "햇빛에 반짝이는 물결이 보이는 작은 포구", "map_node": [100, 228], "width": 1000, "style": "wood",
+  "name": "윤슬 마을", "subtitle": "햇빛에 반짝이는 물결이 보이는 작은 포구", "map_node": [100, 228], "width": 1110, "style": "wood",
   "ambience": "village_sharmion",
   "places": [
-   {"id": "dock", "name": "부두", "x": 70, "w": 120, "action": "dock", "kind": "dock"},
-   {"id": "shop", "name": "하루 낚시점", "x": 235, "w": 130, "action": "shop", "kind": "house", "wall": [150, 104, 70], "roof": [120, 50, 40], "npc": "haru"},
-   {"id": "board", "name": "의뢰 게시판", "x": 375, "w": 70, "action": "quests", "kind": "board", "npc": "sora"},
-   {"id": "gallery", "name": "어탁 갤러리", "x": 505, "w": 120, "action": "gallery", "kind": "house", "wall": [196, 180, 150], "roof": [70, 90, 120], "npc": "gull", "sign": "fish"},
-   {"id": "season", "name": "계절 알림판", "x": 650, "w": 60, "action": "season", "kind": "notice"},
-   {"id": "hut", "name": "노인 어부의 오두막", "x": 840, "w": 120, "action": "talk", "kind": "hut", "wall": [110, 84, 60], "roof": [80, 70, 50], "npc": "baek"}
+   {"id": "home", "name": "{player}의 집", "x": 62, "w": 92, "action": "home", "kind": "house", "low": true, "wall": [232, 220, 196], "roof": [122, 90, 58], "door": [90, 61, 42]},
+   {"id": "dock", "name": "부두", "x": 180, "w": 120, "action": "dock", "kind": "dock"},
+   {"id": "shop", "name": "하루 낚시점", "x": 345, "w": 130, "action": "shop", "kind": "house", "wall": [150, 104, 70], "roof": [120, 50, 40], "npc": "haru"},
+   {"id": "board", "name": "의뢰 게시판", "x": 485, "w": 70, "action": "quests", "kind": "board", "npc": "sora"},
+   {"id": "gallery", "name": "어탁 갤러리", "x": 615, "w": 120, "action": "gallery", "kind": "house", "wall": [196, 180, 150], "roof": [70, 90, 120], "npc": "gull", "sign": "fish"},
+   {"id": "season", "name": "계절 알림판", "x": 760, "w": 60, "action": "season", "kind": "notice"},
+   {"id": "hut", "name": "노인 어부의 오두막", "x": 950, "w": 120, "action": "talk", "kind": "hut", "wall": [110, 84, 60], "roof": [80, 70, 50], "npc": "baek"}
   ],
   "npcs": {
-   "haru": {"name": "하루 아저씨", "x": 290, "body": [230, 140, 60], "skin": [230, 180, 140], "hat": "cap", "hat_col": [60, 90, 150], "prop": "rod",
+   "haru": {"name": "하루 아저씨", "x": 400, "body": [230, 140, 60], "skin": [230, 180, 140], "hat": "cap", "hat_col": [60, 90, 150], "prop": "rod",
             "lines": ["어서 와! 오늘은 뭘 낚으러 가나? 장비는 내 가게가 최고지!", "이 낚싯대 좀 봐, 반짝반짝하지? 하하!", "줄은 아끼지 말라고. 끊어지면 다 소용없거든."]},
-   "sora": {"name": "소라", "x": 410, "body": [250, 210, 90], "skin": [240, 195, 160], "hat": "band", "hat_col": [255, 120, 120], "prop": "papers",
+   "sora": {"name": "소라", "x": 520, "body": [250, 210, 90], "skin": [240, 195, 160], "hat": "band", "hat_col": [255, 120, 120], "prop": "papers",
             "lines": ["새 의뢰 들어왔어요! 게시판 확인해 주세요~", "아, 바쁘다 바빠! 그래도 낚시꾼님 의뢰는 꼭 챙길게요.", "오늘도 무사히 다녀오세요!"]},
-   "gull": {"name": "갈매기 박사", "x": 455, "body": [235, 235, 240], "skin": [225, 190, 160], "hat": "feather", "hat_col": [250, 250, 250], "prop": "glasses",
+   "gull": {"name": "갈매기 박사", "x": 565, "body": [235, 235, 240], "skin": [225, 190, 160], "hat": "feather", "hat_col": [250, 250, 250], "prop": "glasses",
             "lines": ["오호! 어탁은 물고기의 영혼을 종이에 옮기는 학문이지요!", "이 벽의 빈칸이 저를 부르는 소리가 들리지 않습니까?", "갈매기는 물고기를 먹지만, 저는 연구합니다. 끼룩."]},
-   "baek": {"name": "백 노인", "x": 790, "body": [120, 120, 130], "skin": [210, 175, 150], "hat": "straw", "hat_col": [200, 180, 120], "prop": "pipe", "sit": true,
+   "baek": {"name": "백 노인", "x": 900, "body": [120, 120, 130], "skin": [210, 175, 150], "hat": "straw", "hat_col": [200, 180, 120], "prop": "pipe", "sit": true,
             "lines": ["…바다는 기다리는 자에게만 말을 거네.", "서두르지 말게. 물고기도 서두르는 걸 알아.", "{purple}물이 갑자기 조용해지거든{/}, 줄을 놓지 말게."]}
   }
  },

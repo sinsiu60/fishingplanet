@@ -15,6 +15,8 @@ def update(game, dt: float, allow: bool) -> None:
     if game.save is None:
         return
     achievements.tick(game.save, dt)
+    from src.story import story
+    story.tick(game.save, dt)
     cur = getattr(game, "achv_toast", None)
     if cur is not None:
         cur["t"] += dt
@@ -22,6 +24,10 @@ def update(game, dt: float, allow: bool) -> None:
             game.achv_toast = None
         return
     if allow:
+        from src.story import story
+        if story.pop_journal_toast(game.save):   # 스토리: '일지에 기록되었다' (작게, 소리 없이)
+            game.achv_toast = {"journal": True, "t": 0.0}
+            return
         a = achievements.pop_toast(game.save)
         if a is not None:
             game.achv_toast = {"a": a, "t": 0.0}
@@ -38,6 +44,16 @@ def draw(game, canvas) -> None:
         return
     w = canvas.get_width()
     from src.core.fonts import get_font
+    if cur.get("journal"):   # 작은 알림: 공책 아이콘 + 한 줄
+        s = "일지에 기록되었다"
+        tw = get_font(11).size(s)[0] + 26
+        r = pygame.Rect(w // 2 - tw // 2, int(8 + 18 * k), tw, 16)   # 위쪽 줄(마을 22px) 바로 아래
+        canvas.fill((20, 18, 14), r)
+        pygame.draw.rect(canvas, (200, 180, 140), r, 1)
+        canvas.fill((236, 226, 200), (r.x + 5, r.y + 4, 8, 9))
+        canvas.fill((150, 120, 80), (r.x + 5, r.y + 4, 2, 9))
+        text(canvas, s, (r.x + 17, r.centery), (240, 230, 210), 11, "midleft")
+        return
     name = cur["a"]["name"]
     tw = max(get_font(11).size(name)[0], 60) + 44
     r = pygame.Rect(w // 2 - tw // 2, int(-28 + 52 * k), tw, 28)

@@ -41,6 +41,9 @@ class EscapeTutorialScene(Scene):
 
     def _shop(self) -> None:
         self._finish()
+        from src.story import runner
+        if self.fishing.spot.get("continent") == "eldrasion" and runner.escape_shop(self.game, self.fishing):
+            return   # 스토리 C4-02 조건 A: 아스테라 수정 공방 (엘라) — 마비 찌는 공방 상점에서 원래 가격으로
         self.fishing.open_menu("shop", tab="float")
 
     def _close(self) -> None:

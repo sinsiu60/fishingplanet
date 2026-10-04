@@ -379,7 +379,55 @@ def _season_counter(canvas, env, x: int, y: int) -> None:
             pygame.draw.circle(canvas, _c("#F29A2E"), (x + 2 + i * 4, y - 7 - (i % 2)), 3)
 
 
+# ───────────────────────── 주인공의 집 (스토리, 사람 없는 방) ─────────────────────────
+def home_back(canvas, env) -> None:
+    """나무 벽 #8A6A4A, 창문 하나(시간대 색), 벽에 걸린 할아버지의 대나무 낚싯대(대각선 #C9A86A, 마디 #A88849) — 항상."""
+    w, cx, (_, by) = env["w"], env["w"] // 2, _geo(env)
+    th = env["top_h"]
+    canvas.fill(_c("#8A6A4A"), (0, 0, w, th))
+    for x in range((cx - 240) % 24, w, 24):
+        canvas.fill(lerp_color(_c("#8A6A4A"), (0, 0, 0), 0.18), (x, 0, 1, th))
+    win = pygame.Rect(cx + 70, by + 30, 64, 48)
+    _window_view(canvas, win, env)
+    pygame.draw.line(canvas, _c("#5A3D2A"), (win.centerx, win.y), (win.centerx, win.bottom), 2)
+    pygame.draw.line(canvas, _c("#5A3D2A"), (win.x, win.centery), (win.right, win.centery), 2)
+    pygame.draw.rect(canvas, _c("#5A3D2A"), win.inflate(6, 6), 3)
+    if env["season"] == "winter":
+        _frost(canvas, win)
+    a, b = (cx - 200, by + 110), (cx - 40, by + 26)   # 벽에 걸린 대나무 낚싯대 (대각선)
+    for hx, hy in ((cx - 170, by + 92), (cx - 72, by + 42)):   # 걸이 못
+        canvas.fill(_c("#3A2A1E"), (hx - 1, hy - 4, 3, 4))
+    pygame.draw.line(canvas, _c("#C9A86A"), a, b, 3)
+    ln = math.hypot(b[0] - a[0], b[1] - a[1])
+    for d in range(9, int(ln), 18):
+        u = d / ln
+        x, y = a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u
+        canvas.fill(_c("#A88849"), (int(x) - 1, int(y) - 1, 3, 3))
+    pygame.draw.line(canvas, (230, 230, 230), b, (b[0] + 6, b[1] + 50), 1)   # 낚싯줄
+
+
+def home_counter(canvas, env) -> None:
+    """책상 + 펼쳐진 공책."""
+    w, cx, (_, by) = env["w"], env["w"] // 2, _geo(env)
+    canvas.fill(_c("#5A3D2A"), (0, by + 150, w, 25))   # 마루
+    desk = pygame.Rect(cx - 70, by + 120, 140, 10)
+    canvas.fill(_c("#6B4A33"), desk)
+    canvas.fill(_c("#4E3424"), (desk.x + 6, desk.bottom, 6, 30))
+    canvas.fill(_c("#4E3424"), (desk.right - 12, desk.bottom, 6, 30))
+    bx, byy = cx - 22, by + 112
+    pygame.draw.polygon(canvas, (236, 228, 208), [(bx, byy + 8), (bx + 22, byy + 4), (bx + 22, byy + 9), (bx, byy + 12)])
+    pygame.draw.polygon(canvas, (226, 216, 194), [(bx + 22, byy + 4), (bx + 44, byy + 8), (bx + 44, byy + 12), (bx + 22, byy + 9)])
+    for k in range(2):
+        canvas.fill((150, 140, 120), (bx + 5, byy + 8 + k * 2, 12, 1))
+    _season_counter(canvas, env, cx + 40, by + 120)
+
+
+def home_light(canvas, env) -> None:
+    _shade(canvas, env, env["top_h"], warm=(255, 200, 140))
+
+
 LAYERS = {
+    "home_room": (home_back, home_counter, home_light),
     "haru_shop": (haru_back, haru_counter, haru_light),
     "baek_hut": (baek_back, baek_counter, baek_light),
     "ella_workshop": (ella_back, ella_counter, ella_light),

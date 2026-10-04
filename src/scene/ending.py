@@ -57,9 +57,13 @@ class EndingScene(Scene):
                 self.t = STATS_T  # 건너뛰기
             elif self.t > STATS_T + 1.5:
                 self.game.scenes.pop()
+                from src.story import runner
                 if self.kind == "sharmion" and "eldrasion" not in self.game.save.data["unlocked_continents"]:
-                    from src.scene.voyage import VoyageScene
-                    self.game.scenes.push(VoyageScene(self.game, self.fishing))
+                    if not runner.after_dragon_ending(self.game, self.fishing):   # 스토리 C3-04 → 출항 컷신
+                        from src.scene.voyage import VoyageScene
+                        self.game.scenes.push(VoyageScene(self.game, self.fishing))
+                elif self.kind == "final" and runner.after_final_ending(self.game, self.fishing):   # 스토리 E-01
+                    pass
                 else:
                     self.game.fade_in(0.8)
 

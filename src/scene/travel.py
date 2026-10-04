@@ -34,8 +34,12 @@ def start_trip(game, fishing, spot_id: str, prev_cont: str) -> None:
     m = mode(game.settings)
     visited = save.data.setdefault("visited", [])
     if m == "off":
+        first = spot_id not in visited
         _mark(save, spot_id)
         game.fade_in(0.5)
+        if first:
+            from src.story import runner
+            runner.after_travel(game, fishing, spot_id)
         return
     first = spot_id not in visited and m == "full"
     kind = "first" if first else "revisit"
@@ -118,9 +122,14 @@ class TravelScene(Scene):
             self.on_done()
             return
         if self.kind in ("first", "revisit"):
+            first = self.spot_id not in g.save.data.get("visited", [])
             _mark(g.save, self.spot_id)
             self.fishing.backdrop = None
             g.save_now()
+            if first:   # 스토리: 비밀 장소·세계수 뿌리 샘 첫 방문 컷신(타이틀까지) 바로 뒤 (C3-02 · C5-04)
+                from src.story import runner
+                if runner.after_travel(g, self.fishing, self.spot_id):
+                    return
         elif self.kind == "return":
             g.scenes.push(self.village)
         elif self.kind == "voyage" and self.then:

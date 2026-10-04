@@ -51,7 +51,7 @@ def portrait(npc: str, expr: str, blink: bool = False, talk: bool = False) -> py
 
 class InteriorScene(Scene):
     def __init__(self, game, fishing, npc_id: str, village=None, script: list | None = None, on_done=None,
-                 menu: bool = True, greet: bool = True):
+                 menu: bool = True, greet: bool = True, replay: bool = False):
         super().__init__(game)
         self.fishing = fishing
         self.save = game.save
@@ -60,7 +60,7 @@ class InteriorScene(Scene):
         self.c = cfg()
         self.nc = self.c["npcs"][npc_id]
         self.cont = self.nc["cont"]
-        vcfg = load_json("villages.json")[self.cont]["npcs"].get(npc_id, {})
+        vcfg = load_json("villages.json")[self.cont]["npcs"].get(npc_id, {"name": ""})
         self.name = vcfg.get("name", npc_id)
         self.t = 0.0
         self.mouse = (0, 0)
@@ -75,6 +75,18 @@ class InteriorScene(Scene):
         self.wait_menu = False
         self.menu_on = menu
         self.menu_sel = 0
+        self.replay = replay                # 추억에서 다시 보기 (결과 없음)
+        self.fade_col = (0, 0, 0)
+        self.story_sid = None
+        if script is None and not replay:   # 스토리: 이 건물에서 재생할 대기 장면이 있으면 그것부터 (DESIGN.md 36)
+            from src.story import story
+            sid = story.take_interior(game.save, npc_id)
+            if sid is not None:
+                from src.story.runner import interior_script
+                script = interior_script(game, sid)
+                self.story_sid = sid
+                menu = story.scene(sid).get("menu", True) and menu
+                on_done = self._story_done
         self.script = script is not None
         self.on_done = on_done
         # 연출
@@ -93,9 +105,16 @@ class InteriorScene(Scene):
             self._greet()
 
     # ── 대사 ──
+    def _story_done(self, sc) -> None:
+        from src.story import story
+        story.complete(self.game, self.story_sid)
+
     def say(self, lines) -> None:
-        """[(화자, 표정, 문장)] 또는 [(표정, 문장)] (화자 = 이 NPC) 를 이어서 말한다."""
+        """[(화자, 표정, 문장)] 또는 [(표정, 문장)] (화자 = 이 NPC) 를 이어서 말한다. {do: …} 는 대본 특수 단계."""
         for ln in lines:
+            if isinstance(ln, dict):
+                self.queue.append(ln)
+                continue
             if len(ln) == 2:
                 ln = (self.npc, ln[0], ln[1])
             self.queue.append(tuple(ln))
@@ -103,6 +122,11 @@ class InteriorScene(Scene):
             self._next()
 
     def _next(self) -> None:
+        if self.queue and isinstance(self.queue[0], dict):   # 이름 입력 · 클로즈업 · 편지
+            item = self.queue.pop(0)
+            from src.story.runner import step
+            step(self, item, self._next)
+            return
         if self.queue:
             self.line = self.queue.pop(0)
             self.shown = 0.0
@@ -118,9 +142,10 @@ class InteriorScene(Scene):
             return
         if self.script:
             self.script = False
-            if self.on_done is not None:
-                cb, self.on_done = self.on_done, None
+            cb, self.on_done = self.on_done, None
+            if cb is not None:
                 cb(self)
+            if self not in self.game.scenes.stack:   # 콜백이 다음 화면으로 넘겼으면 끝
                 return
             if not self.menu_on:
                 self._begin_leave(farewell=False)
@@ -133,8 +158,8 @@ class InteriorScene(Scene):
     def _text(self) -> str:
         if not self.line:
             return ""
-        name = self.save.data.get("story", {}).get("player_name") or "하늘"
-        return self.line[2].replace("{player}", name)
+        from src.story.story import player_name
+        return self.line[2].replace("{player}", player_name(self.save))
 
     def typing(self) -> bool:
         return self.line is not None and self.shown < len(self._plain())
@@ -348,7 +373,8 @@ class InteriorScene(Scene):
     def draw(self, canvas) -> None:
         g = self.draw_room(canvas)
         # 간판
-        sign = self.nc["sign"]
+        from src.story.story import player_name
+        sign = self.nc["sign"].replace("{player}", player_name(self.save))
         sw = hud.get_font(11).size(sign)[0] + 16
         canvas.fill(SIGN_BG, (8, 7, sw, 18))
         text(canvas, sign, (16, 16), SIGN_FG, 11, "midleft")
@@ -414,6 +440,7 @@ class InteriorScene(Scene):
             a = max(a, 1 - self.leaving / fs)
         if a > 0:
             s = pygame.Surface(canvas.get_size())
+            s.fill(self.fade_col)
             s.set_alpha(int(255 * min(1.0, a)))
             canvas.blit(s, (0, 0))
 

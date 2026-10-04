@@ -159,12 +159,13 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
     k = 0.15 + 0.35 * night
     hit = pygame.Rect(x0, GROUND - 80, w, 84)
     if kind in ("house", "hut"):
-        hh = 62 if kind == "house" else 44
+        hh = (46 if p.get("low") else 62) if kind == "house" else 44   # low = 주인공의 작은 단층집 (스토리)
         canvas.fill(shade(wall, k), (x0, GROUND - hh, w, hh))
         for yy in range(GROUND - hh, GROUND, 6):   # 판자 결
             canvas.fill(shade(lerp_color(wall, (0, 0, 0), 0.15), k), (x0, yy, w, 1))
         pygame.draw.polygon(canvas, shade(roof, k), [(x0 - 8, GROUND - hh), (x0 + w // 2, GROUND - hh - 30), (x0 + w + 8, GROUND - hh)])
-        canvas.fill(shade(lerp_color(wall, (0, 0, 0), 0.5), k), (x0 + w // 2 - 9, GROUND - 26, 18, 26))   # 문
+        door = tuple(p["door"]) if p.get("door") else lerp_color(wall, (0, 0, 0), 0.5)
+        canvas.fill(shade(door, k), (x0 + w // 2 - 9, GROUND - 26, 18, 26))   # 문
         _window(canvas, x0 + 12, GROUND - hh + 14, 18, 14, night, shade(lerp_color(wall, (0, 0, 0), 0.5), k))
         _window(canvas, x0 + w - 30, GROUND - hh + 14, 18, 14, night, shade(lerp_color(wall, (0, 0, 0), 0.5), k))
         if kind == "hut":   # 그물 말리는 틀
@@ -181,7 +182,7 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
             pygame.draw.ellipse(canvas, (230, 220, 190), (fx - 14, fy - 5, 24, 10))
             pygame.draw.polygon(canvas, (230, 220, 190), [(fx + 9, fy), (fx + 16, fy - 5), (fx + 16, fy + 5)])
             canvas.fill((40, 40, 40), (fx - 9, fy - 1, 2, 2))
-        _sign(canvas, x0 + w // 2, GROUND - hh - 18 if p.get("sign") != "fish" else GROUND - hh + 4, p["name"],
+        _sign(canvas, x0 + w // 2, GROUND - hh - 18 if p.get("sign") != "fish" else GROUND - hh + 4, p.get("label", p["name"]),
               (60, 44, 30) if style == "wood" else (40, 46, 80), (250, 236, 200))
         if night > 0.2:
             _add_glow(canvas, (x0 + 21, GROUND - hh + 21), 14, tuple(int(v * night) for v in (255, 190, 100)))

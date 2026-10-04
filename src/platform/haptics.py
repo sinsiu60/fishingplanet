@@ -11,6 +11,7 @@ from src.platform.detect import IS_ANDROID, PREVIEW
 # 종류: (이름, 길이 ms [켬, 끔, 켬 ...], 세기 0~1)
 KINDS = {
     "nibble": ("입질 (톡)", [15], 0.25),
+    "phone": ("휴대폰 알림 (짧게 1회, 스토리)", [60], 0.4),
     "bite": ("진짜 입질 (쑥)", [70], 0.9),
     "tension": ("장력 빨강", [25], 0.4),
     "perfect": ("퍼펙트", [35, 60, 35], 0.8),

@@ -97,13 +97,21 @@ def draw_bobber(canvas, pal, x: float, y: float, size: float, floating: bool, di
         canvas.set_clip(pygame.Rect(0, 0, canvas.get_width(), y).clip(clip))
         pygame.draw.ellipse(canvas, red, body)
         canvas.fill(white, (x - w // 2, top + h // 2 - max(1, h // 8), w, max(1, h // 8)))
+        if pal.get("bobber_band"):   # 해강의 찌: 가운데 대나무색 띠 (외형만)
+            canvas.fill(pal["bobber_band"], (x - w // 2, top + h // 5, w, max(1, h // 9)))
         pygame.draw.line(canvas, scale_color(red, 0.7), (x, top), (x, top - h // 3), 1)
+        if pal.get("bobber_dot"):    # 맨 위 작은 빨간 점
+            canvas.fill(pal["bobber_dot"], (x - 1, top - h // 3 - 1, 2, 2))
         canvas.set_clip(clip)
         canvas.fill(hl, (x - w // 2 - 1, y, w + 2, 1))
     else:
         pygame.draw.ellipse(canvas, red, (x - w // 2, y - h // 2, w, h // 2 + 1))
         pygame.draw.ellipse(canvas, white, (x - w // 2, y - 1, w, h // 2))
+        if pal.get("bobber_band"):
+            canvas.fill(pal["bobber_band"], (x - w // 2, y - h // 4, w, max(1, h // 9)))
         pygame.draw.line(canvas, scale_color(red, 0.7), (x, y - h // 2), (x, y - h // 2 - h // 3), 1)
+        if pal.get("bobber_dot"):
+            canvas.fill(pal["bobber_dot"], (x - 1, y - h // 2 - h // 3 - 1, 2, 2))
 
 
 def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:

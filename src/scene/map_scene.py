@@ -451,6 +451,8 @@ class MapScene(Scene):
                 yy += 12
             cost = sp["unlock"].get("cost", 0)
             self.go_btn.label = f"해금하기 ({cost:,}원)" if cost else "해금하기"
+            if sp["id"] == "offshore":   # 스토리: 먼바다용 배 = 해강의 배 수리 (가격·조건 그대로)
+                self.go_btn.label = f"해강의 배 수리 ({cost:,}원)"
             self.go_btn.enabled = ok
         self.go_btn.draw(canvas, self.mouse)
 
