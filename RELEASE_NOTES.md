@@ -9,6 +9,7 @@
 |---|---|
 | `MiniFishing-v1.2.1-windows.zip` | 윈도 PC — 압축을 풀고 `MiniFishing.exe` 실행 (폴더째로 두세요, `_internal` 지우면 안 됨) |
 | `MiniFishing-v1.2.1-android.apk` | 안드로이드 — 폰에서 열어 설치 ('출처를 알 수 없는 앱' 허용 필요, 테스트용 debug 서명) |
+| 웹 (아이폰·아이패드·PC 브라우저) | https://sinsiu60.github.io/fishingplanet/ — 사파리로 열고 공유 → '홈 화면에 추가' 하면 앱처럼 전체 화면 |
 
 "Windows의 PC 보호" 창이 뜨면 [추가 정보] → [실행] (서명 안 된 개인 제작 exe의 정상 경고). 세이브는 예전 버전과 호환됩니다 (이미 해 본 기능의 튜토리얼은 자동으로 완료 처리).
 
