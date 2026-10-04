@@ -85,7 +85,8 @@ class SettingsScene(Scene):
         test = ("테스트: 환상 물고기", "button",
                 lambda: "다음 착수에 나옴 (취소)" if s.get("test_phantom") else "다음 착수에 부르기",
                 lambda: s.set("test_phantom", not s.get("test_phantom")))
-        return [tele, cards, slot, cb, snd, test]
+        show = ("테스트: 환상 포획 연출", "button", lambda: "열기", self._open_phantom_test)
+        return [tele, cards, slot, cb, snd, test, show]
 
     def _sound_rows(self) -> list[tuple]:
         """소리 (32장 S3): 버스 볼륨 4개, 신호음 모드(N2), 성공 효과음·파이팅 음악(32-16), 신호 때 배경 줄이기, 오디오 지연 보정, 사운드 테스트 룸."""
@@ -123,6 +124,10 @@ class SettingsScene(Scene):
     def _open_sound_test(self) -> None:
         from src.scene.sound_test import SoundTestScene
         self.game.scenes.push(SoundTestScene(self.game))
+
+    def _open_phantom_test(self) -> None:
+        from src.scene.phantom_show_test import PhantomShowTestScene
+        self.game.scenes.push(PhantomShowTestScene(self.game))
 
     def _build(self) -> None:
         x = self.x0 + ROW_X
