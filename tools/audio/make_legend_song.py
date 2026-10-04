@@ -10,9 +10,12 @@
 - 구조·마커는 data/legend_catch_timeline.json 을 읽는다 (연출과 같은 숫자 = 싱크)
   끝맺음 타격(hit) → 팀파니 롤 + 금관 상승(rise) → 현악 스타카토 고조(scales) → 절정 화음(climax, ♭VII→I)
   → 3음 동기(card) → 인장 '쿵'(record) → 웅장한 마침(afterglow)
-- 3음 동기 = 5-1-3 (A4-D5-F#5, 짧게-짧게-길게) — 환상의 4음 동기(리디안)와 다른 전설의 서명
+- 3음 동기 = '주인의 동기' 으뜸음 → 5도 → 4도 (D5-A5-G5, 4분·4분·2분 비율 — card~record 사이에 맞춤).
+  전설 전용 파이팅 곡(BOSS_BGM.md, DESIGN.md 43)의 주선율 동기와 같은 음. 환상의 4음 동기(리디안)와 다른 전설의 서명
+- 전설마다 그 파이팅 곡의 조성(으뜸음)으로 따로 굽는다 (파이팅 곡 마지막 화음 = 이 곡의 첫 타격음):
+  legend_catch_<버전>_<곡ID>.ogg (L01~L12, 조성은 data/music_patterns.json boss.songs 의 root, 음색은 L01~L06 샤르미온 · L07~ 엘드라시온)
 
-출력: assets/music_generated/legend_catch_{full,short,loop}_{sharmion,eldrasion}.ogg + legend_catch_markers.json
+출력: assets/music_generated/legend_catch_{full,short,loop}_{sharmion,eldrasion,L01..L12}.ogg + legend_catch_markers.json
       + tools/audio/reference/legend_catch/ 같은 이름 .wav + 길이·최대·평균 음량·마커 표
       (final 버전은 full 곡을 그대로 쓴다 — 닫을 때 엔딩 음악으로 넘어감)
 사용: python tools/audio/make_legend_song.py   (numpy, scipy, ffmpeg 필요 — 빌드 때는 안 돌린다)
@@ -37,7 +40,7 @@ BEAT = 60.0 / BPM
 hz = ps.hz
 
 # D 기준 음 (엘드라시온은 +2 = E)
-MOTIF = [69, 74, 78]                          # A4 D5 F#5 (5-1-3)
+MOTIF = [74, 81, 79]                          # D5 A5 G5 (주인의 동기 1-5-4)
 I_CHORD = [38, 50, 57, 62, 66, 69, 74]        # D2 D3 A3 D4 F#4 A4 D5
 BVII = [36, 48, 55, 60, 64, 67, 72]           # C 장3화음 (믹솔리디안 ♭VII)
 IV = [43, 55, 59, 62, 67, 71]                 # G
@@ -157,11 +160,13 @@ def ching() -> np.ndarray:
 
 # ───────────────────────── 곡 ─────────────────────────
 
-def compose(variant: str, cont: str) -> tuple[np.ndarray, dict]:
+def compose(variant: str, cont: str, tp: int | None = None) -> tuple[np.ndarray, dict]:
+    """cont = 음색(샤르미온 따뜻하게 / 엘드라시온 밝게), tp = D 에서 옮길 반음 (없으면 대륙 기본: 샤르미온 D · 엘드라시온 E)."""
     eld = cont == "eldrasion"
+    if tp is None:
+        tp = 2 if eld else 0
     if variant == "loop":
-        return compose_loop(eld), {}
-    tp = 2 if eld else 0
+        return compose_loop(eld, tp), {}
     T = lambda ns: [m + tp for m in ns]  # noqa: E731
     m = TL["variants"][variant]["markers"]
     short = variant == "short"
@@ -206,9 +211,10 @@ def compose(variant: str, cont: str) -> tuple[np.ndarray, dict]:
     if eld:
         for j, nn in enumerate((86, 90, 93, 98)):
             tr.add(ps.bell(hz(nn + tp), 2.2, "crystal"), cl + 0.03 * j, 0.1, (-0.5, -0.2, 0.2, 0.5)[j])
-    # 6) 3음 동기 (card): 트럼펫(엘드라시온)/호른+트럼펫(샤르미온) 5-1-3, 짧게-짧게-길게 + 금속성 '챙'
+    # 6) 주인의 동기 (card): 트럼펫(엘드라시온)/호른+트럼펫(샤르미온) 1-5-4, 4분·4분·2분 비율 + 금속성 '챙'
     tr.add(ching(), card, 0.28)
-    durs = (BEAT / 2, BEAT / 2, (rec - card) + 0.6)
+    q = (rec - card) / 2
+    durs = (q, q, 2 * q + 0.6)
     st = card
     for j, (nn, d) in enumerate(zip(MOTIF, durs)):
         tr.add(brass([nn + tp], d + 0.05, False, 0.015, stab=j < 2), st, 0.5, 0.1)
@@ -240,9 +246,10 @@ def compose(variant: str, cont: str) -> tuple[np.ndarray, dict]:
     return ps.master(y, -2.0), {k: v for k, v in m.items()}  # 평균 음량을 환상(−13dB)과 비슷하게
 
 
-def compose_loop(eld: bool) -> np.ndarray:
+def compose_loop(eld: bool, tp: int | None = None) -> np.ndarray:
     """카드 대기: 작은 여운 (금관 패드 + 합창, 드문 반짝임), 이음매 없이 반복."""
-    tp = 2 if eld else 0
+    if tp is None:
+        tp = 2 if eld else 0
     L = TL["loop_len"]
     tr = Track(L)
     tr.add(brass([50 + tp, 57 + tp, 62 + tp, 66 + tp], L + 2.0, True, 1.0), 0.0, 0.3)
@@ -266,10 +273,21 @@ if __name__ == "__main__":
     ps.REF = REF  # 저장 위치만 전설용으로
     markers = {"_설명": "make_legend_song.py 가 실제로 음을 놓은 시각 (초). 게임 연출은 data/legend_catch_timeline.json 의 같은 값을 쓴다.",
                "files": {}}
-    for cont in ("sharmion", "eldrasion"):
+    # 전설 전용 곡 조성 (data/music_patterns.json boss.songs: kind legend, 시험곡 제외)
+    songs = json.load(open(os.path.join(ROOT, "data", "music_patterns.json"), encoding="utf-8"))["boss"]["songs"]
+    jobs = [(c, c, None) for c in ("sharmion", "eldrasion")]
+    for sid, sp in sorted(songs.items()):
+        if sp.get("kind") == "legend" and not sp.get("test"):
+            tp = (sp["root"] - 2) % 12
+            tp = tp - 12 if tp > 5 else tp   # D 에서 가까운 쪽으로 (−6~+5)
+            jobs.append((sid, "eldrasion" if int(sid[1:]) >= 7 else "sharmion", tp))
+    import tempfile
+    tmp_ref = tempfile.mkdtemp()
+    for tag, cont, tp in jobs:
+        ps.REF = REF if tp is None else tmp_ref   # 전설별 판은 ogg 만 (미리듣기 wav 는 대륙판만)
         for variant in ("full", "short", "loop"):
-            y, mk = compose(variant, cont)
-            name = f"legend_catch_{variant}_{cont}"
+            y, mk = compose(variant, cont, tp)
+            name = f"legend_catch_{variant}_{tag}"
             ps.save(y, name)
             ln, pk, rms = ps.stats(y)
             s = " ".join(f"{k}{v:g}" for k, v in mk.items() if k in ("rise", "climax", "card", "record", "afterglow"))

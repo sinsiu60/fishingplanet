@@ -61,7 +61,13 @@ def degree_to_midi(deg, root: int, scale: str) -> float:
 
 
 def chord_midis(deg, root: int, scale: str, n: int = 3) -> list[float]:
-    """도수 화음 (3화음, n=4 면 7화음). '5:7' = 5도 7화음."""
+    """도수 화음 (3화음, n=4 면 7화음). '5:7' = 5도 7화음. 'M'/'m' 꼬리 = 장·단3화음으로 고정
+    ('5M' = 화성단음계 V, 'b7M' = ♭VII, 'b6M' = ♭VI, '4m' = iv, 'b2M' = 나폴리)."""
+    if isinstance(deg, str) and deg[-1:] in ("M", "m") and ":" not in deg:
+        base = degree_to_midi(deg[:-1], root, scale)
+        third = 4 if deg[-1] == "M" else 3
+        out = [base, base + third, base + 7]
+        return out + [base + 10] if n == 4 else out
     if isinstance(deg, str) and ":" in deg:
         d, k = deg.split(":")
         deg, n = int(d), 4 if k == "7" else n
