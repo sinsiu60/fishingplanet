@@ -26,6 +26,11 @@ def story_busy(game) -> bool:
     return False
 
 
+def fighting(game) -> bool:
+    fs = _fishing(game)
+    return fs is not None and fs.fight is not None and fs.fight.phase in ("fight", "net")
+
+
 def aside(game) -> bool:
     return _cur_name(game) in ASIDE_SCENES or story_busy(game)
 

@@ -35,6 +35,7 @@ jobs:
           python tools/bake_music.py --check
           python tools/bake_indoor.py --check
           python tools/sound_audit.py --strict
+          python tools/tutorial_check.py
       - name: 아이콘
         run: python tools/make_icon.py build/icon.ico
       - name: PyInstaller (build.bat 과 같은 옵션)

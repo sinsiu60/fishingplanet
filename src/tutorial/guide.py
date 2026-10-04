@@ -117,6 +117,10 @@ class Guide:
             return False
         return True
 
+    @staticmethod
+    def _fight_tut(tid: str) -> bool:
+        return tid == "TG-02" or tid.startswith(("TG-P", "TG-19"))
+
     def request(self, tid: str) -> None:
         if tid not in self.queue and (self.run is None or self.run["id"] != tid) and self.can_start(tid):
             self.queue.append(tid)
@@ -210,7 +214,10 @@ class Guide:
             return   # 일시정지·설정·스토리 장면 중: 가이드도 멈춤
         if self.run is None:
             if self.queue and not conds.story_busy(self.game):
-                tid = self.queue.pop(0)
+                tid = self.queue[0]
+                if conds.fighting(self.game) and not self._fight_tut(tid):
+                    return   # 파이팅 중엔 파이팅 튜토리얼만 — 나머지는 끝난 뒤
+                self.queue.pop(0)
                 if self.can_start(tid):
                     self._begin(tid)
             return
