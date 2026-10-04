@@ -199,13 +199,11 @@ class MapScene(Scene):
         """훈련 수조 (31장 C5): 해금 패턴 무한 반복, 보상·패널티 없음."""
         if self.fishing.fight is not None:
             return
-        from src.scene.training import TrainingTank
         self.game.sfx.play("ui_click")
         self.game.scenes.pop()
         if self.village is not None:
             self.village.leave()
-        self.fishing.training = TrainingTank(self.fishing)
-        self.fishing.training.start()
+        self.fishing.start_training()
 
     def handle_action(self, a) -> None:
         if a.name == "back" or a.is_("menu", "map"):

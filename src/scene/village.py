@@ -57,6 +57,7 @@ class VillageScene(Scene):
         self.efx = EventFx()
         self.ev_banner = None
         self.btns = []
+        self.collect_open = False   # 위 '수집' 버튼 서랍
         # 계절이 바뀐 뒤 처음 들어옴: 계절 알림 + 상점 주인의 계절 대사 (35-4)
         self.season_banner = 0.0
         if self.save.data.get("season_seen") != self.season:
@@ -138,7 +139,7 @@ class VillageScene(Scene):
         elif a.name == "menu":
             if a.value == "map":
                 self._act("place", "dock")
-            elif a.value in ("dex", "inventory", "shop", "quests", "chest"):
+            elif a.value in ("dex", "inventory", "shop", "quests", "chest", "achievements"):
                 self.fishing.open_menu(a.value)
         elif a.name == "debug" and a.value == "F12":
             from src.core.config import load_json as _lj
@@ -191,6 +192,8 @@ class VillageScene(Scene):
     # ── 시간 ──
     def update(self, dt: float) -> None:
         self.t += dt
+        from src.ui import achv_toast
+        achv_toast.update(self.game, dt, self.game.scenes.current is self)
         f = self.fishing
         f.clock.update(dt)      # 마을에서도 시간은 흐른다 (등불·창문 불빛)
         f.ambience.update(dt, self.cfg["ambience"], f.clock.period()[0], f.weather, season=self.season)
@@ -304,12 +307,24 @@ class VillageScene(Scene):
         sname = seasons.name(self.season, self.cont)
         text(canvas, f"{self.cfg['name']} · {sname} · {self.fishing.clock.label()}", (8, 11), (255, 240, 200), 11, "midleft")
         text(canvas, ui.money_text(self.save.money), (w - 150, 11), ui.ACCENT, 11, "midright")
-        labels = (("도감", "dex"), ("가방", "inventory"), ("설정", "settings"))
+        labels = (("수집", "collection"), ("가방", "inventory"), ("설정", "settings"))
         self.btns = []
         for i, (lab, key) in enumerate(labels):
             b = ui.Button((w - 142 + i * 46, 4, 42, 14), lab, lambda k=key: self._menu(k))
-            b.draw(canvas, self.mouse)
+            b.draw(canvas, self.mouse, selected=key == "collection" and self.collect_open)
             self.btns.append(b)
+        if self.collect_open:   # 수집 서랍: 수집 버튼 아래에서 왼쪽으로 (도감 · 업적 · 어탁 · 수조)
+            items = (("도감", "dex"), ("업적", "achievements"), ("어탁", "prints"), ("수조", "tank"))
+            x0 = w - 142 + 42
+            back = pygame.Surface((4 * 46 + 4, 20), pygame.SRCALPHA)
+            back.fill((10, 12, 24, 190))
+            canvas.blit(back, (x0 - 4 * 46 - 2, 22))
+            for i, (lab, key) in enumerate(items):
+                b = ui.Button((x0 - (i + 1) * 46 + 4, 25, 42, 14), lab, lambda k=key: self._menu(k))
+                b.draw(canvas, self.mouse)
+                self.btns.insert(0, b)
+        from src.ui import achv_toast
+        achv_toast.draw(self.game, canvas)
         # 양 끝 화살표
         for side in (-1, 1):
             if (side < 0 and self.ox > 1) or (side > 0 and self.ox < self.width - w - 1):
@@ -340,6 +355,15 @@ class VillageScene(Scene):
         draw_cursor(canvas, self.mouse)
 
     def _menu(self, key: str) -> None:
+        if key == "collection":
+            self.game.sfx.play("ui_click")
+            self.collect_open = not self.collect_open
+            return
+        self.collect_open = False
+        if key == "tank":
+            self.game.sfx.play("ui_click")
+            self.fishing.start_training()   # 마을을 떠나 지금 낚시터의 훈련 수조로
+            return
         if key == "settings":
             from src.scene.settings_scene import SettingsScene
             self.game.sfx.play("ui_click")

@@ -33,6 +33,7 @@ KEY_ACTIONS = {
     pygame.K_c: ("menu", "chest"),
     pygame.K_i: ("menu", "inventory"),
     pygame.K_j: ("menu", "quests"),
+    pygame.K_u: ("menu", "achievements"),
     pygame.K_h: ("help", 0),
     pygame.K_t: ("time_fast", 0),
     pygame.K_q: ("drag", -1),

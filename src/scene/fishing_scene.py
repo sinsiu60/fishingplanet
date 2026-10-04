@@ -38,7 +38,7 @@ def float_name(tier: int) -> str:
     return next((f["name"] for f in load_json("floats.json")["floats"] if f["tier"] == tier), "특수 찌")
 
 HINTS = {
-    CastState.READY: "좌클릭 유지: 던지기   오른쪽 버튼: 지도·상점·의뢰·도감",
+    CastState.READY: "좌클릭 유지: 던지기   오른쪽 버튼: 지도·상점·의뢰·수집",
     CastState.CHARGING: "놓으면 던지기   우클릭: 취소",
     CastState.SWING: "",
     CastState.FLIGHT: "",
@@ -182,6 +182,8 @@ class FishingScene(Scene):
         self.tutorial = tut.Tutorial(self.settings)
         self.card: dict | None = None    # 튜토리얼 카드 (표시 중엔 게임 정지)
         self.help = False                # H 도움말 (표시 중엔 게임 정지)
+        self.collect_open = False        # 오른쪽 메뉴 '수집' 서랍 (도감·업적·어탁·수조)
+        self.collect_k = 0.0
         self.slack_t = self.red_t = 0.0
         self.shake_on = self.settings.get("screen_shake")
         self.screen_fx.enabled = self.shake_on
@@ -517,7 +519,7 @@ class FishingScene(Scene):
                     from src.scene.quick_menu import QuickMenuScene
                     self.sfx.play("ui_click")
                     self.game.scenes.push(QuickMenuScene(self.game, self))
-            elif a.value in ("dex", "quests"):
+            elif a.value in ("dex", "quests", "achievements"):
                 if self.fight is None:
                     self.open_menu(a.value)
             elif self.can_open_menus():
@@ -594,9 +596,19 @@ class FishingScene(Scene):
         if not self._side_menu_on():
             return False
         from src.ui import side_menu
-        k = side_menu.hit(self._side_menu_rects(), pos)
+        rects = self._side_menu_rects()
+        k = side_menu.hit(rects, pos)
+        if k is None and self.collect_open:
+            k = side_menu.hit(side_menu.drawer_layout(rects), pos)
+            self.collect_open = False   # 서랍 바깥을 눌러도 닫힘
+            if k is None:
+                return True
         if k is None:
             return False
+        if k == "collection":
+            self.sfx.play("ui_click")
+            self.collect_open = not self.collect_open
+            return True
         if k == "help":
             self.sfx.play("ui_click")
             self.help = True
@@ -645,8 +657,35 @@ class FishingScene(Scene):
                 return
             from src.scene.quest_board import QuestBoardScene
             self.game.scenes.push(QuestBoardScene(self.game, self))
+        elif which == "achievements":
+            if self.fight is not None:
+                return
+            from src.scene.achievements_scene import AchievementsScene
+            self.game.scenes.push(AchievementsScene(self.game, self))
+        elif which == "prints":
+            if self.fight is not None:
+                return
+            from src.scene.print_gallery import PrintGalleryScene
+            self.game.scenes.push(PrintGalleryScene(self.game, self))
+        elif which == "tank":
+            self.start_training()
         self.fight_audio.stop()
         self.signal_audio.stop()
+
+    def start_training(self) -> None:
+        """훈련 수조 (31장 C5): 해금 패턴 무한 반복, 보상·패널티 없음. 지도·수집 서랍에서."""
+        if self.fight is not None or self.training is not None:
+            return
+        from src.scene.training import TrainingTank
+        stack = self.game.scenes.stack
+        while stack and stack[-1] is not self:   # 위에 열린 화면(지도·마을 등)은 닫고
+            top = stack[-1]
+            if hasattr(top, "leave"):
+                top.leave()
+            else:
+                stack.pop()
+        self.training = TrainingTank(self)
+        self.training.start()
 
     def write_save(self) -> None:
         d = self.save.data
@@ -1025,6 +1064,13 @@ class FishingScene(Scene):
             self.game.screen.shake = (0, 0)
             return
         self.t += dt
+        from src.ui import achv_toast
+        achv_toast.update(self.game, dt, self.fight is None and self.landing is None and self.catch_show is None
+                          and self.game.scenes.current is self)   # 업적 확인·알림 (파이팅·포획 연출 중엔 대기)
+        self.collect_k = min(1.0, self.collect_k + dt * 6) if self.collect_open and self._side_menu_on() \
+            else max(0.0, self.collect_k - dt * 8)
+        if not self._side_menu_on():
+            self.collect_open = False
         self.ctl.begin_tick()
         self.clock.update(dt)
         self.clouds.update(dt)
@@ -2617,7 +2663,9 @@ class FishingScene(Scene):
             if side:
                 from src.ui import side_menu
                 chests = sum(self.save.data.get("chests", {}).values())
-                side_menu.draw(canvas, self._side_menu_rects(), self.mouse, t, {"chest": chests})
+                side_menu.draw(canvas, self._side_menu_rects(), self.mouse, t, {"chest": chests}, drawer=self.collect_k)
+            from src.ui import achv_toast
+            achv_toast.draw(self.game, canvas)
         self.toasts.draw(canvas)
         la = self.phantom_fx.line_alpha()
         if la > 0:

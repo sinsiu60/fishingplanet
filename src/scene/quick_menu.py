@@ -12,7 +12,8 @@ class QuickMenuScene(Scene):
         self.fishing = fishing
         self.mouse = (-100, -100)
         self.age = 0.0
-        items = [("인벤토리", "inventory"), ("지도", "map"), ("상점", "shop"), ("도감", "dex"), ("보물상자", "chest"),
+        self.collect = False   # '수집'을 누르면 같은 판이 도감·업적·어탁·수조로 바뀜
+        items = [("인벤토리", "inventory"), ("지도", "map"), ("상점", "shop"), ("수집", "collection"), ("보물상자", "chest"),
                  ("의뢰", "quests")]
         bw, bh, gap = 104, 32, 6
         x0 = 240 - (bw * 3 + gap * 2) // 2
@@ -23,8 +24,24 @@ class QuickMenuScene(Scene):
         y = 66 + 2 * (bh + gap)
         self.buttons.append(ui.Button((x0 + bw + gap, y, bw, bh), "도움말", self._help, size=16))
         self.buttons.append(ui.Button((240 - bw // 2, y + bh + gap, bw, 28), "닫기", self._close))
+        sub = [("도감", "dex"), ("업적", "achievements"), ("어탁", "prints"), ("수조", "tank")]
+        self.sub_buttons = []
+        for i, (label, which) in enumerate(sub):
+            x, y2 = 240 - (bw * 2 + gap) // 2 + (i % 2) * (bw + gap), 66 + (i // 2) * (bh + gap)
+            self.sub_buttons.append(ui.Button((x, y2, bw, bh), label, lambda w=which: self._open(w), size=16))
+        self.sub_buttons.append(ui.Button((240 - bw // 2, 66 + 2 * (bh + gap) + bh + gap, bw, 28), "뒤로", self._back))
+
+    def _back(self) -> None:
+        self.collect = False
+
+    @property
+    def active(self) -> list:
+        return self.sub_buttons if self.collect else self.buttons
 
     def _open(self, which: str) -> None:
+        if which == "collection":
+            self.collect = True
+            return
         self.game.scenes.pop()
         self.fishing.open_menu(which)
 
@@ -39,7 +56,7 @@ class QuickMenuScene(Scene):
         if a.name in ("back", "menu"):
             self._close()
         elif a.name == "primary":
-            for b in self.buttons:
+            for b in self.active:
                 if b.click(a.pos):
                     self.game.sfx.play("ui_click")
                     return
@@ -54,6 +71,6 @@ class QuickMenuScene(Scene):
         ui.dim(canvas, int(150 * min(1.0, self.age / 0.15)))
         canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (240 - 176, 34, 352, 194))
-        text(canvas, "가방", (240, 50), ui.ACCENT, 16, "center")
-        for b in self.buttons:
+        text(canvas, "수집" if self.collect else "가방", (240, 50), ui.ACCENT, 16, "center")
+        for b in self.active:
             b.draw(canvas, self.mouse)
