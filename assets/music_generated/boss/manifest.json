@@ -21,15 +21,15 @@
    "L01_3_perc_crisis.ogg",
    "L01_intro.ogg"
   ],
-  "hash": "b6163256b14c2209",
+  "hash": "273262b9fdb85d97",
   "lufs": -14.0,
   "phases": {
-   "1": -15.22,
-   "2": -13.9,
-   "3": -12.9,
-   "intro": -18.2
+   "1": -15.21,
+   "2": -13.87,
+   "3": -12.92,
+   "intro": -17.99
   },
-  "tp": -1.13
+  "tp": -2.3
  },
  "L02": {
   "files": [
@@ -53,15 +53,15 @@
    "L02_3_perc_crisis.ogg",
    "L02_intro.ogg"
   ],
-  "hash": "7c4b429410b5df29",
+  "hash": "c29eaea17f9cef29",
   "lufs": -14.0,
   "phases": {
-   "1": -17.01,
-   "2": -12.92,
-   "3": -12.9,
-   "intro": -19.54
+   "1": -16.88,
+   "2": -13.0,
+   "3": -12.87,
+   "intro": -19.29
   },
-  "tp": -1.15
+  "tp": -2.26
  },
  "L03": {
   "files": [
@@ -85,15 +85,15 @@
    "L03_3_perc_crisis.ogg",
    "L03_intro.ogg"
   ],
-  "hash": "bdd202d6a61a1e6c",
+  "hash": "9b1fddcbff1b02f3",
   "lufs": -14.0,
   "phases": {
    "1": -16.24,
-   "2": -13.85,
+   "2": -13.86,
    "3": -12.48,
-   "intro": -16.94
+   "intro": -16.93
   },
-  "tp": -1.39
+  "tp": -1.55
  },
  "L04": {
   "files": [
@@ -117,15 +117,15 @@
    "L04_3_perc_crisis.ogg",
    "L04_intro.ogg"
   ],
-  "hash": "2240f02f31e25ab0",
+  "hash": "3c596273bfcd2ae1",
   "lufs": -14.0,
   "phases": {
-   "1": -15.42,
+   "1": -15.4,
    "2": -14.77,
-   "3": -12.3,
-   "intro": -15.59
+   "3": -12.31,
+   "intro": -15.62
   },
-  "tp": -1.54
+  "tp": -1.74
  },
  "L05": {
   "files": [
@@ -149,15 +149,15 @@
    "L05_3_perc_crisis.ogg",
    "L05_intro.ogg"
   ],
-  "hash": "aba8c433c41313ba",
+  "hash": "bcde96073c501881",
   "lufs": -14.0,
   "phases": {
-   "1": -17.24,
-   "2": -14.0,
-   "3": -12.04,
-   "intro": -16.05
+   "1": -17.29,
+   "2": -13.99,
+   "3": -12.03,
+   "intro": -16.12
   },
-  "tp": -1.5
+  "tp": -1.66
  },
  "L06": {
   "files": [
@@ -181,15 +181,15 @@
    "L06_3_perc_crisis.ogg",
    "L06_intro.ogg"
   ],
-  "hash": "bffe917d16f0243a",
+  "hash": "deb79c851abf034d",
   "lufs": -14.0,
   "phases": {
-   "1": -14.4,
-   "2": -14.22,
-   "3": -13.31,
-   "intro": -15.76
+   "1": -14.35,
+   "2": -14.26,
+   "3": -13.32,
+   "intro": -15.75
   },
-  "tp": -1.3
+  "tp": -2.42
  },
  "L07": {
   "files": [
@@ -213,15 +213,15 @@
    "L07_3_perc_crisis.ogg",
    "L07_intro.ogg"
   ],
-  "hash": "0f286ac396198abd",
+  "hash": "f6ebfe5a171e6e80",
   "lufs": -14.0,
   "phases": {
    "1": -16.37,
    "2": -14.62,
    "3": -11.92,
-   "intro": -18.9
+   "intro": -18.93
   },
-  "tp": -1.9
+  "tp": -2.08
  },
  "L08": {
   "files": [
@@ -245,15 +245,15 @@
    "L08_3_perc_crisis.ogg",
    "L08_intro.ogg"
   ],
-  "hash": "7f3ac4e594775da8",
+  "hash": "649c014dfab40568",
   "lufs": -14.0,
   "phases": {
-   "1": -16.31,
+   "1": -16.19,
    "2": -13.51,
-   "3": -12.7,
-   "intro": -16.98
+   "3": -12.77,
+   "intro": -16.77
   },
-  "tp": -1.32
+  "tp": -2.3
  },
  "L09": {
   "files": [
@@ -277,15 +277,15 @@
    "L09_3_perc_crisis.ogg",
    "L09_intro.ogg"
   ],
-  "hash": "35cfe12e4a94e072",
+  "hash": "12e339c19fa77867",
   "lufs": -14.0,
   "phases": {
-   "1": -16.61,
-   "2": -14.26,
-   "3": -12.08,
-   "intro": -17.44
+   "1": -16.62,
+   "2": -14.33,
+   "3": -12.03,
+   "intro": -17.16
   },
-  "tp": -1.23
+  "tp": -2.31
  },
  "L10": {
   "files": [
@@ -309,15 +309,15 @@
    "L10_3_perc_crisis.ogg",
    "L10_intro.ogg"
   ],
-  "hash": "4520b6704b0f1e71",
+  "hash": "890cf963ca19019b",
   "lufs": -14.0,
   "phases": {
-   "1": -17.6,
-   "2": -15.0,
-   "3": -11.38,
-   "intro": -17.08
+   "1": -17.62,
+   "2": -15.05,
+   "3": -11.36,
+   "intro": -16.98
   },
-  "tp": -1.07
+  "tp": -2.13
  },
  "L11": {
   "files": [
@@ -341,15 +341,15 @@
    "L11_3_perc_crisis.ogg",
    "L11_intro.ogg"
   ],
-  "hash": "1df65228d5d2182e",
+  "hash": "a69add9c8212d25f",
   "lufs": -14.0,
   "phases": {
    "1": -17.93,
-   "2": -16.71,
-   "3": -10.76,
-   "intro": -16.57
+   "2": -16.74,
+   "3": -10.75,
+   "intro": -16.67
   },
-  "tp": -1.75
+  "tp": -1.91
  },
  "L12": {
   "files": [
@@ -381,15 +381,316 @@
    "L12_4_perc_crisis.ogg",
    "L12_intro.ogg"
   ],
-  "hash": "9afffddfdea2d191",
+  "hash": "e2d1f40a7e110942",
   "lufs": -14.0,
   "phases": {
    "1": -15.68,
    "2": -14.98,
-   "3": -12.92,
-   "4": -12.98,
-   "intro": -15.72
+   "3": -12.91,
+   "4": -12.99,
+   "intro": -15.76
   },
-  "tp": -1.62
+  "tp": -1.75
+ },
+ "P01": {
+  "files": [
+   "P01_1_base.ogg",
+   "P01_1_lead.ogg",
+   "P01_1_lead_oct.ogg",
+   "P01_1_perc.ogg",
+   "P01_1_perc_crisis.ogg",
+   "P01_1_riser.ogg",
+   "P01_2_base.ogg",
+   "P01_2_choir.ogg",
+   "P01_2_lead.ogg",
+   "P01_2_lead_oct.ogg",
+   "P01_2_perc.ogg",
+   "P01_2_perc_crisis.ogg",
+   "P01_intro.ogg"
+  ],
+  "hash": "90d88cf1bfad6b18",
+  "lufs": -14.0,
+  "phases": {
+   "1": -15.34,
+   "2": -12.92,
+   "intro": -14.71
+  },
+  "tp": -1.59
+ },
+ "P02": {
+  "files": [
+   "P02_1_base.ogg",
+   "P02_1_lead.ogg",
+   "P02_1_lead_oct.ogg",
+   "P02_1_perc.ogg",
+   "P02_1_perc_crisis.ogg",
+   "P02_1_riser.ogg",
+   "P02_2_base.ogg",
+   "P02_2_choir.ogg",
+   "P02_2_lead.ogg",
+   "P02_2_lead_oct.ogg",
+   "P02_2_perc.ogg",
+   "P02_2_perc_crisis.ogg",
+   "P02_intro.ogg"
+  ],
+  "hash": "12907a5551ced039",
+  "lufs": -14.0,
+  "phases": {
+   "1": -14.08,
+   "2": -13.84,
+   "intro": -14.81
+  },
+  "tp": -1.81
+ },
+ "P03": {
+  "files": [
+   "P03_1_base.ogg",
+   "P03_1_lead.ogg",
+   "P03_1_lead_oct.ogg",
+   "P03_1_perc.ogg",
+   "P03_1_perc_crisis.ogg",
+   "P03_1_riser.ogg",
+   "P03_2_base.ogg",
+   "P03_2_choir.ogg",
+   "P03_2_lead.ogg",
+   "P03_2_lead_oct.ogg",
+   "P03_2_perc.ogg",
+   "P03_2_perc_crisis.ogg",
+   "P03_intro.ogg"
+  ],
+  "hash": "c75f6f74f8fbf6e6",
+  "lufs": -14.0,
+  "phases": {
+   "1": -15.46,
+   "2": -12.8,
+   "intro": -15.42
+  },
+  "tp": -1.76
+ },
+ "P04": {
+  "files": [
+   "P04_1_base.ogg",
+   "P04_1_lead.ogg",
+   "P04_1_lead_oct.ogg",
+   "P04_1_perc.ogg",
+   "P04_1_perc_crisis.ogg",
+   "P04_1_riser.ogg",
+   "P04_2_base.ogg",
+   "P04_2_choir.ogg",
+   "P04_2_lead.ogg",
+   "P04_2_lead_oct.ogg",
+   "P04_2_perc.ogg",
+   "P04_2_perc_crisis.ogg",
+   "P04_intro.ogg"
+  ],
+  "hash": "e83b79470302e22e",
+  "lufs": -14.0,
+  "phases": {
+   "1": -15.29,
+   "2": -12.89,
+   "intro": -15.38
+  },
+  "tp": -1.95
+ },
+ "P05": {
+  "files": [
+   "P05_1_base.ogg",
+   "P05_1_lead.ogg",
+   "P05_1_lead_oct.ogg",
+   "P05_1_perc.ogg",
+   "P05_1_perc_crisis.ogg",
+   "P05_1_riser.ogg",
+   "P05_2_base.ogg",
+   "P05_2_choir.ogg",
+   "P05_2_lead.ogg",
+   "P05_2_lead_oct.ogg",
+   "P05_2_perc.ogg",
+   "P05_2_perc_crisis.ogg",
+   "P05_intro.ogg"
+  ],
+  "hash": "59e2dcbfa1daffef",
+  "lufs": -14.0,
+  "phases": {
+   "1": -16.02,
+   "2": -12.59,
+   "intro": -14.4
+  },
+  "tp": -2.46
+ },
+ "P06": {
+  "files": [
+   "P06_1_base.ogg",
+   "P06_1_lead.ogg",
+   "P06_1_lead_oct.ogg",
+   "P06_1_perc.ogg",
+   "P06_1_perc_crisis.ogg",
+   "P06_1_riser.ogg",
+   "P06_2_base.ogg",
+   "P06_2_choir.ogg",
+   "P06_2_lead.ogg",
+   "P06_2_lead_oct.ogg",
+   "P06_2_perc.ogg",
+   "P06_2_perc_crisis.ogg",
+   "P06_intro.ogg"
+  ],
+  "hash": "c18ec2a2a0fe253c",
+  "lufs": -14.0,
+  "phases": {
+   "1": -15.27,
+   "2": -12.89,
+   "intro": -15.77
+  },
+  "tp": -1.71
+ },
+ "P07": {
+  "files": [
+   "P07_1_base.ogg",
+   "P07_1_lead.ogg",
+   "P07_1_lead_oct.ogg",
+   "P07_1_perc.ogg",
+   "P07_1_perc_crisis.ogg",
+   "P07_1_riser.ogg",
+   "P07_2_base.ogg",
+   "P07_2_choir.ogg",
+   "P07_2_lead.ogg",
+   "P07_2_lead_oct.ogg",
+   "P07_2_perc.ogg",
+   "P07_2_perc_crisis.ogg",
+   "P07_intro.ogg"
+  ],
+  "hash": "94b8c3cb32a90eb1",
+  "lufs": -14.0,
+  "phases": {
+   "1": -14.24,
+   "2": -13.51,
+   "intro": -17.54
+  },
+  "tp": -1.64
+ },
+ "P08": {
+  "files": [
+   "P08_1_base.ogg",
+   "P08_1_lead.ogg",
+   "P08_1_lead_oct.ogg",
+   "P08_1_perc.ogg",
+   "P08_1_perc_crisis.ogg",
+   "P08_1_riser.ogg",
+   "P08_2_base.ogg",
+   "P08_2_choir.ogg",
+   "P08_2_lead.ogg",
+   "P08_2_lead_oct.ogg",
+   "P08_2_perc.ogg",
+   "P08_2_perc_crisis.ogg",
+   "P08_intro.ogg"
+  ],
+  "hash": "b3c089bb0d24360c",
+  "lufs": -14.0,
+  "phases": {
+   "1": -16.46,
+   "2": -12.28,
+   "intro": -17.0
+  },
+  "tp": -2.21
+ },
+ "P09": {
+  "files": [
+   "P09_1_base.ogg",
+   "P09_1_lead.ogg",
+   "P09_1_lead_oct.ogg",
+   "P09_1_perc.ogg",
+   "P09_1_perc_crisis.ogg",
+   "P09_1_riser.ogg",
+   "P09_2_base.ogg",
+   "P09_2_choir.ogg",
+   "P09_2_lead.ogg",
+   "P09_2_lead_oct.ogg",
+   "P09_2_perc.ogg",
+   "P09_2_perc_crisis.ogg",
+   "P09_intro.ogg"
+  ],
+  "hash": "756df79760edd081",
+  "lufs": -14.0,
+  "phases": {
+   "1": -14.15,
+   "2": -13.63,
+   "intro": -16.65
+  },
+  "tp": -2.25
+ },
+ "P10": {
+  "files": [
+   "P10_1_base.ogg",
+   "P10_1_lead.ogg",
+   "P10_1_lead_oct.ogg",
+   "P10_1_perc.ogg",
+   "P10_1_perc_crisis.ogg",
+   "P10_1_riser.ogg",
+   "P10_2_base.ogg",
+   "P10_2_choir.ogg",
+   "P10_2_lead.ogg",
+   "P10_2_lead_oct.ogg",
+   "P10_2_perc.ogg",
+   "P10_2_perc_crisis.ogg",
+   "P10_intro.ogg"
+  ],
+  "hash": "85df4907d81dd0b9",
+  "lufs": -14.0,
+  "phases": {
+   "1": -15.08,
+   "2": -13.06,
+   "intro": -14.91
+  },
+  "tp": -1.57
+ },
+ "P11": {
+  "files": [
+   "P11_1_base.ogg",
+   "P11_1_lead.ogg",
+   "P11_1_lead_oct.ogg",
+   "P11_1_perc.ogg",
+   "P11_1_perc_crisis.ogg",
+   "P11_1_riser.ogg",
+   "P11_2_base.ogg",
+   "P11_2_choir.ogg",
+   "P11_2_lead.ogg",
+   "P11_2_lead_oct.ogg",
+   "P11_2_perc.ogg",
+   "P11_2_perc_crisis.ogg",
+   "P11_intro.ogg"
+  ],
+  "hash": "8ad8fa75359a26ca",
+  "lufs": -14.0,
+  "phases": {
+   "1": -17.66,
+   "2": -12.04,
+   "intro": -14.31
+  },
+  "tp": -1.67
+ },
+ "P12": {
+  "files": [
+   "P12_1_base.ogg",
+   "P12_1_choir.ogg",
+   "P12_1_lead.ogg",
+   "P12_1_lead_oct.ogg",
+   "P12_1_perc.ogg",
+   "P12_1_perc_crisis.ogg",
+   "P12_1_riser.ogg",
+   "P12_2_base.ogg",
+   "P12_2_choir.ogg",
+   "P12_2_lead.ogg",
+   "P12_2_lead_oct.ogg",
+   "P12_2_perc.ogg",
+   "P12_2_perc_crisis.ogg",
+   "P12_intro.ogg"
+  ],
+  "hash": "349231be9318f8fe",
+  "lufs": -14.0,
+  "phases": {
+   "1": -14.37,
+   "2": -13.48,
+   "intro": -15.97
+  },
+  "tp": -1.7
  }
 }

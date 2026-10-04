@@ -97,7 +97,8 @@ class SettingsScene(Scene):
                 lambda: s.set("test_phantom", not s.get("test_phantom")))
         show = ("테스트: 포획 연출 (환상·전설)", "button", lambda: "열기", self._open_phantom_test)
         trv = ("테스트: 이동 컷신", "button", lambda: "열기", self._open_travel_test)
-        rows = [tele, cards, slot, cb, snd, test, show, trv]
+        bgm = ("테스트: 전설·환상 음악", "button", lambda: "열기", self._open_boss_music)
+        rows = [tele, cards, slot, cb, snd, test, show, trv, bgm]
         if self.game.save is not None:
             rows.append(("테스트: NPC 대사", "button", lambda: "열기", self._open_dialogue_test))
             rows.append(("테스트: 날씨 이벤트", "button", self._event_label, self._cycle_event))
@@ -209,6 +210,10 @@ class SettingsScene(Scene):
     def _open_dialogue_test(self) -> None:
         from src.scene.dialogue_debug import DialogueDebugScene
         self.game.scenes.push(DialogueDebugScene(self.game))
+
+    def _open_boss_music(self) -> None:
+        from src.scene.boss_music_test import BossMusicTestScene
+        self.game.scenes.push(BossMusicTestScene(self.game))
 
     def _open_travel_test(self) -> None:
         from src.scene.travel_test import TravelTestScene

@@ -23,7 +23,7 @@
   "focus": {"mus": -2, "amb": -2, "sec": 0.3},
   "success": {"sfx": -3, "amb": -3, "mus": -3, "sec": 0.5}
  },
- "boss": {"_설명": "전설·환상 전용 곡 파이팅 동안 (BOSS_BGM.md 1번, DESIGN.md 43): 음악 덕킹은 이 값까지만, 릴 소리 dB, 환경음은 duck.boss_fight (계속 낮춤). 신호 버스는 그대로 최우선.", "duck_mus": -2, "reel_db": -2},
+ "boss": {"_설명": "전설·환상 전용 곡 파이팅 동안 (BOSS_BGM.md 1번, DESIGN.md 43): 음악 덕킹은 이 값까지만, 릴 소리 dB, 신호 버스 +dB(sig_db — 커진 음악 위에서도 풀기 신호가 묻히지 않게, tools/boss_signal_check.py), 환경음은 duck.boss_fight (계속 낮춤). 신호 버스는 그대로 최우선.", "duck_mus": -2, "reel_db": -2, "sig_db": 2},
  "sig_boost_gain": 1.3,
  "variation": {"pitch_pct": [-4, -2, 2, 4], "vol_db": 2.0,
                "names": ["sfx_splash", "sfx_splash_small", "sfx_nibble", "sfx_bubbles", "sfx_scrape", "sfx_judge_miss", "sfx_impact",

@@ -326,6 +326,8 @@ class Sfx:
         g = bv["master"] * bv.get({"mus": "mus", "amb": "amb"}.get(bus, "sfx"), 1.0)
         if bus == "sig" and self.sig_boost:
             g *= self.cfg["sig_boost_gain"]
+        if bus == "sig" and self.boss_mode:   # 전설·환상 전용 곡 동안 신호 +2dB (DESIGN.md 43)
+            g *= 10 ** (self.cfg.get("boss", {}).get("sig_db", 0) / 20)
         db = self.duck_db.get(bus, 0.0) + self.base_duck.get(bus, 0.0) + self.space_mask.get(bus, 0.0)
         g *= 10 ** (db / 20)
         if limit and bus not in ("sig", "mus"):

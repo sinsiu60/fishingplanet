@@ -747,6 +747,7 @@ class FishingScene(Scene):
                                         low=getattr(self.game, "slow_device", False) or self.settings.get("fps") == 30)
         self.fight_audio.stop()
         self.signal_audio.stop()
+        self.game.boss.stop()   # 전용 곡: 즉시 완전히 멈춤 → 숨 멎음 정적 → 환상의 노래 (DESIGN.md 43)
         sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)
         name = phantom_song.preload(sfx, variant, cont)
         self.phantom_song_ch = sfx.play(name, 1.0) if name else None
@@ -768,8 +769,10 @@ class FishingScene(Scene):
                                      intro=intro)
         self.fight_audio.stop()
         self.signal_audio.stop()
+        sid = self.game.boss.song_for(f.fish["id"])
+        self.game.boss.stop(fade_ms=150)   # 전용 곡의 마지막 화음 → 같은 조성 전설의 노래 첫 타격음 (DESIGN.md 43)
         sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)
-        name = legend_song.preload(sfx, variant, cont)
+        name = legend_song.preload(sfx, variant, cont, sid)
         self.phantom_song_ch = sfx.play(name, 1.0) if name else None
         self.phantom_loop_ch = None
         self.game.haptics.vibrate("perfect", 1.0)  # 쾅: 강하게 1회
@@ -823,7 +826,8 @@ class FishingScene(Scene):
                     self.phantom_song_ch.fadeout(300)
                 if self.phantom_loop_ch is None:
                     from src.audio import legend_song
-                    name = legend_song.preload(self.sfx, "loop", self.spot.get("continent", "sharmion"))
+                    sid = self.game.boss.song_for(getattr(sh, "fish", {}).get("id")) if getattr(sh, "fish", None) else None
+                    name = legend_song.preload(self.sfx, "loop", self.spot.get("continent", "sharmion"), sid)
                     if name:
                         self.phantom_loop_ch = self.sfx.play(name, 0.55)
                         if self.phantom_loop_ch is not None:
@@ -1050,6 +1054,10 @@ class FishingScene(Scene):
         elif fish.get("rarity") == "legend":
             from src.audio import legend_song as song
             variants = ("full", "short", "loop")
+            sid = self.game.boss.song_for(fish["id"])
+            for v in variants:
+                song.preload(self.sfx, v, cont, sid)   # 전설마다 그 파이팅 곡 조성 (DESIGN.md 43)
+            return
         else:
             return
         for v in variants:
@@ -1146,11 +1154,13 @@ class FishingScene(Scene):
         if not fighting:  # N5 거리감: 파이팅 중엔 fight_audio 가 물고기 거리로, 그 밖엔 찌(루어)까지 거리로
             self.sfx.fish_dist = min(1.0, self.cast.current_distance() / max(1.0, self.cast_far)) \
                 if self.cast.state != CastState.READY else 0.3
-        if fighting != getattr(self, "_amb_fight", False):
-            self._amb_fight = fighting
-            self.sfx.set_base_duck((("boss_fight" if self.game.boss.active else "fight") if fighting else None))  # 파이팅 중 환경음 −4dB
+        amb_key = (fighting, self.game.boss.active)
+        if amb_key != getattr(self, "_amb_fight", (False, False)):
+            self._amb_fight = amb_key
+            # 파이팅 중 환경음 −4dB, 전설·환상 전용 곡이 도는 동안 −6dB (DESIGN.md 43)
+            self.sfx.set_base_duck((("boss_fight" if self.game.boss.active else "fight") if fighting else None))
             # 동시 재생 한도 (N3): 일반 파이팅 3 (주인공 1 + 보조 2) / 전설 4, 파이팅 밖은 없음
-            legend = fighting and self.fight.fish.get("rarity") == "legend"
+            legend = fighting and (self.fight.fish.get("rarity") == "legend" or self.game.boss.active)
             self.sfx.set_budget(("legend" if legend else "fight") if fighting else None)
         self.drag_seen_t = max(0.0, getattr(self, "drag_seen_t", 0.0) - dt)
         signal_slots.configure(self.settings)
@@ -1339,6 +1349,39 @@ class FishingScene(Scene):
             self.red_t = self.crisis_hold = 0.0
         am.set(state, intensity, phase, am.daylight_of(self.clock.hour, tuple(am.cfg["night_hours"])), rarity=rarity,
                crisis=crisis)
+        self._update_boss(crisis)
+
+    def _update_boss(self, crisis: bool) -> None:
+        """전설·환상 전용 파이팅 곡 (DESIGN.md 43, BOSS_BGM.md B5): 다가올 때 미리 불러오기 → 챔질 = 곡 시작(인트로 → 1페이즈)
+        → 페이즈·위기·지침 → 실패 = 즉시 정지 + '쿵' / 포획 = 연출이 넘겨받음 (전설의 노래 · 환상 정적 → 환상의 노래).
+        구운 곡이 없으면 예전 보스 테마(적응형 음악 전설 층) 그대로."""
+        b = self.game.boss
+        if not b.enabled or self.training is not None:
+            return
+        f = self.fight
+        fish = f.fish if f is not None else (self.bite.fish if self.bite.state in (BiteState.APPROACH, BiteState.NIBBLE, BiteState.BITE) else None)
+        sid = b.song_for(fish["id"]) if fish and (fish.get("rarity") == "legend" or phantom.is_phantom(fish)) else None
+        if sid and not b.active and b.loaded_for != sid:
+            b.prepare(sid)   # 다가오는 동안·파장 동안 한 프레임에 한 파일씩
+        if f is not None and f.phase in ("fight", "net"):
+            if sid and not b.active and getattr(self, "boss_fight", None) is not f:
+                if b.start(sid):
+                    self.boss_fight = f
+                    self.boss_tired = False
+            if b.active and getattr(self, "boss_fight", None) is f:
+                b.set_phase(f.brain.phase)
+                b.set_crisis(crisis)
+                tired = f.phase == "net" or f.brain.state in ("tired", "exhausted")
+                if tired and not self.boss_tired:
+                    b.tired()   # 지친 순간: 2마디 동안 주선율 한 옥타브 위 (해방감)
+                self.boss_tired = tired
+        elif b.active:
+            if f is not None and f.phase == "lost":
+                b.fail()        # 줄 끊김·도주: 바로 멈춤 + 낮은 '쿵' + 1.5초 잔향
+            elif f is not None and f.phase == "caught":
+                pass            # 전설: 뜰채 연출 동안 계속 → 전설의 노래가 이어받음 / 환상: 연출 시작에서 멈춤
+            else:
+                b.stop(400)
 
     def _update_weather(self, dt: float) -> None:
         w = self.weather_sys

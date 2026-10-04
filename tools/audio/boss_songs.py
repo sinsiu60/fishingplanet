@@ -4,7 +4,8 @@
 (시험곡 T00 등 다른 곡은 그대로). 그 뒤 python tools/bake_boss.py --preview 로 굽는다.
 
   python tools/audio/boss_songs.py          스펙 다시 쓰기
-  python tools/audio/boss_songs.py --check  서명 검사만 (전설: 주인의 동기 1→5→4 · 단조 · #4·리디안 없음)
+  python tools/audio/boss_songs.py --check  서명 검사만 (전설: 주인의 동기 1→5→4 · 단조 · #4·리디안·4음 동기 없음 /
+                                            환상: 이름 없는 것의 동기 1→#4→5→3 · 리디안 · 2페이즈 온음 올림 · 금관·행진 북·3음 동기 없음)
 
 선율 표기: "마디:박:도수:길이" (박·길이 = 4분음표 단위, 도수 1=으뜸음 8=옥타브 위, '#7' 이끎음) — 공백으로 나열.
 """
@@ -371,6 +372,211 @@ def legend_songs() -> dict:
     return S
 
 
+# ───────────────────────── 환상 12곡 ─────────────────────────
+# 주제 A·B 는 모두 0마디(B는 8마디)에서 '이름 없는 것의 동기'(1 → #4 → 5 → 3, 8분·8분·4분·2분)로 시작한다.
+# 음계는 리디안 (도수 4 = #4). 금관·찌그러진 소리·북 행진 없음 — 층을 두껍게 쌓아 풍성함으로 크기를 만든다.
+NM = "0:0:1:.5 0:.5:4:.5 0:1:5:1 0:2:3:2 "
+NM8 = "8:0:1:.5 8:.5:4:.5 8:1:5:1 8:2:3:2 "
+NM4 = "4:0:1:.5 4:.5:4:.5 4:1:5:1 4:2:3:2 "
+PH_THEMES = {
+    "P01": (NM + "1:0:5:1 1:1:6:1 1:2:8:2 2:0:7:1 2:1:6:1 2:2:5:2 3:0:3:4 " + NM4 + "5:0:2:1 5:1:3:1 5:2:5:2 6:0:6:2 6:2:7:2 7:0:8:4",
+            NM8 + "9:0:8:2 9:2:9:2 10:0:10:2 10:2:9:1 10:3:8:1 11:0:7:4 12:0:6:1 12:1:7:1 12:2:8:2 13:0:9:2 13:2:11:2 14:0:10:2 14:2:9:2 15:0:8:4"),
+    "P02": (NM + "1:0:2:2 1:2:3:2 2:0:5:3 2:3:4:1 3:0:3:4 " + NM4 + "5:0:6:2 5:2:5:2 6:0:4:2 6:2:2:2 7:0:1:4",
+            NM8 + "9:0:5:2 9:2:7:2 10:0:8:3 10:3:7:1 11:0:5:4 12:0:6:2 12:2:8:2 13:0:9:4 14:0:7:2 14:2:6:2 15:0:5:4"),
+    "P03": (NM + "1:0:5:1.5 1:1.5:6:.5 1:2:5:2 2:0:3:1 2:1:2:1 2:2:1:2 3:0:2:4 " + NM4 + "5:0:6:1.5 5:1.5:7:.5 5:2:8:2 6:0:7:2 6:2:5:2 7:0:6:4",
+            NM8 + "9:0:4:2 9:2:5:2 10:0:6:2 10:2:5:1 10:3:4:1 11:0:3:4 12:0:5:2 12:2:7:2 13:0:8:2 13:2:9:2 14:0:7:2 14:2:6:2 15:0:5:4"),
+    "P04": (NM + "1:0:8:.5 1:.5:7:.5 1:1:6:.5 1:1.5:5:.5 1:2:4:1 1:3:3:1 2:0:5:2 2:2:8:2 3:0:7:4 " + NM4
+            + "5:0:9:.5 5:.5:8:.5 5:1:7:.5 5:1.5:6:.5 5:2:5:2 6:0:6:2 6:2:7:2 7:0:8:4",
+            NM8 + "9:0:10:1 9:1:9:1 9:2:8:2 10:0:9:1 10:1:8:1 10:2:7:2 11:0:5:4 12:0:8:1 12:1:9:1 12:2:10:2 13:0:12:2 13:2:11:2 14:0:9:2 14:2:7:2 15:0:8:4"),
+    "P05": (NM + "1:0:2:4 2:0:1:2 2:2:-1:2 3:0:1:4 " + NM4 + "5:0:5:4 6:0:6:2 6:2:5:2 7:0:3:4",
+            NM8 + "9:0:4:2 9:2:3:2 10:0:2:4 11:0:1:4 12:0:3:2 12:2:5:2 13:0:8:4 14:0:7:2 14:2:5:2 15:0:8:4"),
+    "P06": (NM + "2:0:5:1 2:1:6:1 2:2:5:2 " + NM4 + "6:0:2:1 6:1:3:1 6:2:1:2",
+            NM8 + "10:0:6:1 10:1:7:1 10:2:8:2 12:0:5:.5 12:.5:4:.5 12:1:3:1 12:2:2:2 14:0:1:4"),
+    "P07": (NM + "1:0:3:1.5 1:1.5:2:.5 1:2:1:2 2:0:2:1 2:1:3:1 2:2:5:2 3:0:6:4 " + NM4 + "5:0:5:1.5 5:1.5:6:.5 5:2:8:2 6:0:7:2 6:2:6:2 7:0:5:4",
+            NM8 + "9:0:2:2 9:2:1:2 10:0:-2:2 10:2:1:2 11:0:2:4 12:0:3:2 12:2:5:2 13:0:6:2 13:2:5:2 14:0:3:2 14:2:2:2 15:0:1:4"),
+    "P08": (NM + "2:0:5:2 2:2:3:2 3:0:2:4 " + NM4 + "6:0:6:2 6:2:5:2 7:0:3:4",
+            NM8 + "9:0:5:4 10:0:8:2 10:2:7:2 11:0:5:4 12:0:6:4 13:0:7:4 14:0:9:2 14:2:7:2 15:0:8:4"),
+    "P09": (NM + "1:1:5:.5 1:1.5:6:1.5 2:0:8:1.5 2:1.5:7:1.5 3:0:5:3 " + NM4 + "5:1:2:.5 5:1.5:3:1.5 6:0:5:1.5 6:1.5:6:1.5 7:0:5:3",
+            NM8 + "9:1:8:.5 9:1.5:9:1.5 10:0:10:1.5 10:1.5:9:1.5 11:0:8:3 12:0:6:1.5 12:1.5:7:1.5 13:0:8:3 14:0:9:1.5 14:1.5:7:1.5 15:0:8:3"),
+    "P10": (NM + "1:0:5:1 1:1:3:1 1:2:2:2 2:0:3:1 2:1:5:1 2:2:6:2 3:0:5:4 " + NM4 + "5:0:6:1 5:1:8:1 5:2:7:2 6:0:6:1 6:1:5:1 6:2:3:2 7:0:2:4",
+            NM8 + "9:0:8:2 9:2:7:2 10:0:6:2 10:2:5:2 11:0:3:4 12:0:5:1 12:1:6:1 12:2:8:2 13:0:10:2 13:2:9:2 14:0:8:2 14:2:7:2 15:0:8:4"),
+    "P11": (NM + "1:1:5:2 2:0:6:1 2:1:5:1 2:2:3:1 3:0:2:3 " + NM4 + "5:1:6:2 6:0:8:1 6:1:7:1 6:2:6:1 7:0:5:3",
+            NM8 + "9:1:8:2 10:0:9:1 10:1:8:1 10:2:7:1 11:0:6:3 12:0:5:1 12:1:6:1 12:2:7:1 13:0:8:3 14:0:9:1.5 14:1.5:7:1.5 15:0:8:3"),
+}
+
+
+def nameless(bar: int, beat: float = 0.0, base: int = 1, big: float = 1.0) -> list:
+    """이름 없는 것의 동기: 1 → #4 → 5 → 3 (8분 · 8분 · 4분 · 2분)."""
+    return [[bar, beat, base, 0.5 * big], [bar, beat + 0.5 * big, base + 3, 0.5 * big], [bar, beat + 1.0 * big, base + 4, 1.0 * big],
+            [bar, beat + 2.0 * big, base + 2, 2.0 * big]]
+
+
+def pab(sid: str, shift: int = 0) -> list:
+    a, b = PH_THEMES[sid]
+    return mel(a, shift) + mel(b, shift)
+
+
+def pba(sid: str) -> list:
+    a, b = PH_THEMES[sid]
+    return mel(b, 0, -8) + mel(a, 0, 8)
+
+
+def pfrag(sid: str, src_bar: int, to_bar: int, bars: int = 1) -> list:
+    """환상 주제 A 의 src_bar 마디부터 bars 마디를 to_bar 로 옮긴 조각."""
+    return [[b - src_bar + to_bar, at, d, ln] for b, at, d, ln in mel(PH_THEMES[sid][0]) if src_bar <= b < src_bar + bars]
+
+
+LYD1 = [1, 1, 2, 2, 1, 1, 2, 2, 6, 6, 5, 5, 3, 3, 2, 2]
+LYD2 = [1, 1, 2, 2, 3, 3, 2, 2, 1, 1, 2, 2, 6, 6, 5, 5]
+PULSE = dict(pattern=dict(pulse="x.......x.......", shaker="..x...x...x...x."),
+             crisis=dict(pulse="x...x...x...x...", shaker="xxxxxxxxxxxxxxxx"))
+PULSE2 = dict(pattern=dict(pulse="x...x...x...x...", shaker="..x...x...x...x."),
+              crisis=dict(pulse="x.x.x.x.x.x.x.x.", shaker="xxxxxxxxxxxxxxxx"))
+CHOIR_A = part("choir_a", "hold", 0.42)
+
+
+def phantom_songs() -> dict:
+    S = {}
+
+    def song(sid, fish, root, bpm, p1, p2, meter=(4, 4), reverb=(0.34, 3.4), intro=None):
+        S[sid] = dict(kind="phantom", root=root, scale="lydian", bpm=bpm, meter=list(meter), fish=fish, reverb=list(reverb),
+                      intro=intro or dict(chords=[1, 2], hit_inst="choir_a"), phases=[p1, dict(p2, transpose=2)])
+
+    harp_arp = part("harp", "arp", 0.3, oct=1, pattern="x.x.x.x.x.x.x.x.")
+    pad = part("pad", "hold", 0.36)
+    pulse_bass = part("synbass", "bass", 0.5, pattern="x.......x.x.....")
+    # P01 달그림자 잉어 — C 리디안 104: 달빛 아래 오르골풍 주선율, 느린 하프 아르페지오 → D 리디안 + 합창 "아—"
+    song("P01", "moon_shadow_carp", 60, 104,
+         dict(chords=LYD1, base=[pad, part("harp", "arp", 0.32, oct=0, pattern="x...x...x...x..."), pulse_bass], perc=PULSE,
+              lead=[lead("celesta", pab("P01"), 0.5, 1)], choir=[]),
+         dict(chords=LYD2, base=[pad, harp_arp, part("strings", "hold", 0.3), pulse_bass], perc=PULSE2,
+              lead=[lead("celesta", pba("P01"), 0.46, 1), lead("glass", pba("P01"), 0.22, 2)], choir=[CHOIR_A]))
+    # P02 안개비늘 쏘가리 — E♭ 리디안 112: 안개처럼 번지는 패드, 흐릿한 벨 → 안개가 걷히듯 고음 반짝임
+    song("P02", "mist_mandarin", 63, 112,
+         dict(chords=LYD1, base=[part("pad", "hold", 0.44), part("glass", "sparkle", 0.16, per_bar=2), pulse_bass], perc=PULSE,
+              lead=[lead("glass", pab("P02"), 0.36, 1), lead("pad", pab("P02"), 0.2, 0)], choir=[]),
+         dict(chords=LYD2, base=[pad, part("glass", "sparkle", 0.26, oct=1, per_bar=8), part("celesta", "sparkle", 0.2, oct=1, per_bar=6), pulse_bass], perc=PULSE2,
+              lead=[lead("celesta", pba("P02"), 0.44, 1)], choir=[CHOIR_A]))
+    # P03 노을빛 농어 — G 리디안 116: 따뜻한 기타 하모닉스풍 음, 붉게 물드는 현악 → 현악이 크게 부풀며 합창
+    song("P03", "dusk_bass", 55, 116,
+         dict(chords=LYD1, base=[part("strings", "hold", 0.34, oct=1), part("harp", "arp", 0.24, oct=1, pattern="x..x..x.x..x..x."), pulse_bass], perc=PULSE,
+              lead=[lead("harmonics", pab("P03"), 0.55, 1)], choir=[]),
+         dict(chords=LYD2, base=[part("strings", "hold", 0.42, oct=1), part("tremolo", "hold", 0.12, oct=2), harp_arp, pulse_bass], perc=PULSE2,
+              lead=[lead("harmonics", pba("P03"), 0.45, 1), lead("strings", pba("P03"), 0.16, 2)], choir=[CHOIR_A]))
+    # P04 유성 다랑어 — A 리디안 128: 쏟아지는 별 같은 빠른 하강 아르페지오, 반짝이는 고음 → 아르페지오 2배 속도 + 별똥별 상승
+    song("P04", "meteor_tuna", 57, 128,
+         dict(chords=LYD1, base=[part("celesta", "fall", 0.3, oct=1, per_bar=8), pad, pulse_bass], perc=PULSE,
+              lead=[lead("glass", pab("P04"), 0.4, 1)], choir=[]),
+         dict(chords=LYD2, base=[part("celesta", "fall", 0.3, oct=1, per_bar=16), part("harp", "arp", 0.26, oct=1, pattern="xxxxxxxxxxxxxxxx", seq="up"), pad, pulse_bass],
+              perc=PULSE2, lead=[lead("glass", pba("P04"), 0.36, 1), lead("celesta", pba("P04"), 0.3, 2)], choir=[CHOIR_A]))
+    # P05 심연의 등불고기 — F 리디안 100: 깊은 맥박 같은 신스 베이스, 어둠 속 빛나는 벨 → 벨이 하나씩 켜지듯 늘어나며 합창
+    song("P05", "abyss_lantern", 53, 100,
+         dict(chords=LYD1, base=[part("synbass", "pulse", 0.5, oct=-1, pattern="x.x.x.x.x.x.x.x.", seq="root"), part("pad", "hold", 0.3), part("glass", "sparkle", 0.16, oct=1, per_bar=1)],
+              perc=dict(pattern=dict(pulse="x.......x......."), crisis=dict(pulse="x...x...x...x...", shaker="..x...x...x...x.")),
+              lead=[lead("glass", pab("P05"), 0.4, 1)], choir=[]),
+         dict(chords=LYD2, base=[part("synbass", "pulse", 0.5, oct=-1, pattern="x.x.x.x.x.x.x.x.", seq="root"), part("pad", "hold", 0.34),
+                                 part("glass", "sparkle", 0.22, oct=1, per_bar=6), part("celesta", "sparkle", 0.18, oct=2, per_bar=4)],
+              perc=PULSE2, lead=[lead("glass", pba("P05"), 0.38, 1), lead("strings", pba("P05"), 0.22, 1)], choir=[CHOIR_A]))
+    # P06 잔향어 — D 리디안 108: 같은 선율이 메아리처럼 겹겹이 (돌림노래) → 메아리 4겹
+    song("P06", "echo_fish", 62, 108,
+         dict(chords=LYD1, base=[pad, part("harp", "arp", 0.24, pattern="x...x...x...x..."), pulse_bass], perc=PULSE,
+              lead=[lead("celesta", pab("P06"), 0.46, 1, canon=[[1.0, 0.6], [2.0, 0.4]])], choir=[]),
+         dict(chords=LYD2, base=[pad, harp_arp, part("strings", "hold", 0.26), pulse_bass], perc=PULSE2,
+              lead=[lead("celesta", pab("P06"), 0.42, 1, canon=[[1.0, 0.65], [2.0, 0.48], [3.0, 0.34]]), lead("glass", pab("P06"), 0.18, 2, canon=[[1.5, 0.6]])],
+              choir=[CHOIR_A]))
+    # P07 보랏빛 갈대잉어 — B♭ 리디안 110: 숨결 섞인 갈대 피리, 바람 같은 패드 → 피리가 합창과 겹쳐 노래함
+    song("P07", "violet_reed_carp", 58, 110,
+         dict(chords=LYD1, base=[part("pad", "hold", 0.4), part("tremolo", "hold", 0.16, oct=1), pulse_bass], perc=PULSE,
+              lead=[lead("reed", pab("P07"), 0.55, 1)], choir=[]),
+         dict(chords=LYD2, base=[pad, harp_arp, part("tremolo", "hold", 0.2, oct=1), pulse_bass], perc=PULSE2,
+              lead=[lead("reed", pba("P07"), 0.5, 1), lead("choir_a", pba("P07"), 0.3, 0)], choir=[CHOIR_A]))
+    # P08 자수정 장님어 — E 리디안 102: 어둠 속 수정 공명음, 아주 고요한 시작 → 수정 공명이 화음으로 피어남
+    song("P08", "amethyst_blindfish", 64, 102,
+         dict(chords=LYD1, base=[part("pad", "hold", 0.24), part("synbass", "bass", 0.36, pattern="x...............")],
+              perc=dict(pattern=dict(pulse="x..............."), crisis=dict(pulse="x.......x.......", shaker="..x...x...x...x.")),
+              lead=[lead("crystal", pab("P08"), 0.46, 0)], choir=[]),
+         dict(chords=LYD2, base=[part("crystal", "hold", 0.3), pad, part("harp", "arp", 0.22, oct=1, pattern="x.x.x.x.x.x.x.x."), pulse_bass], perc=PULSE2,
+              lead=[lead("crystal", pba("P08"), 0.42, 0), lead("celesta", pba("P08"), 0.22, 1)], choir=[CHOIR_A]))
+    # P09 천공의 나비고기 — C 리디안 132 6/8: 날갯짓 같은 현악 피치카토, 하늘을 나는 플루트 → 하늘이 열리듯 합창과 하프
+    wing = "x.xx.xx.xx.x"
+    song("P09", "sky_butterfly", 60, 132, meter=(6, 8),
+         p1=dict(chords=LYD1, base=[part("pizz", "ostinato", 0.32, pattern=wing), pad, part("synbass", "bass", 0.45, pattern="x.....x.....")],
+                 perc=dict(pattern=dict(pulse="x.....x.....", shaker="..x..x..x..x"), crisis=dict(pulse="x..x..x..x..", shaker="xxxxxxxxxxxx")),
+                 lead=[lead("flute", pab("P09"), 0.5, 1)], choir=[]),
+         p2=dict(chords=LYD2, base=[part("pizz", "ostinato", 0.26, pattern=wing), part("harp", "arp", 0.2, oct=1, pattern="x.x.x.x.x.x."), pad, part("synbass", "bass", 0.45, pattern="x.....x.....")],
+                 perc=dict(pattern=dict(pulse="x..x..x..x..", shaker="..x..x..x..x"), crisis=dict(pulse="x.x.x.x.x.x.", shaker="xxxxxxxxxxxx")),
+                 lead=[lead("flute", pba("P09"), 0.46, 1), lead("harp", pba("P09"), 0.26, 1)], choir=[CHOIR_A]))
+    # P10 잿불 곰치 — F# 리디안 120: 타닥이는 불씨 같은 타악, 따뜻한 합창 → 불씨가 날아오르듯 고음 반짝임
+    song("P10", "ember_moray", 54, 120,
+         dict(chords=LYD1, base=[part("choir", "hold", 0.32), pad, pulse_bass],
+              perc=dict(pattern=dict(crackle="x..x.x..x..x.x..", pulse="x.......x......."), crisis=dict(crackle="xxxxxxxxxxxxxxxx", pulse="x...x...x...x...")),
+              lead=[lead("celesta", pab("P10"), 0.44, 1), lead("harp", pab("P10"), 0.2, 1)], choir=[]),
+         dict(chords=LYD2, base=[pad, part("glass", "sparkle", 0.22, oct=2, per_bar=8), harp_arp, pulse_bass],
+              perc=dict(pattern=dict(crackle="x.xx.xx.x.xx.xx.", pulse="x...x...x...x..."), crisis=dict(crackle="xxxxxxxxxxxxxxxx", pulse="x.x.x.x.x.x.x.x.")),
+              lead=[lead("celesta", pba("P10"), 0.42, 1)], choir=[part("choir", "hold", 0.36), CHOIR_A]))
+    # P11 오로라 은빙어 — A♭ 리디안 106 3/4: 유리 같은 반짝임, 느린 왈츠 → 왈츠가 커지며 합창
+    wb, wc = "x...........", "....x...x..."
+    song("P11", "aurora_smelt", 56, 106, meter=(3, 4),
+         p1=dict(chords=LYD1, base=[part("synbass", "bass", 0.45, pattern=wb), part("harp", "hits", 0.26, pattern=wc, len=1.5), part("glass", "sparkle", 0.16, oct=1, per_bar=2)],
+                 perc=dict(pattern=dict(pulse=wb), crisis=dict(pulse="x...x...x...", shaker="xxxxxxxxxxxx")),
+                 lead=[lead("glass", pab("P11"), 0.42, 1)], choir=[]),
+         p2=dict(chords=LYD2, base=[part("synbass", "bass", 0.45, pattern=wb), part("strings", "hits", 0.3, pattern=wc, len=2), part("harp", "arp", 0.24, oct=1, pattern="x.x.x.x.x.x."), pad],
+                 perc=dict(pattern=dict(pulse=wb, shaker="..x...x...x."), crisis=dict(pulse="x...x...x...", shaker="xxxxxxxxxxxx")),
+                 lead=[lead("glass", pba("P11"), 0.4, 1), lead("celesta", pba("P11"), 0.24, 1)], choir=[CHOIR_A]))
+    # P12 정령의 꿈잉어 (세계수) — D 리디안 114: P01~P11 동기 조각이 꿈처럼 차례로, 가장 큰 합창 → 모든 동기가 한꺼번에
+    dream = sum((pfrag(f"P{i:02d}", 1, i - 1) for i in range(1, 12)), []) + nameless(12) + nameless(14, 0, 1, 1.0)
+    stack1 = sum((pfrag(f"P{i:02d}", 1, b) for i, b in ((1, 0), (4, 2), (7, 4), (10, 6), (2, 8), (5, 10), (8, 12), (11, 14))), [])
+    stack2 = sum((pfrag(f"P{i:02d}", 2, b) for i, b in ((3, 0), (6, 2), (9, 4), (1, 6), (4, 8), (7, 10), (10, 12), (2, 14))), [])
+    song("P12", "dream_carp", 62, 114, reverb=(0.38, 3.8),
+         p1=dict(chords=LYD1, base=[pad, harp_arp, part("strings", "hold", 0.28), pulse_bass], perc=PULSE,
+                 lead=[lead("celesta", dream, 0.46, 1), lead("flute", dream, 0.22, 1)], choir=[part("choir_a", "hold", 0.34)]),
+         p2=dict(chords=LYD2, base=[pad, harp_arp, part("strings", "hold", 0.34), part("glass", "sparkle", 0.2, oct=2, per_bar=6), pulse_bass], perc=PULSE2,
+                 lead=[lead("celesta", stack1 + nameless(0) + nameless(8), 0.38, 1), lead("glass", stack2, 0.3, 1), lead("flute", nameless(4) + nameless(12), 0.3, 1),
+                       lead("reed", stack2, 0.18, 0)],
+                 choir=[part("choir_a", "hold", 0.46), part("choir", "hold", 0.28, oct=-1)]))
+    for sid in ("P03", "P09"):   # B6 신호 가독성: 2페이즈 고음 층이 1~3kHz 를 채워 풀기 신호가 +3dB 미만 → 중음역을 더 비움
+        S[sid]["master"] = {"mid_cut_db": -4.0}
+    for sid, sp in S.items():
+        sp["_설명"] = f"{sid} — BOSS_BGM.md 환상 표 (B4, tools/audio/boss_songs.py 가 씀)"
+    return S
+
+
+PHANTOM_BAN = {"brass", "horn", "trumpet", "roar", "grit"}
+
+
+def has_nameless_motif(notes) -> bool:
+    ns = sorted(([b, at, d, ln] for b, at, d, ln in notes if isinstance(d, int)), key=lambda n: (n[0], n[1]))
+    for i in range(len(ns) - 3):
+        a, b, c, d = ns[i:i + 4]
+        if (a[2] - 1) % 7 == 0 and (b[2] - a[2], c[2] - a[2], d[2] - a[2]) == (3, 4, 2) and \
+                abs(b[3] - a[3]) < 1e-6 and abs(c[3] - 2 * a[3]) < 1e-6 and abs(d[3] - 4 * a[3]) < 1e-6:
+            return True
+    return False
+
+
+def check_phantom(songs: dict) -> int:
+    bad = 0
+    for sid, sp in songs.items():
+        if sp.get("kind") != "phantom" or sp.get("test"):
+            continue
+        if sp.get("scale") != "lydian":
+            print(sid, "환상인데 리디안 아님"); bad += 1
+        if len(sp["phases"]) != 2 or sp["phases"][1].get("transpose") != 2:
+            print(sid, "2페이즈·온음 올림 아님"); bad += 1
+        insts = {p["inst"] for ph in sp["phases"] for k in ("base", "lead", "choir") for p in ph.get(k, [])}
+        if insts & PHANTOM_BAN:
+            print(sid, "금관·찌그러진 소리:", insts & PHANTOM_BAN); bad += 1
+        if any(k in ("taiko", "snare", "bigdrum", "timp") for ph in sp["phases"] for k in list(ph.get("perc", {}).get("pattern", {})) + list(ph.get("perc", {}).get("crisis", {}))):
+            print(sid, "행진 북"); bad += 1
+        leads = [l["notes"] for ph in sp["phases"] for l in ph.get("lead", [])]
+        if not any(has_nameless_motif(n) for n in leads):
+            print(sid, "이름 없는 것의 동기 없음"); bad += 1
+        if any(has_owner_motif(n) for n in leads):
+            print(sid, "전설의 3음 동기가 들어 있음"); bad += 1
+    print("환상 서명 검사:", "ok" if not bad else f"{bad}개 문제")
+    return bad
+
+
 # ───────────────────────── 검사 ─────────────────────────
 
 def has_owner_motif(notes) -> bool:
@@ -395,6 +601,8 @@ def check(songs: dict) -> int:
         if '"#4"' in txt:
             print(sid, "전설에 #4 (환상 동기 재료)"); bad += 1
         motif_ok = any(has_owner_motif(l["notes"]) for p in sp["phases"] for l in p.get("lead", []))
+        if any(has_nameless_motif(l["notes"]) for p in sp["phases"] for l in p.get("lead", [])):
+            print(sid, "전설에 환상의 4음 동기"); bad += 1
         if not motif_ok:
             print(sid, "주인의 동기 없음"); bad += 1
         for i, p in enumerate(sp["phases"]):
@@ -406,7 +614,8 @@ def check(songs: dict) -> int:
 
 def main(argv) -> int:
     songs = legend_songs()
-    if check(songs):
+    songs.update(phantom_songs())
+    if check(songs) or check_phantom(songs):
         return 1
     if "--check" in argv:
         return 0
@@ -414,7 +623,7 @@ def main(argv) -> int:
     data = json.loads(s)
     cur = data["boss"]["songs"]
     for k in list(cur):
-        if k.startswith("L") and k not in songs:
+        if k[:1] in ("L", "P") and k not in songs:
             del cur[k]
     cur.update(songs)
     blk = json.dumps(data["boss"], ensure_ascii=False)

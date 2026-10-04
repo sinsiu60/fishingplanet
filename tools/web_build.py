@@ -5,6 +5,7 @@
       아이콘(favicon · 홈 화면 아이콘 192) 넣고 index.html 손보기:
       한국어 제목·안내, 홈 화면에 추가하면 주소창 없이 전체 화면, 게임 화면비 그대로 꽉 채우기(픽셀 그대로),
       세로로 들면 '가로로 돌려 주세요'
+웹엔 전설·환상 전용 곡(assets/music_generated/boss, 전설별 전설의 노래)을 넣지 않는다 — 대신 예전 보스 테마·대륙판 전설의 노래.
 """
 import os
 import re
@@ -62,7 +63,8 @@ def stage(out: str) -> None:
     for name in KEEP:
         src = os.path.join(ROOT, name)
         if os.path.isdir(src):
-            shutil.copytree(src, os.path.join(out, name), ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            # 전설·환상 전용 곡(약 160MB)은 웹에선 뺀다 — 브라우저(특히 아이폰 사파리) 메모리·첫 로딩. 없으면 예전 보스 테마 (DESIGN.md 43)
+            shutil.copytree(src, os.path.join(out, name), ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "boss", "legend_catch_*_L[0-9][0-9].ogg"))
         else:
             shutil.copy2(src, out)
     print("모은 파일:", sum(len(f) for _, _, f in os.walk(out)))

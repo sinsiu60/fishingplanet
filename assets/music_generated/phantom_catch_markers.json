@@ -22,7 +22,7 @@
   "phantom_catch_short_sharmion": {
    "len": 5.2,
    "peak_db": -1.0,
-   "rms_db": -13.2,
+   "rms_db": -14.6,
    "markers": {
     "breath": 0.0,
     "rise": 0.2,
@@ -40,7 +40,7 @@
   "phantom_catch_extended_sharmion": {
    "len": 12.2,
    "peak_db": -1.0,
-   "rms_db": -13.4,
+   "rms_db": -12.7,
    "markers": {
     "breath": 0.0,
     "rise": 0.35,
@@ -60,13 +60,13 @@
   "phantom_catch_loop_sharmion": {
    "len": 6.0,
    "peak_db": -12.0,
-   "rms_db": -21.6,
+   "rms_db": -21.4,
    "markers": {}
   },
   "phantom_catch_full_eldrasion": {
    "len": 9.2,
    "peak_db": -1.0,
-   "rms_db": -13.1,
+   "rms_db": -13.2,
    "markers": {
     "breath": 0.0,
     "rise": 0.35,
@@ -84,7 +84,7 @@
   "phantom_catch_short_eldrasion": {
    "len": 5.2,
    "peak_db": -1.0,
-   "rms_db": -12.5,
+   "rms_db": -12.0,
    "markers": {
     "breath": 0.0,
     "rise": 0.2,
@@ -102,7 +102,7 @@
   "phantom_catch_extended_eldrasion": {
    "len": 12.2,
    "peak_db": -1.0,
-   "rms_db": -13.2,
+   "rms_db": -12.3,
    "markers": {
     "breath": 0.0,
     "rise": 0.35,
@@ -122,7 +122,7 @@
   "phantom_catch_loop_eldrasion": {
    "len": 6.0,
    "peak_db": -12.0,
-   "rms_db": -21.7,
+   "rms_db": -22.3,
    "markers": {}
   }
  }

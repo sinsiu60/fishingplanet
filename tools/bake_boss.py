@@ -95,7 +95,7 @@ def main(argv: list[str]) -> int:
         if man.get(sid, {}).get("hash") == h and "--all" not in argv and "--preview" not in argv and not names:
             continue
         t0 = time.time()
-        stems, rep = boss_synth.master(boss_synth.Song(sid, spec, mcfg).stems(), len(spec["phases"]), mcfg)
+        stems, rep = boss_synth.master(boss_synth.Song(sid, spec, mcfg).stems(), len(spec["phases"]), dict(mcfg, **spec.get("master", {})))
         for old in os.listdir(out):
             if old.startswith(sid + "_"):
                 os.remove(os.path.join(out, old))

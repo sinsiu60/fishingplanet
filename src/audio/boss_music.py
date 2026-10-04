@@ -77,6 +77,15 @@ class BossMusic:
         q = 60.0 / sp["bpm"]
         return q, q * num * 4 / den
 
+    def song_for(self, fish_id: str | None) -> str | None:
+        """물고기 id → 전용 곡 ID (music_patterns boss.songs 의 fish, 시험곡 제외)."""
+        if not fish_id:
+            return None
+        for sid, sp in self.cfg.get("boss", {}).get("songs", {}).items():
+            if sp.get("fish") == fish_id and not sp.get("test"):
+                return sid
+        return None
+
     def available(self, sid: str | None) -> bool:
         """그 곡의 층 파일이 있는가 (없으면 장면이 예전 보스 테마를 쓴다)."""
         return bool(sid) and self.enabled and self.spec(sid) is not None and find(f"{sid}_1_base") is not None

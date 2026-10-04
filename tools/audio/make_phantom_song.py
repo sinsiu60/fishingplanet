@@ -7,7 +7,8 @@
 - 공간: 3.5초 잔향(좌우 다른 IR = 넓은 스테레오), 마무리: 중음 보강(폰 스피커), 리미터, 정규화
 - 구조와 마커는 data/phantom_catch_timeline.json 을 읽는다 (연출 이펙트와 같은 숫자 = 싱크)
   정적 → 하프 상승(rise) → 벨(scales) → 합창 스웰(rays) → 절정 화음(climax) → 벨 4음 동기(card) → 맑은 '띵'(record) → 해결 화음 + 잔향
-- 4음 동기 F5-A5-B5-E6 (리디안 #4 를 지나 장7도로) = 환상만의 음악 서명 (카드·도감 인장에 재사용)
+- 4음 동기 = '이름 없는 것의 동기' 으뜸음 → #4 → 5도 → 3도 (F5-B5-C6-A5, 8분·8분·4분·2분) = 환상만의 음악 서명.
+  환상 전용 파이팅 곡(BOSS_BGM.md, DESIGN.md 43)의 주선율 동기와 같은 음
 
 출력: assets/music_generated/phantom_catch_{full,short,extended,loop}_{sharmion,eldrasion}.ogg
       + tools/audio/reference/phantom_catch/ 같은 이름 .wav (들어보기용) + 길이·최대·평균 음량·마커 표
@@ -30,7 +31,8 @@ TL = json.load(open(os.path.join(ROOT, "data", "phantom_catch_timeline.json"), e
 OUT = os.path.join(ROOT, "assets", "music_generated")
 REF = os.path.join(ROOT, "tools", "audio", "reference", "phantom_catch")
 
-MOTIF = [77, 81, 83, 88]          # F5 A5 B5 E6
+MOTIF = [77, 83, 84, 81]          # F5 B5 C6 A5 (1 → #4 → 5 → 3)
+MOTIF_AT = [0, 1, 2, 4]           # 8분 · 8분 · 4분 · 2분 (step = 8분음표)
 CHORD_LO = [41, 53, 60, 64, 67, 69, 71]   # F2 F3 C4 E4 G4 A4 B4 — Fmaj9(#11)
 RESOLVE = [53, 57, 60, 62, 67, 72]         # F3 A3 C4 D4 G4 C5 — F6/9 (해결)
 
@@ -262,8 +264,8 @@ def compose(variant: str, cont: str) -> tuple[np.ndarray, dict]:
     # 5) 카드: 벨 4음 동기
     step = 0.18 if not short else 0.14
     for i, note in enumerate(MOTIF):
-        tr.add(bell(hz(note), 3.0, bellk), m["card"] + i * step, 0.24, -0.3 + 0.2 * i)
-        tr.add(harp(hz(note - 12), 2.0, 0.4), m["card"] + i * step, 0.12, 0.2 - 0.15 * i)
+        tr.add(bell(hz(note), 3.0, bellk), m["card"] + MOTIF_AT[i] * step, 0.24, -0.3 + 0.2 * i)
+        tr.add(harp(hz(note - 12), 2.0, 0.4), m["card"] + MOTIF_AT[i] * step, 0.12, 0.2 - 0.15 * i)
     # 6) 기록: 맑은 '띵'
     tr.add(bell(hz(96), 3.5, "glass" if not eld else "crystal"), m["record"], 0.22, 0.0)
     # 7) 해결 화음 + 선율 (보상 → 여운)
