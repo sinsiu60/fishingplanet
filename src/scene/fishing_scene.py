@@ -691,6 +691,14 @@ class FishingScene(Scene):
             bd = fight_hud.dex_badges(sh.news)   # 도감 별·숙련 (35-2): 연출 카드를 닫은 뒤 한 줄로
             if bd:
                 self.toasts.show(" · ".join(b[0] for b in bd), bd[0][1], 3.5, 11)
+            offer = getattr(self, "print_offer", None)
+            if offer is not None:
+                # 환상·전설: 연출 카드를 닫은 뒤 어탁 제안 (최종 보스는 엔딩이 먼저 — 다음 기록 때)
+                from src.scene.confirm import ConfirmScene
+                fish, size = sh.fish, sh.result["size"]
+                msg = f"어탁을 {'남길' if offer['replace'] is None else '바꿀'}까요? ({offer['cost']:,}원)"
+                self.game.scenes.push(ConfirmScene(self.game, msg, lambda: self._make_print(None, fish, size),
+                                                   "남기기", "괜찮아요"))
 
     def _phantom_retreat(self, x: float, z: float) -> None:
         """환상어가 떠났다 (놓침·직접 회수·챔질 놓침): 사라진 지점으로 보라가 빨려 들어감 + 한 줄."""
@@ -720,6 +728,9 @@ class FishingScene(Scene):
                 self.net_anim = 0.3
                 f.net_click()
             elif f.phase in ("caught", "lost") and self.end_t > fight_hud.CATCH_READY_T:
+                if f.phase == "caught" and self._print_btn() is not None and self._print_btn().collidepoint(self.mouse):
+                    self._make_print(f)
+                    return
                 self._end_fight()
             return
         if c.state != CastState.LANDED:
@@ -835,6 +846,39 @@ class FishingScene(Scene):
         if self.tutorial.want("fight_intro"):
             self._open_card("fight_intro", "gauge")
         self._preload_catch_song(fish)
+
+    # ── 어탁 (35-2) ──
+    def _print_btn(self):
+        offer = getattr(self, "print_offer", None)
+        if offer is None or self.end_t < fight_hud.CATCH_READY_T:
+            return None
+        return pygame.Rect(self.cam.width - 134, 118, 124, 18)
+
+    def _draw_print_btn(self, canvas) -> None:
+        r = self._print_btn()
+        if r is None:
+            return
+        offer = self.print_offer
+        hov = r.collidepoint(self.mouse)
+        canvas.fill((44, 36, 28) if hov else (30, 26, 22), r)
+        pygame.draw.rect(canvas, (210, 190, 150), r, 1)
+        label = f"어탁 남기기 {offer['cost']:,}원" if offer["replace"] is None else f"어탁 갱신 {offer['cost']:,}원"
+        hud.text(canvas, label, r.center, (240, 226, 200), 11, "center")
+        if offer["replace"] is not None:
+            hud.text(canvas, f"(지금 어탁 {offer['replace']:.1f}cm)", (r.centerx, r.bottom + 7), (170, 160, 140), 11, "center")
+
+    def _make_print(self, f, fish: dict | None = None, size: float | None = None) -> None:
+        from src.save import prints
+        fish = fish or f.fish
+        size = size if size is not None else f.result["size"]
+        if prints.make(self.save, fish, size, self.spot["name"]):
+            self.print_offer = None
+            self.sfx.play("ui_buy", 0.8)
+            self.toasts.show("어탁을 남겼다! (도감 · 마을 어탁 갤러리)", (240, 226, 200), 2.5, 11)
+            self.game.save_now()
+        else:
+            self.sfx.play("ui_error")
+            self.toasts.show("돈이 모자라요", BAD, 1.5, 11)
 
     def _preload_catch_song(self, fish: dict) -> None:
         """환상·전설 파이팅 시작 때 포획 곡을 미리 올려 둔다 (포획 순간 파일 읽기로 끊기지 않게)."""
@@ -2197,6 +2241,8 @@ class FishingScene(Scene):
                 self.catch_news.update(phantom.on_catch(self.save, f.fish, ph_first))
             from src.save import dexbook
             self.catch_news.update(dexbook.on_catch(self.save, f.fish))   # 도감 별·숙련·도감 보상 (35-2, 결과 화면에서만)
+            from src.save import prints
+            self.print_offer = prints.offer(self.save, f.fish, f.result["size"])   # 어탁 (35-2): 크기 신기록이면 결과 화면에 버튼
             if getattr(self.landing, "legend_handoff", False):
                 # 다시 잡은 전설: 뜰채 끌어올리기도 빠르게 (환상 재포획 3.5초보다 짧게 — 희귀함 순서)
                 from src.render.legend_show import pick_variant as _lv
@@ -2716,6 +2762,7 @@ class FishingScene(Scene):
         if f.phase == "caught":
             draw_catch_cut(canvas, pal, f.result, self.end_t)
             fight_hud.draw_catch_info(canvas, f.result, self.end_t, self.catch_news)
+            self._draw_print_btn(canvas)
             if qr is not None and qr.items and self.end_t > 1.0:
                 fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)  # 의뢰 상세는 결과 화면에
             if self.end_t > 1.2:   # 왼쪽 위 기록 배지(최대 4줄) 아래 세로 — 가운데 글자를 가리지 않게

@@ -83,6 +83,7 @@ class DexScene(Scene):
         # 도감 별 보상 (35-2): 도감 포인트 · 보상 · 표지 · 칭호 장착
         self.star_mode = False
         self.star_btn = ui.Button((244, 9, 56, 15), "별 보상", self._toggle_star)
+        self.print_btn = ui.Button((244, 232, 76, 15), "어탁 갤러리", self._open_prints)
         self.title_page = 0
 
     def _toggle_mut(self) -> None:
@@ -412,8 +413,15 @@ class DexScene(Scene):
             out.append((pygame.Rect(14 + len(owned) * 56, 216, 40, 14), None))
         return out
 
+    def _open_prints(self) -> None:
+        from src.scene.print_gallery import PrintGalleryScene
+        self.game.scenes.push(PrintGalleryScene(self.game, self.fishing))
+
     def _star_click(self, m) -> None:
         from src.save import dexbook, quests
+        if self.print_btn.click(m):
+            self.game.sfx.play("ui_click")
+            return
         for r, cid in self._cover_btns():
             if r.collidepoint(m):
                 dexbook.book(self.save)["cover"] = cid
@@ -458,6 +466,8 @@ class DexScene(Scene):
                 ui.panel(canvas, r, STAR_ON if on else ui.BORDER, ui.PANEL_LIGHT if r.collidepoint(self.mouse) else (16, 20, 36))
                 text(canvas, fit(name, r.w - 4), r.center, STAR_ON if on else ui.TEXT, 11, "center")
         # 칭호 장착 (의뢰 상점·변이·환상·도감 보상·달인 칭호 전부)
+        self.print_btn.label = f"어탁 {len(self.save.data.get('prints', {}))}장"
+        self.print_btn.draw(canvas, self.mouse)
         tr = self.TITLE_RECT
         ui.panel(canvas, tr, ui.BORDER, (16, 20, 36))
         text(canvas, "칭호 (눌러서 장착/해제)", (tr.x + 6, tr.y + 8), ui.ACCENT, 11, "midleft")
