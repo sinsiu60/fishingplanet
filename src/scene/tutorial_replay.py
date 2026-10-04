@@ -61,8 +61,18 @@ class TutorialReplayScene(Scene):
         self.msg, self.msg_t = "다음에 그 화면에서 다시 보여드려요 (낚시는 다음 낚시 때)", 2.5
 
     def _now(self, tid: str) -> None:
-        """디버그: 설정을 닫고 그 튜토리얼의 그 단계부터 바로."""
+        """디버그: 설정을 닫고 그 튜토리얼의 그 단계부터 바로. 패턴 튜토리얼은 다음 파이팅에서 그 패턴을 띄워 실행."""
         g = self.game.guide
+        pat = g.data[tid].get("pattern")
+        if pat:
+            st = g.st()
+            if tid not in st["replay"]:
+                st["replay"].append(tid)
+            fs = next((sc for sc in self.game.scenes.stack if type(sc).__name__ == "FishingScene"), None)
+            if fs is not None:
+                fs.tut_force_pattern = pat
+            self.msg, self.msg_t = "다음 파이팅에서 그 패턴이 나와요", 2.5
+            return
         while type(self.game.scenes.current).__name__ in ("TutorialReplayScene", "SettingsScene", "PauseScene"):
             self.game.scenes.pop()
         g.force_debug = True

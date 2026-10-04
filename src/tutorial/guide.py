@@ -79,6 +79,17 @@ class Guide:
                 if t2 not in st["done"]:
                     st["done"].append(t2)
 
+    def abort(self) -> None:
+        """끝내지 못하고 멈춤 (물고기를 놓쳤다 등) — 완료로 치지 않아 다음에 그 순간이 오면 다시."""
+        r = self.run
+        if r is None:
+            return
+        self.run = None
+        self.modal = False
+        self.st()["active"] = None
+        from src.tutorial import scripts
+        scripts.stop(self.game, r["id"])
+
     def _chain(self, tid: str) -> list[str]:
         out = []
         while tid and tid not in out:
@@ -131,7 +142,11 @@ class Guide:
         replay = self.st()["replay"] if self.game.save is not None else []
         for tid, tut in self.data.items():
             st = tut.get("start", "")
-            if st == f"event:{name}":
+            if st == f"event:{name}" and tut.get("pattern"):
+                # 패턴 튜토리얼: 예고 '그 순간'에만 (대기열에 넣지 않고 바로, 다른 튜토리얼 중이면 이번엔 넘김)
+                if self.run is None and self.can_start(tid) and not conds.aside(self.game):
+                    self._begin(tid)
+            elif st == f"event:{name}":
                 self.request(tid)
             elif tid in replay and name.startswith("spot_enter:") and st.startswith("event:spot_enter:"):
                 self.request(tid)   # 다시 보기: 낚시 튜토리얼은 다음 낚시 때 (어느 낚시터든)
@@ -153,13 +168,17 @@ class Guide:
             return True
         return s["kind"] in ("freeze", "info") and not self.run["ctx"].get("released")
 
+    def released(self) -> bool:
+        """정지 지시가 '그 순간'을 기다리는 중 (게임은 그대로 흐르고 안내도 숨김)."""
+        return bool(self.run is not None and self.run["ctx"].get("released"))
+
     def _next(self, success: bool = False) -> None:
         r = self.run
         s = self.step
         if s and s.get("on_done"):
             from src.tutorial import scripts
             scripts.action(self.game, s["on_done"])
-        if success and s and s["kind"] == "freeze" and s["until"] != "tap":
+        if success and s and s["kind"] == "freeze" and s["until"] != "tap" and not self.data[r["id"]].get("no_ok"):
             self.ok_t = OK_SEC
             self.game.slowmo(SLOW_SEC, SLOW_SCALE)
         if self.run is not r:   # on_done 이 튜토리얼을 끝냈으면
@@ -170,8 +189,9 @@ class Guide:
         r["tapped"] = False
         r["nudge"] = 0.0
         r["sub"] = 0
-        r["ctx"].pop("released", None)
-        r["ctx"].pop("start_ptr", None)
+        for k in ("released", "start_ptr", "passed", "c_acc", "c_prev", "c_hist", "mash_n", "circle_k", "text", "anim",
+                  "allow", "badge", "show", "dir"):
+            r["ctx"].pop(k, None)
         self.st()["active"] = {"id": r["id"], "step": r["i"]}
         if self.step is None:
             self._finish()
@@ -211,6 +231,8 @@ class Guide:
     def _satisfied(self, s: dict) -> bool:
         r = self.run
         u = s["until"]
+        if r["ctx"].get("released"):
+            return False
         kind, _, arg = u.partition(":")
         if u == "tap":
             return r["tapped"]
@@ -303,7 +325,7 @@ class Guide:
         k = s["kind"]
         if a.name in ("primary_up",):
             return True
-        if a.name == "debug":
+        if a.name == "debug" or r["ctx"].get("released"):
             return True
         if k == "wait":
             return True
@@ -350,6 +372,11 @@ class Guide:
         txt = re.sub(r"\{([^}/]+)\}", sub, txt)
         return re.sub(r"\*\*(.+?)\*\*", r"{gold}\1{/}", txt)
 
+    def _sub(self, txt: str) -> str:
+        touch = self.game.input.kind == "touch"
+        return re.sub(r"\{([^}/]+)\}", lambda m: (self.inputs[m.group(1)]["mobile" if touch else "pc"]
+                                                    if m.group(1) in self.inputs else m.group(0)), txt)
+
     def who(self) -> str:
         return self.data[self.run["id"]].get("who", "haru") if self.run else "haru"
 
@@ -363,6 +390,14 @@ class Guide:
         r = self.run
         rects = targets.rects(self.game, s["target"], r) if s.get("target") else []
         k = s["kind"]
+        if r["ctx"].get("released"):
+            if r["ctx"].get("show"):   # 머리 흔들기: 문구를 띄운 채 진행
+                overlay.box(canvas, self.text_of(s), self.who(), s.get("expr") or "neutral", rects, "wait", self.t,
+                            small=True)
+                if r["ctx"].get("badge") and rects:
+                    overlay.badge(canvas, r["ctx"]["badge"], (rects[0].centerx, rects[0].bottom + 10))
+            overlay.skip_button(canvas, self.skip_rect(), self.game.input.pointer)
+            return
         if k != "wait" and (rects or k != "spotlight"):
             overlay.dim(canvas, rects, self.t)
         expr = s.get("expr") or {"haru": "happy", "ella": "neutral", "baek": "neutral"}.get(self.who(), "neutral")
@@ -371,8 +406,15 @@ class Guide:
         if k == "freeze" and s["until"] != "tap":
             how = conds.anim_of(self.game, s["until"], r)
             if how:
-                overlay.input_anim(canvas, how, conds.anim_pos(self.game, s, r, rects), self.t, self.game.input.kind == "touch",
-                                   r["nudge"])
+                pos = conds.anim_pos(self.game, s, r, rects)
+                overlay.input_anim(canvas, how, pos, self.t, self.game.input.kind == "touch", r["nudge"])
+                if r["ctx"].get("circle_k") is not None and how == "circle":
+                    overlay.progress_ring(canvas, pos, r["ctx"]["circle_k"])
+            if r["ctx"].get("badge"):
+                bp = (rects[0].centerx, rects[0].bottom + 10) if rects else (canvas.get_width() // 2, 90)
+                overlay.badge(canvas, r["ctx"]["badge"], bp)
+            for txt, pos in r["ctx"].get("labels", []):   # 이중 패턴: 슬롯마다 조작 이름
+                overlay.badge(canvas, self._sub(txt), pos)
         overlay.skip_button(canvas, self.skip_rect(), self.game.input.pointer)
         if self.modal:
             overlay.modal(canvas, *self._modal_rects())

@@ -469,13 +469,9 @@
    "title": "돌진",
    "who": "haru",
    "start": "event:first:telegraph:rush",
-   "pattern": "telegraph:rush",
-   "how": "input:drag_down",
-   "raw": {
-    "warn": "물결이 **안쪽으로 빨려들고**, 줄 위로 빛이 다가와요. **돌진** 신호예요!",
-    "act": "지금이에요! 줄을 풀어 주세요. {드랙내리기}",
-    "ok": "좋아요! 줄이 버텨 냈어요."
-   },
+   "pattern": "rush",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -493,7 +489,8 @@
       "fight.slots"
      ],
      "text": "지금이에요! 줄을 풀어 주세요. {드랙내리기}",
-     "until": "input:drag_down"
+     "until": "input:drag_down",
+     "at": "rush"
     },
     {
      "kind": "wait",
@@ -507,13 +504,9 @@
    "title": "점프",
    "who": "haru",
    "start": "event:first:telegraph:jump",
-   "pattern": "telegraph:jump",
-   "how": "input:lower",
-   "raw": {
-    "warn": "수면 아래가 **부글부글** 끓어요. 곧 **점프**해요!",
-    "act": "지금이에요! 링이 맞았어요. {숙이기}",
-    "ok": "좋아요! 퍼펙트예요!"
-   },
+   "pattern": "jump",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -531,7 +524,8 @@
       "fight.slots"
      ],
      "text": "지금이에요! 링이 맞았어요. {숙이기}",
-     "until": "input:lower"
+     "until": "input:lower",
+     "at": "apex"
     },
     {
      "kind": "wait",
@@ -545,13 +539,9 @@
    "title": "방향 전환",
    "who": "haru",
    "start": "event:first:telegraph:turn",
-   "pattern": "telegraph:turn",
-   "how": "input:turn",
-   "raw": {
-    "warn": "줄이 한쪽으로 쏠려요. **방향 전환** 신호예요!",
-    "act": "지금이에요! 표시된 방향으로! {왼쪽} (방향은 실제 화살표대로 {왼쪽}/{오른쪽})",
-    "ok": "좋아요! 놓치지 않았어요."
-   },
+   "pattern": "turn",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -568,8 +558,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 표시된 방향으로! {왼쪽} (방향은 실제 화살표대로 {왼쪽}/{오른쪽})",
-     "until": "input:turn"
+     "text": "지금이에요! 표시된 방향으로! {왼쪽}",
+     "until": "input:turn",
+     "at": "turn"
     },
     {
      "kind": "wait",
@@ -583,13 +574,9 @@
    "title": "힘 모으기 → 지침",
    "who": "haru",
    "start": "event:first:action:charge",
-   "pattern": "action:charge",
-   "how": "input:reel",
-   "raw": {
-    "warn": "물고기가 **멈췄어요**. 힘을 모으는 중이에요.",
-    "act": "지금이에요! 지친 틈에 감으세요! {감기}",
-    "ok": "좋아요! 쭉 끌려왔어요."
-   },
+   "pattern": "charge",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -607,7 +594,8 @@
       "fight.slots"
      ],
      "text": "지금이에요! 지친 틈에 감으세요! {감기}",
-     "until": "input:reel"
+     "until": "input:reel",
+     "at": "charge_tired"
     },
     {
      "kind": "wait",
@@ -621,13 +609,9 @@
    "title": "① 머리 흔들기",
    "who": "haru",
    "start": "event:first:pattern:shake",
-   "pattern": "pattern:shake",
-   "how": "hold:shake",
-   "raw": {
-    "warn": "줄이 **파르르** 떨려요. **머리 흔들기**예요!",
-    "act": "지금은 아무것도 하지 마세요! {손떼기} (떨림이 끝날 때까지 화면에 \"참는 중…\" 표시)",
-    "ok": "좋아요! 바늘이 빠지지 않았어요."
-   },
+   "pattern": "shake",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -644,8 +628,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금은 아무것도 하지 마세요! {손떼기} (떨림이 끝날 때까지 화면에 \"참는 중…\" 표시)",
-     "until": "hold:shake"
+     "text": "지금은 아무것도 하지 마세요! {손떼기}",
+     "until": "hold:shake",
+     "at": "action"
     },
     {
      "kind": "wait",
@@ -653,19 +638,17 @@
      "text": "좋아요! 바늘이 빠지지 않았어요.",
      "until": "auto:1.5"
     }
-   ]
+   ],
+   "hold_text": "참는 중…",
+   "again_text": "손을 떼세요!"
   },
   "TG-P6": {
    "title": "② 잠수",
    "who": "haru",
    "start": "event:first:pattern:dive",
-   "pattern": "pattern:dive",
-   "how": "input:up",
-   "raw": {
-    "warn": "그림자가 **작아지며** 깊이 들어가요. **잠수** 신호예요!",
-    "act": "지금이에요! 낚싯대를 세우세요! {위}",
-    "ok": "좋아요! 바위에 쓸리지 않았어요."
-   },
+   "pattern": "dive",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -683,7 +666,8 @@
       "fight.slots"
      ],
      "text": "지금이에요! 낚싯대를 세우세요! {위}",
-     "until": "input:up"
+     "until": "input:up",
+     "at": "action"
     },
     {
      "kind": "wait",
@@ -697,13 +681,9 @@
    "title": "③ 수면 질주",
    "who": "haru",
    "start": "event:first:pattern:surface",
-   "pattern": "pattern:surface",
-   "how": "input:down",
-   "raw": {
-    "warn": "수면에 **V자 물살**이 생겨요. **수면 질주** 신호예요!",
-    "act": "지금이에요! 낚싯대를 낮추세요! {아래}",
-    "ok": "좋아요! 거리가 줄었어요."
-   },
+   "pattern": "surface",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -721,7 +701,8 @@
       "fight.slots"
      ],
      "text": "지금이에요! 낚싯대를 낮추세요! {아래}",
-     "until": "input:down"
+     "until": "input:down",
+     "at": "action"
     },
     {
      "kind": "wait",
@@ -735,13 +716,9 @@
    "title": "④ 역주행",
    "who": "haru",
    "start": "event:first:pattern:reverse",
-   "pattern": "pattern:reverse",
-   "how": "input:mash",
-   "raw": {
-    "warn": "그림자가 **이쪽으로** 와요! 줄이 늘어져요.",
-    "act": "지금이에요! 늘어진 줄을 빨리 감으세요! {연타} (화면에 연타 횟수 0/6)",
-    "ok": "좋아요! 한 번에 끌어왔어요."
-   },
+   "pattern": "reverse",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -758,8 +735,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 늘어진 줄을 빨리 감으세요! {연타} (화면에 연타 횟수 0/6)",
-     "until": "input:mash"
+     "text": "지금이에요! 늘어진 줄을 빨리 감으세요! {연타}",
+     "until": "input:mash",
+     "at": "action"
     },
     {
      "kind": "wait",
@@ -767,19 +745,16 @@
      "text": "좋아요! 한 번에 끌어왔어요.",
      "until": "auto:1.5"
     }
-   ]
+   ],
+   "mash_need": 6
   },
   "TG-P9": {
    "title": "⑤ 줄 비틀기",
    "who": "haru",
    "start": "event:first:pattern:twist",
-   "pattern": "pattern:twist",
-   "how": "input:circle",
-   "raw": {
-    "warn": "물고기가 **빙글빙글** 돌아요. 줄이 꼬여요!",
-    "act": "지금이에요! 꼬임을 풀어요! {원} (원 진행 표시)",
-    "ok": "좋아요! 꼬임이 풀렸어요."
-   },
+   "pattern": "twist",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -796,8 +771,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 꼬임을 풀어요! {원} (원 진행 표시)",
-     "until": "input:circle"
+     "text": "지금이에요! 꼬임을 풀어요! {원}",
+     "until": "input:circle",
+     "at": "action"
     },
     {
      "kind": "wait",
@@ -811,13 +787,9 @@
    "title": "⑥ 연쇄 콤보",
    "who": "haru",
    "start": "event:first:pattern:chain",
-   "pattern": "pattern:chain",
-   "how": "chain",
-   "raw": {
-    "warn": "아이콘이 **3개** 떴어요. 이 순서대로 공격해 와요!",
-    "act": "각 행동 순간마다 정지: \"첫 번째!\", \"두 번째!\", \"마지막!\" + 해당 조작",
-    "ok": "좋아요! 콤보를 다 막았어요!"
-   },
+   "pattern": "chain",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -834,8 +806,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "각 행동 순간마다 정지: \"첫 번째!\", \"두 번째!\", \"마지막!\" + 해당 조작",
-     "until": "chain"
+     "text": "첫 번째!",
+     "until": "chain",
+     "at": "chain"
     },
     {
      "kind": "wait",
@@ -843,19 +816,20 @@
      "text": "좋아요! 콤보를 다 막았어요!",
      "until": "auto:1.5"
     }
+   ],
+   "chain_texts": [
+    "첫 번째!",
+    "두 번째!",
+    "마지막!"
    ]
   },
   "TG-P11": {
    "title": "⑦ 숨기",
    "who": "haru",
    "start": "event:first:pattern:hide",
-   "pattern": "pattern:hide",
-   "how": "hide",
-   "raw": {
-    "warn": "물고기가 **바위 밑에** 숨었어요. 당기면 줄만 닳아요.",
-    "act": "1차: 살짝 풀어서 안심시켜요. {드랙내리기} → 2차(나오는 순간): 나왔어요! 지금 감으세요! {감기}",
-    "ok": "좋아요! 기습 성공!"
-   },
+   "pattern": "hide",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -872,8 +846,19 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "1차: 살짝 풀어서 안심시켜요. {드랙내리기} → 2차(나오는 순간): 나왔어요! 지금 감으세요! {감기}",
-     "until": "hide"
+     "text": "살짝 풀어서 안심시켜요. {드랙내리기}",
+     "until": "input:drag_down",
+     "at": "action"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "나왔어요! 지금 감으세요! {감기}",
+     "until": "input:reel",
+     "at": "peek"
     },
     {
      "kind": "wait",
@@ -887,13 +872,9 @@
    "title": "⑧ 펌핑 리듬",
    "who": "haru",
    "start": "event:first:pattern:pump",
-   "pattern": "pattern:pump",
-   "how": "pump",
-   "raw": {
-    "warn": "**둥, 둥** 박자에 맞춰 당기고 있어요.",
-    "act": "첫 두 박자 사이마다 정지: \"지금! 박자 사이에 감으세요!\" {감기}",
-    "ok": "좋아요! 박자를 탔어요!"
-   },
+   "pattern": "pump",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -910,8 +891,19 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "첫 두 박자 사이마다 정지: \"지금! 박자 사이에 감으세요!\" {감기}",
-     "until": "pump"
+     "text": "지금! 박자 사이에 감으세요! {감기}",
+     "until": "input:reel",
+     "at": "gap0"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "지금! 박자 사이에 감으세요! {감기}",
+     "until": "input:reel",
+     "at": "gap1"
     },
     {
      "kind": "wait",
@@ -925,13 +917,9 @@
    "title": "⑨ 공중 몸부림",
    "who": "haru",
    "start": "event:first:pattern:thrash",
-   "pattern": "pattern:thrash",
-   "how": "thrash",
-   "raw": {
-    "warn": "아주 **높이** 뛰어올라요! 링이 **두 번** 나와요.",
-    "act": "1차: \"첫 번째 링!\" {숙이기} → 2차: \"한 번 더!\" {숙이기}",
-    "ok": "좋아요! 더블 퍼펙트!"
-   },
+   "pattern": "thrash",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -948,8 +936,19 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "1차: \"첫 번째 링!\" {숙이기} → 2차: \"한 번 더!\" {숙이기}",
-     "until": "thrash"
+     "text": "첫 번째 링! {숙이기}",
+     "until": "input:lower",
+     "at": "apex"
+    },
+    {
+     "kind": "freeze",
+     "target": [
+      "fight.fish",
+      "fight.slots"
+     ],
+     "text": "한 번 더! {숙이기}",
+     "until": "input:lower",
+     "at": "second"
     },
     {
      "kind": "wait",
@@ -963,13 +962,9 @@
    "title": "⑩ 줄 물어뜯기",
    "who": "haru",
    "start": "event:first:pattern:bite",
-   "pattern": "pattern:bite",
-   "how": "input:drag_min",
-   "raw": {
-    "warn": "이빨이 **번쩍**! 줄을 물어뜯으려 해요!",
-    "act": "지금이에요! 줄을 순간 확 풀어요! {순간최저}",
-    "ok": "좋아요! 헛물었어요!"
-   },
+   "pattern": "bite",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -987,7 +982,8 @@
       "fight.slots"
      ],
      "text": "지금이에요! 줄을 순간 확 풀어요! {순간최저}",
-     "until": "input:drag_min"
+     "until": "input:drag_min",
+     "at": "action"
     },
     {
      "kind": "wait",
@@ -1001,13 +997,9 @@
    "title": "⑪ 가짜 지침",
    "who": "haru",
    "start": "event:first:fake_tired",
-   "pattern": "fake_tired",
-   "how": "fake",
-   "raw": {
-    "warn": "멈췄는데… **지느러미가 아직 움직여요**. 이건 **가짜**예요! 감지 마세요.",
-    "act": "(탭으로 넘김) → 진짜 지침 순간 정지: \"지느러미가 멈췄어요. 진짜예요! 감으세요!\" {감기}",
-    "ok": "좋아요! 속지 않았어요."
-   },
+   "pattern": "fake",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -1024,8 +1016,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "(탭으로 넘김) → 진짜 지침 순간 정지: \"지느러미가 멈췄어요. 진짜예요! 감으세요!\" {감기}",
-     "until": "fake"
+     "text": "지느러미가 멈췄어요. 진짜예요! 감으세요! {감기}",
+     "until": "input:reel",
+     "at": "real_tired"
     },
     {
      "kind": "wait",
@@ -1039,13 +1032,9 @@
    "title": "⑫ 이중 패턴",
    "who": "haru",
    "start": "event:first:pattern:dual",
-   "pattern": "pattern:dual",
-   "how": "dual",
-   "raw": {
-    "warn": "신호가 **두 개** 동시에! 왼쪽은 왼손, 오른쪽은 오른손이에요.",
-    "act": "지금이에요! 두 개 다! (각 슬롯 옆에 해당 조작 이름을 따로 표시)",
-    "ok": "좋아요! 양손 다 해냈어요!"
-   },
+   "pattern": "dual",
+   "script": "pattern",
+   "no_ok": true,
    "steps": [
     {
      "kind": "freeze",
@@ -1062,8 +1051,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 두 개 다! (각 슬롯 옆에 해당 조작 이름을 따로 표시)",
-     "until": "dual"
+     "text": "지금이에요! 두 개 다!",
+     "until": "dual",
+     "at": "action"
     },
     {
      "kind": "wait",

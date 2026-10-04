@@ -86,6 +86,9 @@ TIP_REPEAT = 1
 SLACK_RED_CARD_SEC = 0.6  # 이 시간 이상 느슨/빨강이면 튜토리얼 카드
 
 
+GUIDE_FIRST = ("telegraph:rush", "telegraph:jump", "telegraph:turn", "action:charge", "fake_tired")
+
+
 class FishingScene(Scene):
     def __init__(self, game):
         super().__init__(game)
@@ -460,6 +463,19 @@ class FishingScene(Scene):
     def tut_busy(self) -> bool:
         """가이드 튜토리얼이 기다릴 때: 카드·도움말·환상·전설 포획 연출 중 (src/tutorial/conds.py)."""
         return self.card is not None or self.help or self.catch_show is not None or self.voyage_pending
+
+    def _guide_first(self, key: str) -> bool:
+        """패턴 첫 만남 신호 → 가이드 (패턴 사전 등록은 그대로). 이번에 패턴 튜토리얼이 시작됐으면 True."""
+        if self.training is not None:
+            return False
+        self.tutorial.mark(key)   # 패턴 사전·훈련 수조 '본 신호' 기록
+        if key == "fake_tired":
+            seen = self.save.data.setdefault("patterns_seen", [])
+            if "fake" not in seen:
+                seen.append("fake")
+        g = self.game.guide
+        g.event(f"first:{key}")
+        return g.run is not None and g.data[g.run["id"]].get("start") == f"event:first:{key}"
 
     def _open_card(self, key: str, focus: str | None) -> None:
         if self.game.guide.run is not None and key != "welcome":
@@ -1503,6 +1519,18 @@ class FishingScene(Scene):
                 self.game.guide.event("catch_shown")   # TG-03: 배지까지 다 뜬 뒤
             return
         reeling = self.game.input.held("reel") and f.phase == "fight"
+        fp = getattr(self, "tut_force_pattern", None)
+        if fp and f.phase == "fight" and f.elapsed > 1.5 and f.brain.state in ("idle", "tired", "recover"):
+            # 디버그 (설정 → 튜토리얼 다시 보기 → 바로): 이번 파이팅에 그 패턴을 띄워 패턴 튜토리얼 실행
+            self.tut_force_pattern = None
+            if fp == "chain" and not getattr(f.brain, "chain_seq", None):
+                f.brain.chain_seq = ["shake", "surface", "jump"]
+            if fp == "dual" and not getattr(f.brain, "dual_pairs", None):
+                f.brain.dual_pairs = [["dive", "bite"]]
+            if fp == "charge":
+                f.brain._start_action("charge")
+            else:
+                f.brain.force_pattern(fp)
         if f.phase == "fight" and f.zone() == "red":
             # 장력 빨강: 빨간 정도에 비례한 약한 진동을 0.3초마다
             self.red_buzz_t = getattr(self, "red_buzz_t", 0.0) - dt
@@ -1916,12 +1944,13 @@ class FishingScene(Scene):
                 self.sparkles.burst(*pos, count=6, speed=0.5, ring=False)  # 이빨 반짝
             seen = self.save.data.setdefault("patterns_seen", [])
             card = f"pattern:{pid}"
-            if card in tut.CARDS and self.card is None and self.tutorial.want(card) and self.settings.get("signal_cards"):
-                # 처음 보는 패턴: 예고 순간 멈추고 시범 그림이 있는 설명 카드
-                if pid not in seen:
+            first = pid not in seen
+            if pid != "fake" and card in tut.CARDS:
+                # 패턴 튜토리얼 (TG-P5~14·16): 예고 순간 가이드가 멈추고 설명 (예전 첫 만남 정지 카드 대신)
+                if self._guide_first(card) and first:
                     seen.append(pid)
-                self._open_signal_card(card)
-            elif pid not in seen:
+                    first = False
+            if first:
                 # 첫 만남(카드는 이미 봤음): 잠깐 느려지며 한 줄 안내 (이후 도감에 패턴 힌트)
                 seen.append(pid)
                 pc = load_json("patterns.json")
@@ -2197,7 +2226,9 @@ class FishingScene(Scene):
         qr = getattr(self, "quest_run", None)
         if qr is not None:
             qr.on_event(ev)
-        if ev in ("tired", "net_start"):
+        if ev in GUIDE_FIRST:
+            self._guide_first(ev)   # 돌진·점프·방향 전환·힘 모으기·가짜 지침 첫 만남 → 패턴 튜토리얼 (TG-P1~4·15)
+        elif ev in ("tired", "net_start"):
             pass   # 첫 지침·첫 뜰채 카드는 가이드 튜토리얼(TG-02)로 바뀜
         elif ev in tut.CARDS and self.card is None and self.tutorial.want(ev):
             if ev.startswith("telegraph:"):

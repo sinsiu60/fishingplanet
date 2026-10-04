@@ -252,3 +252,24 @@ def ok_banner(canvas, text: str, k: float) -> None:
     y = 72 - int((1 - k) * 6)
     canvas.blit(sh, (W // 2 - img.get_width() // 2 + 1, y + 1))
     canvas.blit(img, (W // 2 - img.get_width() // 2, y))
+
+
+def badge(canvas, text: str, pos) -> None:
+    """작은 표시 (연타 0/6 · 참는 중… · 이중 패턴 조작 이름)."""
+    font = get_font(11)
+    w = font.size(hud.strip_tags(text))[0] + 10
+    r = pygame.Rect(0, 0, w, 15)
+    r.center = (int(pos[0]), int(pos[1]))
+    r.clamp_ip(canvas.get_rect())
+    canvas.fill(BOX_BG, r)
+    pygame.draw.rect(canvas, YELLOW, r, 1)
+    hud.text(canvas, text, r.center, YELLOW, 11, "center")
+
+
+def progress_ring(canvas, pos, k: float) -> None:
+    """원 그리기 진행 (0~1)."""
+    x, y = int(pos[0]), int(pos[1])
+    rect = pygame.Rect(x - 18, y - 18, 36, 36)
+    pygame.draw.circle(canvas, (60, 64, 80), (x, y), 18, 2)
+    if k > 0.01:
+        pygame.draw.arc(canvas, YELLOW, rect, math.pi / 2 - k * math.tau, math.pi / 2, 3)

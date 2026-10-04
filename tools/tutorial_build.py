@@ -107,23 +107,47 @@ SPEC = {
 }
 
 # 패턴 튜토리얼: (패턴 키, ① 강조, ② 강조, ② 조작) — 문구는 TG-P 표 (①②③)
-PATTERNS = {
-    "TG-P1": ("telegraph:rush", "input:drag_down"),
-    "TG-P2": ("telegraph:jump", "input:lower"),
-    "TG-P3": ("telegraph:turn", "input:turn"),
-    "TG-P4": ("action:charge", "input:reel"),
-    "TG-P5": ("pattern:shake", "hold:shake"),
-    "TG-P6": ("pattern:dive", "input:up"),
-    "TG-P7": ("pattern:surface", "input:down"),
-    "TG-P8": ("pattern:reverse", "input:mash"),
-    "TG-P9": ("pattern:twist", "input:circle"),
+PATTERNS = {   # 시작 신호, 패턴(대본 키)
+    "TG-P1": ("telegraph:rush", "rush"),
+    "TG-P2": ("telegraph:jump", "jump"),
+    "TG-P3": ("telegraph:turn", "turn"),
+    "TG-P4": ("action:charge", "charge"),
+    "TG-P5": ("pattern:shake", "shake"),
+    "TG-P6": ("pattern:dive", "dive"),
+    "TG-P7": ("pattern:surface", "surface"),
+    "TG-P8": ("pattern:reverse", "reverse"),
+    "TG-P9": ("pattern:twist", "twist"),
     "TG-P10": ("pattern:chain", "chain"),
     "TG-P11": ("pattern:hide", "hide"),
     "TG-P12": ("pattern:pump", "pump"),
     "TG-P13": ("pattern:thrash", "thrash"),
-    "TG-P14": ("pattern:bite", "input:drag_min"),
+    "TG-P14": ("pattern:bite", "bite"),
     "TG-P15": ("fake_tired", "fake"),
     "TG-P16": ("pattern:dual", "dual"),
+}
+# ② 대응 정지: (② 칸 안의 문구 — 원문 그대로 들어 있어야 함, 넘어가는 조건, 멈추는 순간)
+#   멈추는 순간: rush 돌진 직전 / apex 점프 정점 / second 공중 몸부림 착수 직전 / turn 방향 전환 순간 /
+#   action 행동 시작 / peek 숨기 고개 내밂 / gap0·gap1 펌핑 첫·둘째 박 사이 / charge_tired 힘 모으기 끝 지침 /
+#   real_tired 가짜 지침 뒤 진짜 지침 / chain 콤보 행동마다 (그 행동의 순간)
+PSTEPS = {
+    "TG-P1": [("지금이에요! 줄을 풀어 주세요. {드랙내리기}", "input:drag_down", "rush")],
+    "TG-P2": [("지금이에요! 링이 맞았어요. {숙이기}", "input:lower", "apex")],
+    "TG-P3": [("지금이에요! 표시된 방향으로! {왼쪽}", "input:turn", "turn")],
+    "TG-P4": [("지금이에요! 지친 틈에 감으세요! {감기}", "input:reel", "charge_tired")],
+    "TG-P5": [("지금은 아무것도 하지 마세요! {손떼기}", "hold:shake", "action")],
+    "TG-P6": [("지금이에요! 낚싯대를 세우세요! {위}", "input:up", "action")],
+    "TG-P7": [("지금이에요! 낚싯대를 낮추세요! {아래}", "input:down", "action")],
+    "TG-P8": [("지금이에요! 늘어진 줄을 빨리 감으세요! {연타}", "input:mash", "action")],
+    "TG-P9": [("지금이에요! 꼬임을 풀어요! {원}", "input:circle", "action")],
+    "TG-P10": [("첫 번째!", "chain", "chain")],
+    "TG-P11": [("살짝 풀어서 안심시켜요. {드랙내리기}", "input:drag_down", "action"),
+               ("나왔어요! 지금 감으세요! {감기}", "input:reel", "peek")],
+    "TG-P12": [("지금! 박자 사이에 감으세요! {감기}", "input:reel", "gap0"),
+               ("지금! 박자 사이에 감으세요! {감기}", "input:reel", "gap1")],
+    "TG-P13": [("첫 번째 링! {숙이기}", "input:lower", "apex"), ("한 번 더! {숙이기}", "input:lower", "second")],
+    "TG-P14": [("지금이에요! 줄을 순간 확 풀어요! {순간최저}", "input:drag_min", "action")],
+    "TG-P15": [("지느러미가 멈췄어요. 진짜예요! 감으세요! {감기}", "input:reel", "real_tired")],
+    "TG-P16": [("지금이에요! 두 개 다!", "dual", "action")],
 }
 
 # 다른 시스템 (TG-08~19, TG-PH): 큰따옴표 문구 순서대로 (강조, 조건[, 덧붙임])
@@ -204,12 +228,28 @@ def build() -> tuple[dict, dict]:
     prow = rows(section(text, "## 패턴별 문구"), "| ID | 패턴 |")
     for cells in prow:
         tid = cells[0]
-        key, how = PATTERNS[tid]
-        tuts[tid] = {"title": cells[1], "who": "haru", "start": f"event:first:{key}", "pattern": key, "how": how,
-                     "raw": {"warn": cells[2], "act": cells[3], "ok": cells[4]},
-                     "steps": [{"kind": "freeze", "target": ["fight.fish", "fight.slots"], "text": cells[2], "until": "tap"},
-                               {"kind": "freeze", "target": ["fight.fish", "fight.slots"], "text": cells[3], "until": how},
-                               {"kind": "wait", "target": None, "text": cells[4], "until": "auto:1.5"}]}
+        key, pat = PATTERNS[tid]
+        tgt = ["fight.fish", "fight.slots"]
+        steps = [{"kind": "freeze", "target": tgt, "text": cells[2], "until": "tap"}]
+        for txt, until, at in PSTEPS[tid]:
+            if txt not in cells[3].replace("\"", ""):
+                raise SystemExit(f"{tid}: ② 문구가 원문에 없음: {txt}")
+            steps.append({"kind": "freeze", "target": tgt, "text": txt, "until": until, "at": at})
+        steps.append({"kind": "wait", "target": None, "text": cells[4], "until": "auto:1.5"})
+        extra = {}
+        q = quoted(cells[3])
+        if tid == "TG-P10":
+            extra["chain_texts"] = q[:3]               # "첫 번째!", "두 번째!", "마지막!"
+        if tid == "TG-P5":
+            extra["hold_text"] = q[0]                   # "참는 중…"
+            extra["again_text"] = "손을 떼세요!"        # 4번 아래 설명 원문
+            if extra["again_text"] not in text:
+                raise SystemExit("TG-P5: '손을 떼세요!' 원문 없음")
+        if tid == "TG-P8":
+            m = re.search(r"0/(\d+)", cells[3])
+            extra["mash_need"] = int(m.group(1))
+        tuts[tid] = {"title": cells[1], "who": "haru", "start": f"event:first:{key}", "pattern": pat,
+                     "script": "pattern", "no_ok": True, "steps": steps} | extra
     # ── 다른 시스템 ──
     orow = {re.sub(r"\*\*", "", c[0]).split(" ")[0]: c for c in
             rows(section(text, "# 🧭 [다른 시스템 튜토리얼 개편]"), "| ID | 시작 |")}
