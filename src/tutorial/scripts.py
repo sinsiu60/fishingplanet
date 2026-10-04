@@ -124,10 +124,7 @@ class _TG02:
                     b.events.append("tired")
             if i >= 6 and b.state not in ("tired", "exhausted"):
                 b._enter("tired", 999.0)
-        elif f.phase == "net" and i == 8 and not run["ctx"].get("net_set"):
-            run["ctx"]["net_set"] = True
-            f.net_t = f.net_period + 0.02   # 물고기가 멈춘 순간 (지금 누르면 건져짐)
-        return False
+        return False   # 뜰채: 설명 단계(퍼덕임) → 물고기가 실제로 멈추는 순간 정지 (억지로 맞추지 않음)
 
     @staticmethod
     def stop(game) -> None:

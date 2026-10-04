@@ -304,8 +304,34 @@ def phantom_paragraphs() -> list[str]:
     return paras[:2]
 
 
+def apply_voice(tuts: dict) -> None:
+    """하루 아저씨 말투 (data/tutorial_voice.json, 사용자 요청): who=haru 문구를 하루 말투로. 원문은 src* 로 남겨 검사.
+    + 사용자 요청으로 넣은 단계 (TG-02 뜰채 설명: 물고기가 퍼덕이는 동안 → 멈추는 순간 '지금이야!')."""
+    v = json.load(open(os.path.join(ROOT, "data", "tutorial_voice.json"), encoding="utf-8"))
+    hv = v["haru"]
+    for tid, t in tuts.items():
+        if t.get("who") != "haru":
+            continue
+        for s in t["steps"]:
+            for key in ("text", "short_text"):
+                if key in s:
+                    if s[key] not in hv:
+                        raise SystemExit(f"{tid}: 하루 말투 표에 없음: {s[key]}")
+                    s["src_" + key], s[key] = s[key], hv[s[key]]
+        if "chain_texts" in t:
+            t["src_chain_texts"], t["chain_texts"] = t["chain_texts"], [hv[x] for x in t["chain_texts"]]
+        for key in ("hold_text", "again_text"):
+            if key in t:
+                t["src_" + key], t[key] = t[key], hv[t[key]]
+    # TG-02 뜰채: 마지막 '지금이야! 뜰채로 건져!' 앞에 설명 단계 (게임은 흐르고, 물고기가 처음 멈추는 순간 넘어감)
+    steps = tuts["TG-02"]["steps"]
+    steps.insert(len(steps) - 1, {"kind": "wait", "target": ["fight.fish", "fight.net"], "text": v["added"]["TG-02:net_wait"],
+                                  "expr": "happy", "until": "cond:net_still", "added": True})
+
+
 def main() -> None:
     tuts, inputs = build()
+    apply_voice(tuts)
     data = {"_설명": "튜토리얼 (TUTORIAL.md 원문 그대로, tools/tutorial_build.py 가 만듦 — 손으로 고치지 말 것). DESIGN.md 40.",
             "tutorials": tuts}
     json.dump(data, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

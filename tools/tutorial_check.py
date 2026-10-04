@@ -24,11 +24,36 @@ def main() -> int:
     flat = doc.replace('"', "")   # 문구 사이에 따옴표가 낀 줄 (예: "지금! 박자 사이에 감으세요!" {감기})
     bad = 0
     n = 0
+    voice = json.load(open(os.path.join(ROOT, "data", "tutorial_voice.json"), encoding="utf-8"))
+    hv = voice["haru"]
     for tid, t in tuts.items():
-        texts = [(f"{tid} {i + 1}단계", s["text"]) for i, s in enumerate(t["steps"])]
-        texts += [(f"{tid} 콤보", x) for x in t.get("chain_texts", [])]
-        texts += [(f"{tid} {k}", t[k]) for k in ("hold_text", "again_text") if k in t]
-        texts += [(f"{tid} 돈 부족", s["short_text"]) for s in t["steps"] if s.get("short_text")]
+        # 원문(src*) 은 TUTORIAL.md 그대로, 화면 문구는 하루 말투 표와 일치하는지 (사용자 요청 — 하루 아저씨 말투)
+        texts, shown = [], []
+        for i, s in enumerate(t["steps"]):
+            if s.get("added"):
+                if s["text"] not in voice["added"].values():
+                    print(f"[추가 단계 문구 다름] {tid} {i + 1}단계")
+                    bad += 1
+                shown.append((f"{tid} {i + 1}단계(추가)", s["text"]))
+                continue
+            texts.append((f"{tid} {i + 1}단계", s.get("src_text", s["text"])))
+            shown.append((f"{tid} {i + 1}단계", s["text"]))
+            if s.get("src_text") and hv.get(s["src_text"]) != s["text"]:
+                print(f"[하루 말투 표와 다름] {tid} {i + 1}단계")
+                bad += 1
+        texts += [(f"{tid} 콤보", x) for x in t.get("src_chain_texts", t.get("chain_texts", []))]
+        texts += [(f"{tid} {k}", t.get("src_" + k, t[k])) for k in ("hold_text", "again_text") if k in t]
+        texts += [(f"{tid} 돈 부족", s.get("src_short_text", s["short_text"])) for s in t["steps"] if s.get("short_text")]
+        for where, txt in shown:
+            for kind in ("pc", "mobile"):
+                tab = voice["inputs_haru"] if t.get("who") == "haru" else inputs
+                out = re.sub(r"\{([^}/]+)\}", lambda m: tab[m.group(1)][kind] if m.group(1) in tab else m.group(0), txt)
+                if re.search(r"\{[^}]*\}", out):
+                    print(f"[하루 조작 이름 못 바꿈] {where} ({kind}): {out}")
+                    bad += 1
+            if tid != "TG-PH" and "환상" in txt:
+                print(f"[환상 비밀] {where}: {txt}")
+                bad += 1
         for where, txt in texts:
             n += 1
             src = ph if tid == "TG-PH" and "환상의 물고기" in txt or "물결이 숨을" in txt else doc

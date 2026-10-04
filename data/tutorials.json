@@ -22,45 +22,51 @@
     {
      "kind": "info",
      "target": "fish.water",
-     "text": "여기가 동네 저수지예요. 찌를 던져 볼까요?",
+     "text": "여기가 동네 저수지야. 어디, 찌 한번 던져 볼까?",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "여기가 동네 저수지예요. 찌를 던져 볼까요?"
     },
     {
      "kind": "spotlight",
      "target": "fish.water",
-     "text": "누르고 있으면 던질 힘이 모여요. {캐스팅}",
+     "text": "꾹 누르고 있으면 던질 힘이 모이거든. {캐스팅}",
      "expr": "neutral",
      "until": "event:cast_landed",
-     "allow": "cast"
+     "allow": "cast",
+     "src_text": "누르고 있으면 던질 힘이 모여요. {캐스팅}"
     },
     {
      "kind": "wait",
      "target": "fish.bobber",
-     "text": "찌를 잘 보세요. 물고기가 오면 움직여요.",
+     "text": "찌를 잘 봐. 물고기가 오면 움직인다고.",
      "expr": "neutral",
-     "until": "event:nibble"
+     "until": "event:nibble",
+     "src_text": "찌를 잘 보세요. 물고기가 오면 움직여요."
     },
     {
      "kind": "freeze",
      "target": "fish.bobber",
-     "text": "톡톡! 아직이에요. 물고기가 **간만 보는 중**이에요.",
+     "text": "톡톡! 아직이야. 녀석이 **간만 보는 중**이구먼.",
      "expr": "surprised",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "톡톡! 아직이에요. 물고기가 **간만 보는 중**이에요."
     },
     {
      "kind": "wait",
      "target": "fish.bobber",
-     "text": "진짜로 물면 찌가 **쑥** 들어가요.",
+     "text": "진짜로 물면 찌가 **쑥** 들어가. 조금만 기다려.",
      "expr": "neutral",
-     "until": "event:bite"
+     "until": "event:bite",
+     "src_text": "진짜로 물면 찌가 **쑥** 들어가요."
     },
     {
      "kind": "freeze",
      "target": "fish.bobber",
-     "text": "지금이에요! **쑥** 들어갔어요! {탭}",
+     "text": "지금이야! **쑥** 들어갔다! {탭}",
      "expr": "surprised",
-     "until": "input:hook"
+     "until": "input:hook",
+     "src_text": "지금이에요! **쑥** 들어갔어요! {탭}"
     }
    ]
   },
@@ -88,44 +94,50 @@
       "fight.gauge.tension",
       "fight.gauge.line"
      ],
-     "text": "이건 **장력 게이지**예요. 바늘이 **초록 칸** 안에 있으면 안전해요.",
+     "text": "이게 **장력 게이지**야. 바늘이 **초록 칸** 안에 있으면 안전하지.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "이건 **장력 게이지**예요. 바늘이 **초록 칸** 안에 있으면 안전해요."
     },
     {
      "kind": "info",
      "target": "fight.gauge.line",
-     "text": "빨간 칸에 오래 있으면 **줄이 닳아요**. 다 닳으면 끊어져요!",
+     "text": "빨간 칸에 오래 있으면 **줄이 닳는다고**. 다 닳으면 툭 끊어져!",
      "expr": "surprised",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "빨간 칸에 오래 있으면 **줄이 닳아요**. 다 닳으면 끊어져요!"
     },
     {
      "kind": "freeze",
      "target": "fight.reel",
-     "text": "이제 감아 볼까요? {감기}",
+     "text": "자, 이제 감아 볼까? {감기}",
      "expr": "happy",
-     "until": "input:reel"
+     "until": "input:reel",
+     "src_text": "이제 감아 볼까요? {감기}"
     },
     {
      "kind": "wait",
      "target": "fight.gauge.tension",
-     "text": "계속 감아요. 바늘을 잘 보세요.",
+     "text": "계속 감아! 바늘 잘 보고.",
      "expr": "neutral",
-     "until": "event:tension_red"
+     "until": "event:tension_red",
+     "src_text": "계속 감아요. 바늘을 잘 보세요."
     },
     {
      "kind": "freeze",
      "target": "fight.gauge.tension.red",
-     "text": "빨간 칸이에요! 잠깐 쉬면 장력이 내려가요. {손떼기}",
+     "text": "빨간 칸이다! 잠깐 쉬면 장력이 내려가. {손떼기}",
      "expr": "surprised",
-     "until": "input:release"
+     "until": "input:release",
+     "src_text": "빨간 칸이에요! 잠깐 쉬면 장력이 내려가요. {손떼기}"
     },
     {
      "kind": "wait",
      "target": "fight.gauge.tension",
-     "text": "초록 칸으로 돌아오면 다시 감아요.",
+     "text": "초록 칸으로 돌아오면 다시 감는 거야.",
      "expr": "neutral",
-     "until": "event:tired"
+     "until": "event:tired",
+     "src_text": "초록 칸으로 돌아오면 다시 감아요."
     },
     {
      "kind": "freeze",
@@ -133,16 +145,29 @@
       "fight.fish",
       "fight.slot.reel"
      ],
-     "text": "물고기가 **지쳤어요**! 이때 감으면 쭉 끌려와요. {감기}",
+     "text": "녀석이 **지쳤구먼**! 이때 감으면 쭉 끌려온다고. {감기}",
      "expr": "happy",
-     "until": "input:reel"
+     "until": "input:reel",
+     "src_text": "물고기가 **지쳤어요**! 이때 감으면 쭉 끌려와요. {감기}"
     },
     {
      "kind": "wait",
      "target": "fight.distance",
-     "text": "거의 다 왔어요!",
+     "text": "거의 다 왔어! 조금만 더!",
      "expr": "happy",
-     "until": "event:net_phase"
+     "until": "event:net_phase",
+     "src_text": "거의 다 왔어요!"
+    },
+    {
+     "kind": "wait",
+     "target": [
+      "fight.fish",
+      "fight.net"
+     ],
+     "text": "뜰채 차례야! 녀석이 퍼덕일 땐 기다렸다가, **딱 멈추는 순간** 건지는 거야.",
+     "expr": "happy",
+     "until": "cond:net_still",
+     "added": true
     },
     {
      "kind": "freeze",
@@ -150,9 +175,10 @@
       "fight.fish",
       "fight.net"
      ],
-     "text": "지금이에요! 뜰채로 건지세요! {탭}",
+     "text": "지금이야! 뜰채로 건져! {탭}",
      "expr": "surprised",
-     "until": "input:hook"
+     "until": "input:hook",
+     "src_text": "지금이에요! 뜰채로 건지세요! {탭}"
     }
    ]
   },
@@ -168,31 +194,35 @@
     {
      "kind": "info",
      "target": "catch.card",
-     "text": "첫 물고기예요! 축하해요!",
+     "text": "첫 물고기구먼! 축하해, 하하!",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "첫 물고기예요! 축하해요!"
     },
     {
      "kind": "info",
      "target": "catch.size",
-     "text": "같은 물고기라도 **크기**가 다 달라요. 크면 더 비싸요.",
+     "text": "같은 물고기라도 **크기**가 다 달라. 클수록 비싸지.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "같은 물고기라도 **크기**가 다 달라요. 크면 더 비싸요."
     },
     {
      "kind": "info",
      "target": "catch.rank",
-     "text": "이건 **랭크**예요. 깔끔하게 잡을수록 높아요. **S랭크**는 판매가가 2배!",
+     "text": "이게 **랭크**야. 깔끔하게 잡을수록 높고, **S랭크**면 값이 2배라고!",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "이건 **랭크**예요. 깔끔하게 잡을수록 높아요. **S랭크**는 판매가가 2배!"
     },
     {
      "kind": "info",
      "target": "catch.dex_new",
-     "text": "처음 잡은 물고기는 **도감**에 기록돼요. 한번 볼까요?",
+     "text": "처음 잡은 물고기는 **도감**에 기록되거든. 한번 볼까?",
      "expr": "happy",
      "until": "tap",
-     "on_done": "close_catch"
+     "on_done": "close_catch",
+     "src_text": "처음 잡은 물고기는 **도감**에 기록돼요. 한번 볼까요?"
     }
    ]
   },
@@ -208,82 +238,93 @@
     {
      "kind": "spotlight",
      "target": "dex.open",
-     "text": "도감을 열어 볼까요? {도감열기}",
+     "text": "도감 한번 열어 볼까? {도감열기}",
      "expr": "happy",
      "until": "scene:DexScene",
      "allow_keys": [
       "menu:dex"
-     ]
+     ],
+     "src_text": "도감을 열어 볼까요? {도감열기}"
     },
     {
      "kind": "info",
      "target": "dex.tabs",
-     "text": "낚시터마다 사는 물고기가 달라요. 탭을 눌러 낚시터를 바꿀 수 있어요.",
+     "text": "낚시터마다 사는 물고기가 달라. 탭을 누르면 낚시터를 바꿀 수 있지.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "낚시터마다 사는 물고기가 달라요. 탭을 눌러 낚시터를 바꿀 수 있어요."
     },
     {
      "kind": "info",
      "target": "dex.cards.unknown",
-     "text": "검은 그림은 **아직 못 잡은 물고기**예요. 잡으면 모습이 보여요.",
+     "text": "까만 그림은 **아직 못 잡은 물고기**야. 잡으면 모습이 보여.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "검은 그림은 **아직 못 잡은 물고기**예요. 잡으면 모습이 보여요."
     },
     {
      "kind": "spotlight",
      "target": "dex.card.first",
-     "text": "방금 잡은 붕어예요. 눌러 보세요.",
+     "text": "방금 잡은 붕어구먼. 눌러 봐.",
      "expr": "happy",
-     "until": "cond:dex_sel_first"
+     "until": "cond:dex_sel_first",
+     "src_text": "방금 잡은 붕어예요. 눌러 보세요."
     },
     {
      "kind": "info",
      "target": "dex.detail.name",
-     "text": "이름, 등급, **난이도**예요. 별이 많을수록 잡기 어려워요.",
+     "text": "이름, 등급, **난이도**야. 별이 많을수록 잡기 어렵지.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "이름, 등급, **난이도**예요. 별이 많을수록 잡기 어려워요."
     },
     {
      "kind": "info",
      "target": "dex.detail.habitat",
-     "text": "언제, 어떤 날씨에, 몇 cm까지 나오는지예요. **잘 잡히는 계절**도 있어요.",
+     "text": "언제, 어떤 날씨에, 몇 cm까지 나오는지야. **잘 잡히는 계절**도 있고.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "언제, 어떤 날씨에, 몇 cm까지 나오는지예요. **잘 잡히는 계절**도 있어요."
     },
     {
      "kind": "info",
      "target": "dex.detail.records",
-     "text": "내가 잡은 **가장 큰 크기**, **최고 랭크**, **잡은 수**예요.",
+     "text": "네가 잡은 **가장 큰 크기**, **최고 랭크**, **잡은 수**야.",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "내가 잡은 **가장 큰 크기**, **최고 랭크**, **잡은 수**예요."
     },
     {
      "kind": "info",
      "target": "dex.detail.stars",
-     "text": "물고기마다 **별이 5개** 있어요. 첫 포획, S랭크, 대물… 목표를 이루면 하나씩 채워져요.",
+     "text": "물고기마다 **별이 5개** 있어. 첫 포획, S랭크, 대물… 해낼 때마다 하나씩 채워지지.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "물고기마다 **별이 5개** 있어요. 첫 포획, S랭크, 대물… 목표를 이루면 하나씩 채워져요."
     },
     {
      "kind": "info",
      "target": "dex.detail.mastery",
-     "text": "같은 물고기를 많이 잡으면 **숙련**이 올라요. 단계마다 새 정보가 열려요.",
+     "text": "같은 놈을 많이 잡으면 **숙련**이 올라. 단계마다 새 정보가 열린다고.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "같은 물고기를 많이 잡으면 **숙련**이 올라요. 단계마다 새 정보가 열려요."
     },
     {
      "kind": "info",
      "target": "dex.detail.unlocks",
-     "text": "더 잡으면 **예고 힌트**와 **좋아하는 리듬**을 알 수 있어요. 싸울 때 큰 도움이 돼요!",
+     "text": "더 잡으면 **예고 힌트**랑 **좋아하는 리듬**도 알게 돼. 싸울 때 큰 도움이 되지!",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "더 잡으면 **예고 힌트**와 **좋아하는 리듬**을 알 수 있어요. 싸울 때 큰 도움이 돼요!"
     },
     {
      "kind": "info",
      "target": "dex.boss",
-     "text": "이건 이 낚시터의 **주인, 전설 물고기**예요. 언젠가 꼭 만나 봐요.",
+     "text": "이게 이 낚시터의 **주인, 전설 물고기**야. 언젠가 꼭 만나 보라고.",
      "expr": "surprised",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "이건 이 낚시터의 **주인, 전설 물고기**예요. 언젠가 꼭 만나 봐요."
     },
     {
      "kind": "info",
@@ -291,16 +332,18 @@
       "dex.spot_stars",
       "dex.btn.stars"
      ],
-     "text": "별을 모으면 **별 보상**을 받을 수 있어요.",
+     "text": "별을 모으면 **별 보상**도 받을 수 있지.",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "별을 모으면 **별 보상**을 받을 수 있어요."
     },
     {
      "kind": "spotlight",
      "target": "dex.close",
-     "text": "다 봤어요! 이제 닫아 볼까요?",
+     "text": "다 봤구먼! 이제 닫아 볼까?",
      "expr": "happy",
-     "until": "closed:DexScene"
+     "until": "closed:DexScene",
+     "src_text": "다 봤어요! 이제 닫아 볼까요?"
     }
    ]
   },
@@ -316,16 +359,18 @@
     {
      "kind": "spotlight",
      "target": "dex.btn.patterns",
-     "text": "배운 **물고기 패턴**은 여기서 다시 볼 수 있어요. 눌러 보세요.",
+     "text": "배운 **물고기 패턴**은 여기서 다시 볼 수 있어. 눌러 봐.",
      "expr": null,
-     "until": "cond:dex_patterns"
+     "until": "cond:dex_patterns",
+     "src_text": "배운 **물고기 패턴**은 여기서 다시 볼 수 있어요. 눌러 보세요."
     },
     {
      "kind": "info",
      "target": "dex.patterns",
-     "text": "신호 모양과 해야 할 조작이 정리돼 있어요. 헷갈리면 언제든 보세요!",
+     "text": "신호 모양이랑 해야 할 조작이 다 정리돼 있지. 헷갈리면 언제든 보라고!",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "신호 모양과 해야 할 조작이 정리돼 있어요. 헷갈리면 언제든 보세요!"
     }
    ]
   },
@@ -342,66 +387,75 @@
     {
      "kind": "info",
      "target": "interior.portrait",
-     "text": "오, 첫 물고기 잡았구먼! 여기서 팔면 돈이 돼요.",
+     "text": "오, 첫 물고기 잡았구먼! 여기서 팔면 돈이 된다고.",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "오, 첫 물고기 잡았구먼! 여기서 팔면 돈이 돼요."
     },
     {
      "kind": "spotlight",
      "target": "interior.menu.sell",
-     "text": "{탭} \"팔기\"를 눌러 봐요.",
+     "text": "\"팔기\"를 눌러 봐. {탭}",
      "expr": "neutral",
-     "until": "cond:shop_sell"
+     "until": "cond:shop_sell",
+     "src_text": "{탭} \"팔기\"를 눌러 봐요."
     },
     {
      "kind": "info",
      "target": "shop.list",
-     "text": "가방에 있는 물고기들이에요. 왼쪽 **색 띠**는 등급이에요.",
+     "text": "가방에 든 물고기들이야. 왼쪽 **색 띠**가 등급이고.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "가방에 있는 물고기들이에요. 왼쪽 **색 띠**는 등급이에요."
     },
     {
      "kind": "spotlight",
      "target": "shop.row.first",
-     "text": "붕어를 골라 봐요.",
+     "text": "붕어를 골라 봐.",
      "expr": "neutral",
-     "until": "cond:shop_sel_first"
+     "until": "cond:shop_sel_first",
+     "src_text": "붕어를 골라 봐요."
     },
     {
      "kind": "info",
      "target": "shop.detail.calc",
-     "text": "**기본가 × 랭크 배수**가 판매가예요. S랭크면 2배!",
+     "text": "**기본가 × 랭크 배수**가 판매가야. S랭크면 2배라고!",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "**기본가 × 랭크 배수**가 판매가예요. S랭크면 2배!"
     },
     {
      "kind": "info",
      "target": "shop.btn.lock",
-     "text": "아끼는 물고기는 **잠가** 두면 실수로 안 팔려요. 귀한 물고기는 자동으로 잠겨요.",
+     "text": "아끼는 놈은 **잠가** 두면 실수로 안 팔려. 귀한 놈은 알아서 잠기고.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "아끼는 물고기는 **잠가** 두면 실수로 안 팔려요. 귀한 물고기는 자동으로 잠겨요."
     },
     {
      "kind": "spotlight",
      "target": "shop.btn.sell",
-     "text": "이번엔 팔아 볼까요?",
+     "text": "자, 이번엔 팔아 볼까?",
      "expr": "happy",
-     "until": "event:sold"
+     "until": "event:sold",
+     "src_text": "이번엔 팔아 볼까요?"
     },
     {
      "kind": "info",
      "target": "shop.money",
-     "text": "돈이 들어왔어요! 여기서 소지금을 볼 수 있어요.",
+     "text": "돈 들어왔구먼! 여기서 소지금을 볼 수 있어.",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "돈이 들어왔어요! 여기서 소지금을 볼 수 있어요."
     },
     {
      "kind": "info",
      "target": "shop.btn.bulk",
-     "text": "물고기가 많아지면 **일괄 판매**로 한 번에 팔아요. 잠긴 건 빼고요.",
+     "text": "물고기가 많아지면 **일괄 판매**로 한 번에 팔아. 잠긴 건 빼고 말이야.",
      "expr": "neutral",
      "until": "tap",
-     "on_done": "shop_to_buy"
+     "on_done": "shop_to_buy",
+     "src_text": "물고기가 많아지면 **일괄 판매**로 한 번에 팔아요. 잠긴 건 빼고요."
     }
    ]
   },
@@ -417,51 +471,58 @@
     {
      "kind": "spotlight",
      "target": "shop.tab.rod",
-     "text": "이제 장비를 볼까요? \"낚싯대\"를 눌러 봐요.",
+     "text": "이제 장비 좀 볼까? \"낚싯대\"를 눌러 봐.",
      "expr": "happy",
-     "until": "cond:shop_tab_rod"
+     "until": "cond:shop_tab_rod",
+     "src_text": "이제 장비를 볼까요? \"낚싯대\"를 눌러 봐요."
     },
     {
      "kind": "info",
      "target": "shop.list.tier",
-     "text": "**T1, T2…** 숫자가 클수록 좋은 장비예요.",
+     "text": "**T1, T2…** 숫자가 클수록 좋은 장비야.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "**T1, T2…** 숫자가 클수록 좋은 장비예요."
     },
     {
      "kind": "spotlight",
      "target": "shop.row.glass",
-     "text": "다음 낚싯대를 골라 봐요.",
+     "text": "다음 낚싯대를 골라 봐.",
      "expr": "neutral",
-     "until": "cond:shop_sel_glass"
+     "until": "cond:shop_sel_glass",
+     "src_text": "다음 낚싯대를 골라 봐요."
     },
     {
      "kind": "info",
      "target": "shop.detail.compare",
-     "text": "위 막대가 **고른 장비**, 아래 막대가 **지금 장비**예요. 길수록 좋아요.",
+     "text": "위 막대가 **고른 장비**, 아래 막대가 **지금 장비**야. 길수록 좋지.",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "위 막대가 **고른 장비**, 아래 막대가 **지금 장비**예요. 길수록 좋아요."
     },
     {
      "kind": "info",
      "target": "shop.detail.price",
-     "text": "사고 나면 돈이 얼마 남는지도 보여요.",
+     "text": "사고 나면 돈이 얼마 남는지도 보여 주거든.",
      "expr": "neutral",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "사고 나면 돈이 얼마 남는지도 보여요."
     },
     {
      "kind": "info",
      "target": "shop.tabs.gear",
-     "text": "릴, 줄, 뜰채, 미끼도 바꿀 수 있어요. 돈이 모이면 하나씩 바꿔 봐요!",
+     "text": "릴, 줄, 뜰채, 미끼도 바꿀 수 있어. 돈 모이면 하나씩 바꿔 보라고!",
      "expr": "happy",
-     "until": "tap"
+     "until": "tap",
+     "src_text": "릴, 줄, 뜰채, 미끼도 바꿀 수 있어요. 돈이 모이면 하나씩 바꿔 봐요!"
     },
     {
      "kind": "spotlight",
      "target": "shop.close",
-     "text": "오늘은 여기까지! 백 노인도 한번 만나 봐요. 오두막에 계셔.",
+     "text": "오늘은 여기까지! 백 영감님도 한번 만나 봐. 오두막에 계셔.",
      "expr": "happy",
-     "until": "closed:ShopScene"
+     "until": "closed:ShopScene",
+     "src_text": "오늘은 여기까지! 백 노인도 한번 만나 봐요. 오두막에 계셔."
     }
    ]
   },
@@ -479,8 +540,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "물결이 **안쪽으로 빨려들고**, 줄 위로 빛이 다가와요. **돌진** 신호예요!",
-     "until": "tap"
+     "text": "물결이 **안쪽으로 빨려들고**, 줄 위로 빛이 다가오지? **돌진** 신호야!",
+     "until": "tap",
+     "src_text": "물결이 **안쪽으로 빨려들고**, 줄 위로 빛이 다가와요. **돌진** 신호예요!"
     },
     {
      "kind": "freeze",
@@ -488,15 +550,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 줄을 풀어 주세요. {드랙내리기}",
+     "text": "지금이야! 줄을 풀어 줘! {드랙내리기}",
      "until": "input:drag_down",
-     "at": "rush"
+     "at": "rush",
+     "src_text": "지금이에요! 줄을 풀어 주세요. {드랙내리기}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 줄이 버텨 냈어요.",
-     "until": "auto:1.5"
+     "text": "좋아! 줄이 버텨 냈구먼.",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 줄이 버텨 냈어요."
     }
    ]
   },
@@ -514,8 +578,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "수면 아래가 **부글부글** 끓어요. 곧 **점프**해요!",
-     "until": "tap"
+     "text": "수면 아래가 **부글부글** 끓지? 곧 **점프**한다고!",
+     "until": "tap",
+     "src_text": "수면 아래가 **부글부글** 끓어요. 곧 **점프**해요!"
     },
     {
      "kind": "freeze",
@@ -523,15 +588,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 링이 맞았어요. {숙이기}",
+     "text": "지금이야! 링이 딱 맞았어! {숙이기}",
      "until": "input:lower",
-     "at": "apex"
+     "at": "apex",
+     "src_text": "지금이에요! 링이 맞았어요. {숙이기}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 퍼펙트예요!",
-     "until": "auto:1.5"
+     "text": "좋아! 퍼펙트구먼!",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 퍼펙트예요!"
     }
    ]
   },
@@ -549,8 +616,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "줄이 한쪽으로 쏠려요. **방향 전환** 신호예요!",
-     "until": "tap"
+     "text": "줄이 한쪽으로 쏠리지? **방향 전환** 신호야!",
+     "until": "tap",
+     "src_text": "줄이 한쪽으로 쏠려요. **방향 전환** 신호예요!"
     },
     {
      "kind": "freeze",
@@ -558,15 +626,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 표시된 방향으로! {왼쪽}",
+     "text": "지금이야! 표시된 방향으로! {왼쪽}",
      "until": "input:turn",
-     "at": "turn"
+     "at": "turn",
+     "src_text": "지금이에요! 표시된 방향으로! {왼쪽}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 놓치지 않았어요.",
-     "until": "auto:1.5"
+     "text": "좋아! 안 놓쳤어.",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 놓치지 않았어요."
     }
    ]
   },
@@ -584,8 +654,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "물고기가 **멈췄어요**. 힘을 모으는 중이에요.",
-     "until": "tap"
+     "text": "녀석이 **멈췄지**? 힘을 모으는 중이야.",
+     "until": "tap",
+     "src_text": "물고기가 **멈췄어요**. 힘을 모으는 중이에요."
     },
     {
      "kind": "freeze",
@@ -593,15 +664,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 지친 틈에 감으세요! {감기}",
+     "text": "지금이야! 지친 틈에 감아! {감기}",
      "until": "input:reel",
-     "at": "charge_tired"
+     "at": "charge_tired",
+     "src_text": "지금이에요! 지친 틈에 감으세요! {감기}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 쭉 끌려왔어요.",
-     "until": "auto:1.5"
+     "text": "좋아! 쭉 끌려왔구먼.",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 쭉 끌려왔어요."
     }
    ]
   },
@@ -619,8 +692,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "줄이 **파르르** 떨려요. **머리 흔들기**예요!",
-     "until": "tap"
+     "text": "줄이 **파르르** 떨리지? **머리 흔들기**야!",
+     "until": "tap",
+     "src_text": "줄이 **파르르** 떨려요. **머리 흔들기**예요!"
     },
     {
      "kind": "freeze",
@@ -628,19 +702,23 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금은 아무것도 하지 마세요! {손떼기}",
+     "text": "지금은 아무것도 하지 마! {손떼기}",
      "until": "hold:shake",
-     "at": "action"
+     "at": "action",
+     "src_text": "지금은 아무것도 하지 마세요! {손떼기}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 바늘이 빠지지 않았어요.",
-     "until": "auto:1.5"
+     "text": "좋아! 바늘이 안 빠졌구먼.",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 바늘이 빠지지 않았어요."
     }
    ],
    "hold_text": "참는 중…",
-   "again_text": "손을 떼세요!"
+   "again_text": "손 떼!",
+   "src_hold_text": "참는 중…",
+   "src_again_text": "손을 떼세요!"
   },
   "TG-P6": {
    "title": "② 잠수",
@@ -656,8 +734,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "그림자가 **작아지며** 깊이 들어가요. **잠수** 신호예요!",
-     "until": "tap"
+     "text": "그림자가 **작아지면서** 깊이 들어가지? **잠수** 신호야!",
+     "until": "tap",
+     "src_text": "그림자가 **작아지며** 깊이 들어가요. **잠수** 신호예요!"
     },
     {
      "kind": "freeze",
@@ -665,15 +744,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 낚싯대를 세우세요! {위}",
+     "text": "지금이야! 낚싯대를 세워! {위}",
      "until": "input:up",
-     "at": "action"
+     "at": "action",
+     "src_text": "지금이에요! 낚싯대를 세우세요! {위}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 바위에 쓸리지 않았어요.",
-     "until": "auto:1.5"
+     "text": "좋아! 바위에 안 쓸렸어.",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 바위에 쓸리지 않았어요."
     }
    ]
   },
@@ -691,8 +772,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "수면에 **V자 물살**이 생겨요. **수면 질주** 신호예요!",
-     "until": "tap"
+     "text": "수면에 **V자 물살**이 생기지? **수면 질주** 신호야!",
+     "until": "tap",
+     "src_text": "수면에 **V자 물살**이 생겨요. **수면 질주** 신호예요!"
     },
     {
      "kind": "freeze",
@@ -700,15 +782,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 낚싯대를 낮추세요! {아래}",
+     "text": "지금이야! 낚싯대를 낮춰! {아래}",
      "until": "input:down",
-     "at": "action"
+     "at": "action",
+     "src_text": "지금이에요! 낚싯대를 낮추세요! {아래}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 거리가 줄었어요.",
-     "until": "auto:1.5"
+     "text": "좋아! 거리가 확 줄었구먼.",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 거리가 줄었어요."
     }
    ]
   },
@@ -726,8 +810,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "그림자가 **이쪽으로** 와요! 줄이 늘어져요.",
-     "until": "tap"
+     "text": "그림자가 **이쪽으로** 온다! 줄이 늘어지지?",
+     "until": "tap",
+     "src_text": "그림자가 **이쪽으로** 와요! 줄이 늘어져요."
     },
     {
      "kind": "freeze",
@@ -735,15 +820,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 늘어진 줄을 빨리 감으세요! {연타}",
+     "text": "지금이야! 늘어진 줄을 빨리 감아! {연타}",
      "until": "input:mash",
-     "at": "action"
+     "at": "action",
+     "src_text": "지금이에요! 늘어진 줄을 빨리 감으세요! {연타}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 한 번에 끌어왔어요.",
-     "until": "auto:1.5"
+     "text": "좋아! 한 번에 끌어왔구먼.",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 한 번에 끌어왔어요."
     }
    ],
    "mash_need": 6
@@ -762,8 +849,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "물고기가 **빙글빙글** 돌아요. 줄이 꼬여요!",
-     "until": "tap"
+     "text": "녀석이 **빙글빙글** 돈다! 줄이 꼬이잖아!",
+     "until": "tap",
+     "src_text": "물고기가 **빙글빙글** 돌아요. 줄이 꼬여요!"
     },
     {
      "kind": "freeze",
@@ -771,15 +859,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 꼬임을 풀어요! {원}",
+     "text": "지금이야! 꼬임을 풀어! {원}",
      "until": "input:circle",
-     "at": "action"
+     "at": "action",
+     "src_text": "지금이에요! 꼬임을 풀어요! {원}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 꼬임이 풀렸어요.",
-     "until": "auto:1.5"
+     "text": "좋아! 꼬임이 풀렸어.",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 꼬임이 풀렸어요."
     }
    ]
   },
@@ -797,8 +887,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "아이콘이 **3개** 떴어요. 이 순서대로 공격해 와요!",
-     "until": "tap"
+     "text": "아이콘이 **3개** 떴지? 이 순서대로 덤벼 온다고!",
+     "until": "tap",
+     "src_text": "아이콘이 **3개** 떴어요. 이 순서대로 공격해 와요!"
     },
     {
      "kind": "freeze",
@@ -808,16 +899,23 @@
      ],
      "text": "첫 번째!",
      "until": "chain",
-     "at": "chain"
+     "at": "chain",
+     "src_text": "첫 번째!"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 콤보를 다 막았어요!",
-     "until": "auto:1.5"
+     "text": "좋아! 콤보를 다 막았구먼!",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 콤보를 다 막았어요!"
     }
    ],
    "chain_texts": [
+    "첫 번째!",
+    "두 번째!",
+    "마지막!"
+   ],
+   "src_chain_texts": [
     "첫 번째!",
     "두 번째!",
     "마지막!"
@@ -837,8 +935,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "물고기가 **바위 밑에** 숨었어요. 당기면 줄만 닳아요.",
-     "until": "tap"
+     "text": "녀석이 **바위 밑에** 숨었어. 당기면 줄만 닳는다고.",
+     "until": "tap",
+     "src_text": "물고기가 **바위 밑에** 숨었어요. 당기면 줄만 닳아요."
     },
     {
      "kind": "freeze",
@@ -846,9 +945,10 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "살짝 풀어서 안심시켜요. {드랙내리기}",
+     "text": "살짝 풀어서 안심시켜. {드랙내리기}",
      "until": "input:drag_down",
-     "at": "action"
+     "at": "action",
+     "src_text": "살짝 풀어서 안심시켜요. {드랙내리기}"
     },
     {
      "kind": "freeze",
@@ -856,15 +956,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "나왔어요! 지금 감으세요! {감기}",
+     "text": "나왔다! 지금 감아! {감기}",
      "until": "input:reel",
-     "at": "peek"
+     "at": "peek",
+     "src_text": "나왔어요! 지금 감으세요! {감기}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 기습 성공!",
-     "until": "auto:1.5"
+     "text": "좋아! 기습 성공이구먼!",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 기습 성공!"
     }
    ]
   },
@@ -882,8 +984,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "**둥, 둥** 박자에 맞춰 당기고 있어요.",
-     "until": "tap"
+     "text": "**둥, 둥** 박자에 맞춰 당기고 있지?",
+     "until": "tap",
+     "src_text": "**둥, 둥** 박자에 맞춰 당기고 있어요."
     },
     {
      "kind": "freeze",
@@ -891,9 +994,10 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금! 박자 사이에 감으세요! {감기}",
+     "text": "지금! 박자 사이에 감아! {감기}",
      "until": "input:reel",
-     "at": "gap0"
+     "at": "gap0",
+     "src_text": "지금! 박자 사이에 감으세요! {감기}"
     },
     {
      "kind": "freeze",
@@ -901,15 +1005,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금! 박자 사이에 감으세요! {감기}",
+     "text": "지금! 박자 사이에 감아! {감기}",
      "until": "input:reel",
-     "at": "gap1"
+     "at": "gap1",
+     "src_text": "지금! 박자 사이에 감으세요! {감기}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 박자를 탔어요!",
-     "until": "auto:1.5"
+     "text": "좋아! 박자를 탔구먼!",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 박자를 탔어요!"
     }
    ]
   },
@@ -927,8 +1033,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "아주 **높이** 뛰어올라요! 링이 **두 번** 나와요.",
-     "until": "tap"
+     "text": "아주 **높이** 뛰어오른다! 링이 **두 번** 나와.",
+     "until": "tap",
+     "src_text": "아주 **높이** 뛰어올라요! 링이 **두 번** 나와요."
     },
     {
      "kind": "freeze",
@@ -938,7 +1045,8 @@
      ],
      "text": "첫 번째 링! {숙이기}",
      "until": "input:lower",
-     "at": "apex"
+     "at": "apex",
+     "src_text": "첫 번째 링! {숙이기}"
     },
     {
      "kind": "freeze",
@@ -948,13 +1056,15 @@
      ],
      "text": "한 번 더! {숙이기}",
      "until": "input:lower",
-     "at": "second"
+     "at": "second",
+     "src_text": "한 번 더! {숙이기}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 더블 퍼펙트!",
-     "until": "auto:1.5"
+     "text": "좋아! 더블 퍼펙트라고!",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 더블 퍼펙트!"
     }
    ]
   },
@@ -972,8 +1082,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "이빨이 **번쩍**! 줄을 물어뜯으려 해요!",
-     "until": "tap"
+     "text": "이빨이 **번쩍**! 줄을 물어뜯으려는 거야!",
+     "until": "tap",
+     "src_text": "이빨이 **번쩍**! 줄을 물어뜯으려 해요!"
     },
     {
      "kind": "freeze",
@@ -981,15 +1092,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 줄을 순간 확 풀어요! {순간최저}",
+     "text": "지금이야! 줄을 순간 확 풀어! {순간최저}",
      "until": "input:drag_min",
-     "at": "action"
+     "at": "action",
+     "src_text": "지금이에요! 줄을 순간 확 풀어요! {순간최저}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 헛물었어요!",
-     "until": "auto:1.5"
+     "text": "좋아! 헛물었구먼!",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 헛물었어요!"
     }
    ]
   },
@@ -1007,8 +1120,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "멈췄는데… **지느러미가 아직 움직여요**. 이건 **가짜**예요! 감지 마세요.",
-     "until": "tap"
+     "text": "멈췄는데… **지느러미가 아직 움직이지**? 이건 **가짜**야! 감지 마.",
+     "until": "tap",
+     "src_text": "멈췄는데… **지느러미가 아직 움직여요**. 이건 **가짜**예요! 감지 마세요."
     },
     {
      "kind": "freeze",
@@ -1016,15 +1130,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지느러미가 멈췄어요. 진짜예요! 감으세요! {감기}",
+     "text": "지느러미가 멈췄다. 이번엔 진짜야! 감아! {감기}",
      "until": "input:reel",
-     "at": "real_tired"
+     "at": "real_tired",
+     "src_text": "지느러미가 멈췄어요. 진짜예요! 감으세요! {감기}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 속지 않았어요.",
-     "until": "auto:1.5"
+     "text": "좋아! 안 속았구먼.",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 속지 않았어요."
     }
    ]
   },
@@ -1042,8 +1158,9 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "신호가 **두 개** 동시에! 왼쪽은 왼손, 오른쪽은 오른손이에요.",
-     "until": "tap"
+     "text": "신호가 **두 개** 동시에! 왼쪽은 왼손, 오른쪽은 오른손이야.",
+     "until": "tap",
+     "src_text": "신호가 **두 개** 동시에! 왼쪽은 왼손, 오른쪽은 오른손이에요."
     },
     {
      "kind": "freeze",
@@ -1051,15 +1168,17 @@
       "fight.fish",
       "fight.slots"
      ],
-     "text": "지금이에요! 두 개 다!",
+     "text": "지금이야! 두 개 다!",
      "until": "dual",
-     "at": "action"
+     "at": "action",
+     "src_text": "지금이에요! 두 개 다!"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "좋아요! 양손 다 해냈어요!",
-     "until": "auto:1.5"
+     "text": "좋아! 양손 다 해냈구먼!",
+     "until": "auto:1.5",
+     "src_text": "좋아요! 양손 다 해냈어요!"
     }
    ]
   },
@@ -1072,23 +1191,26 @@
     {
      "kind": "freeze",
      "target": "fish.bobber",
-     "text": "기다리기만 해도 되지만, 찌를 움직이면 더 빨리 와요.",
+     "text": "기다리기만 해도 되지만, 찌를 움직이면 더 빨리 온다고.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "기다리기만 해도 되지만, 찌를 움직이면 더 빨리 와요."
     },
     {
      "kind": "freeze",
      "target": "fight.reel",
-     "text": "살짝 움직여 볼까요? {저킹}",
+     "text": "살짝 움직여 볼까? {저킹}",
      "expr": null,
-     "until": "input:jerk"
+     "until": "input:jerk",
+     "src_text": "살짝 움직여 볼까요? {저킹}"
     },
     {
      "kind": "wait",
      "target": "fish.shadow",
-     "text": "그림자가 다가오면 관심 있다는 뜻이에요!",
+     "text": "그림자가 다가오면 관심 있다는 뜻이야!",
      "expr": null,
-     "until": "event:bite"
+     "until": "event:bite",
+     "src_text": "그림자가 다가오면 관심 있다는 뜻이에요!"
     }
    ]
   },
@@ -1100,17 +1222,19 @@
     {
      "kind": "freeze",
      "target": "fish.signs",
-     "text": "저기 봐요! 새 떼 아래엔 물고기가 모여 있어요.",
+     "text": "저기 봐! 새 떼 아래엔 물고기가 모여 있거든.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "저기 봐요! 새 떼 아래엔 물고기가 모여 있어요."
     },
     {
      "kind": "spotlight",
      "target": "fish.signs",
-     "text": "저 근처로 던져 볼까요? {캐스팅}",
+     "text": "저 근처로 던져 볼까? {캐스팅}",
      "expr": null,
      "until": "event:cast_landed",
-     "allow": "cast"
+     "allow": "cast",
+     "src_text": "저 근처로 던져 볼까요? {캐스팅}"
     }
    ]
   },
@@ -1123,38 +1247,43 @@
     {
      "kind": "info",
      "target": "catch.chest",
-     "text": "보물상자예요! 물고기가 물고 나왔어요.",
+     "text": "보물상자구먼! 물고기가 물고 나왔어.",
      "expr": null,
      "until": "tap",
-     "on_done": "close_catch"
+     "on_done": "close_catch",
+     "src_text": "보물상자예요! 물고기가 물고 나왔어요."
     },
     {
      "kind": "spotlight",
      "target": "chest.menu",
-     "text": "여기서 열 수 있어요. {탭}",
+     "text": "여기서 열 수 있어. {탭}",
      "expr": null,
-     "until": "scene:ChestScene"
+     "until": "scene:ChestScene",
+     "src_text": "여기서 열 수 있어요. {탭}"
     },
     {
      "kind": "spotlight",
      "target": "chest.box",
-     "text": "눌러서 열어 봐요!",
+     "text": "눌러서 열어 봐!",
      "expr": null,
-     "until": "event:chest_opened"
+     "until": "event:chest_opened",
+     "src_text": "눌러서 열어 봐요!"
     },
     {
      "kind": "info",
      "target": "chest.grade",
-     "text": "갈색·파랑·보라·금색 순으로 귀해요.",
+     "text": "갈색·파랑·보라·금색 순으로 귀한 거야.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "갈색·파랑·보라·금색 순으로 귀해요."
     },
     {
      "kind": "info",
      "target": "chest.pity",
-     "text": "운이 없어도, 여기 숫자가 차면 좋은 상자가 꼭 나와요.",
+     "text": "운이 없어도 여기 숫자가 차면 좋은 상자가 꼭 나온다고.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "운이 없어도, 여기 숫자가 차면 좋은 상자가 꼭 나와요."
     }
    ]
   },
@@ -1166,37 +1295,42 @@
     {
      "kind": "info",
      "target": "quests.daily",
-     "text": "매일 새 의뢰가 3개 올라와요.",
+     "text": "매일 새 의뢰가 3개씩 올라와.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "매일 새 의뢰가 3개 올라와요."
     },
     {
      "kind": "info",
      "target": "quests.cond",
-     "text": "조건대로 잡으면 성공이에요.",
+     "text": "조건대로 잡으면 성공이고.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "조건대로 잡으면 성공이에요."
     },
     {
      "kind": "info",
      "target": "quests.reward",
-     "text": "보상과 **의뢰 포인트**를 줘요.",
+     "text": "보상이랑 **의뢰 포인트**를 주지.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "보상과 **의뢰 포인트**를 줘요."
     },
     {
      "kind": "info",
      "target": "quests.refresh",
-     "text": "마음에 안 들면 하루 한 번 바꿀 수 있어요.",
+     "text": "마음에 안 들면 하루 한 번 바꿀 수 있어.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "마음에 안 들면 하루 한 번 바꿀 수 있어요."
     },
     {
      "kind": "info",
      "target": "quests.weekly",
-     "text": "일주일에 한 번, 어려운 의뢰도 있어요.",
+     "text": "일주일에 한 번은 어려운 의뢰도 있다고.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "일주일에 한 번, 어려운 의뢰도 있어요."
     }
    ]
   },
@@ -1212,30 +1346,34 @@
     {
      "kind": "spotlight",
      "target": "interior.menu.enhance",
-     "text": "{탭} 장비를 더 좋게 만들 수 있어요.",
+     "text": "여기서 장비를 더 좋게 만들 수 있지. {탭}",
      "expr": null,
-     "until": "cond:shop_enhance"
+     "until": "cond:shop_enhance",
+     "src_text": "{탭} 장비를 더 좋게 만들 수 있어요."
     },
     {
      "kind": "spotlight",
      "target": "shop.list",
-     "text": "강화할 장비를 고르고",
+     "text": "강화할 장비를 골라 봐.",
      "expr": null,
-     "until": "cond:shop_sel_any"
+     "until": "cond:shop_sel_any",
+     "src_text": "강화할 장비를 고르고"
     },
     {
      "kind": "info",
      "target": "shop.enhance.cost",
-     "text": "골드와 **물고기 소재**가 필요해요. 소재는 물고기를 **분해**하면 나와요.",
+     "text": "돈이랑 **물고기 소재**가 들어. 소재는 물고기를 **분해**하면 나오고.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "골드와 **물고기 소재**가 필요해요. 소재는 물고기를 **분해**하면 나와요."
     },
     {
      "kind": "info",
      "target": "shop.enhance.stars",
-     "text": "+3까지 올릴 수 있고, **실패는 없어요**.",
+     "text": "+3까지 올릴 수 있고, **실패는 없어**. 걱정 마!",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "+3까지 올릴 수 있고, **실패는 없어요**."
     }
    ]
   },
@@ -1248,23 +1386,26 @@
     {
      "kind": "info",
      "target": "catch.print_btn",
-     "text": "신기록이에요! 먹물로 **어탁**을 남길 수 있어요.",
+     "text": "신기록이구먼! 먹물로 **어탁**을 남길 수 있어.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "신기록이에요! 먹물로 **어탁**을 남길 수 있어요."
     },
     {
      "kind": "spotlight",
      "target": "catch.print_btn",
      "text": "{탭}",
      "expr": null,
-     "until": "event:print_made"
+     "until": "event:print_made",
+     "src_text": "{탭}"
     },
     {
      "kind": "wait",
      "target": null,
-     "text": "어탁은 마을 **어탁 갤러리**에 걸려요.",
+     "text": "어탁은 마을 **어탁 갤러리**에 걸린다고.",
      "expr": null,
-     "until": "auto:3"
+     "until": "auto:3",
+     "src_text": "어탁은 마을 **어탁 갤러리**에 걸려요."
     }
    ]
   },
@@ -1276,23 +1417,26 @@
     {
      "kind": "info",
      "target": "home.menu.journal",
-     "text": "그날그날의 마음이 일지에 남아요.",
+     "text": "그날그날의 마음이 일지에 남는 거야.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "그날그날의 마음이 일지에 남아요."
     },
     {
      "kind": "info",
      "target": "home.menu.memories",
-     "text": "본 장면을 다시 볼 수 있어요.",
+     "text": "봤던 장면을 다시 볼 수 있지.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "본 장면을 다시 볼 수 있어요."
     },
     {
      "kind": "info",
      "target": "home.menu.notebook",
-     "text": "모은 수첩을 읽을 수 있어요.",
+     "text": "모은 수첩도 여기서 읽을 수 있고.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "모은 수첩을 읽을 수 있어요."
     }
    ]
   },
@@ -1306,16 +1450,18 @@
     {
      "kind": "info",
      "target": "village.season",
-     "text": "계절이 바뀌었어요! 지금만 나오는 물고기가 있어요.",
+     "text": "계절이 바뀌었구먼! 지금만 나오는 물고기가 있다고.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "계절이 바뀌었어요! 지금만 나오는 물고기가 있어요."
     },
     {
      "kind": "info",
      "target": "village.season.fish",
-     "text": "이번 계절 한정 물고기예요.",
+     "text": "이게 이번 계절 한정 물고기야.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "이번 계절 한정 물고기예요."
     }
    ]
   },
@@ -1327,16 +1473,18 @@
     {
      "kind": "info",
      "target": "village.sky",
-     "text": "특별한 날씨예요! 이때만 나오는 물고기가 있어요.",
+     "text": "특별한 날씨구먼! 이때만 나오는 물고기가 있지.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "특별한 날씨예요! 이때만 나오는 물고기가 있어요."
     },
     {
      "kind": "info",
      "target": "village.banner",
-     "text": "짧게 끝나니 서둘러요!",
+     "text": "금방 끝나니까 서둘러!",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "짧게 끝나니 서둘러요!"
     }
    ]
   },
@@ -1349,16 +1497,18 @@
     {
      "kind": "info",
      "target": "catch.mutation",
-     "text": "**변이**예요! 같은 물고기라도 특별한 개체예요.",
+     "text": "**변이**구먼! 같은 물고기라도 특별한 놈이야.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "**변이**예요! 같은 물고기라도 특별한 개체예요."
     },
     {
      "kind": "info",
      "target": "catch.mutation",
-     "text": "도감에 따로 기록돼요.",
+     "text": "도감에도 따로 기록된다고.",
      "expr": null,
-     "until": "tap"
+     "until": "tap",
+     "src_text": "도감에 따로 기록돼요."
     }
    ]
   },

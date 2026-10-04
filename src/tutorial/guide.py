@@ -25,6 +25,7 @@ class Guide:
         self.game = game
         self.data = load_json("tutorials.json")["tutorials"]
         self.inputs = load_json("tutorial_inputs.json")["inputs"]
+        self.inputs_haru = load_json("tutorial_voice.json")["inputs_haru"]   # 하루 아저씨 말투 조작 이름 ("꾹 눌렀다가 떼 봐")
         self.run: dict | None = None        # {"id", "i", "t", "events", "tapped", "nudge", "ctx"}
         self.queue: list[str] = []
         self.modal = False                  # 건너뛰기 확인 창
@@ -379,18 +380,18 @@ class Guide:
         alt = conds.dynamic_text(self.game, s, self.run)
         if alt:
             txt = alt
-        touch = self.game.input.kind == "touch"
-
-        def sub(m):
-            v = self.inputs.get(m.group(1))
-            return (v["mobile"] if touch else v["pc"]) if v else m.group(0)
-        txt = re.sub(r"\{([^}/]+)\}", sub, txt)
+        txt = self._sub(txt)
         return re.sub(r"\*\*(.+?)\*\*", r"{gold}\1{/}", txt)
 
     def _sub(self, txt: str) -> str:
+        """{이름} → 기기별 조작 이름 (하루 아저씨가 안내하면 하루 말투)."""
         touch = self.game.input.kind == "touch"
-        return re.sub(r"\{([^}/]+)\}", lambda m: (self.inputs[m.group(1)]["mobile" if touch else "pc"]
-                                                    if m.group(1) in self.inputs else m.group(0)), txt)
+        table = self.inputs_haru if self.who() == "haru" else self.inputs
+
+        def sub(m):
+            v = table.get(m.group(1)) or self.inputs.get(m.group(1))
+            return (v["mobile"] if touch else v["pc"]) if v else m.group(0)
+        return re.sub(r"\{([^}/]+)\}", sub, txt)
 
     def target_of(self, s: dict):
         """강조 대상 (대본이 바꿀 수 있음 — TG-18 돈이 모자라면 판매 탭)."""

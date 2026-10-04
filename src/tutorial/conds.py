@@ -61,6 +61,10 @@ def check(game, name: str, run) -> bool:
     if name == "c402_done":
         from src.story import story
         return story.seen(save, "C4-02")
+    if name == "net_still":   # TG-02: 뜰채 단계에서 물고기가 처음 멈춘 순간 (퍼덕임을 한 번 본 뒤)
+        fs = _fishing(game)
+        f = fs.fight if fs is not None else None
+        return f is not None and f.phase == "net" and f.net_pose()[1]
     if name == "catch_card":   # 포획 카드가 아직 떠 있음 (카드 위 튜토리얼은 카드가 닫히면 이번엔 넘김)
         fs = _fishing(game)
         return fs is not None and fs.fight is not None and fs.fight.phase == "caught" and fs.landing is None
