@@ -51,6 +51,17 @@ class VillageScene(Scene):
         game.adaptive.set("menu")
         self.season = seasons.current(game.settings)
         self.btns = []
+        # 계절이 바뀐 뒤 처음 들어옴: 계절 알림 + 상점 주인의 계절 대사 (35-4)
+        self.season_banner = 0.0
+        if self.save.data.get("season_seen") != self.season:
+            first = self.save.data.get("season_seen") is None
+            self.save.data["season_seen"] = self.season
+            if not first:
+                self.season_banner = 3.5
+                host = "haru" if cont == "sharmion" else "ella"
+                from src.scene import dialogue
+                self.bubble = {"npc": host, "lines": dialogue.pick(game, host, cont, prefer_season=True), "i": 0, "t": -1.0}
+                self.ox = max(0, self.cfg["npcs"][host]["x"] - game.screen.canvas.get_width() // 2)
 
     # ── 장소 · 행동 ──
     def leave(self) -> None:
@@ -172,6 +183,7 @@ class VillageScene(Scene):
         self.ox = clamp(self.ox, 0, max(0, self.width - w))
         if self.bubble:
             self.bubble["t"] += dt
+        self.season_banner = max(0.0, self.season_banner - dt)
         if self.panel:
             self.panel["t"] += dt
         self.hover = None
@@ -256,7 +268,13 @@ class VillageScene(Scene):
                                     [(cx - 4 * side, h // 2 - 8), (cx + 4 * side, h // 2), (cx - 4 * side, h // 2 + 8)])
         if self.t < 6 and self.bubble is None:
             text(canvas, "끌어서 둘러보기 · 건물과 사람을 눌러 보세요", (w // 2, h - 10), (230, 225, 210), 11, "center")
-        if self.bubble is not None:
+        if self.season_banner > 0:
+            a = min(1.0, self.season_banner / 0.5, (3.5 - self.season_banner) / 0.4)
+            band = pygame.Surface((w, 26), pygame.SRCALPHA)
+            band.fill((20, 16, 10, int(170 * a)))
+            canvas.blit(band, (0, 30))
+            text(canvas, f"계절이 바뀌었어요 — {sname}", (w // 2, 43), tuple(int(v * a) for v in (255, 230, 170)), 16, "center")
+        if self.bubble is not None and self.bubble["t"] >= 0:
             self._draw_bubble(canvas)
         if self.panel is not None:
             self._draw_season_panel(canvas)

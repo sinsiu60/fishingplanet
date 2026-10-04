@@ -567,6 +567,7 @@ class SaveGame:
         """획득 기록. 돌려주는 값: 새로 등록 / 최대 크기 경신 / 힌트 해금 / S 금테 등."""
         fish = result["fish"]
         fid = fish["id"]
+        self.data.setdefault("dialogue", {}).setdefault("flags", {})["lost_streak"] = 0
         if fish.get("rarity") == "phantom":
             return self._record_phantom(result)
         dex = self.data["dex"]
@@ -624,6 +625,8 @@ class SaveGame:
 
     def record_loss(self) -> None:
         self.data["stats"]["lost"] += 1
+        fl = self.data.setdefault("dialogue", {}).setdefault("flags", {})
+        fl["lost_streak"] = fl.get("lost_streak", 0) + 1   # 하루 아저씨: 계속 놓치면 한마디 (35-12)
 
     def sell(self, index: int) -> int:
         if not 0 <= index < len(self.data["keepnet"]):

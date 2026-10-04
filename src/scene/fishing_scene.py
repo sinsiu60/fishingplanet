@@ -330,8 +330,12 @@ class FishingScene(Scene):
         """의뢰 진행 알림: 실패는 작게, 완료는 보상과 함께."""
         for ev in qr.events:
             if ev == "quest_fail":
+                from src.scene import dialogue
+                dialogue.note(self.save, "quest_fail_streak", 1)   # 소라: 의뢰 연속 실패 위로 (35-12)
                 pass  # N3: 낚시 화면에선 의뢰 소리 없음 (화면 알림만)
             elif ev == "quest_done":
+                from src.scene import dialogue
+                dialogue.note(self.save, "quest_fail_streak", value=0)
                 it = next((x for x in qr.items if x[1] == "done" and len(x) > 3 and not x[3].get("_shown")), None)
                 if it is not None:
                     got = it[3]

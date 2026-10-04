@@ -3053,3 +3053,11 @@ Y2 도감 별·숙련·포인트·칭호 화면 → Y3 어탁 → Y4 마을·NPC
   도착 화면을 0.15초에 한 번 미리 그림(캐시), 도착 전경은 HUD·카드 없이(FishingScene.scenic). 발소리(흙·판자·눈)·노 젓는 소리 새로 구움, 환경음은 도착지로, 대기 음악은 대륙 테마 → 도착 낚시터로 자연 전환.
   건너뛰기(첫 방문 1초 뒤). 설정 → 화면 '이동 컷신 전체/짧게/끄기', `visited`(옛 세이브 = 해금된 곳 전부). 대륙 첫 항해는 기존 VoyageScene.
 - 흐름: 마을 부두 → 지도 → (대륙이 다르면 항해) → 낚시터 컷신 → 낚시. 낚시터 지도 '마을로' → 복귀 컷신 → 마을. 테스트: 설정 → 접근성 → 테스트: 이동 컷신 (12곳 × 4종).
+### 35-12. Y6 대사 시스템 (구현)
+- `data/dialogue.json` 189줄 (하루 32 · 백 노인 31 · 소라 31 · 갈매기 박사 31 · 엘라 31 · 오렌 32), NPC마다 계절당 3줄 이상, 최대 37자(말풍선 2줄).
+- `src/scene/dialogue.py`: 조건 = spot_unlocked·continent_unlocked·legend_caught(any/id)·legend_caught_eld·gear_tier_ge·mastery_ge·dex_stars_ge·prints_ge/lt·gold/legend/phantom_print·lost_streak_ge(연속 놓침)
+  ·quest_fail_streak_ge(의뢰 연속 실패)·quests_done_ge·catches_ge·keepnet_ge·period·weather·season·event·phantom_tutorial. 우선순위: prio 3(새 달성, 1회성) → 2(계절·이벤트, 40%) → 1(잡담, 직전 3개 피함).
+  들은 1회성 = dialogue.heard. 연속 놓침은 record_loss/record_catch, 의뢰 연속 실패는 quest_fail/quest_done 에서 기록. 갈매기 박사는 어탁 종류마다 한마디(갤러리 크게 보기).
+- 계절이 바뀐 뒤 처음 마을: 위 띠 '계절이 바뀌었어요 — 여름' + 상점 주인(하루/엘라)이 1초 뒤 계절 대사, 그쪽으로 화면 이동. 첫 기록(None)은 알림 없음.
+- 환상 비밀: 튜토리얼 전 대사(phantom_tutorial false)에 '환상' 단어 0 (생성 시 검사), 소문만 (백 노인 4줄·오렌 2줄).
+- 디버그: 설정 → 접근성 → 테스트: NPC 대사 (NPC 탭·대사 목록·조건·●지금 가능/들음, 계절·때·이벤트·환상 전/후 강제, 미리보기 — 기록 안 남김).

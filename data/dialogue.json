@@ -1,0 +1,1992 @@
+{
+ "_설명": "NPC 대사 (DESIGN.md 35-3·35-12). cond: spot_unlocked·legend_caught(id/any)·legend_caught_eld·gear_tier_ge[종류,티어]·mastery_ge·dex_stars_ge·prints_ge/prints_lt·gold_print·legend_print·phantom_print·lost_streak_ge·quest_fail_streak_ge·quests_done_ge·catches_ge·keepnet_ge·continent_unlocked·period·weather·season·event·phantom_tutorial. once = 한 번만(들은 기록 저장), prio: 3 새 달성 반응 > 2 계절·이벤트 > 1 일반 잡담. 환상 튜토리얼 전(phantom_tutorial false)에는 '환상' 단어 금지 — 흐릿한 소문만.",
+ "lines": [
+  {
+   "id": "haru_01",
+   "npc": "haru",
+   "text": "오, 카본이구먼! 이제 좀 어부 티가 나는데?",
+   "cond": {
+    "gear_tier_ge": [
+     "rod",
+     3
+    ]
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "haru_02",
+   "npc": "haru",
+   "text": "그 릴 소리 좀 들어 봐. 돈 값 하지? 하하!",
+   "cond": {
+    "gear_tier_ge": [
+     "reel",
+     3
+    ]
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "haru_03",
+   "npc": "haru",
+   "text": "최고급 장비라니! 우리 가게 역사에 남을 손님이야!",
+   "cond": {
+    "gear_tier_ge": [
+     "rod",
+     5
+    ]
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "haru_04",
+   "npc": "haru",
+   "text": "전설을 잡았다며? 동네방네 다 소문났어! 내 낚싯대 덕분이지?",
+   "cond": {
+    "legend_caught": "any"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "haru_05",
+   "npc": "haru",
+   "text": "계곡까지 갔다고? 바위에 줄 걸리지 않게 조심하라고!",
+   "cond": {
+    "spot_unlocked": "valley"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "haru_06",
+   "npc": "haru",
+   "text": "먼바다라니! 배멀미 약은 챙겼어? …없어? 하하, 농담이야.",
+   "cond": {
+    "spot_unlocked": "offshore"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "haru_07",
+   "npc": "haru",
+   "text": "요즘 계속 놓친다며? 줄부터 바꿔 봐. 줄이 반이야, 반!",
+   "cond": {
+    "lost_streak_ge": 3
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_08",
+   "npc": "haru",
+   "text": "살림망이 꽉 찼구먼! 팔 거면 지금이 딱이야.",
+   "cond": {
+    "keepnet_ge": 15
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_09",
+   "npc": "haru",
+   "text": "벌써 봄이네! 벚꽃 피면 송어들이 들떠서 잘 문다고.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_10",
+   "npc": "haru",
+   "text": "봄비 오는 날엔 물고기도 기분이 좋아. 나도 좋고!",
+   "cond": {
+    "season": [
+     "spring"
+    ],
+    "weather": [
+     "rain"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_11",
+   "npc": "haru",
+   "text": "봄맞이 대청소 했는데 낚싯바늘이 또 서랍에서 나왔지 뭐야.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_12",
+   "npc": "haru",
+   "text": "덥다, 더워! 이런 날엔 은어가 쌩쌩하지.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_13",
+   "npc": "haru",
+   "text": "여름엔 해 질 녘이 최고야. 시원해지면 큰 놈이 나와.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_14",
+   "npc": "haru",
+   "text": "부채질하면서 장사하는 것도 여름의 낭만이지, 하하.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_15",
+   "npc": "haru",
+   "text": "가을이구먼. 단풍 잉어가 바닥에서 버틴다던데, 드랙 잘 봐!",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_16",
+   "npc": "haru",
+   "text": "가을 물고기는 살이 올라서 무거워. 손목 조심해!",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_17",
+   "npc": "haru",
+   "text": "선선해서 장사하기 딱 좋은 날씨야. 뭐 하나 사 가!",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_18",
+   "npc": "haru",
+   "text": "벌써 겨울이네. 손 시려도 줄은 꽉 잡으라고!",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_19",
+   "npc": "haru",
+   "text": "얼음 빙어가 머리를 그렇게 흔든다며? 작다고 얕보지 마.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_20",
+   "npc": "haru",
+   "text": "난로 옆에서 장비 손질하는 게 겨울 낙이지.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_21",
+   "npc": "haru",
+   "text": "별이 쏟아지네! 오늘 밤엔 상자도 잘 나온다던데?",
+   "cond": {
+    "event": "meteor"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_22",
+   "npc": "haru",
+   "text": "달이 붉어… 이런 밤엔 이상한 놈들이 나온다니까.",
+   "cond": {
+    "event": "red_moon"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "haru_23",
+   "npc": "haru",
+   "text": "어서 와! 오늘은 뭘 낚으러 가나? 장비는 내 가게가 최고지!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_24",
+   "npc": "haru",
+   "text": "이 낚싯대 좀 봐, 반짝반짝하지? 하하!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_25",
+   "npc": "haru",
+   "text": "줄은 아끼지 말라고. 끊어지면 다 소용없거든.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_26",
+   "npc": "haru",
+   "text": "우리 가게 미끼는 지렁이도 엘리트야. 진짜라니까.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_27",
+   "npc": "haru",
+   "text": "내가 젊었을 땐 말이야, 맨손으로 잉어를… 아, 됐고.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_28",
+   "npc": "haru",
+   "text": "아침 일찍 나가 봐. 물고기도 아침밥은 먹거든!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_29",
+   "npc": "haru",
+   "text": "비 오는 날 장사는 공치지만, 낚시는 대박이지.",
+   "cond": {
+    "weather": [
+     "rain",
+     "storm"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_30",
+   "npc": "haru",
+   "text": "밤엔 등불 켜고 다녀. 부두에서 빠지면 큰일이야.",
+   "cond": {
+    "period": [
+     "night"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_31",
+   "npc": "haru",
+   "text": "백 노인? 말은 없어도 낚시 실력은 진짜야.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "haru_32",
+   "npc": "haru",
+   "text": "소라가 또 의뢰를 잔뜩 붙였더라. 바쁘다 바빠, 하하.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_01",
+   "npc": "baek",
+   "text": "…그 녀석을 잡았다고? 허, 오래 살고 볼 일이군.",
+   "cond": {
+    "legend_caught": "any"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "baek_02",
+   "npc": "baek",
+   "text": "용이 된 잉어라… 자네가 끝내 해냈군.",
+   "cond": {
+    "legend_caught": "dragon_carp"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "baek_03",
+   "npc": "baek",
+   "text": "그 물고기의 달인이라… 이제 물이 자네를 알아보겠군.",
+   "cond": {
+    "mastery_ge": 5
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "baek_04",
+   "npc": "baek",
+   "text": "물이 갑자기 조용해지거든, 줄을 놓지 말게.",
+   "cond": {
+    "phantom_tutorial": false
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_05",
+   "npc": "baek",
+   "text": "가끔… 물결이 숨을 죽이는 날이 있지. 그런 날은 이상해.",
+   "cond": {
+    "phantom_tutorial": false
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_06",
+   "npc": "baek",
+   "text": "보랏빛이 비치는 물을 본 적 있나? …아니, 아무것도 아닐세.",
+   "cond": {
+    "phantom_tutorial": false
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_07",
+   "npc": "baek",
+   "text": "고요한 물을 조심하게. 그 아래엔 이름 없는 것이 있다네.",
+   "cond": {
+    "phantom_tutorial": false
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_08",
+   "npc": "baek",
+   "text": "자네도 봤군. 보랏빛 물결 말일세. …역시 있었어.",
+   "cond": {
+    "phantom_tutorial": true
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "baek_09",
+   "npc": "baek",
+   "text": "환상의 물고기는 쫓는 자보다 기다리는 자에게 오지.",
+   "cond": {
+    "phantom_tutorial": true
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_10",
+   "npc": "baek",
+   "text": "…봄이군. 얼음이 풀리면 물도 깨어나지.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_11",
+   "npc": "baek",
+   "text": "벚꽃이 물에 떨어지면, 송어가 그걸 먹으러 올라온다네.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_12",
+   "npc": "baek",
+   "text": "봄 물은 차갑고 맑지. 마음도 그래야 해.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_13",
+   "npc": "baek",
+   "text": "여름 밤엔 반딧불을 따라가 보게. 물고기도 그 빛을 봐.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_14",
+   "npc": "baek",
+   "text": "더위에 지치면 그늘에서 쉬게. 물은 도망가지 않아.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_15",
+   "npc": "baek",
+   "text": "한여름 소나기는 금방 그치지. 그 뒤가 진짜야.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_16",
+   "npc": "baek",
+   "text": "가을 단풍 아래엔 붉은 잉어가 숨지. 오래된 얘기야.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_17",
+   "npc": "baek",
+   "text": "낙엽이 물에 뜨면 계절이 바뀐다는 뜻이지.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_18",
+   "npc": "baek",
+   "text": "가을엔 물고기도 겨울 준비를 하네. 욕심이 많아져.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_19",
+   "npc": "baek",
+   "text": "겨울 물은 말이 없지. …나처럼.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_20",
+   "npc": "baek",
+   "text": "살얼음 가장자리는 조심하게. 발이 아니라 줄 말일세.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_21",
+   "npc": "baek",
+   "text": "눈 오는 날의 낚시는… 세상에서 제일 조용한 일이지.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_22",
+   "npc": "baek",
+   "text": "…안개가 은빛이군. 이런 새벽은 몇 해에 한 번이야.",
+   "cond": {
+    "event": "silver_fog"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_23",
+   "npc": "baek",
+   "text": "붉은 달이 뜨면 물고기들이 성을 내지. 조심하게.",
+   "cond": {
+    "event": "red_moon"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "baek_24",
+   "npc": "baek",
+   "text": "…바다는 기다리는 자에게만 말을 거네.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_25",
+   "npc": "baek",
+   "text": "서두르지 말게. 물고기도 서두르는 걸 알아.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_26",
+   "npc": "baek",
+   "text": "줄이 팽팽할 때 힘을 빼는 법을 배우게.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_27",
+   "npc": "baek",
+   "text": "…",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_28",
+   "npc": "baek",
+   "text": "이 그물? 오십 년 됐지. 아직 쓸 만해.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_29",
+   "npc": "baek",
+   "text": "밤바다는 낮보다 정직하다네.",
+   "cond": {
+    "period": [
+     "night"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_30",
+   "npc": "baek",
+   "text": "폭풍 치는 날엔 큰 놈이 올라오지. 무섭게.",
+   "cond": {
+    "weather": [
+     "storm"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "baek_31",
+   "npc": "baek",
+   "text": "요즘 젊은이들은 장비만 좋지… 자네는 좀 다르군.",
+   "cond": {
+    "catches_ge": 100
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_01",
+   "npc": "sora",
+   "text": "괜찮아요! 오늘은 물고기들이 좀 예민한가 봐요.",
+   "cond": {
+    "quest_fail_streak_ge": 3
+   },
+   "once": false,
+   "prio": 3
+  },
+  {
+   "id": "sora_02",
+   "npc": "sora",
+   "text": "의뢰 열 개 완료! 우와, 게시판 전설이 되시겠어요!",
+   "cond": {
+    "quests_done_ge": 10
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "sora_03",
+   "npc": "sora",
+   "text": "의뢰 오십 개라니… 저보다 게시판을 더 잘 아시겠어요!",
+   "cond": {
+    "quests_done_ge": 50
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "sora_04",
+   "npc": "sora",
+   "text": "첫 의뢰 완료 축하드려요! 앞으로도 잘 부탁해요~",
+   "cond": {
+    "quests_done_ge": 1
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "sora_05",
+   "npc": "sora",
+   "text": "전설을 잡으셨다고요?! 의뢰서에 '전설급'이라고 써야겠어요!",
+   "cond": {
+    "legend_caught": "any"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "sora_06",
+   "npc": "sora",
+   "text": "봄 의뢰가 잔뜩 들어왔어요! 벚꽃 송어 찾는 분도 계시고요.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_07",
+   "npc": "sora",
+   "text": "꽃가루 때문에 재채기가… 에취! 의뢰는 문제없어요!",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_08",
+   "npc": "sora",
+   "text": "봄이라 그런지 다들 낚시 가고 싶어 해요. 저도요!",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_09",
+   "npc": "sora",
+   "text": "더워서 서류가 다 눅눅해요~ 그래도 힘내요!",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_10",
+   "npc": "sora",
+   "text": "여름엔 은어 의뢰가 많아요. 날렵하대요!",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_11",
+   "npc": "sora",
+   "text": "아이스크림 먹고 싶다… 앗, 의뢰 얘기였죠!",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_12",
+   "npc": "sora",
+   "text": "가을 의뢰는 크기 기록이 많아요. 다들 살찐 물고기를 원하나 봐요.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_13",
+   "npc": "sora",
+   "text": "낙엽이 게시판에 자꾸 붙어요. 의뢰서인 줄 알았어요!",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_14",
+   "npc": "sora",
+   "text": "가을엔 해가 짧아요. 저녁 의뢰는 서둘러 주세요!",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_15",
+   "npc": "sora",
+   "text": "추워요~ 장갑 끼고 의뢰서 붙이느라 힘들었어요.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_16",
+   "npc": "sora",
+   "text": "겨울 의뢰는 빙어가 인기예요. 작아도 귀엽잖아요!",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_17",
+   "npc": "sora",
+   "text": "새해 의뢰 목표는 백 개! …제 목표 말고 낚시꾼님 목표요!",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_18",
+   "npc": "sora",
+   "text": "쌍무지개 봤어요?! 오늘 운이 좋을 것 같아요!",
+   "cond": {
+    "event": "double_rainbow"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_19",
+   "npc": "sora",
+   "text": "별똥별이다! 소원 빌었어요? 저는 '의뢰 대박'이요!",
+   "cond": {
+    "event": "meteor"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "sora_20",
+   "npc": "sora",
+   "text": "새 의뢰 들어왔어요! 게시판 확인해 주세요~",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_21",
+   "npc": "sora",
+   "text": "아, 바쁘다 바빠! 그래도 낚시꾼님 의뢰는 꼭 챙길게요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_22",
+   "npc": "sora",
+   "text": "오늘도 무사히 다녀오세요!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_23",
+   "npc": "sora",
+   "text": "의뢰 포인트로 예쁜 찌도 살 수 있는 거 아세요?",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_24",
+   "npc": "sora",
+   "text": "하루 아저씨가 또 장비 자랑했죠? 다 들려요, 하하.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_25",
+   "npc": "sora",
+   "text": "갈매기 박사님 어탁 벽 보셨어요? 점점 멋져져요!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_26",
+   "npc": "sora",
+   "text": "비 오는 날은 의뢰서가 젖어서 큰일이에요~",
+   "cond": {
+    "weather": [
+     "rain",
+     "storm"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_27",
+   "npc": "sora",
+   "text": "밤에도 일하냐고요? 의뢰는 잠들지 않거든요!",
+   "cond": {
+    "period": [
+     "night"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_28",
+   "npc": "sora",
+   "text": "아침 의뢰는 아침에! 아침 물고기는 부지런하대요.",
+   "cond": {
+    "period": [
+     "morning"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_29",
+   "npc": "sora",
+   "text": "오늘 의뢰 다 하셨어요? 대단해요!",
+   "cond": {
+    "quests_done_ge": 5
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_30",
+   "npc": "sora",
+   "text": "엘드라시온에도 게시판이 있대요. 거긴 누가 붙일까요?",
+   "cond": {
+    "continent_unlocked": "eldrasion"
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "sora_31",
+   "npc": "sora",
+   "text": "저도 언젠가 큰 물고기 잡아 보고 싶어요!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_01",
+   "npc": "gull",
+   "text": "오호! 첫 어탁이군요! 이 벽의 역사가 시작되었습니다!",
+   "cond": {
+    "prints_ge": 1
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "gull_02",
+   "npc": "gull",
+   "text": "오호! 이 벽이 점점 근사해지는군요. 다음 칸은 누구 차지일까요?",
+   "cond": {
+    "prints_ge": 10
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "gull_03",
+   "npc": "gull",
+   "text": "어탁 서른 장! 이건 학회에 보고해야 합니다, 끼룩!",
+   "cond": {
+    "prints_ge": 30
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "gull_04",
+   "npc": "gull",
+   "text": "금박 어탁이라니! 숙련의 증거가 반짝이는군요!",
+   "cond": {
+    "gold_print": true
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "gull_05",
+   "npc": "gull",
+   "text": "전설의 금빛 먹… 손이 떨려서 액자를 못 걸겠습니다!",
+   "cond": {
+    "legend_print": true
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "gull_06",
+   "npc": "gull",
+   "text": "이 보라빛 먹은… 학계에 보고된 적 없는 색입니다!",
+   "cond": {
+    "phantom_print": true,
+    "phantom_tutorial": true
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "gull_07",
+   "npc": "gull",
+   "text": "도감 별이 쌓이는군요. 별을 세는 것도 학문이지요!",
+   "cond": {
+    "dex_stars_ge": 50
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "gull_08",
+   "npc": "gull",
+   "text": "봄은 탁본의 계절! 종이가 습기를 적당히 머금지요.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_09",
+   "npc": "gull",
+   "text": "벚꽃 송어의 분홍 반점은 먹으로 어떻게 찍을까요? 연구 중!",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_10",
+   "npc": "gull",
+   "text": "봄 갈매기는 노래가 다릅니다. 저만 아는 사실이지요.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_11",
+   "npc": "gull",
+   "text": "여름엔 먹이 빨리 마릅니다. 서두르세요, 어탁 장인이여!",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_12",
+   "npc": "gull",
+   "text": "햇살 은어의 날렵함을 종이에 담는 건 거의 불가능… 도전!",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_13",
+   "npc": "gull",
+   "text": "더위에 깃털 모자가 무겁군요. 하지만 벗을 순 없습니다!",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_14",
+   "npc": "gull",
+   "text": "가을 단풍처럼 붉은 잉어의 어탁… 걸작이 될 겁니다!",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_15",
+   "npc": "gull",
+   "text": "가을 공기는 먹 향기를 멀리 보내지요. 킁킁.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_16",
+   "npc": "gull",
+   "text": "가을엔 물고기가 살이 올라 어탁도 통통해집니다!",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_17",
+   "npc": "gull",
+   "text": "겨울엔 먹이 얼지 않게 품에 안고 다닙니다. 따뜻해요.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_18",
+   "npc": "gull",
+   "text": "얼음 빙어는 작아서 어탁 종이가 남습니다. 남는 건 메모장!",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_19",
+   "npc": "gull",
+   "text": "눈 내리는 갤러리… 시적이지 않습니까? 끼룩.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_20",
+   "npc": "gull",
+   "text": "유성우의 밤! 별 모양 어탁은 아직 아무도 못 만들었지요.",
+   "cond": {
+    "event": "meteor"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "gull_21",
+   "npc": "gull",
+   "text": "오호! 어탁은 물고기의 영혼을 종이에 옮기는 학문이지요!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_22",
+   "npc": "gull",
+   "text": "이 벽의 빈칸이 저를 부르는 소리가 들리지 않습니까?",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_23",
+   "npc": "gull",
+   "text": "갈매기는 물고기를 먹지만, 저는 연구합니다. 끼룩.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_24",
+   "npc": "gull",
+   "text": "크기 신기록을 세우면 결과 화면에서 어탁을 남길 수 있답니다!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_25",
+   "npc": "gull",
+   "text": "어탁의 비결? 먹은 적당히, 숨은 멈추고, 마음은 넓게!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_26",
+   "npc": "gull",
+   "text": "제 모자의 깃털은 진짜 갈매기에게 빌린 겁니다. 돌려줄 거예요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_27",
+   "npc": "gull",
+   "text": "비 오는 날엔 종이가 울어서 어탁 금지입니다.",
+   "cond": {
+    "weather": [
+     "rain",
+     "storm"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_28",
+   "npc": "gull",
+   "text": "밤에는 등불 아래서 어탁을 감상하세요. 그림자가 살아납니다.",
+   "cond": {
+    "period": [
+     "night"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_29",
+   "npc": "gull",
+   "text": "숙련 4단계면 금박 테두리를 두를 수 있지요. 반짝!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_30",
+   "npc": "gull",
+   "text": "아직 빈 벽이군요… 크기 신기록을 노려 보세요!",
+   "cond": {
+    "prints_lt": 1
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "gull_31",
+   "npc": "gull",
+   "text": "하루 씨는 어탁보다 낚싯대를 더 좋아하지요. 이해 불가!",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_first",
+   "npc": "ella",
+   "text": "어서 오세요. 수정은 주인을 알아본답니다.",
+   "cond": {},
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "ella_02",
+   "npc": "ella",
+   "text": "그 장비… 수정이 당신에게 반응하네요. 좋은 징조예요.",
+   "cond": {
+    "gear_tier_ge": [
+     "rod",
+     6
+    ]
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "ella_03",
+   "npc": "ella",
+   "text": "최고의 장비군요. 이제 바다가 당신을 시험할 거예요.",
+   "cond": {
+    "gear_tier_ge": [
+     "rod",
+     8
+    ]
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "ella_04",
+   "npc": "ella",
+   "text": "전설을 낚으셨군요. 수정이 조용히 울리고 있어요.",
+   "cond": {
+    "legend_caught_eld": true
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "ella_05",
+   "npc": "ella",
+   "text": "천해왕을… 정말로요? 이 항구가 생긴 이래 처음일 거예요.",
+   "cond": {
+    "legend_caught": "orsiel"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "ella_06",
+   "npc": "ella",
+   "text": "개화기예요. 수정 꽃이 피면 마력이 부드러워지죠.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_07",
+   "npc": "ella",
+   "text": "수정꽃 나비고기를 보셨나요? 지느러미가 꽃잎 같대요.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_08",
+   "npc": "ella",
+   "text": "개화기의 수정은 향기가 나요. 맡아 보실래요?",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_09",
+   "npc": "ella",
+   "text": "성하기에는 마력이 짙어져요. 등불이 저절로 밝아지죠.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_10",
+   "npc": "ella",
+   "text": "마력 뱀장어는 줄을 비틀어요. 줄이 꼬이지 않게 조심하세요.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_11",
+   "npc": "ella",
+   "text": "성하기의 밤은 길어요. 수정이 꿈을 꾸는 시간이죠.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_12",
+   "npc": "ella",
+   "text": "수확기예요. 금빛 갈대가 바람에 노래를 해요.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_13",
+   "npc": "ella",
+   "text": "금빛 갈대메기는 숨는 걸 좋아해요. 기다려 주세요.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_14",
+   "npc": "ella",
+   "text": "수확기엔 수정도 무르익어요. 빛이 깊어지죠.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_15",
+   "npc": "ella",
+   "text": "극야기예요. 별이 가장 밝게 빛나는 계절이죠.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_16",
+   "npc": "ella",
+   "text": "별빛 대구는 펌핑 리듬을 탄대요. 숨을 맞춰 보세요.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_17",
+   "npc": "ella",
+   "text": "극야기의 수정은 차가워요. 손이 시리지 않게.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_18",
+   "npc": "ella",
+   "text": "유성이 떨어지는 밤엔 수정이 함께 반짝여요.",
+   "cond": {
+    "event": "meteor"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_19",
+   "npc": "ella",
+   "text": "쌍무지개… 이 대륙에선 마력의 다리라고 불러요.",
+   "cond": {
+    "event": "double_rainbow"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "ella_20",
+   "npc": "ella",
+   "text": "이 등불, 마력이 흐를 때만 빛나요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_21",
+   "npc": "ella",
+   "text": "천천히 둘러보세요. 서두를 필요는 없으니까요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_22",
+   "npc": "ella",
+   "text": "수정은 깨지기 쉽지만, 빛은 깨지지 않아요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_23",
+   "npc": "ella",
+   "text": "특수 찌가 없으면 이 바다의 물고기는 붙잡기 어려워요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_24",
+   "npc": "ella",
+   "text": "오렌 선생님은 책 속에 사세요. 가끔 꺼내 드려야 해요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_25",
+   "npc": "ella",
+   "text": "밤의 항구는 수정 등불로 가득해요. 아름답죠?",
+   "cond": {
+    "period": [
+     "night"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_26",
+   "npc": "ella",
+   "text": "비가 오면 수정이 맑아져요. 씻기는 거죠.",
+   "cond": {
+    "weather": [
+     "rain",
+     "storm"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_27",
+   "npc": "ella",
+   "text": "안개 속에선 수정 빛이 더 멀리 가요.",
+   "cond": {
+    "weather": [
+     "fog"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_28",
+   "npc": "ella",
+   "text": "샤르미온에서 오셨죠? 바다 냄새가 달라요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_29",
+   "npc": "ella",
+   "text": "하늘섬의 폭포 물로 수정을 닦으면 빛이 오래가요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_30",
+   "npc": "ella",
+   "text": "당신의 찌, 조금 반짝이네요. 바다가 기억할 거예요.",
+   "cond": {
+    "catches_ge": 200
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "ella_31",
+   "npc": "ella",
+   "text": "이 대륙의 물고기는 저마다 이야기가 있어요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_first",
+   "npc": "oren",
+   "text": "오, 새 손님이군요. 이 대륙의 전설은 바다보다 오래되었지요.",
+   "cond": {},
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "oren_02",
+   "npc": "oren",
+   "text": "갈대왕 실바를 낚으셨다고요? 기록해 두어야겠군요.",
+   "cond": {
+    "legend_caught": "silva"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "oren_03",
+   "npc": "oren",
+   "text": "결정어왕 프리시아… 수정 동굴의 주인을 만나셨군요.",
+   "cond": {
+    "legend_caught": "prisia"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "oren_04",
+   "npc": "oren",
+   "text": "불꽃상어 이그니스라니, 손은 무사하신가요?",
+   "cond": {
+    "legend_caught": "ignis"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "oren_05",
+   "npc": "oren",
+   "text": "천해왕 오르시엘… 하늘과 바다가 당신을 인정했습니다.",
+   "cond": {
+    "legend_caught": "orsiel"
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "oren_06",
+   "npc": "oren",
+   "text": "보랏빛 물결에 대한 기록이 있지요. 아주 오래된 기록이.",
+   "cond": {
+    "phantom_tutorial": false
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_07",
+   "npc": "oren",
+   "text": "고대 문헌에 '숨을 죽이는 물'이라는 말이 나옵니다. 흥미롭죠.",
+   "cond": {
+    "phantom_tutorial": false
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_08",
+   "npc": "oren",
+   "text": "환상의 물고기… 문헌 속 이야기인 줄로만 알았습니다.",
+   "cond": {
+    "phantom_tutorial": true
+   },
+   "once": true,
+   "prio": 3
+  },
+  {
+   "id": "oren_09",
+   "npc": "oren",
+   "text": "개화기의 기원은 세계수의 첫 꽃이라 전해집니다.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_10",
+   "npc": "oren",
+   "text": "개화기엔 물고기도 꽃을 닮아 갑니다. 놀랍지요.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_11",
+   "npc": "oren",
+   "text": "수정 꽃은 일 년에 한 주만 핍니다. 지금이 그때죠.",
+   "cond": {
+    "season": [
+     "spring"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_12",
+   "npc": "oren",
+   "text": "성하기는 마력이 가장 짙은 계절. 옛사람들은 축제를 열었죠.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_13",
+   "npc": "oren",
+   "text": "마력 뱀장어는 성하기에만 깨어난다는 기록이 있어요.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_14",
+   "npc": "oren",
+   "text": "성하기의 화산 해역은 특히 뜨겁습니다. 조심하세요.",
+   "cond": {
+    "season": [
+     "summer"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_15",
+   "npc": "oren",
+   "text": "수확기에는 금빛 갈대로 두루마리를 엮었다고 합니다.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_16",
+   "npc": "oren",
+   "text": "수확기의 별빛은 가장 따뜻하다고들 하지요.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_17",
+   "npc": "oren",
+   "text": "이 계절엔 갈대 습지의 물고기가 숨기를 좋아합니다.",
+   "cond": {
+    "season": [
+     "autumn"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_18",
+   "npc": "oren",
+   "text": "극야기… 별이 가장 밝은 계절. 별빛 대구가 올라옵니다.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_19",
+   "npc": "oren",
+   "text": "극야기의 밤은 길지요. 그래서 이야기도 길어집니다.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_20",
+   "npc": "oren",
+   "text": "빙해의 얼음은 극야기에 가장 두껍습니다.",
+   "cond": {
+    "season": [
+     "winter"
+    ]
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_21",
+   "npc": "oren",
+   "text": "별이 쏟아지는 밤엔, 바다도 소원을 들어준다는 말이 있지요.",
+   "cond": {
+    "event": "meteor"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_22",
+   "npc": "oren",
+   "text": "붉은 달은 고대에 '바다의 분노'라 불렸습니다.",
+   "cond": {
+    "event": "red_moon"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_23",
+   "npc": "oren",
+   "text": "은빛 안개는 세계수가 숨을 쉬는 것이라는 설이 있어요.",
+   "cond": {
+    "event": "silver_fog"
+   },
+   "once": false,
+   "prio": 2
+  },
+  {
+   "id": "oren_24",
+   "npc": "oren",
+   "text": "이 대륙의 전설은 바다보다 오래되었지요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_25",
+   "npc": "oren",
+   "text": "계절이 바뀌면 물고기도 다른 노래를 부릅니다.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_26",
+   "npc": "oren",
+   "text": "세계수의 뿌리는 하늘과 바다를 함께 붙들고 있다오.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_27",
+   "npc": "oren",
+   "text": "이 두루마리? 천 년 된 낚시 일지랍니다. 글씨가 엉망이죠.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_28",
+   "npc": "oren",
+   "text": "엘라는 수정 이야기만 하면 눈이 반짝이지요.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_29",
+   "npc": "oren",
+   "text": "밤엔 별을 보며 기록을 정리합니다. 졸리지만요.",
+   "cond": {
+    "period": [
+     "night"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_30",
+   "npc": "oren",
+   "text": "폭풍은 고대의 신들이 낚시하는 소리라는 이야기가 있지요.",
+   "cond": {
+    "weather": [
+     "storm"
+    ]
+   },
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_31",
+   "npc": "oren",
+   "text": "전설 물고기마다 비늘에 시대가 새겨져 있답니다.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "oren_32",
+   "npc": "oren",
+   "text": "도감의 별을 모으는 것은 곧 이 세계를 읽는 일입니다.",
+   "cond": {
+    "dex_stars_ge": 100
+   },
+   "once": false,
+   "prio": 1
+  }
+ ]
+}

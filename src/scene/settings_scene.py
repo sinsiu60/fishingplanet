@@ -96,6 +96,8 @@ class SettingsScene(Scene):
         trv = ("테스트: 이동 컷신", "button", lambda: "열기", self._open_travel_test)
         rows = [tele, cards, slot, cb, snd, test, show, trv]
         if self.game.save is not None:
+            rows.append(("테스트: NPC 대사", "button", lambda: "열기", self._open_dialogue_test))
+        if self.game.save is not None:
             rows.append(("테스트: 환상 낚은 기록", "button",
                          lambda: "지웠어요" if getattr(self, "_ph_wiped", False) else "지우기", self._ask_phantom_reset))
         return rows
@@ -152,6 +154,10 @@ class SettingsScene(Scene):
         cur = self.s.get(key)
         i = values.index(cur) if cur in values else 0
         self.s.set(key, values[(i + d) % len(values)])
+
+    def _open_dialogue_test(self) -> None:
+        from src.scene.dialogue_debug import DialogueDebugScene
+        self.game.scenes.push(DialogueDebugScene(self.game))
 
     def _open_travel_test(self) -> None:
         from src.scene.travel_test import TravelTestScene
