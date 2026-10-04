@@ -50,6 +50,8 @@ class MenuBackdrop:
 def start_game(game, save: SaveGame) -> None:
     from src.scene.fishing_scene import FishingScene
     game.save = save
+    from src.save import dexbook
+    dexbook.ensure_seen(save)   # 옛 세이브: 지금 별·숙련을 기준으로 (알림 폭탄 없이) + 소급 보상·달인 칭호
     game.save.save()
     game.scenes.stack.clear()
     game.scenes.push(FishingScene(game))

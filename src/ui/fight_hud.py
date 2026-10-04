@@ -203,7 +203,22 @@ def catch_badges(news: dict | None) -> list:
         badges.append((f"전설 첫 포획 트로피 +{news['trophy']:,}원!", RANK_COLORS["S"]))
     if news.get("resell"):
         badges.append((f"다시 잡은 전설: 판매가 ×{news['resell']:g}", (200, 200, 210)))
+    badges += dex_badges(news)
     return badges
+
+
+def dex_badges(news: dict) -> list:
+    """도감 별·숙련·도감 보상 (35-2) — 결과 화면에서만."""
+    from src.save.dexbook import STAR_LABEL
+    out = []
+    for s in news.get("dex_stars", []):
+        if s > 1:  # ★1(첫 포획)은 'NEW! 도감 등록'과 같음
+            out.append((f"도감 ★{s} {STAR_LABEL[s]}! (★{news.get('dex_star_total', s)}/5)", (255, 220, 120)))
+    if news.get("mastery_up"):
+        out.append((f"숙련 {news['mastery_up']}단계!", (170, 255, 200)))
+    for rw in news.get("dex_rewards", []):
+        out.append((f"도감 보상: {rw}", (255, 214, 90)))
+    return out
 
 
 def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) -> None:

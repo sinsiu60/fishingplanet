@@ -453,7 +453,8 @@ def shop_item(item_id: str) -> dict | None:
         return {"id": item_id, "kind": "title", "name": c["titles_extra"][item_id]}
     if item_id in c["skins_extra"]:
         return {"id": item_id, **c["skins_extra"][item_id]}
-    return None
+    from src.save import dexbook   # 도감 보상·달인 칭호 (35-2)
+    return dexbook.cosmetic_item(item_id)
 
 
 def owns(save, item: dict) -> bool:

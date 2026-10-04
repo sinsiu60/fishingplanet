@@ -17,7 +17,7 @@ from src.core.config import load_json
 from src.core.paths import save_dir
 
 SLOTS = 3
-VERSION = 3
+VERSION = 4
 RANK_ORDER = {"C": 0, "B": 1, "A": 2, "S": 3}
 GEAR_KINDS = ("rod", "reel", "line", "net")
 TOP_TIER = {"sharmion": 5, "eldrasion": 8}  # 대륙별 상점 최고 티어
@@ -81,6 +81,17 @@ def migrate(data: dict, slot: int | None = None) -> dict:
                 except OSError:
                     pass
         data["version"] = 3
+    if data["version"] < 4:
+        # 콘텐츠 확장 (DESIGN.md 35-5): 도감 별·숙련은 기존 기록에서 계산(소급), 가 본 낚시터 = 지금 해금된 곳 전부
+        if slot is not None:
+            src, bak = _slot_path(slot), save_dir() / f"slot{slot}.v3.bak.json"
+            if src.exists() and not bak.exists():
+                try:
+                    shutil.copyfile(src, bak)
+                except OSError:
+                    pass
+        data.setdefault("visited", list(data.get("unlocked_spots", ["reservoir"])))
+        data["version"] = 4
     if "legend_sales" not in data:
         # 전설 감가(A+D) 이전에 잡아 둔 살림망 전설은 제값으로 (규칙이 생기기 전에 잡은 것)
         legends = {f["id"] for f in load_json("fish.json")["fish"] if f["rarity"] == "legend"}
@@ -210,6 +221,13 @@ def new_data() -> dict:
         "cosmetics": {"titles": [], "float_skins": [], "rod_skins": [], "net_skins": []},
         "equipped_cosmetic": {"title": None, "float_skin": None, "rod_skin": None, "net_skin": None},
         "quests": {"points": 0, "done": 0, "boards": {}},  # 챌린지 의뢰 (대륙별 게시판, src/save/quests.py)
+        # ── 콘텐츠 확장 v4 (DESIGN.md 35) ──
+        "dex_book": {"claimed": [], "cover": None, "seen": None},  # 도감 보상 받은 것·표지·알림 기준 (별·숙련 자체는 계산)
+        "prints": {},                                    # 어탁: 물고기 id → {size, date, spot, season, kind}
+        "visited": ["reservoir"],                        # 이동 컷신: 첫 방문 기록
+        "dialogue": {"heard": [], "recent": {}, "flags": {}},  # 들은 1회성 대사·NPC별 최근 대사·대사용 진행 기록
+        "season_seen": None,                             # 마지막으로 마을에서 본 계절 (계절 바뀜 알림)
+        "events": {"day": -1, "plan": None, "active": None, "seen": {}},  # 날씨 이벤트 (오늘 계획·진행 중·본 횟수)
     }
 
 

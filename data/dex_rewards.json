@@ -1,0 +1,14 @@
+{
+ "_설명": "도감 포인트(= 모은 별 수) 보상 (DESIGN.md 35-2). 외형·칭호·표지만 — 성능 없음. kind: title / float_skin / rod_skin / net_skin / cover(도감 표지 꾸미기: frame·corner·paper 색).",
+ "rewards": [
+  {"points": 20, "kind": "title", "id": "dex_collector", "name": "도감 수집가"},
+  {"points": 50, "kind": "float_skin", "id": "dex_star_float", "name": "별빛 찌", "colors": [[255, 230, 140], [60, 70, 120]]},
+  {"points": 80, "kind": "cover", "id": "cover_wave", "name": "물결 표지", "frame": [110, 170, 230], "corner": [200, 230, 255], "paper": [16, 26, 44]},
+  {"points": 130, "kind": "title", "id": "dex_star_gatherer", "name": "별을 모으는 자"},
+  {"points": 180, "kind": "rod_skin", "id": "dex_star_rod", "name": "별무리 낚싯대", "colors": [[40, 50, 90], [255, 230, 140], [120, 140, 210]]},
+  {"points": 250, "kind": "cover", "id": "cover_gold", "name": "금박 표지", "frame": [230, 190, 90], "corner": [255, 236, 170], "paper": [30, 24, 14]},
+  {"points": 330, "kind": "title", "id": "dex_master", "name": "도감의 주인"},
+  {"points": 420, "kind": "net_skin", "id": "dex_galaxy_net", "name": "은하 뜰채", "colors": [[90, 110, 200], [230, 220, 255]]},
+  {"points": 565, "kind": "cover", "id": "cover_legend", "name": "전설의 책", "frame": [255, 214, 90], "corner": [200, 150, 255], "paper": [26, 14, 34]}
+ ]
+}

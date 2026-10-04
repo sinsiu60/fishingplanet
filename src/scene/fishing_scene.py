@@ -687,6 +687,10 @@ class FishingScene(Scene):
             self.game.fade_in(load_json("legend_catch_timeline.json")["ending_fade_sec"])
         elif getattr(sh, "kind", "") == "legend" and sh.news.get("legend_line"):
             self.toasts.show(sh.news["legend_line"], phantom.COLOR_LIGHT, 3.5, 11)  # 환상 복선 한 줄 (첫 전설 포획)
+        if not final:
+            bd = fight_hud.dex_badges(sh.news)   # 도감 별·숙련 (35-2): 연출 카드를 닫은 뒤 한 줄로
+            if bd:
+                self.toasts.show(" · ".join(b[0] for b in bd), bd[0][1], 3.5, 11)
 
     def _phantom_retreat(self, x: float, z: float) -> None:
         """환상어가 떠났다 (놓침·직접 회수·챔질 놓침): 사라진 지점으로 보라가 빨려 들어감 + 한 줄."""
@@ -2191,6 +2195,8 @@ class FishingScene(Scene):
                 self.catch_news["legend_line"] = phantom.hints()["legend_line"]
             if phantom.is_phantom(f.fish):
                 self.catch_news.update(phantom.on_catch(self.save, f.fish, ph_first))
+            from src.save import dexbook
+            self.catch_news.update(dexbook.on_catch(self.save, f.fish))   # 도감 별·숙련·도감 보상 (35-2, 결과 화면에서만)
             if getattr(self.landing, "legend_handoff", False):
                 # 다시 잡은 전설: 뜰채 끌어올리기도 빠르게 (환상 재포획 3.5초보다 짧게 — 희귀함 순서)
                 from src.render.legend_show import pick_variant as _lv

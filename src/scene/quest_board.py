@@ -64,12 +64,13 @@ class QuestBoardScene(Scene):
         c = quests.cfg()
         out = list(c["shop"])
         cos = quests.cosmetics(self.save)
-        for tid in cos["titles"]:
-            if tid in c["titles_extra"]:
+        shop_ids = {x["id"] for x in c["shop"]}
+        for tid in cos["titles"]:   # 다른 곳에서 얻은 칭호 (변이·환상·도감 보상·달인)
+            if tid not in shop_ids and quests.shop_item(tid):
                 out.append(quests.shop_item(tid))
         for key in ("float_skins", "rod_skins", "net_skins"):
             for sid in cos[key]:
-                if sid in c["skins_extra"]:
+                if sid not in shop_ids and quests.shop_item(sid):
                     out.append(quests.shop_item(sid))
         return out
 
