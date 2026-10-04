@@ -40,6 +40,13 @@ class SettingsScene(Scene):
             ("화면 연출 (흔들림·줌)", "toggle", lambda: s.get("screen_shake"), self._toggle_fx),
             ("찌 확대 창 (말풍선)", "toggle", lambda: s.get("bobber_zoom"), lambda: s.set("bobber_zoom", not s.get("bobber_zoom"))),
             ("화면 효과 줄이기 (파장 → 페이드)", "toggle", lambda: s.get("reduce_fx"), lambda: s.set("reduce_fx", not s.get("reduce_fx"))),
+            ("이동 컷신", "step", lambda: {"full": "전체", "short": "짧게", "off": "끄기"}[s.get("travel_cutscene") or "full"],
+             (lambda: self._cycle("travel_cutscene", ("full", "short", "off"), -1),
+              lambda: self._cycle("travel_cutscene", ("full", "short", "off"), 1))),
+            ("계절 고정 (고정 중 한정 물고기 없음)", "step",
+             lambda: {None: "실제 날짜", "spring": "봄", "summer": "여름", "autumn": "가을", "winter": "겨울"}[s.get("season_lock")],
+             (lambda: self._cycle("season_lock", (None, "spring", "summer", "autumn", "winter"), -1),
+              lambda: self._cycle("season_lock", (None, "spring", "summer", "autumn", "winter"), 1))),
         ]
         tutorial = ("튜토리얼", "button", lambda: "처음부터 다시 보기", self._reset_tutorial)
         captions = ("소리 자막 (예고음 글자로)", "toggle", lambda: s.get("sound_captions"), self._toggle_captions)
@@ -86,7 +93,8 @@ class SettingsScene(Scene):
                 lambda: "다음 착수에 나옴 (취소)" if s.get("test_phantom") else "다음 착수에 부르기",
                 lambda: s.set("test_phantom", not s.get("test_phantom")))
         show = ("테스트: 포획 연출 (환상·전설)", "button", lambda: "열기", self._open_phantom_test)
-        rows = [tele, cards, slot, cb, snd, test, show]
+        trv = ("테스트: 이동 컷신", "button", lambda: "열기", self._open_travel_test)
+        rows = [tele, cards, slot, cb, snd, test, show, trv]
         if self.game.save is not None:
             rows.append(("테스트: 환상 낚은 기록", "button",
                          lambda: "지웠어요" if getattr(self, "_ph_wiped", False) else "지우기", self._ask_phantom_reset))
@@ -139,6 +147,15 @@ class SettingsScene(Scene):
         phantom.reset_records(self.game.save)
         self.game.save_now()
         self._ph_wiped = True
+
+    def _cycle(self, key: str, values: tuple, d: int) -> None:
+        cur = self.s.get(key)
+        i = values.index(cur) if cur in values else 0
+        self.s.set(key, values[(i + d) % len(values)])
+
+    def _open_travel_test(self) -> None:
+        from src.scene.travel_test import TravelTestScene
+        self.game.scenes.push(TravelTestScene(self.game))
 
     def _open_phantom_test(self) -> None:
         from src.scene.phantom_show_test import PhantomShowTestScene

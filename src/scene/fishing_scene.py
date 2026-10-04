@@ -2470,6 +2470,8 @@ class FishingScene(Scene):
         self._draw_gimmick_world(canvas, pal)
         # 가짜 FOV (줌·패닝·기울기)
         self.screen_fx.apply_camera(canvas)
+        if getattr(self, "scenic", False):
+            return   # 이동 컷신의 도착 전경: 풍경·낚싯대까지만 (HUD·카드 없음)
 
         inset = self.hud_inset
         if f is not None:

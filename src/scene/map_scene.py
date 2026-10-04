@@ -151,23 +151,23 @@ class MapScene(Scene):
         if self.village is not None:
             self._close()
             return
-        from src.scene.village import VillageScene
+        from src.scene.travel import start_return
         self.game.scenes.pop()
-        self.game.scenes.push(VillageScene(self.game, self.fishing, self.cont))
-        self.game.fade_in(0.6)
+        start_return(self.game, self.fishing, self.cont)   # 돌아오는 길 컷신 → 마을
 
     def _go(self) -> None:
         sp = self.spot
         if sp["id"] == self.fishing.spot_id and self.village is None:
             return
         if self.unlocked(sp):
+            prev_cont = self.fishing.spot.get("continent", "sharmion") if self.village is None else self.village.cont
             if sp["id"] != self.fishing.spot_id:
                 self.fishing.travel(sp["id"])
-            self.game.sfx.play("sfx_splash_small", 0.6)
             self.game.scenes.pop()
             if self.village is not None:
                 self.village.leave()   # 부두에서 출발: 마을도 닫고 낚시터로
-            self.game.fade_in(0.8)
+            from src.scene.travel import start_trip
+            start_trip(self.game, self.fishing, sp["id"], prev_cont)   # 이동 컷신 (35-3)
             return
         ok, _ = unlock_status(self.save, sp)
         if ok:

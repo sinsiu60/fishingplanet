@@ -1,0 +1,24 @@
+{
+ "_설명": "이동 컷신 (DESIGN.md 35-3, CONTENT_EXPANSION.md B-4). 1인칭 원근: 멀리(지평선)에서 다가오는 물체(objects) + 바닥(ground) 줄무늬 + 먼 배경(far). move = walk(걷기 흔들림) / boat(출렁임, 뱃머리) / bridge(구름다리 판자). 길이(초): travel = 이동, reveal = 낚시터 전경이 펼쳐지는 부분 (첫 방문은 이름+부제).",
+ "durations": {"first": {"travel": 4.6, "reveal": 2.6}, "revisit": {"travel": 1.2, "reveal": 0.8}, "return": {"travel": 1.2, "reveal": 0.8}, "voyage": {"travel": 2.8, "reveal": 1.3}, "off": 0.5},
+ "skip_after_first": 1.0,
+ "spots": {
+  "reservoir":   {"scene": "path", "subtitle": "잔잔한 물 위로 하루가 흐르는 곳", "move": "walk", "ground": "dirt", "side": "grass", "far": "hills", "objects": ["tree", "bush", "fence", "tree"], "speed": 1.0, "sound": "step"},
+  "valley":      {"scene": "forest", "subtitle": "바위 사이로 맑은 물이 노래하는 곳", "move": "walk", "ground": "dirt", "side": "grass", "far": "peaks", "objects": ["pine", "pine", "rock", "pine", "bush"], "speed": 1.1, "dense": 1.8, "sound": "step"},
+  "breakwater":  {"scene": "pier", "subtitle": "파도와 갈매기가 맞이하는 끝자락", "move": "walk", "ground": "planks", "side": "sea", "far": "sea", "objects": ["post", "lamp", "post", "tetrapod"], "speed": 1.0, "sound": "wood_step"},
+  "offshore":    {"scene": "boat_out", "subtitle": "육지가 보이지 않는 넓은 물결", "move": "boat", "ground": "sea", "side": "sea", "far": "land_away", "objects": ["buoy", "wave", "wave"], "speed": 1.3, "sound": "oar"},
+  "deep":        {"scene": "deep_sea", "subtitle": "빛이 닿지 않는 깊은 곳", "move": "boat", "ground": "deep", "side": "deep", "far": "sea", "objects": ["wave", "wave", "bubble"], "speed": 0.8, "darken": 0.55, "sound": "oar"},
+  "secret":      {"scene": "fog", "subtitle": "아무도 길을 기억하지 못하는 곳", "move": "walk", "ground": "dirt", "side": "grass", "far": "hills", "objects": ["tree", "rock", "tree"], "speed": 0.7, "fog": 0.75, "sound": "step"},
+  "marsh":       {"scene": "ferry", "subtitle": "은빛 갈대가 바람을 따라 눕는 곳", "move": "boat", "ground": "marsh", "side": "marsh", "far": "hills", "objects": ["reed", "reed", "reed", "reed"], "speed": 0.9, "dense": 2.2, "sound": "oar"},
+  "crystal_cave": {"scene": "cave", "subtitle": "수정이 빛을 삼키고 내뱉는 곳", "move": "walk", "ground": "stone", "side": "stone", "far": "cave", "objects": ["crystal", "rock", "crystal"], "speed": 0.9, "cave": true, "sound": "step"},
+  "sky_falls":   {"scene": "cloud_bridge", "subtitle": "구름 위로 물이 쏟아지는 곳", "move": "bridge", "ground": "bridge", "side": "clouds", "far": "islands", "objects": ["rope_post", "cloud", "rope_post"], "speed": 0.9, "sound": "wood_step"},
+  "volcano":     {"scene": "red_sea", "subtitle": "바다가 끓어오르는 붉은 물결", "move": "boat", "ground": "red_sea", "side": "red_sea", "far": "volcano", "objects": ["steam", "wave", "rock"], "speed": 1.0, "sound": "oar"},
+  "ice_sea":     {"scene": "ice_walk", "subtitle": "얼음 아래로 차가운 빛이 흐르는 곳", "move": "walk", "ground": "ice", "side": "ice", "far": "ice", "objects": ["ice_block", "ice_crack", "ice_block"], "speed": 0.8, "sound": "snow_step"},
+  "world_tree":  {"scene": "roots", "subtitle": "세상의 뿌리가 물을 마시는 곳", "move": "walk", "ground": "moss", "side": "moss", "far": "tree", "objects": ["root", "glow", "root"], "speed": 0.8, "sound": "step"}
+ },
+ "return": {
+  "sharmion":  {"scene": "path", "move": "walk", "ground": "dirt", "side": "grass", "far": "hills", "objects": ["lamp", "fence", "house", "lamp"], "speed": 1.1, "sound": "step"},
+  "eldrasion": {"scene": "path", "move": "walk", "ground": "stone", "side": "stone", "far": "sea", "objects": ["crystal_lamp", "arch", "crystal_lamp"], "speed": 1.1, "sound": "step"}
+ },
+ "voyage": {"scene": "voyage", "move": "ship", "ground": "sea", "side": "sea", "far": "sea", "objects": ["wave", "wave", "gull_wave"], "speed": 1.4, "sound": "oar"}
+}
