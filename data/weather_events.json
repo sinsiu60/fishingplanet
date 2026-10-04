@@ -1,0 +1,380 @@
+{
+ "_설명": "특별한 날씨 이벤트 (DESIGN.md 35-4·35-14). 게임 하루가 시작될 때 하루 1개 이하를 굴려(day_chance 합 = 이벤트 날 확률) 시작 시각(start)에 조건(need)을 확인 → 맞으면 hours 동안. 혜택: chest_bonus(상자 %p) · rare_bonus(희귀 이상 %p) · mutation_mult · s_sale_bonus(S랭크 판매가). 이벤트 물고기는 그 이벤트 중에만, 두 대륙 공통(엘드라시온은 price_eld), 도감 % 제외. 환상 확률·천장 무관.",
+ "fish_weight": {
+  "uncommon": 10,
+  "rare": 4
+ },
+ "events": [
+  {
+   "id": "meteor",
+   "name": "유성우 밤",
+   "banner": "하늘에서 별이 쏟아진다",
+   "start": 20.0,
+   "hours": 10,
+   "day_chance": 0.1,
+   "need": {
+    "weather": [
+     "clear"
+    ]
+   },
+   "benefit": {
+    "chest_bonus": 0.01
+   },
+   "benefit_text": "보물상자 +1%p",
+   "start_sound": [
+    "amb_crystal",
+    0.3
+   ],
+   "fish": {
+    "id": "star_jack",
+    "name": "별똥 전갱이",
+    "spot": "reservoir",
+    "continent": null,
+    "limited": "event",
+    "event": "meteor",
+    "event_name": "유성우 밤",
+    "times": [
+     "morning",
+     "day",
+     "evening",
+     "night"
+    ],
+    "weathers": [
+     "clear",
+     "rain",
+     "storm",
+     "fog"
+    ],
+    "rarity": "uncommon",
+    "size_cm": [
+     20,
+     40
+    ],
+    "base_price": 140,
+    "price_eld": 1400,
+    "difficulty": 4,
+    "telegraph_sec": 0.85,
+    "power": 0.95,
+    "stamina": 110,
+    "actions": {
+     "rush": 35,
+     "turn": 30,
+     "jump": 20,
+     "leap": 15
+    },
+    "shadow_len_m": 0.27,
+    "nibbles": [
+     1,
+     2
+    ],
+    "colors": {
+     "body": [
+      90,
+      110,
+      150
+     ],
+     "belly": [
+      230,
+      235,
+      245
+     ],
+     "fin": [
+      240,
+      220,
+      140
+     ],
+     "stripe": [
+      255,
+      240,
+      160
+     ]
+    },
+    "shape": {
+     "height": 0.17,
+     "tail": "fork",
+     "pattern": "stripe"
+    },
+    "skill": "별똥 돌진",
+    "desc": "별똥별이 떨어진 자리에 모인다는 전갱이.",
+    "hint3": "돌진과 방향 전환이 번갈아 온다.",
+    "hint10": "도약 뒤 곧바로 돌진이 이어진다."
+   }
+  },
+  {
+   "id": "double_rainbow",
+   "name": "쌍무지개",
+   "banner": "비 그친 하늘에 무지개가 두 겹 떴다",
+   "start": 12.0,
+   "hours": 6,
+   "day_chance": 0.1,
+   "need": {
+    "weather": [
+     "clear"
+    ],
+    "rained_today": true
+   },
+   "benefit": {
+    "rare_bonus": 0.02
+   },
+   "benefit_text": "희귀 이상 +2%p",
+   "start_sound": [
+    "amb_bird0",
+    0.35
+   ],
+   "fish": {
+    "id": "rainbow_medaka",
+    "name": "무지개 송사리",
+    "spot": "reservoir",
+    "continent": null,
+    "limited": "event",
+    "event": "double_rainbow",
+    "event_name": "쌍무지개",
+    "times": [
+     "morning",
+     "day",
+     "evening",
+     "night"
+    ],
+    "weathers": [
+     "clear",
+     "rain",
+     "storm",
+     "fog"
+    ],
+    "rarity": "uncommon",
+    "size_cm": [
+     4,
+     8
+    ],
+    "base_price": 90,
+    "price_eld": 900,
+    "difficulty": 3,
+    "telegraph_sec": 0.95,
+    "power": 0.6,
+    "stamina": 60,
+    "actions": {
+     "turn": 40,
+     "jump": 35,
+     "rush": 25
+    },
+    "shadow_len_m": 0.05,
+    "nibbles": [
+     1,
+     2
+    ],
+    "colors": {
+     "body": [
+      150,
+      190,
+      220
+     ],
+     "belly": [
+      245,
+      245,
+      250
+     ],
+     "fin": [
+      255,
+      170,
+      200
+     ],
+     "stripe": [
+      250,
+      220,
+      120
+     ]
+    },
+    "shape": {
+     "height": 0.16,
+     "tail": "round"
+    },
+    "skill": "무지개 튀기",
+    "desc": "무지개가 뜬 날에만 반짝이는 작은 송사리.",
+    "hint3": "점프가 잦다 — 작다고 방심 금물.",
+    "hint10": "방향 전환 뒤 점프."
+   }
+  },
+  {
+   "id": "red_moon",
+   "name": "붉은 달",
+   "banner": "달이 붉게 물들었다…",
+   "start": 21.0,
+   "hours": 8,
+   "day_chance": 0.05,
+   "need": {
+    "weather": [
+     "clear",
+     "fog"
+    ]
+   },
+   "benefit": {
+    "mutation_mult": 1.5
+   },
+   "benefit_text": "변이 확률 ×1.5",
+   "start_sound": [
+    "amb_owl",
+    0.35
+   ],
+   "fish": {
+    "id": "blood_catfish",
+    "name": "핏빛 메기",
+    "spot": "reservoir",
+    "continent": null,
+    "limited": "event",
+    "event": "red_moon",
+    "event_name": "붉은 달",
+    "times": [
+     "morning",
+     "day",
+     "evening",
+     "night"
+    ],
+    "weathers": [
+     "clear",
+     "rain",
+     "storm",
+     "fog"
+    ],
+    "rarity": "rare",
+    "size_cm": [
+     60,
+     120
+    ],
+    "base_price": 480,
+    "price_eld": 4200,
+    "difficulty": 7,
+    "telegraph_sec": 0.7,
+    "power": 1.45,
+    "stamina": 260,
+    "actions": {
+     "rush": 45,
+     "charge": 30,
+     "turn": 25
+    },
+    "shadow_len_m": 0.81,
+    "nibbles": [
+     1,
+     2
+    ],
+    "colors": {
+     "body": [
+      120,
+      30,
+      30
+     ],
+     "belly": [
+      200,
+      120,
+      110
+     ],
+     "fin": [
+      150,
+      40,
+      40
+     ],
+     "stripe": null
+    },
+    "shape": {
+     "height": 0.16,
+     "whiskers": true,
+     "tail": "round"
+    },
+    "skill": "공격적인 돌진",
+    "desc": "붉은 달 아래에서만 성을 내며 올라오는 메기.",
+    "hint3": "돌진이 강하고 잦다 — 드랙을 넉넉히.",
+    "hint10": "돌진 → 버티기가 연달아 온다."
+   }
+  },
+  {
+   "id": "silver_fog",
+   "name": "은빛 안개",
+   "banner": "은빛 안개가 수면을 덮는다",
+   "start": 4.0,
+   "hours": 6,
+   "day_chance": 0.07,
+   "need": {
+    "weather": [
+     "clear",
+     "fog",
+     "rain"
+    ]
+   },
+   "benefit": {
+    "s_sale_bonus": 0.1
+   },
+   "benefit_text": "S랭크 판매가 +10%",
+   "start_sound": [
+    "amb_gust",
+    0.25
+   ],
+   "fish": {
+    "id": "silver_mist_eel",
+    "name": "은안개 장어",
+    "spot": "reservoir",
+    "continent": null,
+    "limited": "event",
+    "event": "silver_fog",
+    "event_name": "은빛 안개",
+    "times": [
+     "morning",
+     "day",
+     "evening",
+     "night"
+    ],
+    "weathers": [
+     "clear",
+     "rain",
+     "storm",
+     "fog"
+    ],
+    "rarity": "uncommon",
+    "size_cm": [
+     50,
+     100
+    ],
+    "base_price": 180,
+    "price_eld": 1700,
+    "difficulty": 5,
+    "telegraph_sec": 0.8,
+    "power": 1.1,
+    "stamina": 160,
+    "actions": {
+     "turn": 45,
+     "rush": 30,
+     "charge": 25
+    },
+    "shadow_len_m": 0.68,
+    "nibbles": [
+     1,
+     2
+    ],
+    "colors": {
+     "body": [
+      170,
+      180,
+      195
+     ],
+     "belly": [
+      230,
+      235,
+      240
+     ],
+     "fin": [
+      200,
+      210,
+      225
+     ],
+     "stripe": null
+    },
+    "shape": {
+     "height": 0.07,
+     "tail": "ribbon"
+    },
+    "skill": "안개 속 S자",
+    "desc": "은빛 안개 속에서만 S자로 헤엄치는 장어.",
+    "hint3": "방향 전환이 연달아 온다.",
+    "hint10": "전환 사이 버티기가 짧다."
+   }
+  }
+ ]
+}

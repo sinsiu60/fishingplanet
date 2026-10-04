@@ -97,6 +97,7 @@ class SettingsScene(Scene):
         rows = [tele, cards, slot, cb, snd, test, show, trv]
         if self.game.save is not None:
             rows.append(("테스트: NPC 대사", "button", lambda: "열기", self._open_dialogue_test))
+            rows.append(("테스트: 날씨 이벤트", "button", self._event_label, self._cycle_event))
         if self.game.save is not None:
             rows.append(("테스트: 환상 낚은 기록", "button",
                          lambda: "지웠어요" if getattr(self, "_ph_wiped", False) else "지우기", self._ask_phantom_reset))
@@ -154,6 +155,24 @@ class SettingsScene(Scene):
         cur = self.s.get(key)
         i = values.index(cur) if cur in values else 0
         self.s.set(key, values[(i + d) % len(values)])
+
+    def _event_label(self) -> str:
+        from src.fishing import weather_events
+        ev = weather_events.active(self.game.save)
+        return f"{ev['name']} (다음)" if ev else "없음 → 지금 시작"
+
+    def _cycle_event(self) -> None:
+        """테스트: 날씨 이벤트를 지금 바로 (없음 → 유성우 → 쌍무지개 → 붉은 달 → 은빛 안개 → 없음)."""
+        from src.fishing import weather_events
+        from src.scene.fishing_scene import FishingScene
+        fishing = next((s for s in self.game.scenes.stack if isinstance(s, FishingScene)), None)
+        ids = [None] + [e["id"] for e in weather_events.cfg()["events"]]
+        cur = weather_events.active(self.game.save)
+        nxt = ids[(ids.index(cur["id"] if cur else None) + 1) % len(ids)]
+        if nxt is None or fishing is None:
+            weather_events.stop(self.game.save)
+        else:
+            weather_events.start(self.game.save, nxt, fishing.clock.day, fishing.clock.hour)
 
     def _open_dialogue_test(self) -> None:
         from src.scene.dialogue_debug import DialogueDebugScene

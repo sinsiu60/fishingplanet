@@ -51,7 +51,10 @@ class VillageScene(Scene):
         game.adaptive.set("menu")
         self.season = seasons.current(game.settings)
         from src.render.season_fx import SeasonParticles
+        from src.render.event_fx import EventFx
         self.particles = SeasonParticles()
+        self.efx = EventFx()
+        self.ev_banner = None
         self.btns = []
         # 계절이 바뀐 뒤 처음 들어옴: 계절 알림 + 상점 주인의 계절 대사 (35-4)
         self.season_banner = 0.0
@@ -174,6 +177,15 @@ class VillageScene(Scene):
         f = self.fishing
         f.clock.update(dt)      # 마을에서도 시간은 흐른다 (등불·창문 불빛)
         f.ambience.update(dt, self.cfg["ambience"], f.clock.period()[0], f.weather, season=self.season)
+        from src.fishing import weather_events
+        new = weather_events.tick(self.save, f.clock.day, f.clock.hour, f.weather)
+        if new:   # 마을에서 이벤트가 시작됨: 위쪽 배너
+            self.ev_banner = {"id": new, "t": 0.0}
+        if getattr(self, "ev_banner", None):
+            self.ev_banner["t"] += dt
+            if self.ev_banner["t"] > 3.5:
+                self.ev_banner = None
+        self.efx.update(dt, self._eid(), self.game.screen.canvas.get_width(), vr.HORIZON, False)
         self.particles.update(dt, self.season, self.cont, self.game.screen.canvas.get_width(), self.game.screen.canvas.get_height(),
                               f.clock.period()[0], f.weather, mobile=self.game.input.kind == "touch")
         self.game.adaptive.set_context(self.cont, None)
@@ -204,8 +216,15 @@ class VillageScene(Scene):
     # ── 그리기 ──
     def _pal(self) -> dict:
         from src.render.season_fx import season_palette
+        from src.render.event_fx import event_palette
         f = self.fishing
-        return season_palette(themed_palette(f.palette.sample(f.clock.hour), {}, f.weather), self.season, self.cont)
+        pal = season_palette(themed_palette(f.palette.sample(f.clock.hour), {}, f.weather), self.season, self.cont)
+        return event_palette(pal, self._eid(), self.cont)
+
+    def _eid(self):
+        from src.fishing import weather_events
+        ev = weather_events.active(self.save)
+        return ev["id"] if ev else None
 
     def draw_world(self, canvas) -> None:
         """마을 풍경 (상점·도감 같은 겹친 화면 뒤에도 이것이 보인다)."""
@@ -217,10 +236,12 @@ class VillageScene(Scene):
         ox = self.ox
         vr._sky(canvas, pal, w)
         sun_x = vr._celestial(canvas, pal, hour, ox, w, self.t)
+        self.efx.draw_sky(canvas, self._eid(), self.cont, vr.HORIZON, False)
         vr._far(canvas, pal, ox, w, style)
         vr._sea(canvas, pal, ox, w, self.t, sun_x, night)
         if style == "wood":
             vr.draw_gulls(canvas, w, self.t)
+        self.efx.draw_low(canvas, self._eid(), self.cont, vr.HORIZON, False)
         vr._ground(canvas, pal, ox, w, h, style)
         hits = []
         for p in self.cfg["places"]:
@@ -281,6 +302,14 @@ class VillageScene(Scene):
                                     [(cx - 4 * side, h // 2 - 8), (cx + 4 * side, h // 2), (cx - 4 * side, h // 2 + 8)])
         if self.t < 6 and self.bubble is None:
             text(canvas, "끌어서 둘러보기 · 건물과 사람을 눌러 보세요", (w // 2, h - 10), (230, 225, 210), 11, "center")
+        if self.ev_banner:
+            from src.fishing import weather_events
+            ev = weather_events.by_id(self.ev_banner["id"])
+            a = min(1.0, self.ev_banner["t"] / 0.4, (3.5 - self.ev_banner["t"]) / 0.6)
+            band = pygame.Surface((w, 26), pygame.SRCALPHA)
+            band.fill((10, 12, 26, int(160 * a)))
+            canvas.blit(band, (0, 58))
+            text(canvas, f"{ev['banner']} — {ev['benefit_text']}", (w // 2, 71), tuple(int(v * a) for v in (255, 240, 210)), 11, "center")
         if self.season_banner > 0:
             a = min(1.0, self.season_banner / 0.5, (3.5 - self.season_banner) / 0.4)
             band = pygame.Surface((w, 26), pygame.SRCALPHA)

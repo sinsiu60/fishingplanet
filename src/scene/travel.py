@@ -95,7 +95,9 @@ class TravelScene(Scene):
         self.view = TravelView(self.scene, w, h, self.season, bool(game.settings.get("reduce_fx")),
                                seed=hash((spot_id, kind)) & 0xffff)
         from src.render.season_fx import SeasonParticles
+        from src.render.event_fx import EventFx
         self.particles = SeasonParticles()
+        self.efx = EventFx()
         self.t = 0.0
         self.step_t = 0.0
         self.preloaded = False
@@ -166,8 +168,12 @@ class TravelScene(Scene):
     def _pal(self) -> dict:
         f = self.fishing
         from src.render.season_fx import season_palette
+        from src.render.event_fx import event_palette
+        from src.fishing import weather_events
         theme = self.spot["theme"] if self.spot else {}
-        return season_palette(themed_palette(f.palette.sample(f.clock.hour), theme, f.weather), self.season, self.cont)
+        ev = weather_events.active(self.game.save)
+        pal = season_palette(themed_palette(f.palette.sample(f.clock.hour), theme, f.weather), self.season, self.cont)
+        return event_palette(pal, ev["id"] if ev else None, self.cont)
 
     def _draw_target(self, surf) -> None:
         if self.village is not None:
@@ -191,6 +197,15 @@ class TravelScene(Scene):
         pal = self._pal()
         night = _night(self.fishing.clock.hour)
         self.view.draw(canvas, pal, night, self.fishing.weather)
+        from src.fishing import weather_events
+        ev = weather_events.active(self.game.save)
+        if ev and not self.scene.get("cave"):   # 이벤트 하늘도 그대로 (유성우 밤이면 컷신 하늘에도 유성)
+            self.efx.update(1 / 60, ev["id"], w, 118, False)
+            clip = canvas.get_clip()
+            canvas.set_clip(pygame.Rect(0, 0, w, 118))
+            self.efx.draw_sky(canvas, ev["id"], self.cont, 118, False)
+            canvas.set_clip(clip)
+            self.efx.draw_low(canvas, ev["id"], self.cont, 118, False)
         self.particles.draw(canvas)
         if self.t > self.t_travel:
             k = smoothstep(clamp((self.t - self.t_travel) / (self.t_reveal * 0.6), 0, 1))

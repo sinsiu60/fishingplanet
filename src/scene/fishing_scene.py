@@ -149,7 +149,11 @@ class FishingScene(Scene):
         self.force_phantom = False   # 디버그 F7: 다음 착수 환상 강제
         self.glints: list[list[float]] = []  # 먼 수면 보라빛 물결 (x, z, t)
         from src.render.season_fx import SeasonParticles
+        from src.render.event_fx import EventFx
         self.season_fx = SeasonParticles()   # 계절 파티클 (35-4)
+        self.event_fx = EventFx()            # 날씨 이벤트 연출 (35-14)
+        self.event_banner = None             # {"id", "t"} 이벤트 시작 배너 (파이팅 중이 아닐 때만)
+        self.event_pending = None
         self.backdrop = None       # 마을이 열려 있으면 마을 풍경 (src/scene/village.py) — 겹친 화면 뒤 배경
         self.catch_show = None     # 환상·전설 포획 연출 (src/render/phantom_show.py · legend_show.py)
         self.phantom_song_ch = self.phantom_loop_ch = None
@@ -280,6 +284,46 @@ class FishingScene(Scene):
                 name = sp["name"] if not sp.get("secret") else "숨겨진 장소"
                 self.toasts.show(f"새 낚시터 '{name}'을(를) 열 수 있어요! (M: 지도)", GOOD, 3.5, 11)  # 소리 없이 (N3)
                 return
+
+    def _tick_events(self, dt: float, f) -> None:
+        """날씨 이벤트 (35-14): 시작 확인 → 배너(파이팅이 끝난 뒤) · 연출 갱신."""
+        from src.fishing import weather_events
+        new = weather_events.tick(self.save, self.clock.day, self.clock.hour, self.weather)
+        if new:
+            self.event_pending = new
+        busy = f is not None or self.catch_show is not None or self.landing is not None
+        if self.event_pending and not busy:
+            ev = weather_events.by_id(self.event_pending)
+            self.event_banner = {"id": self.event_pending, "t": 0.0}
+            self.event_pending = None
+            snd, vol = ev.get("start_sound", ["amb_gust", 0.25])
+            self.sfx.play(snd, vol)   # 짧은 자연음 (SOUND_CLEANUP)
+        if self.event_banner is not None:
+            self.event_banner["t"] += dt
+            if self.event_banner["t"] > 3.5:
+                self.event_banner = None
+        ev = weather_events.active(self.save)
+        self.event_fx.update(dt, ev["id"] if ev else None, self.cam.width, self.cam.horizon,
+                             f is not None and f.phase in ("fight", "net"))
+
+    def _event_id(self):
+        from src.fishing import weather_events
+        ev = weather_events.active(self.save)
+        return ev["id"] if ev else None
+
+    def _draw_event_banner(self, canvas) -> None:
+        b = self.event_banner
+        if b is None:
+            return
+        from src.fishing import weather_events
+        ev = weather_events.by_id(b["id"])
+        w = canvas.get_width()
+        a = min(1.0, b["t"] / 0.4, (3.5 - b["t"]) / 0.6)
+        band = pygame.Surface((w, 34), pygame.SRCALPHA)
+        band.fill((10, 12, 26, int(150 * a)))
+        canvas.blit(band, (0, 26))
+        hud.text(canvas, ev["banner"], (w // 2, 38), tuple(int(v * a) for v in (255, 240, 210)), 16, "center")
+        hud.text(canvas, f"{ev['name']} · {ev['benefit_text']}", (w // 2, 53), tuple(int(v * a) for v in (200, 220, 255)), 11, "center")
 
     @property
     def season(self) -> str:
@@ -816,11 +860,12 @@ class FishingScene(Scene):
         fish = self.bite.fish
         size = roll_size(fish, self.bite.cast_distance)
         # 변이 (U5): 챔질 순간 굴림 (테스트: F10 강제 지정)
-        from src.fishing import mutation
+        from src.fishing import mutation, weather_events
         force = getattr(self, "force_mut", None)
         train = self.training is not None
         muts = [] if train else mutation.roll(self.save, fish, self.weather, force=force if force else None,
-                             chance_mult=self.bite.sign_mods.get("mutation_mult", 1.0) if self.bite.sign_mods else 1.0)
+                             chance_mult=(self.bite.sign_mods.get("mutation_mult", 1.0) if self.bite.sign_mods else 1.0)
+                             * weather_events.benefit(self.save, "mutation_mult", 1.0))   # 붉은 달: 변이 ×1.5
         if muts:
             fish = mutation.apply(fish, muts)
             if "giant" in muts:
@@ -1220,6 +1265,7 @@ class FishingScene(Scene):
                               self.clock.period()[0], self.weather, mobile=self.touch,
                               fighting=f is not None and f.phase in ("fight", "net"),
                               enabled=self.theme["terrain"] != "cave" and self.theme.get("dark", 0) < 0.5)
+        self._tick_events(dt, f)
 
     def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
@@ -1719,6 +1765,8 @@ class FishingScene(Scene):
         self.bite.rare_bonus = 0.03 if buffs.get("lucky_casts", 0) > 0 else 0.0
         if phantom.blessing_active(self.save):
             self.bite.rare_bonus += phantom.reward_cfg()["blessing_rare"]  # 물결의 축복: 희귀 이상 +3%p (떡밥과 더해짐)
+        from src.fishing import weather_events
+        self.bite.rare_bonus += weather_events.benefit(self.save, "rare_bonus")   # 쌍무지개: 희귀 이상 +2%p
         if buffs.get("lucky_casts", 0) > 0:
             buffs["lucky_casts"] -= 1
         self.bite.window_extra = 0.95 if self.save.charm_on("pinwheel_float") else 1.0
@@ -2255,6 +2303,11 @@ class FishingScene(Scene):
             bonus = mk["frenzy"]["chest_bonus"] if "frenzy" in muts else 0.0  # 광폭: 상자 +2%p
             if phantom.blessing_active(self.save):
                 bonus += phantom.reward_cfg()["blessing_chest"]  # 물결의 축복: 상자 +1%p
+            from src.fishing import weather_events
+            bonus += weather_events.benefit(self.save, "chest_bonus")   # 유성우 밤: 상자 +1%p
+            sb = weather_events.benefit(self.save, "s_sale_bonus")
+            if sb and f.result["rank"] == "S":   # 은빛 안개: S랭크 판매가 +10%
+                f.result["price"] = int(round(f.result["price"] * (1 + sb)))
             ph_first = phantom.is_phantom(f.fish) and not phantom.caught(self.save, f.fish["id"])
             self.chest_drop = treasure.roll_drop(self.save, f.fish, f.result["rank"], bonus=bonus, first=ph_first)
             legend_scales = 0
@@ -2349,11 +2402,15 @@ class FishingScene(Scene):
         cam, t, hour, theme, weather = self.cam, self.t, self.clock.hour, self.theme, self.weather
         world.draw_sky(canvas, pal, cam)
         self.stars.draw(canvas, pal, cam, t)
-        world.draw_celestial(canvas, pal, cam, hour, t, visible=weather == "clear" and theme["terrain"] != "cave")
+        world.draw_celestial(canvas, pal, cam, hour, t, visible=weather == "clear" and theme["terrain"] != "cave"
+                             and self._event_id() != "red_moon")   # 붉은 달 이벤트: 달은 붉은 달 하나만
         if theme.get("aurora"):
             from src.render.eldra_world import draw_aurora
             draw_aurora(canvas, pal, cam, t)
         self.clouds.draw(canvas, pal, cam)
+        if theme["terrain"] != "cave":   # 날씨 이벤트 하늘 (유성·쌍무지개·붉은 달) — 산보다 먼저
+            self.event_fx.draw_sky(canvas, self._event_id(), self.spot.get("continent", "sharmion"), cam.horizon,
+                                   self.fight is not None)
         self.lightning.draw(canvas)
         world.draw_mountains(canvas, pal, cam, theme["terrain"], t)
         amp = {"clear": 1.0, "rain": 1.25, "storm": 1.9, "fog": 0.8}[weather] * (1.3 if theme.get("sea") else 1.0)
@@ -2373,6 +2430,8 @@ class FishingScene(Scene):
         pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash, self.legend_k)
         from src.render.season_fx import season_palette
         pal = season_palette(pal, self.season, self.spot.get("continent", "sharmion"))   # 계절 색감 (은은하게)
+        from src.render.event_fx import event_palette
+        pal = event_palette(pal, self._event_id(), self.spot.get("continent", "sharmion"))   # 붉은 달·은빛 안개 (환상 팔레트가 위)
         pal = self._line_pal(pal)
         if self.dragon_k > 0.01:
             for key, v in pal.items():
@@ -2501,6 +2560,8 @@ class FishingScene(Scene):
         self.rain.draw(canvas, pal)
         self.fog.draw(canvas, pal, cam.horizon, t)
         self.season_fx.draw(canvas)   # 계절 파티클 (파이팅 중엔 위쪽에 1/3만)
+        self.event_fx.draw_low(canvas, self._event_id(), self.spot.get("continent", "sharmion"), cam.horizon,
+                               f is not None and f.phase == "fight")
         if f is not None and f.phase == "fight":
             # 수면 위 행동 연출 (카메라 연출 전에 그려서 함께 확대됨)
             pos = self._fish_screen()
@@ -2517,6 +2578,7 @@ class FishingScene(Scene):
         self.screen_fx.apply_camera(canvas)
         if getattr(self, "scenic", False):
             return   # 이동 컷신의 도착 전경: 풍경·낚싯대까지만 (HUD·카드 없음)
+        self._draw_event_banner(canvas)
 
         inset = self.hud_inset
         if f is not None:
