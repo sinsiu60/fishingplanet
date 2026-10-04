@@ -16,7 +16,8 @@ DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": N
             "success_sfx": True,  # 패턴 성공 '지이이잉' (32-16 Z3)
             "fight_music": True,
             "bobber_zoom": True,
-            "reduce_fx": False,  # 화면 효과 줄이기 (환상 파장 대신 0.8초 페이드)  # 찌 확대 말풍선 (찌·다가오는 그림자를 크게)  # 일반 파이팅 음악 (32-16 Z4) — 끄면 대기 층 낮추기만  # 신호음: 0 자연음 / 1 보조음 / 2 강조 (SOUND_CLEANUP N2)
+            "reduce_fx": False,
+            "test_phantom": False,  # 테스트: 다음 착수 한 번 환상 물고기 강제 (설정 → 접근성)  # 화면 효과 줄이기 (환상 파장 대신 0.8초 페이드)  # 찌 확대 말풍선 (찌·다가오는 그림자를 크게)  # 일반 파이팅 음악 (32-16 Z4) — 끄면 대기 층 낮추기만  # 신호음: 0 자연음 / 1 보조음 / 2 강조 (SOUND_CLEANUP N2)
             # 성능 표시 (FPS·단계별 처리 시간, v0.8.8)
             "perf_overlay": False}
 

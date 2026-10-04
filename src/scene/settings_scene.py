@@ -82,7 +82,10 @@ class SettingsScene(Scene):
               lambda: s.set("colorblind", not s.get("colorblind")))
         snd = ("소리 신호 (끄면 그림 강조)", "toggle", lambda: s.get("signal_sound"),
                lambda: s.set("signal_sound", not s.get("signal_sound")))
-        return [tele, cards, slot, cb, snd]
+        test = ("테스트: 환상 물고기", "button",
+                lambda: "다음 착수에 나옴 (취소)" if s.get("test_phantom") else "다음 착수에 부르기",
+                lambda: s.set("test_phantom", not s.get("test_phantom")))
+        return [tele, cards, slot, cb, snd, test]
 
     def _sound_rows(self) -> list[tuple]:
         """소리 (32장 S3): 버스 볼륨 4개, 신호음 모드(N2), 성공 효과음·파이팅 음악(32-16), 신호 때 배경 줄이기, 오디오 지연 보정, 사운드 테스트 룸."""

@@ -1495,8 +1495,11 @@ class FishingScene(Scene):
         self.bite.window_extra = 0.95 if self.save.charm_on("pinwheel_float") else 1.0
         ph = None
         if self.training is None and self.force_i < 0:
-            ph = phantom.roll(self.save, self.spot_id, force=self.force_phantom)
+            test = self.settings.get("test_phantom")  # 설정 → 접근성 '테스트: 다음 착수에 환상 물고기'
+            ph = phantom.roll(self.save, self.spot_id, force=self.force_phantom or test)
             self.force_phantom = False
+            if test:
+                self.settings.set("test_phantom", False)
         if ph is not None:
             # 환상어: 착수 지점에서 보랏빛 파장 → 대사 → 가짜 입질 없이 진짜 입질 (33-5)
             sc = phantom.spawn_cfg()
