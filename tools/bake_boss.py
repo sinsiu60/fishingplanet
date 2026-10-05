@@ -2,7 +2,7 @@
 
 data/music_patterns.json "boss" → src/audio/boss_synth.py 로 층 합성 + 마스터링(−14 LUFS · −1dBTP · 중음역 −2dB)
 → assets/music_generated/boss/<곡ID>_intro.ogg · <곡ID>_<페이즈>_<층>.ogg (OGG, 층마다 같은 배율).
-바뀐 곡만 다시 굽는다 (manifest.json 해시 = 곡 스펙 + 마스터 설정 + boss_synth.py). 구운 파일은 저장소에 함께 올린다.
+바뀐 곡만 다시 굽는다 (manifest.json 해시 = 곡 스펙 + 마스터 설정 + boss_synth.py, "battle" 곡은 + boss_battle.py). 구운 파일은 저장소에 함께 올린다.
 시험곡("test": true)은 게임 파일로는 굽지 않는다 (--out 으로만).
 
   python tools/bake_boss.py              바뀐 곡만
@@ -33,6 +33,8 @@ PREVIEW = os.path.join(ROOT, "tools", "audio", "reference", "boss_bgm")
 
 def song_hash(spec: dict, master: dict) -> str:
     src = open(os.path.join(ROOT, "src", "audio", "boss_synth.py"), "rb").read().replace(b"\r\n", b"\n")
+    if spec.get("battle"):   # 전투감 곡은 boss_battle.py 도 (DESIGN.md 43-13)
+        src += open(os.path.join(ROOT, "src", "audio", "boss_battle.py"), "rb").read().replace(b"\r\n", b"\n")
     return hashlib.sha1(src + json.dumps([spec, master], sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
 
 
@@ -95,7 +97,10 @@ def main(argv: list[str]) -> int:
         if man.get(sid, {}).get("hash") == h and "--all" not in argv and "--preview" not in argv and not names:
             continue
         t0 = time.time()
-        stems, rep = boss_synth.master(boss_synth.Song(sid, spec, mcfg).stems(), len(spec["phases"]), dict(mcfg, **spec.get("master", {})))
+        cls = boss_synth.Song
+        if spec.get("battle"):
+            from src.audio.boss_battle import BattleSong as cls
+        stems, rep = boss_synth.master(cls(sid, spec, mcfg).stems(), len(spec["phases"]), dict(mcfg, **spec.get("master", {})))
         for old in os.listdir(out):
             if old.startswith(sid + "_"):
                 os.remove(os.path.join(out, old))

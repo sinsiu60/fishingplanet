@@ -611,9 +611,16 @@ def check(songs: dict) -> int:
     return bad
 
 
+# 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
+# F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
+BATTLE = {"L02": 168, "P04": 160}
+
+
 def main(argv) -> int:
     songs = legend_songs()
     songs.update(phantom_songs())
+    for sid, bpm in BATTLE.items():
+        songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):
         return 1
     if "--check" in argv:
