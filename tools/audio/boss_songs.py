@@ -1171,20 +1171,36 @@ def nordic_songs() -> dict:
 # ───────────────────────── 음표 데이터: 천해왕 오르시엘 (ORSIEL_BGM.md, DESIGN.md 43-27) ─────────────────────────
 # data/music/orsiel_notes.json 의 음표를 그대로 연주 (src/audio/boss_notes.py). 여기서는 페이즈 박자와 이름만 — 음은 하나도 만들지 않음.
 # 138 · 4/4 → 2페이즈 7/8 → 4/4, C 프리지안 → 4페이즈 C장조. 오케스트라 L12 는 남겨 둠.
-def orsiel_songs() -> dict:
-    d = json.load(open(os.path.join(os.path.dirname(PAT), "music", "orsiel_notes.json"), encoding="utf-8"))
+def notes_spec(name: str, fish: str, replaces: str, root: int, scale: str = "minor", **kw) -> dict:
+    """음표 데이터 곡 스펙: 페이즈마다 박자 · 빠르기 · 반복 구간만 (json 에서 그대로). 음은 하나도 만들지 않음."""
+    d = json.load(open(os.path.join(os.path.dirname(PAT), "music", f"{name}_notes.json"), encoding="utf-8"))
     sigs = sorted((s["beat"], s["sig"]) for s in d["time_signatures"])
+    tempos = sorted((t["beat"], t["bpm"]) for t in d.get("tempos", [{"beat": 0, "bpm": d["bpm"]}]))
 
-    def meter(beat):
-        cur = "4/4"
-        for b, sg in sigs:
+    def at(lst, beat, default):
+        cur = default
+        for b, v in lst:
             if beat + 1e-6 >= b:
-                cur = sg
-        return [int(v) for v in cur.split("/")]
+                cur = v
+        return cur
     loops = sorted(d["loops"].values())
-    song = dict(kind="legend", notes="orsiel", replaces="L12", root=60, scale="minor", bpm=d["bpm"], meter=[4, 4], fish="orsiel",
-                reverb=[0.2, 1.2], master={"mid_cut_db": -3.0},
-                phases=[dict(meter=meter(a), loop=[a, b], bright_choir=(k == 3)) for k, (a, b) in enumerate(loops)])
+    phases = []
+    for k, (a, b) in enumerate(loops):
+        ph = dict(meter=[int(v) for v in at(sigs, a, "4/4").split("/")], loop=[a, b])
+        bpm = at(tempos, a, d["bpm"])
+        if bpm != tempos[0][1]:
+            ph["bpm"] = bpm
+        phases.append(ph)
+    return dict(kind="legend", notes=name, replaces=replaces, root=root, scale=scale, bpm=tempos[0][1],
+                meter=[int(v) for v in sigs[0][1].split("/")], fish=fish, reverb=kw.pop("reverb", [0.2, 1.2]),
+                master=kw.pop("master", {"mid_cut_db": -3.0}), phases=phases, **kw)
+
+
+def orsiel_songs() -> dict:
+    song = notes_spec("orsiel", "orsiel", "L12", 60)
+    song["phases"][3]["bright_choir"] = True   # 4페이즈 C장조: 밝은 합창 '아—'
+    for ph in song["phases"][:3]:
+        ph["bright_choir"] = False
     return {"L12-ORSIEL": song}
 
 

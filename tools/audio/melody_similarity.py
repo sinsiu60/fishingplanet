@@ -11,6 +11,7 @@
 
 사용: python tools/audio/melody_similarity.py [--all] [--min 0.2]
       --all  원곡(테마 곡으로 대체된 L01~L12)까지 포함
+      --try 이름:곡ID   게임에 넣기 전 새 음표 데이터(data/music/<이름>_notes.json)로 그 곡을 바꿔 넣고 비교 (여러 번 가능)
 """
 import json
 import os
@@ -43,9 +44,10 @@ def phrases_from_spec(sp: dict) -> list:
 
 def phrases_from_notes(name: str) -> list:
     d = json.load(open(os.path.join(ROOT, "data", "music", f"{name}_notes.json"), encoding="utf-8"))
+    lead = {t for t, lay in d.get("layers", {}).items() if lay == "lead"} or {"horn", "trumpet"}
     top = {}
     for n in d["notes"]:
-        if n["track"] in ("horn", "trumpet"):
+        if n["track"] in lead:
             k = round(n["start"], 3)
             if k not in top or n["pitch"] > top[k][2]:
                 top[k] = (n["start"], n["dur"], n["pitch"])
@@ -97,8 +99,15 @@ def main(argv) -> int:
     replaced = {v["replaces"] for v in songs.values() if v.get("replaces")}
     if "--all" not in argv:
         songs = {k: v for k, v in songs.items() if k not in replaced}
+    trial = {}
+    for i, a in enumerate(argv):
+        if a == "--try":
+            nm, sid = argv[i + 1].split(":")
+            trial[sid] = nm
     g = {}
     for sid, sp in sorted(songs.items()):
+        if sid in trial:
+            sp = dict(sp, notes=trial[sid])
         ph = phrases_from_notes(sp["notes"]) if sp.get("notes") else phrases_from_spec(sp)
         g[sid] = grams(ph)
     print(f"곡 {len(g)}개 · 음 간격 4개 묶음 · 공통 동기 제외 · 기준 {lim:.0%}")
