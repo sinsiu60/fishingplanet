@@ -427,6 +427,39 @@
   },
   "tp": -2.63
  },
+ "L07-CELTIC": {
+  "files": [
+   "L07-CELTIC_1_base.ogg",
+   "L07-CELTIC_1_lead.ogg",
+   "L07-CELTIC_1_lead_oct.ogg",
+   "L07-CELTIC_1_perc.ogg",
+   "L07-CELTIC_1_perc_crisis.ogg",
+   "L07-CELTIC_1_riser.ogg",
+   "L07-CELTIC_2_base.ogg",
+   "L07-CELTIC_2_lead.ogg",
+   "L07-CELTIC_2_lead_oct.ogg",
+   "L07-CELTIC_2_perc.ogg",
+   "L07-CELTIC_2_perc_crisis.ogg",
+   "L07-CELTIC_2_riser.ogg",
+   "L07-CELTIC_3_base.ogg",
+   "L07-CELTIC_3_choir.ogg",
+   "L07-CELTIC_3_lead.ogg",
+   "L07-CELTIC_3_lead_oct.ogg",
+   "L07-CELTIC_3_perc.ogg",
+   "L07-CELTIC_3_perc_crisis.ogg",
+   "L07-CELTIC_fail.ogg",
+   "L07-CELTIC_intro.ogg"
+  ],
+  "hash": "8ff6e1858dd51884",
+  "lufs": -14.0,
+  "phases": {
+   "1": -14.87,
+   "2": -13.95,
+   "3": -13.44,
+   "intro": -16.51
+  },
+  "tp": -2.41
+ },
  "L08": {
   "files": [
    "L08_1_base.ogg",

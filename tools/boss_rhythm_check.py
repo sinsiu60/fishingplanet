@@ -90,6 +90,9 @@ def measure(sid: str, spec: dict, mcfg: dict) -> dict:
     if spec.get("epic"):
         from src.audio import boss_epic
         cls = boss_epic.EpicSong
+    if spec.get("celtic"):
+        from src.audio import boss_celtic
+        cls = boss_celtic.CelticSong
     D = dry_class(cls)
     s = D(sid, spec, mcfg)
     # 1페이즈만: 층 이름을 바꿔 가며 기록 (stems 를 그대로 돌리되 1페이즈 기록만 씀)

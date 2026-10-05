@@ -940,6 +940,61 @@ def epic_songs() -> dict:
     return {"L06-EPIC": song}
 
 
+# ───────────────────────── 켈틱: 갈대왕 실바 (BOSS_BGM.md 엘드라시온 L07, DESIGN.md 43-22) ─────────────────────────
+# D 도리안 · 1·2페이즈 6/8 (점4분 = 100, 엔진 150) → 3페이즈 4/4 · 150. src/audio/boss_celtic.py. 오케스트라 L07 은 남겨 둠.
+# 6/8 선율: 박 = 4분 단위, 한 마디 = 3박 (점4분 = 1.5). 주인의 동기는 점4분 · 점4분 · 점2분 (1:1:2).
+CE_A = [[0, 0, 1, 1.5], [0, 1.5, 5, 1.5], [1, 0, 4, 3],                                  # 주인의 동기 (6/8)
+        [2, 0, 5, .5], [2, .5, 6, .5], [2, 1, 5, .5], [2, 1.5, 4, .5], [2, 2, 3, .5], [2, 2.5, 2, .5],
+        [3, 0, 1, 1], [3, 1, 3, .5], [3, 1.5, 5, 1.5],
+        [4, 0, 8, 1.5], [4, 1.5, 7, .5], [4, 2, 6, .5], [4, 2.5, 5, .5],
+        [5, 0, 6, .5], [5, .5, 7, .5], [5, 1, 8, .5], [5, 1.5, 9, 1], [5, 2.5, 8, .5],
+        [6, 0, 7, .5], [6, .5, 6, .5], [6, 1, 5, .5], [6, 1.5, 4, .5], [6, 2, 5, .5], [6, 2.5, 7, .5],
+        [7, 0, 8, 1.5], [7, 1.5, 5, 1.5]]
+CE_B = [[8, 0, 8, 1.5], [8, 1.5, 12, 1.5], [9, 0, 11, 3],                                # 동기 한 옥타브 위
+        [10, 0, 12, .5], [10, .5, 13, .5], [10, 1, 12, .5], [10, 1.5, 11, .5], [10, 2, 10, .5], [10, 2.5, 9, .5],
+        [11, 0, 8, 1], [11, 1, 9, .5], [11, 1.5, 10, 1.5],
+        [12, 0, 9, .5], [12, .5, 8, .5], [12, 1, 7, .5], [12, 1.5, 6, .5], [12, 2, 7, .5], [12, 2.5, 8, .5],
+        [13, 0, 9, 1.5], [13, 1.5, 5, 1.5],
+        [14, 0, 6, .5], [14, .5, 5, .5], [14, 1, 4, .5], [14, 1.5, 3, .5], [14, 2, 4, .5], [14, 2.5, 2, .5],
+        [15, 0, 1, 3]]
+CE_C = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                        # 4/4 (3페이즈)
+        [1, 0, 5, .5], [1, .5, 6, .5], [1, 1, 5, .5], [1, 1.5, 4, .5], [1, 2, 3, .5], [1, 2.5, 2, .5], [1, 3, 1, 1],
+        [2, 0, 3, 1], [2, 1, 4, .5], [2, 1.5, 5, .5], [2, 2, 6, 1], [2, 3, 5, 1],
+        [3, 0, 4, .5], [3, .5, 3, .5], [3, 1, 2, 1], [3, 2, 0, 1], [3, 3, 2, 1],
+        [4, 0, 8, 1], [4, 1, 12, 1], [4, 2, 11, 2],
+        [5, 0, 12, .5], [5, .5, 13, .5], [5, 1, 12, .5], [5, 1.5, 11, .5], [5, 2, 10, 1], [5, 3, 9, 1],
+        [6, 0, 10, .5], [6, .5, 9, .5], [6, 1, 8, 1], [6, 2, 7, 1], [6, 3, 9, 1],
+        [7, 0, 8, 3], [7, 3, 7, 1]]
+
+
+def celtic_songs() -> dict:
+    six = CE_A + CE_B
+    four = CE_C + [[b + 8, at, d, ln] for b, at, d, ln in CE_C[:-2]] + [[15, 0, 8, 4]]
+    third = [[b, at, d + 2 if isinstance(d, int) else d, ln] for b, at, d, ln in six]   # 휘슬 받침 (3도 위)
+    bod6 = "X.xx.xX.xx.x"      # 보드란 6/8: 점4분 강박 + 막대 양끝 셋잇단 느낌
+    rim6 = "...x.....x.."
+    ch6 = [1, 7, 1, 4, 1, 7, 3, 5, 1, 7, 1, 4, 3, 4, 5, 1]
+    song = dict(kind="legend", celtic=True, replaces="L07", root=62, scale="dorian", bpm=150, meter=[6, 8], fish="silva",
+                reverb=[0.15, 1.1], master={"mid_cut_db": -3.0},
+                phases=[dict(chords=ch6,
+                             base=[part("bouzouki", "strum", 0.32), part("bass", "bass", 0.5, pattern="x.....x.....")],
+                             perc=dict(pattern=dict(bod=bod6, rim=rim6), crisis=dict(bod="XxxXxxXxxXxx", bodp="..x..x..x..x", big="x.....x.....")),
+                             lead=[lead("whistle", six, 0.5, 1)], choir=[]),
+                        dict(chords=[1, 7, 1, 4, 1, 7, 4, 5, 1, 7, 3, 4, 1, 4, 5, 1],
+                             base=[part("drone", "drone", 0.22), part("fiddle", "reel", 0.16), part("bouzouki", "strum", 0.26),
+                                   part("bass", "bass", 0.5, pattern="x.....x.....")],
+                             perc=dict(pattern=dict(bod=bod6, rim=rim6, bodp="..x.....x..."), crisis=dict(bod="XxxXxxXxxXxx", bodp="..x..x..x..x", big="x.....x.....")),
+                             lead=[lead("fiddle", six, 0.5, 0), lead("whistle", third, 0.22, 1, pan=0.25)], choir=[]),
+                        dict(chords=[1, 7, 3, 4, 1, 7, 4, 5, 1, 7, 3, 4, 3, 4, 5, 1], bpm=150, meter=[4, 4],
+                             base=[part("drone", "drone", 0.24), part("fiddle", "reel", 0.13), part("bouzouki", "strum", 0.24),
+                                   part("bass", "bass", 0.5, pattern="x.......x.......")],
+                             perc=dict(pattern=dict(big="X.......x.......", bod="x.xxx.xxx.xxx.xx", rim="....x.......x..."),
+                                       crisis=dict(big="X...x...X...x...", bod="xxxxxxxxxxxxxxxx", bodp="..x...x...x...x.")),
+                             lead=[lead("chanter", four, 0.55, 0), lead("whistle", four, 0.36, 1, pan=0.2)],
+                             choir=[part("chant", "chant_hold", 0.55)])])
+    return {"L07-CELTIC": song}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -954,6 +1009,7 @@ def main(argv) -> int:
     songs.update(sangun_songs())
     songs.update(organ_songs())
     songs.update(epic_songs())
+    songs.update(celtic_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):
