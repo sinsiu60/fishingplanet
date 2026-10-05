@@ -160,7 +160,7 @@ Mystical epic battle at a sacred moonlit waterfall. Thundering taiko and buk dru
 곡 하나에 "고요한 등장 → 본격 전투 → 절정" 흐름이 들어가도록 구조를 적어두었다
 (게임은 곡을 처음부터 반복하므로, 등장 부분이 짧은 버전을 고르면 좋다).
 
-### `legend_golden_carp` — 황금잉어 '누렁이' (저수지)
+### `legend_golden_carp` — 황금잉어 '여우비' (저수지)
 > 비 오는 저녁, 황금 떡밥에만 반응. 좌우로 휘젓고, 방향을 두 번씩 바꾸고, **지친 척을 한다** — 장난꾸러기 보스.
 
 **Style**
@@ -169,7 +169,7 @@ Mischievous majestic boss theme for a legendary golden carp, rainy evening at a 
 ```
 **Exclude** `horror, dark ambient, EDM, metal`
 
-### `legend_tiger_mandarin` — 산신 쏘가리 '범' (계곡)
+### `legend_tiger_mandarin` — 산신 쏘가리 '산군' (계곡)
 > 폭풍 치는 밤 계곡의 호랑이 무늬 쏘가리. 산신령. 바위에서 바위로 숨고 도주하자마자 뛰어오른다.
 
 **Style**
@@ -196,7 +196,7 @@ Heroic epic orchestral duel at sea, an old fisherman versus the king of the ocea
 ```
 **Exclude** `EDM, rock drum kit, pop, lo-fi`
 
-### `legend_coelacanth` — 실러캔스 '고대' (심해)
+### `legend_coelacanth` — 실러캔스 '태고' (심해)
 > 심연에서 올라온 살아있는 화석. **2페이즈엔 그림자·기포·판정 원이 사라져 소리로만 읽어야 한다** → 이 곡은 특히 비어 있어야 한다.
 
 **Style**
