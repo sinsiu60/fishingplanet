@@ -912,6 +912,44 @@
    "peak_db": -12.0,
    "rms_db": -21.4,
    "markers": {}
+  },
+  "legend_catch_full_L11-NORDIC": {
+   "len": 5.5,
+   "peak_db": -2.0,
+   "rms_db": -14.7,
+   "markers": {
+    "hit": 0.0,
+    "rise": 0.3,
+    "scales": 0.8,
+    "climax": 1.4,
+    "card": 1.9,
+    "record": 2.6,
+    "rewards": 3.2,
+    "afterglow": 3.5,
+    "wait": 4.6
+   }
+  },
+  "legend_catch_short_L11-NORDIC": {
+   "len": 3.0,
+   "peak_db": -2.0,
+   "rms_db": -11.6,
+   "markers": {
+    "hit": 0.0,
+    "rise": 0.15,
+    "scales": 0.4,
+    "climax": 0.7,
+    "card": 1.0,
+    "record": 1.4,
+    "rewards": 1.7,
+    "afterglow": 1.9,
+    "wait": 2.2
+   }
+  },
+  "legend_catch_loop_L11-NORDIC": {
+   "len": 4.0,
+   "peak_db": -12.0,
+   "rms_db": -21.1,
+   "markers": {}
   }
  }
 }

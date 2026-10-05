@@ -687,6 +687,39 @@
   },
   "tp": -2.24
  },
+ "L11-NORDIC": {
+  "files": [
+   "L11-NORDIC_1_base.ogg",
+   "L11-NORDIC_1_lead.ogg",
+   "L11-NORDIC_1_lead_oct.ogg",
+   "L11-NORDIC_1_perc.ogg",
+   "L11-NORDIC_1_perc_crisis.ogg",
+   "L11-NORDIC_1_riser.ogg",
+   "L11-NORDIC_2_base.ogg",
+   "L11-NORDIC_2_lead.ogg",
+   "L11-NORDIC_2_lead_oct.ogg",
+   "L11-NORDIC_2_perc.ogg",
+   "L11-NORDIC_2_perc_crisis.ogg",
+   "L11-NORDIC_2_riser.ogg",
+   "L11-NORDIC_3_base.ogg",
+   "L11-NORDIC_3_choir.ogg",
+   "L11-NORDIC_3_lead.ogg",
+   "L11-NORDIC_3_lead_oct.ogg",
+   "L11-NORDIC_3_perc.ogg",
+   "L11-NORDIC_3_perc_crisis.ogg",
+   "L11-NORDIC_fail.ogg",
+   "L11-NORDIC_intro.ogg"
+  ],
+  "hash": "f9f5198d8eb13e29",
+  "lufs": -14.0,
+  "phases": {
+   "1": -14.08,
+   "2": -15.35,
+   "3": -12.79,
+   "intro": -18.74
+  },
+  "tp": -2.43
+ },
  "L12": {
   "files": [
    "L12_1_base.ogg",

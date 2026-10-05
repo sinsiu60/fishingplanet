@@ -1125,6 +1125,48 @@ def flamenco_songs() -> dict:
     return {"L10-FLAMENCO": song}
 
 
+# ───────────────────────── 노르딕: 극광어 보레알리스 (BOSS_BGM.md 엘드라시온 L11, DESIGN.md 43-26) ─────────────────────────
+# B단조 · 6/8 점4분 = 96 (엔진 144), src/audio/boss_nordic.py. 오케스트라 L11 은 남겨 둠. 6/8 선율: 한 마디 3박, 동기는 점4분 · 점4분 · 점2분.
+NO_A = [[0, 0, 1, 1.5], [0, 1.5, 5, 1.5], [1, 0, 4, 3],                                  # 주인의 동기 B→F#→E
+        [2, 0, 3, 1], [2, 1, 4, .5], [2, 1.5, 5, 1], [2, 2.5, 6, .5],
+        [3, 0, 5, 1.5], [3, 1.5, 3, 1], [3, 2.5, 2, .5],
+        [4, 0, 1, .5], [4, .5, 2, .5], [4, 1, 3, .5], [4, 1.5, 5, 1.5],
+        [5, 0, 8, 1], [5, 1, 7, .5], [5, 1.5, 6, 1], [5, 2.5, 5, .5],
+        [6, 0, 4, 1], [6, 1, 3, .5], [6, 1.5, 2, 1], [6, 2.5, 0, .5],
+        [7, 0, 1, 3],
+        [8, 0, 8, 1.5], [8, 1.5, 12, 1.5], [9, 0, 11, 3],                              # 동기 한 옥타브 위
+        [10, 0, 10, 1], [10, 1, 11, .5], [10, 1.5, 12, 1], [10, 2.5, 13, .5],
+        [11, 0, 12, 1.5], [11, 1.5, 10, 1], [11, 2.5, 9, .5],
+        [12, 0, 8, .5], [12, .5, 9, .5], [12, 1, 10, .5], [12, 1.5, 12, 1.5],
+        [13, 0, 13, 1], [13, 1, 12, .5], [13, 1.5, 11, 1], [13, 2.5, 10, .5],
+        [14, 0, 9, 1], [14, 1, 8, .5], [14, 1.5, 7, 1], [14, 2.5, "#7", .5],
+        [15, 0, 8, 3]]
+
+
+def nordic_songs() -> dict:
+    mel = NO_A
+    frame = "X.xx.xX.xx.x"
+    crisis = dict(frame="X.xX.xX.xX.x", big="x.....x.....")
+    song = dict(kind="legend", nordic=True, replaces="L11", root=59, scale="minor", bpm=144, meter=[6, 8], fish="borealis",
+                reverb=[0.18, 1.2], master={"mid_cut_db": -3.0},
+                phases=[dict(chords=[1, 6, 7, 1, 4, 6, 7, 3, 1, 6, 7, 1, 6, 4, "5M", 1],
+                             base=[part("celesta", "ice_arp", 0.24, oct=1, every=1), part("drone", "low_drone", 0.3), part("bass", "bass", 0.45, pattern="x.....x.....")],
+                             perc=dict(pattern=dict(frame=frame, rim="...x.....x.."), crisis=crisis),
+                             lead=[lead("hardanger", mel, 0.55, 0)], choir=[]),
+                        dict(chords=[1, 7, 6, 7, 1, 4, 6, 7, 1, 7, 6, 7, 4, 6, "5M", 1], mid_cut_extra=-5.0,
+                             base=[part("fiddle", "reel", 0.12), part("drone", "low_drone", 0.32), part("celesta", "ice_arp", 0.16, oct=1),
+                                   part("bass", "bass", 0.45, pattern="x.....x.....")],
+                             perc=dict(pattern=dict(frame="X..x..X..xx.", rim="...x.....x.."), crisis=crisis),
+                             lead=[lead("nyckel", mel, 0.55, 0)], choir=[]),
+                        dict(chords=[1, 6, 3, 7, 1, 6, 4, "5M", 1, 6, 3, 7, 6, 4, "5M", 1],
+                             base=[part("fiddle", "reel", 0.1), part("drone", "low_drone", 0.3), part("celesta", "ice_arp", 0.2, oct=1),
+                                   part("bass", "bass", 0.45, pattern="x.....x.....")],
+                             perc=dict(pattern=dict(frame="X..x..X..xx.", big="x.....x.....", rim="...x.....x.."), crisis=crisis),
+                             lead=[lead("hardanger", mel, 0.4, 0), lead("nyckel", mel, 0.3, 0, pan=0.25)],
+                             choir=[part("chant", "chant_rhythm", 0.8)])])
+    return {"L11-NORDIC": song}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -1143,6 +1185,7 @@ def main(argv) -> int:
     songs.update(trance_songs())
     songs.update(baroque_songs())
     songs.update(flamenco_songs())
+    songs.update(nordic_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):

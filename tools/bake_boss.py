@@ -61,6 +61,9 @@ def song_hash(spec: dict, master: dict) -> str:
     if spec.get("flamenco"):  # 플라멩코 메탈 곡은 boss_flamenco.py 도 (DESIGN.md 43-25) — 기타·외침·도우미를 다른 테마 모듈에서
         for f in ("boss_flamenco.py", "boss_rock.py", "boss_sangun.py", "boss_muhyeop.py"):
             src += open(os.path.join(ROOT, "src", "audio", f), "rb").read().replace(b"\r\n", b"\n")
+    if spec.get("nordic"):   # 노르딕 곡은 boss_nordic.py 도 (DESIGN.md 43-26) — 켈틱 연주법·성가·도우미를 다른 모듈에서
+        for f in ("boss_nordic.py", "boss_celtic.py", "boss_organ.py", "boss_muhyeop.py"):
+            src += open(os.path.join(ROOT, "src", "audio", f), "rb").read().replace(b"\r\n", b"\n")
     if spec.get("rock"):     # 락 곡은 boss_rock.py 도 (DESIGN.md 43-14)
         src += open(os.path.join(ROOT, "src", "audio", "boss_rock.py"), "rb").read().replace(b"\r\n", b"\n")
     return hashlib.sha1(src + json.dumps([spec, master], sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
@@ -148,6 +151,8 @@ def main(argv: list[str]) -> int:
             from src.audio.boss_baroque import BaroqueSong as cls
         if spec.get("flamenco"):
             from src.audio.boss_flamenco import FlamencoSong as cls
+        if spec.get("nordic"):
+            from src.audio.boss_nordic import NordicSong as cls
         stems, rep = boss_synth.master(cls(sid, spec, mcfg).stems(), len(spec["phases"]), dict(mcfg, **spec.get("master", {})))
         for old in os.listdir(out):
             if old.startswith(sid + "_"):
