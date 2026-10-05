@@ -557,6 +557,39 @@
   },
   "tp": -2.51
  },
+ "L09-BAROQUE": {
+  "files": [
+   "L09-BAROQUE_1_base.ogg",
+   "L09-BAROQUE_1_lead.ogg",
+   "L09-BAROQUE_1_lead_oct.ogg",
+   "L09-BAROQUE_1_perc.ogg",
+   "L09-BAROQUE_1_perc_crisis.ogg",
+   "L09-BAROQUE_1_riser.ogg",
+   "L09-BAROQUE_2_base.ogg",
+   "L09-BAROQUE_2_lead.ogg",
+   "L09-BAROQUE_2_lead_oct.ogg",
+   "L09-BAROQUE_2_perc.ogg",
+   "L09-BAROQUE_2_perc_crisis.ogg",
+   "L09-BAROQUE_2_riser.ogg",
+   "L09-BAROQUE_3_base.ogg",
+   "L09-BAROQUE_3_choir.ogg",
+   "L09-BAROQUE_3_lead.ogg",
+   "L09-BAROQUE_3_lead_oct.ogg",
+   "L09-BAROQUE_3_perc.ogg",
+   "L09-BAROQUE_3_perc_crisis.ogg",
+   "L09-BAROQUE_fail.ogg",
+   "L09-BAROQUE_intro.ogg"
+  ],
+  "hash": "6990b107e5c57ccb",
+  "lufs": -14.0,
+  "phases": {
+   "1": -14.14,
+   "2": -14.64,
+   "3": -13.19,
+   "intro": -18.67
+  },
+  "tp": -2.3
+ },
  "L10": {
   "files": [
    "L10_1_base.ogg",

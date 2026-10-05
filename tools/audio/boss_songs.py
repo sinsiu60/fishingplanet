@@ -1036,6 +1036,44 @@ def trance_songs() -> dict:
     return {"L08-TRANCE": song}
 
 
+# ───────────────────────── 바로크: 천공어 에어리스 (BOSS_BGM.md 엘드라시온 L09, DESIGN.md 43-24) ─────────────────────────
+# E단조 172 · 4/4, src/audio/boss_baroque.py. 오케스트라 L09 은 남겨 둠. 화성은 5도권 진행, 선율은 화음음을 도는 바로크식 반복 음형.
+BQ_A = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                      # 주인의 동기 (Em)
+        [1, 0, 4, .5], [1, .5, 3, .5], [1, 1, 4, .5], [1, 1.5, 6, .5], [1, 2, 8, 1], [1, 3, 6, 1],          # Am
+        [2, 0, 7, .5], [2, .5, 6, .5], [2, 1, 7, .5], [2, 1.5, 9, .5], [2, 2, 9, 1], [2, 3, 7, 1],          # D
+        [3, 0, 8, .5], [3, .5, 7, .5], [3, 1, 8, .5], [3, 1.5, 10, .5], [3, 2, 12, 1], [3, 3, 10, 1],       # G
+        [4, 0, 8, 1], [4, 1, 12, 1], [4, 2, 11, 2],                                    # 동기 한 옥타브 위 (C)
+        [5, 0, 9, .5], [5, .5, 8, .5], [5, 1, 9, .5], [5, 1.5, 11, .5], [5, 2, 13, 1], [5, 3, 11, 1],       # F#dim
+        [6, 0, 5, .5], [6, .5, "#7", .5], [6, 1, 9, .5], [6, 1.5, 12, .5], [6, 2, "#7", 1], [6, 3, 5, 1],   # B
+        [7, 0, 8, 2], [7, 2, 5, 1], [7, 3, "#7", 1]]                                   # Em
+
+
+def baroque_songs() -> dict:
+    mel = BQ_A + [[b + 8, at, d, ln] for b, at, d, ln in BQ_A if b < 7] + [[15, 0, 8, 1.75], [15, 2, 5, 1], [15, 3, 1, 1]]
+    circle = [1, 4, 7, 3, 6, 2, "5M", 1]
+    timp = "x...x...x...x..."
+    crisis = dict(timp="xxxxxxxxxxxxxxxx", big="x.......x.......")
+    song = dict(kind="legend", baroque=True, replaces="L09", root=64, scale="minor", bpm=172, meter=[4, 4], fish="aeris",
+                reverb=[0.2, 1.2], master={"mid_cut_db": -3.0},
+                phases=[dict(chords=circle + [6, 4, 7, 3, 6, 2, "5M", 1],
+                             base=[part("harpsichord", "toccata", 0.5), part("bass", "continuo", 0.45), part("strings", "hold", 0.08)],
+                             perc=dict(pattern=dict(timp=timp, snare="....x.......x..."), crisis=crisis),
+                             lead=[lead("harpsichord", mel, 1.1, 1)], choir=[]),
+                        dict(chords=[1, "5M", 6, 3, 4, 1, "5M", "5M"] + circle,
+                             base=[part("harpsichord", "toccata", 0.17), part("spiccato", "ostinato", 0.22), part("strings", "hold", 0.12),
+                                   part("bass", "continuo", 0.45)],
+                             perc=dict(pattern=dict(timp=timp, snare="....x.......x...", big="x..............."), crisis=crisis),
+                             lead=[lead("trumpet", mel, 0.2, 1), lead("strings", mel, 0.3, 0, pan=-0.2)], choir=[]),
+                        dict(chords=circle + [6, 4, 1, 6, 2, "5M", "5M", 1],
+                             base=[part("organ_full", "organ_chords", 0.13), part("organ", "pedal", 0.42), part("harpsichord", "toccata", 0.15),
+                                   part("spiccato", "ostinato", 0.16), part("bass", "continuo", 0.4)],
+                             perc=dict(pattern=dict(timp="x.x.x.x.x.x.x.x.", snare="....x.......x...", big="x.......x.......",
+                                                    crash=["x...............", "", "", ""]), crisis=crisis),
+                             lead=[lead("trumpet", mel, 0.23, 1), lead("organ_full", mel, 0.15, 0, pan=-0.2)],
+                             choir=[part("choir_a", "hold", 0.42)])])
+    return {"L09-BAROQUE": song}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -1052,6 +1090,7 @@ def main(argv) -> int:
     songs.update(epic_songs())
     songs.update(celtic_songs())
     songs.update(trance_songs())
+    songs.update(baroque_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):
