@@ -18,7 +18,7 @@ from src.audio.boss_synth import (DRUM_LEN, RATE, Song, _bw_filter, _t, d_crash,
                                   degree_to_midi, hz, noise, peaking_eq)
 
 DRUM_PAN = {"hat": 0.3, "ohat": 0.3, "ride": -0.35, "crash": 0.25}
-KIT_GAIN = {"kick": 0.68, "snare": 0.66, "hat": 0.24, "ohat": 0.22, "ride": 0.27, "crash": 0.42, "tom": 0.6}
+KIT_GAIN = {"kick": 0.46, "snare": 0.46, "hat": 0.15, "ohat": 0.14, "ride": 0.17, "crash": 0.28, "tom": 0.42}   # 드럼은 기타 뒤 (주인공 = 일렉 기타)
 # 박 단계 0~2 (1 → 3페이즈). crash = 몇 마디마다 첫 칸 크래시
 KIT = [
     dict(kick="x..x..x.x..x..x.", snare="....x.......x...", hat="x.x.x.x.x.x.x.x.", crash=4),

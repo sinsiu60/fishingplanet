@@ -640,7 +640,7 @@ def solo(b0: int, b1: int) -> list:
 
 
 def rock_songs() -> dict:
-    base = [part("gtr", "riff", 1.3, riff=RIFF), part("bass_gtr", "bassriff", 0.5, riff=RIFF)]
+    base = [part("gtr", "riff", 1.8, riff=RIFF), part("bass_gtr", "bassriff", 0.4, riff=RIFF)]
     licks = []
     for i, b in enumerate((1, 3, 5, 7, 9, 11)):
         licks += mel(LICKS[i % len(LICKS)].format(b=b))
@@ -651,11 +651,11 @@ def rock_songs() -> dict:
     rock = dict(kind="legend", rock=True, replaces="L03", root=52, scale="minor", bpm=168, meter=[4, 4], fish="silver_bass", reverb=[0.1, 0.7],
                 master={"mid_cut_db": -3.0},
                 phases=[dict(chords=[1, 1, 6, 7, 1, 1, 6, 7, 1, 1, 4, 4, 6, 7, 1, 1], base=base,
-                             lead=[lead("gtr_lead", p1_lead, 0.8, 1)], choir=[]),
+                             lead=[lead("gtr_lead", p1_lead, 1.3, 1)], choir=[]),
                         dict(chords=[1, 1, 6, 6, 3, 3, 7, 7, 1, 1, 6, 6, 4, 4, 5, 5], base=base,
-                             lead=[lead("gtr_lead", ab("L03"), 1.25, 1)], choir=[]),
+                             lead=[lead("gtr_lead", ab("L03"), 2.0, 1)], choir=[]),
                         dict(chords=[1, 1, 6, 7, 1, 1, 6, 7, 4, 4, 1, 1, 6, 7, 5, 5], base=base,
-                             lead=[lead("gtr_lead", p3, 0.8, 1)], choir=[lead("gtr_harm", harm, 0.5, 1, pan=0.45)])])
+                             lead=[lead("gtr_lead", p3, 1.3, 1)], choir=[lead("gtr_harm", harm, 0.8, 1, pan=0.45)])])
     return {"L03-ROCK": rock}
 
 
