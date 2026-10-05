@@ -608,6 +608,44 @@
    "peak_db": -12.0,
    "rms_db": -24.7,
    "markers": {}
+  },
+  "legend_catch_full_L01-JAZZ": {
+   "len": 5.5,
+   "peak_db": -4.0,
+   "rms_db": -16.9,
+   "markers": {
+    "hit": 0.0,
+    "rise": 0.3,
+    "scales": 0.8,
+    "climax": 1.4,
+    "card": 1.9,
+    "record": 2.6,
+    "rewards": 3.2,
+    "afterglow": 3.5,
+    "wait": 4.6
+   }
+  },
+  "legend_catch_short_L01-JAZZ": {
+   "len": 3.0,
+   "peak_db": -2.4,
+   "rms_db": -15.8,
+   "markers": {
+    "hit": 0.0,
+    "rise": 0.15,
+    "scales": 0.4,
+    "climax": 0.7,
+    "card": 1.0,
+    "record": 1.4,
+    "rewards": 1.7,
+    "afterglow": 1.9,
+    "wait": 2.2
+   }
+  },
+  "legend_catch_loop_L01-JAZZ": {
+   "len": 4.0,
+   "peak_db": -12.0,
+   "rms_db": -25.5,
+   "markers": {}
   }
  }
 }

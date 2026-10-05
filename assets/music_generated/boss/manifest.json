@@ -31,6 +31,40 @@
   },
   "tp": -2.94
  },
+ "L01-JAZZ": {
+  "files": [
+   "L01-JAZZ_1_base.ogg",
+   "L01-JAZZ_1_lead.ogg",
+   "L01-JAZZ_1_lead_oct.ogg",
+   "L01-JAZZ_1_perc.ogg",
+   "L01-JAZZ_1_perc_crisis.ogg",
+   "L01-JAZZ_1_riser.ogg",
+   "L01-JAZZ_2_base.ogg",
+   "L01-JAZZ_2_choir.ogg",
+   "L01-JAZZ_2_lead.ogg",
+   "L01-JAZZ_2_lead_oct.ogg",
+   "L01-JAZZ_2_perc.ogg",
+   "L01-JAZZ_2_perc_crisis.ogg",
+   "L01-JAZZ_2_riser.ogg",
+   "L01-JAZZ_3_base.ogg",
+   "L01-JAZZ_3_choir.ogg",
+   "L01-JAZZ_3_lead.ogg",
+   "L01-JAZZ_3_lead_oct.ogg",
+   "L01-JAZZ_3_perc.ogg",
+   "L01-JAZZ_3_perc_crisis.ogg",
+   "L01-JAZZ_fail.ogg",
+   "L01-JAZZ_intro.ogg"
+  ],
+  "hash": "56400bbc6ed82daf",
+  "lufs": -14.0,
+  "phases": {
+   "1": -15.88,
+   "2": -14.81,
+   "3": -12.08,
+   "intro": -15.82
+  },
+  "tp": -2.48
+ },
  "L02": {
   "files": [
    "L02_1_base.ogg",

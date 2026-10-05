@@ -721,6 +721,56 @@ def muhyeop_songs() -> dict:
     return {"L04-MUHYEOP": song}
 
 
+# ───────────────────────── 재즈 빅밴드: 황금잉어 '여우비' (SHARMION_THEMES.md 1장, DESIGN.md 43-16) ─────────────────────────
+# D단조 176 스윙, src/audio/boss_jazz.py. 선율은 곧은 박으로 적고 뒷박 8분은 재생할 때 스윙(2:1)으로.
+JZ_A = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                   # 주인의 동기 (약음기 트럼펫)
+        [1, 0, 3, .5], [1, .5, 4, .5], [1, 1, 5, .5], [1, 1.5, 7, .5], [1, 2, 8, 1], [1, 3, 7, .5], [1, 3.5, 5, .5],
+        [2, 0, 4, 1.5], [2, 1.5, 3, .5], [2, 2, 1, 2],
+        [3, .5, 5, .5], [3, 1, 7, .5], [3, 1.5, 8, .5], [3, 2, 10, 1], [3, 3, 8, 1],
+        [4, 0, 9, .5], [4, .5, 8, .5], [4, 1, 7, .5], [4, 1.5, 5, .5], [4, 2, 4, 1], [4, 3, 3, 1],
+        [5, 0, 2, 1.5], [5, 1.5, 3, .5], [5, 2, 4, 2],
+        [6, 0, 5, .5], [6, .5, 6, .5], [6, 1, 7, .5], [6, 1.5, 8, .5], [6, 2, 9, 1], [6, 3, 8, 1],
+        [7, 0, 5, 3]]
+JZ_B = [[8, 0, 8, 1], [8, 1, 12, 1], [8, 2, 11, 2],                                   # 동기 한 옥타브 위
+        [9, 0, 10, .5], [9, .5, 9, .5], [9, 1, 8, .5], [9, 1.5, 7, .5], [9, 2, 8, 1], [9, 3, 10, 1],
+        [10, 0, 11, 1.5], [10, 1.5, 10, .5], [10, 2, 8, 2],
+        [11, .5, 7, .5], [11, 1, 8, .5], [11, 1.5, 10, .5], [11, 2, 12, 2],
+        [12, 0, 11, .5], [12, .5, 10, .5], [12, 1, 8, .5], [12, 1.5, 7, .5], [12, 2, 5, 1], [12, 3, 4, 1],
+        [13, 0, 3, .5], [13, .5, 4, .5], [13, 1, 5, 1], [13, 2, 7, 2],
+        [14, 0, 5, .5], [14, .5, 4, .5], [14, 1, 3, .5], [14, 1.5, 2, .5], [14, 2, "#7", 1], [14, 3, 2, 1],
+        [15, 0, 1, 3]]
+
+
+def jazz_songs() -> dict:
+    mel = JZ_A + JZ_B
+    swap = [[b - 8 if b >= 8 else b + 8, at, d, ln] for b, at, d, ln in mel]          # 2페이즈: 둘째 가락부터
+    tp2 = [n for n in swap if n[1] < 2]                                               # 트럼펫 ↔ 색소폰 2박씩 주고받기
+    sx2 = [[b, at, d, ln] for b, at, d, ln in swap if at >= 2]
+    sx3 = [[b, at, d - 2 if isinstance(d, int) else d, ln] for b, at, d, ln in mel]  # 3페이즈 색소폰 3도 아래
+    ride = "x..x.xx..x.x"
+    p1 = dict(ride=ride, hat="...x.....x..", kick="x.....x.....", comp=1, brush=True, crash=8, fill=True)
+    p2 = dict(ride=ride, hat="...x.....x..", kick="x.....x.....", comp=2, crash=8, fill=True)
+    p3 = dict(ride=ride, hat="...x.....x..", kick="x..x..x..x..", comp=3, crash=4, fill=True)
+    crisis = dict(kick="x..x.xx..x.x")
+    song = dict(kind="legend", jazz=True, replaces="L01", root=62, scale="minor", bpm=176, meter=[4, 4], fish="golden_carp",
+                reverb=[0.14, 0.8], master={"mid_cut_db": -3.0},
+                phases=[dict(chords=[1, 1, 4, 4, 2, "5:7", 1, 1, 6, 6, 2, "5:7", 1, 4, 2, "5:7"],
+                             base=[part("upright", "walk", 0.62), part("piano", "comp", 0.3)],
+                             perc=dict(pattern=p1, crisis=crisis),
+                             lead=[lead("trumpet", mel, 0.55, 1)], choir=[]),
+                        dict(chords=[1, 6, 2, "5:7", 1, 6, 4, "5:7", 3, 6, 2, "5:7", 1, 4, 2, "5:7"],
+                             base=[part("upright", "walk", 0.62, eighth=True), part("piano", "comp", 0.3)],
+                             perc=dict(pattern=p2, crisis=crisis),
+                             lead=[lead("trumpet", tp2, 0.55, 1), lead("sax", sx2, 0.55, 0, pan=0.25)],
+                             choir=[part("trumpet_open", "stabs", 0.4, pats=[[5, 11]], every=2)]),
+                        dict(chords=[1, 6, 2, "5:7", 1, 4, 2, "5:7", 6, 3, 2, "5:7", 1, 4, "5:7", 1], fake_stop=True,
+                             base=[part("upright", "walk", 0.66, eighth=True), part("piano", "comp", 0.32, pats=[[0, 5, 8], [2, 5, 11]])],
+                             perc=dict(pattern=p3, crisis=crisis),
+                             lead=[lead("trumpet_open", mel, 0.5, 1), lead("sax", sx3, 0.38, 1, pan=-0.25)],
+                             choir=[part("trumpet_open", "stabs", 0.5, pats=[[0, 5], [5, 11], [2, 8], [0, 9]], len=1.6)])])
+    return {"L01-JAZZ": song}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -731,6 +781,7 @@ def main(argv) -> int:
     songs.update(phantom_songs())
     songs.update(rock_songs())
     songs.update(muhyeop_songs())
+    songs.update(jazz_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):

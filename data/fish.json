@@ -526,6 +526,7 @@
   {
    "id": "golden_carp",
    "name": "황금잉어 '여우비'",
+   "theme": "yeoubi",
    "spot": "reservoir",
    "times": [
     "evening"

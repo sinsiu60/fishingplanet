@@ -2023,6 +2023,8 @@ class FishingScene(Scene):
         f = self.fight
         if ev == "fake_tired":
             kind, pid = "telegraph", "fake"  # 가짜 지침은 예고 없이 상태가 곧 신호 — 첫 만남 안내만
+            if f is not None and f.fish.get("theme") == "yeoubi" and f.brain.phase >= 2:
+                theme_sfx.play(self.sfx, "yeoubi", "piano", 0.35)   # 여우비 3페이즈: 기존 신호 그대로 + 아주 작은 피아노 '띵—' (능청)
         if kind == "telegraph":
             # 신호 소리·진동은 계열별로 _signal_cue 가 낸다 (31장 C3). 여기선 물고기 몸짓 소리·연출만.
             if pid == "thrash":
@@ -2153,13 +2155,15 @@ class FishingScene(Scene):
         소리 = 오디오 최종 팩 성공음 (grade: small / mid / big — 퍼펙트면 big_pop), 연출은 그 소리의 타격 시점에."""
         mp = self.screen_fx.map(pos)
         if perfect:
-            ilseom = self.fight is not None and self.fight.fish.get("theme") == "ilseom"
+            theme = self.fight.fish.get("theme") if self.fight is not None else None
 
             def fx():
-                if ilseom:   # 일섬: 짧은 '챙!' + 화면 위쪽 절반 사선 베기 선 (화면 효과 줄이기면 선은 끔)
+                if theme == "ilseom":   # 일섬: 짧은 '챙!' + 화면 위쪽 절반 사선 베기 선 (화면 효과 줄이기면 선은 끔)
                     theme_sfx.play(self.sfx, "ilseom", "chaeng", 0.7)
                     if not self.settings.get("reduce_fx"):
                         self.ilseom_fx.slash()
+                elif theme == "yeoubi":   # 여우비: 짧은 금화 '띵'
+                    theme_sfx.play(self.sfx, "yeoubi", "coin", 0.55)
                 self.sparkles.burst(*pos, count=40, speed=1.7)
                 self.sparkles.burst(*pos, count=16, speed=0.6, ring=False)
                 self.screen_fx.perfect(mp, glow=self._glow_sec())
