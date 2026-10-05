@@ -189,9 +189,9 @@
   {
    "track": "morin",
    "start": 4.0,
-   "dur": 0.2,
-   "pitch": 62,
-   "vel": 84
+   "dur": 1.0,
+   "pitch": 64,
+   "vel": 96
   },
   {
    "track": "morin_low",
@@ -206,13 +206,6 @@
    "dur": 7.84,
    "pitch": 40,
    "vel": 90
-  },
-  {
-   "track": "morin",
-   "start": 4.2,
-   "dur": 0.8,
-   "pitch": 64,
-   "vel": 96
   },
   {
    "track": "hand",
@@ -259,9 +252,9 @@
   {
    "track": "morin",
    "start": 5.0,
-   "dur": 0.2,
-   "pitch": 69,
-   "vel": 84
+   "dur": 1.0,
+   "pitch": 71,
+   "vel": 96
   },
   {
    "track": "morin_low",
@@ -269,13 +262,6 @@
    "dur": 0.7,
    "pitch": 52,
    "vel": 88
-  },
-  {
-   "track": "morin",
-   "start": 5.2,
-   "dur": 0.8,
-   "pitch": 71,
-   "vel": 96
   },
   {
    "track": "hand",
@@ -322,9 +308,9 @@
   {
    "track": "morin",
    "start": 6.0,
-   "dur": 0.2,
-   "pitch": 67,
-   "vel": 84
+   "dur": 2.0,
+   "pitch": 69,
+   "vel": 96
   },
   {
    "track": "morin_low",
@@ -332,13 +318,6 @@
    "dur": 0.7,
    "pitch": 52,
    "vel": 88
-  },
-  {
-   "track": "morin",
-   "start": 6.2,
-   "dur": 1.8,
-   "pitch": 69,
-   "vel": 96
   },
   {
    "track": "hand",
@@ -6482,9 +6461,9 @@
   {
    "track": "morin",
    "start": 100.0,
-   "dur": 0.2,
-   "pitch": 74,
-   "vel": 88
+   "dur": 1.0,
+   "pitch": 76,
+   "vel": 100
   },
   {
    "track": "morin_low",
@@ -6506,13 +6485,6 @@
    "dur": 3.92,
    "pitch": 40,
    "vel": 96
-  },
-  {
-   "track": "morin",
-   "start": 100.2,
-   "dur": 0.8,
-   "pitch": 76,
-   "vel": 100
   },
   {
    "track": "hand",
@@ -6566,9 +6538,9 @@
   {
    "track": "morin",
    "start": 101.0,
-   "dur": 0.2,
-   "pitch": 81,
-   "vel": 88
+   "dur": 1.0,
+   "pitch": 83,
+   "vel": 100
   },
   {
    "track": "morin_low",
@@ -6576,13 +6548,6 @@
    "dur": 0.7,
    "pitch": 52,
    "vel": 92
-  },
-  {
-   "track": "morin",
-   "start": 101.2,
-   "dur": 0.8,
-   "pitch": 83,
-   "vel": 100
   },
   {
    "track": "hand",
@@ -6629,9 +6594,9 @@
   {
    "track": "morin",
    "start": 102.0,
-   "dur": 0.2,
-   "pitch": 79,
-   "vel": 88
+   "dur": 2.0,
+   "pitch": 81,
+   "vel": 100
   },
   {
    "track": "morin_low",
@@ -6639,13 +6604,6 @@
    "dur": 0.7,
    "pitch": 52,
    "vel": 92
-  },
-  {
-   "track": "morin",
-   "start": 102.2,
-   "dur": 1.8,
-   "pitch": 81,
-   "vel": 100
   },
   {
    "track": "hand",
@@ -8596,16 +8554,16 @@
   {
    "track": "horn",
    "start": 132.0,
-   "dur": 0.2,
-   "pitch": 62,
-   "vel": 96
+   "dur": 1.0,
+   "pitch": 64,
+   "vel": 108
   },
   {
    "track": "morin",
    "start": 132.0,
-   "dur": 0.2,
-   "pitch": 50,
-   "vel": 64
+   "dur": 1.0,
+   "pitch": 52,
+   "vel": 76
   },
   {
    "track": "morin_low",
@@ -8627,20 +8585,6 @@
    "dur": 11.76,
    "pitch": 40,
    "vel": 104
-  },
-  {
-   "track": "horn",
-   "start": 132.2,
-   "dur": 0.8,
-   "pitch": 64,
-   "vel": 108
-  },
-  {
-   "track": "morin",
-   "start": 132.2,
-   "dur": 0.8,
-   "pitch": 52,
-   "vel": 76
   },
   {
    "track": "hand",
@@ -8687,9 +8631,9 @@
   {
    "track": "horn",
    "start": 133.0,
-   "dur": 0.2,
-   "pitch": 69,
-   "vel": 96
+   "dur": 1.0,
+   "pitch": 71,
+   "vel": 108
   },
   {
    "track": "low",
@@ -8701,9 +8645,9 @@
   {
    "track": "morin",
    "start": 133.0,
-   "dur": 0.2,
-   "pitch": 57,
-   "vel": 64
+   "dur": 1.0,
+   "pitch": 59,
+   "vel": 76
   },
   {
    "track": "morin_low",
@@ -8711,20 +8655,6 @@
    "dur": 0.7,
    "pitch": 52,
    "vel": 100
-  },
-  {
-   "track": "horn",
-   "start": 133.2,
-   "dur": 0.8,
-   "pitch": 71,
-   "vel": 108
-  },
-  {
-   "track": "morin",
-   "start": 133.2,
-   "dur": 0.8,
-   "pitch": 59,
-   "vel": 76
   },
   {
    "track": "hand",
@@ -8778,16 +8708,16 @@
   {
    "track": "horn",
    "start": 134.0,
-   "dur": 0.2,
-   "pitch": 67,
-   "vel": 96
+   "dur": 2.0,
+   "pitch": 69,
+   "vel": 108
   },
   {
    "track": "morin",
    "start": 134.0,
-   "dur": 0.2,
-   "pitch": 55,
-   "vel": 64
+   "dur": 2.0,
+   "pitch": 57,
+   "vel": 76
   },
   {
    "track": "morin_low",
@@ -8795,20 +8725,6 @@
    "dur": 0.7,
    "pitch": 52,
    "vel": 100
-  },
-  {
-   "track": "horn",
-   "start": 134.2,
-   "dur": 1.8,
-   "pitch": 69,
-   "vel": 108
-  },
-  {
-   "track": "morin",
-   "start": 134.2,
-   "dur": 1.8,
-   "pitch": 57,
-   "vel": 76
   },
   {
    "track": "hand",

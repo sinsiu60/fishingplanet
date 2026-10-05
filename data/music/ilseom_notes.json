@@ -133,9 +133,9 @@
   {
    "track": "daegeum",
    "start": 6.0,
-   "dur": 0.17,
-   "pitch": 77,
-   "vel": 70
+   "dur": 1.5,
+   "pitch": 74,
+   "vel": 82
   },
   {
    "track": "daego",
@@ -180,13 +180,6 @@
    "vel": 100
   },
   {
-   "track": "daegeum",
-   "start": 6.17,
-   "dur": 1.33,
-   "pitch": 74,
-   "vel": 82
-  },
-  {
    "track": "gayageum",
    "start": 6.5,
    "dur": 0.9,
@@ -210,9 +203,9 @@
   {
    "track": "daegeum",
    "start": 7.5,
-   "dur": 0.17,
-   "pitch": 84,
-   "vel": 70
+   "dur": 1.5,
+   "pitch": 81,
+   "vel": 82
   },
   {
    "track": "deok",
@@ -227,13 +220,6 @@
    "dur": 0.9,
    "pitch": 69,
    "vel": 86
-  },
-  {
-   "track": "daegeum",
-   "start": 7.67,
-   "dur": 1.33,
-   "pitch": 81,
-   "vel": 82
   },
   {
    "track": "gayageum",
@@ -266,9 +252,9 @@
   {
    "track": "daegeum",
    "start": 9.0,
-   "dur": 0.17,
-   "pitch": 81,
-   "vel": 70
+   "dur": 3.0,
+   "pitch": 79,
+   "vel": 82
   },
   {
    "track": "deok",
@@ -297,13 +283,6 @@
    "dur": 0.4,
    "pitch": 48,
    "vel": 100
-  },
-  {
-   "track": "daegeum",
-   "start": 9.17,
-   "dur": 2.83,
-   "pitch": 79,
-   "vel": 82
   },
   {
    "track": "gayageum",
@@ -7994,9 +7973,9 @@
   {
    "track": "daegeum2",
    "start": 198.0,
-   "dur": 0.17,
-   "pitch": 65,
-   "vel": 68
+   "dur": 1.0,
+   "pitch": 62,
+   "vel": 80
   },
   {
    "track": "daego",
@@ -8043,21 +8022,7 @@
   {
    "track": "taepyeongso",
    "start": 198.0,
-   "dur": 0.17,
-   "pitch": 77,
-   "vel": 98
-  },
-  {
-   "track": "daegeum2",
-   "start": 198.17,
-   "dur": 0.83,
-   "pitch": 62,
-   "vel": 80
-  },
-  {
-   "track": "taepyeongso",
-   "start": 198.17,
-   "dur": 0.83,
+   "dur": 1.0,
    "pitch": 74,
    "vel": 110
   },
@@ -8092,9 +8057,9 @@
   {
    "track": "daegeum2",
    "start": 199.0,
-   "dur": 0.17,
-   "pitch": 72,
-   "vel": 68
+   "dur": 1.0,
+   "pitch": 69,
+   "vel": 80
   },
   {
    "track": "deok",
@@ -8113,21 +8078,7 @@
   {
    "track": "taepyeongso",
    "start": 199.0,
-   "dur": 0.17,
-   "pitch": 84,
-   "vel": 98
-  },
-  {
-   "track": "daegeum2",
-   "start": 199.17,
-   "dur": 0.83,
-   "pitch": 69,
-   "vel": 80
-  },
-  {
-   "track": "taepyeongso",
-   "start": 199.17,
-   "dur": 0.83,
+   "dur": 1.0,
    "pitch": 81,
    "vel": 110
   },
@@ -8169,9 +8120,9 @@
   {
    "track": "daegeum2",
    "start": 200.0,
-   "dur": 0.17,
-   "pitch": 69,
-   "vel": 68
+   "dur": 2.0,
+   "pitch": 67,
+   "vel": 80
   },
   {
    "track": "daego",
@@ -8211,21 +8162,7 @@
   {
    "track": "taepyeongso",
    "start": 200.0,
-   "dur": 0.17,
-   "pitch": 81,
-   "vel": 98
-  },
-  {
-   "track": "daegeum2",
-   "start": 200.17,
-   "dur": 1.83,
-   "pitch": 67,
-   "vel": 80
-  },
-  {
-   "track": "taepyeongso",
-   "start": 200.17,
-   "dur": 1.83,
+   "dur": 2.0,
    "pitch": 79,
    "vel": 110
   },

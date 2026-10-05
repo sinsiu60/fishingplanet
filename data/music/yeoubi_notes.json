@@ -8223,9 +8223,9 @@
   {
    "track": "trumpet",
    "start": 132.0,
-   "dur": 0.12,
-   "pitch": 73,
-   "vel": 76
+   "dur": 1.0,
+   "pitch": 74,
+   "vel": 88
   },
   {
    "track": "upright",
@@ -8233,13 +8233,6 @@
    "dur": 1.0,
    "pitch": 38,
    "vel": 100
-  },
-  {
-   "track": "trumpet",
-   "start": 132.12,
-   "dur": 0.88,
-   "pitch": 74,
-   "vel": 88
   },
   {
    "track": "hat",
@@ -8272,22 +8265,15 @@
   {
    "track": "trumpet",
    "start": 133.0,
-   "dur": 0.12,
-   "pitch": 80,
-   "vel": 76
+   "dur": 1.0,
+   "pitch": 81,
+   "vel": 88
   },
   {
    "track": "upright",
    "start": 133.0,
    "dur": 1.0,
    "pitch": 45,
-   "vel": 88
-  },
-  {
-   "track": "trumpet",
-   "start": 133.12,
-   "dur": 0.88,
-   "pitch": 81,
    "vel": 88
   },
   {
@@ -8412,9 +8398,9 @@
   {
    "track": "trumpet",
    "start": 134.0,
-   "dur": 0.12,
-   "pitch": 78,
-   "vel": 76
+   "dur": 2.0,
+   "pitch": 79,
+   "vel": 88
   },
   {
    "track": "upright",
@@ -8422,13 +8408,6 @@
    "dur": 1.0,
    "pitch": 53,
    "vel": 86
-  },
-  {
-   "track": "trumpet",
-   "start": 134.12,
-   "dur": 1.88,
-   "pitch": 79,
-   "vel": 88
   },
   {
    "track": "piano",

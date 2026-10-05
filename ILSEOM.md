@@ -46,6 +46,8 @@
 
 ## 3. 전투 음악: L04-MUHYEOP
 
+> **2026-10 교체 (DESIGN.md 43-28)**: 게임의 전투 곡은 새로 작곡한 음표 데이터(`data/music/ilseom_notes.json`, `tools/audio/compose_ilseom.py`)로 바뀜. 아래 표는 처음 설계(악기 · 성격은 그대로 이어짐).
+
 ### 빠르기 · 장단
 
 | 페이즈 | 박자 · 빠르기 | 느낌 |

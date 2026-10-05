@@ -65,7 +65,7 @@ def song_hash(spec: dict, master: dict) -> str:
         for f in ("boss_nordic.py", "boss_celtic.py", "boss_organ.py", "boss_muhyeop.py"):
             src += open(os.path.join(ROOT, "src", "audio", f), "rb").read().replace(b"\r\n", b"\n")
     if spec.get("notes"):    # 음표 데이터 곡은 boss_notes.py 와 그 음표 파일도 (DESIGN.md 43-27) — 북 · 상승음을 다른 모듈에서
-        for f in ("boss_notes.py", "boss_celtic.py", "boss_trance.py", "boss_muhyeop.py"):
+        for f in ("boss_notes.py", "boss_celtic.py", "boss_trance.py", "boss_muhyeop.py", "boss_jazz.py", "boss_sangun.py", "boss_rock.py"):   # 장르 음색 (43-28)
             src += open(os.path.join(ROOT, "src", "audio", f), "rb").read().replace(b"\r\n", b"\n")
         src += open(os.path.join(ROOT, "data", "music", spec["notes"] + "_notes.json"), "rb").read().replace(b"\r\n", b"\n")
     if spec.get("rock"):     # 락 곡은 boss_rock.py 도 (DESIGN.md 43-14)

@@ -600,7 +600,7 @@ def check(songs: dict) -> int:
         if '"#4"' in txt:
             print(sid, "전설에 #4 (환상 동기 재료)"); bad += 1
         motif_ok = any(has_owner_motif(l["notes"]) for p in sp["phases"] for l in p.get("lead", [])) or \
-            (bool(sp.get("notes")) and notes_owner_motif(sp["notes"]))
+            (bool(sp.get("notes")) and notes_owner_motif(sp["notes"], sp["root"]))
         if any(has_nameless_motif(l["notes"]) for p in sp["phases"] for l in p.get("lead", [])):
             print(sid, "전설에 환상의 4음 동기"); bad += 1
         if not motif_ok:
@@ -660,162 +660,21 @@ def rock_songs() -> dict:
     return {"L03-ROCK": rock}
 
 
-# ───────────────────────── 국악 무협: 청새치 '일섬' (ILSEOM.md, DESIGN.md 43-15) ─────────────────────────
-# D 계면조(D·F·G·A·C 중심), 1·2페이즈 12/8 점4분 = 100 (엔진 bpm = 4분 150) → 3페이즈 4/4 168. src/audio/boss_muhyeop.py.
-# 선율 도수는 D단조로 적되 계면조 다섯 음(1·3·4·5·7)만. 12/8 한 마디 = 4분 6박 (점4분 4개).
-IL_P1 = [[0, 0, 1, 1.5], [0, 1.5, 5, 1.5], [0, 3, 4, 3],                       # 주인의 동기 (대금, 점4분·점4분·점2분)
-         [1, 0, 3, 1.5], [1, 1.5, 4, .5], [1, 2, 3, 1], [1, 3, 1, 3],
-         [2, 0, 5, 1.5], [2, 1.5, 7, 1.5], [2, 3, 8, 3],
-         [3, 0, 7, 1], [3, 1, 5, .5], [3, 1.5, 4, 1.5], [3, 3, 5, 3],
-         [4, 0, 1, 1.5], [4, 1.5, 5, 1.5], [4, 3, 4, 3],
-         [5, 0, 7, 1.5], [5, 1.5, 8, 1.5], [5, 3, 10, 3],
-         [6, 0, 8, 1], [6, 1, 7, .5], [6, 1.5, 5, 1.5], [6, 3, 4, 1.5], [6, 4.5, 3, 1.5],
-         [7, 0, 1, 6],
-         [8, 0, 8, 1.5], [8, 1.5, 12, 1.5], [8, 3, 11, 3],
-         [9, 0, 10, 1.5], [9, 1.5, 11, .5], [9, 2, 10, 1], [9, 3, 8, 3],
-         [10, 0, 7, 1.5], [10, 1.5, 8, 1.5], [10, 3, 10, 1.5], [10, 4.5, 11, 1.5],
-         [11, 0, 12, 6],
-         [12, 0, 11, 1], [12, 1, 10, .5], [12, 1.5, 8, 1.5], [12, 3, 7, 1.5], [12, 4.5, 5, 1.5],
-         [13, 0, 4, 1.5], [13, 1.5, 5, 1.5], [13, 3, 7, 3],
-         [14, 0, 5, 1.5], [14, 1.5, 4, 1.5], [14, 3, 3, 1.5], [14, 4.5, 4, 1.5],
-         [15, 0, 1, 6]]
-IL_P3 = [[0, 0, 8, 1], [0, 1, 12, 1], [0, 2, 11, 2],                           # 주인의 동기 (태평소, 4/4)
-         [1, 0, 10, .5], [1, .5, 11, .5], [1, 1, 12, 1], [1, 2, 11, .5], [1, 2.5, 10, .5], [1, 3, 8, 1],
-         [2, 0, 7, .5], [2, .5, 8, .5], [2, 1, 10, 1], [2, 2, 8, 1], [2, 3, 7, 1],
-         [3, 0, 8, 4],
-         [4, 0, 8, 1], [4, 1, 12, 1], [4, 2, 11, 2],
-         [5, 0, 10, .5], [5, .5, 11, .5], [5, 1, 12, 1], [5, 2, 14, 1], [5, 3, 12, 1],
-         [6, 0, 11, .5], [6, .5, 10, .5], [6, 1, 8, 1], [6, 2, 7, 1], [6, 3, 5, 1],
-         [7, 0, 5, 2], [7, 2, 7, 2],
-         [8, 0, 12, 1], [8, 1, 11, .5], [8, 1.5, 10, .5], [8, 2, 11, 2],
-         [9, 0, 12, .5], [9, .5, 14, .5], [9, 1, 12, 1], [9, 2, 11, 1], [9, 3, 10, 1],
-         [10, 0, 11, .5], [10, .5, 12, .5], [10, 1, 14, 1], [10, 2, 15, 2],
-         [11, 0, 12, 4],
-         [12, 0, 8, 1], [12, 1, 12, 1], [12, 2, 11, 2],
-         [13, 0, 10, .5], [13, .5, 11, .5], [13, 1, 12, 1], [13, 2, 11, .5], [13, 2.5, 10, .5], [13, 3, 8, 1],
-         [14, 0, 7, .5], [14, .5, 8, .5], [14, 1, 10, 1], [14, 2, 11, 1], [14, 3, 7, 1],
-         [15, 0, 8, 4]]
+# ───────────────────────── 음표 데이터 3곡: 여우비 · 산군 · 일섬 (DESIGN.md 43-28) ─────────────────────────
+# 곡마다 새로 작곡한 음표 데이터(data/music/<이름>_notes.json, tools/audio/compose_<이름>.py)를 그대로 연주 (src/audio/boss_notes.py).
+# 음색은 예전 장르 합성 그대로 (boss_jazz · boss_sangun · boss_muhyeop) — 전설의 노래(같은 조성 D · E · D)도 그대로 이어짐.
 
 
 def muhyeop_songs() -> dict:
-    base = [part("gayageum", "gaya", 0.62), part("geomungo", "geomungo", 0.6)]
-    p2 = [[b - 8 if b >= 8 else b + 8, at, d, ln] for b, at, d, ln in IL_P1]    # 2페이즈: 둘째 가락부터
-    dae2 = [n for n in p2 if (n[0] // 2) % 2 == 0]                              # 대금 ↔ 해금 2마디씩 주고받기
-    hae2 = [n for n in p2 if (n[0] // 2) % 2 == 1]
-    harm3 = [[b, at, d - 3, ln] for b, at, d, ln in IL_P3]                       # 대금 화음 (4도 아래)
-    k12 = dict(daego="x.....x.....", kung="...x.....x..", deok="..x..x..x..x", jing=16)
-    k16 = dict(daego="x..x..x.x..x..x.", kung="x...x...x...x...", deok="xxxxxxxxxxxxxxxx", jing=4)
-    song = dict(kind="legend", muhyeop=True, replaces="L04", root=62, scale="minor", bpm=150, meter=[12, 8], fish="marlin",
-                reverb=[0.15, 1.0], master={"mid_cut_db": -3.0},
-                phases=[dict(chords=[1, 1, 3, 1, 4, 4, 5, 1, 1, 7, 3, 4, 5, 5, 1, 1], base=base,
-                             perc=dict(pattern=k12, crisis=dict(daego="x.x.x.x.x.x.")),
-                             lead=[lead("daegeum", IL_P1, 0.55, 1)], choir=[]),
-                        dict(chords=[1, 1, 7, 3, 4, 4, 5, 1, 1, 1, 3, 1, 4, 4, 5, 1], base=base,
-                             perc=dict(pattern=dict(k12, clash=True), crisis=dict(daego="x.x.x.x.x.x.")),
-                             lead=[lead("daegeum", dae2, 0.55, 1), lead("haegeum", hae2, 0.5, 1, pan=0.2)],
-                             choir=[part("haegeum", "hold_hae", 0.45, oct=1, pan=-0.3)]),
-                        dict(chords=[1, 1, 7, 7, 3, 3, 4, 5, 1, 1, 7, 3, 4, 4, 5, 1], bpm=168, meter=[4, 4],
-                             base=[part("gayageum", "gaya", 0.62), part("geomungo", "geomungo", 0.6)],
-                             perc=dict(pattern=k16, crisis=dict(daego="x.x.x.x.x.x.x.x.")),
-                             lead=[lead("taepyeongso", IL_P3, 0.72, 1), lead("daegeum", harm3, 0.26, 1, pan=-0.25)],
-                             choir=[lead("haegeum", IL_P3, 0.4, 0, pan=0.3)])])
-    return {"L04-MUHYEOP": song}
-
-
-# ───────────────────────── 재즈 빅밴드: 황금잉어 '여우비' (SHARMION_THEMES.md 1장, DESIGN.md 43-16) ─────────────────────────
-# D단조 176 스윙, src/audio/boss_jazz.py. 선율은 곧은 박으로 적고 뒷박 8분은 재생할 때 스윙(2:1)으로.
-JZ_A = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                   # 주인의 동기 (약음기 트럼펫)
-        [1, 0, 3, .5], [1, .5, 4, .5], [1, 1, 5, .5], [1, 1.5, 7, .5], [1, 2, 8, 1], [1, 3, 7, .5], [1, 3.5, 5, .5],
-        [2, 0, 4, 1.5], [2, 1.5, 3, .5], [2, 2, 1, 2],
-        [3, .5, 5, .5], [3, 1, 7, .5], [3, 1.5, 8, .5], [3, 2, 10, 1], [3, 3, 8, 1],
-        [4, 0, 9, .5], [4, .5, 8, .5], [4, 1, 7, .5], [4, 1.5, 5, .5], [4, 2, 4, 1], [4, 3, 3, 1],
-        [5, 0, 2, 1.5], [5, 1.5, 3, .5], [5, 2, 4, 2],
-        [6, 0, 5, .5], [6, .5, 6, .5], [6, 1, 7, .5], [6, 1.5, 8, .5], [6, 2, 9, 1], [6, 3, 8, 1],
-        [7, 0, 5, 3]]
-JZ_B = [[8, 0, 8, 1], [8, 1, 12, 1], [8, 2, 11, 2],                                   # 동기 한 옥타브 위
-        [9, 0, 10, .5], [9, .5, 9, .5], [9, 1, 8, .5], [9, 1.5, 7, .5], [9, 2, 8, 1], [9, 3, 10, 1],
-        [10, 0, 11, 1.5], [10, 1.5, 10, .5], [10, 2, 8, 2],
-        [11, .5, 7, .5], [11, 1, 8, .5], [11, 1.5, 10, .5], [11, 2, 12, 2],
-        [12, 0, 11, .5], [12, .5, 10, .5], [12, 1, 8, .5], [12, 1.5, 7, .5], [12, 2, 5, 1], [12, 3, 4, 1],
-        [13, 0, 3, .5], [13, .5, 4, .5], [13, 1, 5, 1], [13, 2, 7, 2],
-        [14, 0, 5, .5], [14, .5, 4, .5], [14, 1, 3, .5], [14, 1.5, 2, .5], [14, 2, "#7", 1], [14, 3, 2, 1],
-        [15, 0, 1, 3]]
+    return {"L04-MUHYEOP": notes_spec("ilseom", "marlin", "L04", 62)}      # D, 12/8 150 → 3페이즈 4/4 168
 
 
 def jazz_songs() -> dict:
-    mel = JZ_A + JZ_B
-    swap = [[b - 8 if b >= 8 else b + 8, at, d, ln] for b, at, d, ln in mel]          # 2페이즈: 둘째 가락부터
-    tp2 = [n for n in swap if n[1] < 2]                                               # 트럼펫 ↔ 색소폰 2박씩 주고받기
-    sx2 = [[b, at, d, ln] for b, at, d, ln in swap if at >= 2]
-    sx3 = [[b, at, d - 2 if isinstance(d, int) else d, ln] for b, at, d, ln in mel]  # 3페이즈 색소폰 3도 아래
-    ride = "x..x.xx..x.x"
-    p1 = dict(ride=ride, hat="...x.....x..", kick="x.....x.....", comp=1, brush=True, crash=8, fill=True)
-    p2 = dict(ride=ride, hat="...x.....x..", kick="x.....x.....", comp=2, crash=8, fill=True)
-    p3 = dict(ride=ride, hat="...x.....x..", kick="x..x..x..x..", comp=3, crash=4, fill=True)
-    crisis = dict(kick="x..x.xx..x.x")
-    song = dict(kind="legend", jazz=True, replaces="L01", root=62, scale="minor", bpm=176, meter=[4, 4], fish="golden_carp",
-                reverb=[0.14, 0.8], master={"mid_cut_db": -3.0},
-                phases=[dict(chords=[1, 1, 4, 4, 2, "5:7", 1, 1, 6, 6, 2, "5:7", 1, 4, 2, "5:7"],
-                             base=[part("upright", "walk", 0.62), part("piano", "comp", 0.3)],
-                             perc=dict(pattern=p1, crisis=crisis),
-                             lead=[lead("trumpet", mel, 0.55, 1)], choir=[]),
-                        dict(chords=[1, 6, 2, "5:7", 1, 6, 4, "5:7", 3, 6, 2, "5:7", 1, 4, 2, "5:7"],
-                             base=[part("upright", "walk", 0.62, eighth=True), part("piano", "comp", 0.3)],
-                             perc=dict(pattern=p2, crisis=crisis),
-                             lead=[lead("trumpet", tp2, 0.55, 1), lead("sax", sx2, 0.55, 0, pan=0.25)],
-                             choir=[part("trumpet_open", "stabs", 0.4, pats=[[5, 11]], every=2)]),
-                        dict(chords=[1, 6, 2, "5:7", 1, 4, 2, "5:7", 6, 3, 2, "5:7", 1, 4, "5:7", 1], fake_stop=True,
-                             base=[part("upright", "walk", 0.66, eighth=True), part("piano", "comp", 0.32, pats=[[0, 5, 8], [2, 5, 11]])],
-                             perc=dict(pattern=p3, crisis=crisis),
-                             lead=[lead("trumpet_open", mel, 0.5, 1), lead("sax", sx3, 0.38, 1, pan=-0.25)],
-                             choir=[part("trumpet_open", "stabs", 0.5, pats=[[0, 5], [5, 11], [2, 8], [0, 9]], len=1.6)])])
-    return {"L01-JAZZ": song}
-
-
-# ───────────────────────── 북과 목 노래: 산신 쏘가리 '산군' (SHARMION_THEMES.md 2장, DESIGN.md 43-17) ─────────────────────────
-# E단조 5음(E·G·A·B·D) 156, src/audio/boss_sangun.py. 선율 도수는 5음(1·3·4·5·7)만.
-SG_A = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                   # 주인의 동기 (마두금)
-        [1, 0, 3, .5], [1, .5, 4, .5], [1, 1, 3, .5], [1, 1.5, 1, .5], [1, 2, 7, 1], [1, 3, 5, 1],
-        [2, 0, 5, 1.5], [2, 1.5, 4, .5], [2, 2, 3, 1], [2, 3, 1, 1],
-        [3, 0, 1, 2], [3, 2, 7, .5], [3, 2.5, 5, .5], [3, 3, 4, 1],
-        [4, 0, 8, 1], [4, 1, 7, .5], [4, 1.5, 5, .5], [4, 2, 4, 1], [4, 3, 5, 1],
-        [5, 0, 7, .5], [5, .5, 8, .5], [5, 1, 10, 1], [5, 2, 8, 2],
-        [6, 0, 7, 1], [6, 1, 5, 1], [6, 2, 4, 1], [6, 3, 3, 1],
-        [7, 0, 1, 2], [7, 2, 3, .5], [7, 2.5, 4, .5], [7, 3, 5, 1]]
-SG_B = [[8, 0, 8, 1], [8, 1, 12, 1], [8, 2, 11, 2],                                  # 동기 한 옥타브 위
-        [9, 0, 10, .5], [9, .5, 11, .5], [9, 1, 10, .5], [9, 1.5, 8, .5], [9, 2, 7, 1], [9, 3, 8, 1],
-        [10, 0, 10, 1.5], [10, 1.5, 11, .5], [10, 2, 12, 2],
-        [11, 0, 11, 1], [11, 1, 10, 1], [11, 2, 8, 2],
-        [12, 0, 7, .5], [12, .5, 8, .5], [12, 1, 10, 1], [12, 2, 8, 1], [12, 3, 7, 1],
-        [13, 0, 5, 1], [13, 1, 4, 1], [13, 2, 3, 2],
-        [14, 0, 4, .5], [14, .5, 5, .5], [14, 1, 7, 1], [14, 2, 5, 1], [14, 3, 4, 1],
-        [15, 0, 1, 4]]
+    return {"L01-JAZZ": notes_spec("yeoubi", "golden_carp", "L01", 62)}    # D단조 176 스윙 (스윙은 음표에 적힘)
 
 
 def sangun_songs() -> dict:
-    mel = SG_A + SG_B
-    swap = [[b - 8 if b >= 8 else b + 8, at, d, ln] for b, at, d, ln in mel]
-    k1 = dict(big="x..x..x.x..x..x.", hand="xxxxxxxxxxxxxxxx", low="....x.......x...", gain=0.85)
-    k2 = dict(k1, gain=1.0)
-    k3 = dict(k1, big="x..x..x.x..x.xx.", gain=1.15)
-    crisis = dict(low="x.x.x.x.x.x.x.x.", shout="x...x...x...x...")
-    song = dict(kind="legend", sangun=True, replaces="L02", root=64, scale="minor", bpm=156, meter=[4, 4], fish="tiger_mandarin",
-                reverb=[0.15, 1.1], master={"mid_cut_db": -2.0},
-                phases=[dict(chords=[1, 1, 7, 7, 1, 1, 4, 5, 1, 1, 7, 7, 4, 4, 5, 1],
-                             base=[part("throat", "throat", 0.8, sharp=0.6), part("morin", "morin_ost", 0.42, oct=-1)],
-                             perc=dict(pattern=k1, crisis=crisis),
-                             lead=[lead("morin", mel, 0.55, 0)], choir=[]),
-                        dict(chords=[1, 1, 7, 7, 4, 4, 5, 5, 1, 1, 7, 3, 4, 4, 5, 1],
-                             base=[part("throat", "throat", 0.8, sharp=0.8), part("morin", "morin_ost", 0.46, oct=-1, busy=True)],
-                             perc=dict(pattern=k2, crisis=crisis),
-                             lead=[lead("morin", swap, 0.8, 0)], choir=[part("shout", "shouts", 3.0, cells=[0, 10])]),
-                        dict(chords=[1, 1, 7, 7, 3, 3, 4, 5, 1, 1, 7, 7, 4, 5, 5, 1],
-                             base=[part("throat", "throat", 0.85, sharp=1.6), part("morin", "morin_ost", 0.5, oct=-1, busy=True)],
-                             perc=dict(pattern=k3, crisis=crisis),
-                             lead=[lead("horn", mel, 0.85, 0), lead("morin", mel, 0.4, -1, pan=-0.25)],
-                             choir=[part("shout", "shouts", 3.4, cells=[0, 6, 10])])])
-    return {"L02-SANGUN": song}
-
+    return {"L02-SANGUN": notes_spec("sangun", "tiger_mandarin", "L02", 64)}   # E 5음 156
 
 # ───────────────────────── 심해 대성당: 실러캔스 '태고' (SHARMION_THEMES.md 5장, DESIGN.md 43-18) ─────────────────────────
 # B♭단조 136, src/audio/boss_organ.py.
@@ -1204,13 +1063,14 @@ def orsiel_songs() -> dict:
     return {"L12-ORSIEL": song}
 
 
-def notes_owner_motif(name: str) -> bool:
-    """음표 데이터의 주선율(horn · trumpet)에 주인의 동기(으뜸음 → 5도 위 → 4도 위, 1:1:2)가 있는가."""
+def notes_owner_motif(name: str, root: int = 60) -> bool:
+    """음표 데이터의 주선율(layers 가 lead 인 트랙, 없으면 horn · trumpet)에 주인의 동기(으뜸음 → 5도 위 → 4도 위, 1:1:2)가 있는가."""
     d = json.load(open(os.path.join(os.path.dirname(PAT), "music", f"{name}_notes.json"), encoding="utf-8"))
-    for tr in ("horn", "trumpet"):
+    leads = [t for t, lay in d.get("layers", {}).items() if lay == "lead"] or ["horn", "trumpet"]
+    for tr in leads:
         ns = sorted((n["start"], n["pitch"], n["dur"]) for n in d["notes"] if n["track"] == tr)
         for a, b, c in zip(ns, ns[1:], ns[2:]):
-            if b[1] - a[1] == 7 and c[1] - a[1] == 5 and abs(b[2] - a[2]) < 1e-6 and abs(c[2] - 2 * a[2]) < 1e-6 and a[1] % 12 == 0:
+            if b[1] - a[1] == 7 and c[1] - a[1] == 5 and abs(b[2] - a[2]) < 1e-6 and abs(c[2] - 2 * a[2]) < 1e-6 and a[1] % 12 == root % 12:
                 return True
     return False
 

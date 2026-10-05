@@ -71,7 +71,14 @@ class Score:
         """[a, b) 박 안 tracks 의 긴 음(min_dur 박 이상) 앞에 꾸밈음을 붙인다 (side=1 위 이웃음 · -1 아래 이웃음, pcs = 음계 음 이름 집합).
         꾸밈음이 본음 머리를 grace 박만큼 가져간다 — 시김새(꺾는 소리) · 마두금 밑꾸밈처럼 장르마다 선율 모양을 다르게 하려고."""
         pcs = {m(f"{x}4") % 12 for x in pcs}
-        cand = sorted((n for n in self.notes if n["track"] in tracks and a <= n["start"] < b and n["dur"] >= min_dur), key=lambda n: n["start"])
+        keep = set()   # 주인의 동기(으뜸음 → 5도 위 → 4도 위, 1:1:2)는 꾸미지 않음 — 모든 전설 곡 공통 동기 그대로
+        for tr in tracks:
+            ns = sorted((n for n in self.notes if n["track"] == tr), key=lambda n: n["start"])
+            for x, y, z in zip(ns, ns[1:], ns[2:]):
+                if y["pitch"] - x["pitch"] == 7 and z["pitch"] - x["pitch"] == 5 and abs(y["dur"] - x["dur"]) < 1e-6 and abs(z["dur"] - 2 * x["dur"]) < 1e-6:
+                    keep |= {id(x), id(y), id(z)}
+        cand = sorted((n for n in self.notes if n["track"] in tracks and a <= n["start"] < b and n["dur"] >= min_dur and id(n) not in keep),
+                      key=lambda n: n["start"])
         for i, n in enumerate(cand):
             if i % every:
                 continue
