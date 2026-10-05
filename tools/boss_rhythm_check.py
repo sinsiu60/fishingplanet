@@ -105,6 +105,9 @@ def measure(sid: str, spec: dict, mcfg: dict) -> dict:
     if spec.get("nordic"):
         from src.audio import boss_nordic
         cls = boss_nordic.NordicSong
+    if spec.get("notes"):
+        from src.audio import boss_notes
+        cls = boss_notes.NotesSong
     D = dry_class(cls)
     s = D(sid, spec, mcfg)
     # 1페이즈만: 층 이름을 바꿔 가며 기록 (stems 를 그대로 돌리되 1페이즈 기록만 씀)
@@ -146,8 +149,8 @@ def measure(sid: str, spec: dict, mcfg: dict) -> dict:
             per_bar.setdefault((inst, int(t // s.bar)), 0)
             per_bar[(inst, int(t // s.bar))] += 1
     lead_long = max(per_bar.values()) if per_bar else 0
-    chords = s.spec["phases"][0]["chords"]
-    changes = sum(1 for a, b in zip(chords, chords[1:]) if a != b)
+    chords = s.spec["phases"][0].get("chords", [])   # 음표 데이터 곡은 화음 목록이 없음 → 화음 간격은 재지 않음 (0)
+    changes = sum(1 for a, b in zip(chords, chords[1:]) if a != b) if chords else bars - 1
     return {"bpm": spec["bpm"], "meter": spec.get("meter", [4, 4]), "onsets": onsets / bars, "long": long_ratio,
             "lead_long": lead_long, "chord_bars": bars / max(1, changes + 1),
             "reverb": getattr(s, "rv_time", 0.0), "bar": s.bar, "intro": intro_bars}

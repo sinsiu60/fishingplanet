@@ -761,6 +761,45 @@
   },
   "tp": -2.18
  },
+ "L12-ORSIEL": {
+  "files": [
+   "L12-ORSIEL_1_base.ogg",
+   "L12-ORSIEL_1_lead.ogg",
+   "L12-ORSIEL_1_lead_oct.ogg",
+   "L12-ORSIEL_1_perc.ogg",
+   "L12-ORSIEL_1_perc_crisis.ogg",
+   "L12-ORSIEL_2_base.ogg",
+   "L12-ORSIEL_2_choir.ogg",
+   "L12-ORSIEL_2_lead.ogg",
+   "L12-ORSIEL_2_lead_oct.ogg",
+   "L12-ORSIEL_2_perc.ogg",
+   "L12-ORSIEL_2_perc_crisis.ogg",
+   "L12-ORSIEL_3_base.ogg",
+   "L12-ORSIEL_3_choir.ogg",
+   "L12-ORSIEL_3_lead.ogg",
+   "L12-ORSIEL_3_lead_oct.ogg",
+   "L12-ORSIEL_3_perc.ogg",
+   "L12-ORSIEL_3_perc_crisis.ogg",
+   "L12-ORSIEL_4_base.ogg",
+   "L12-ORSIEL_4_choir.ogg",
+   "L12-ORSIEL_4_lead.ogg",
+   "L12-ORSIEL_4_lead_oct.ogg",
+   "L12-ORSIEL_4_perc.ogg",
+   "L12-ORSIEL_4_perc_crisis.ogg",
+   "L12-ORSIEL_fail.ogg",
+   "L12-ORSIEL_intro.ogg"
+  ],
+  "hash": "cf6f9628e5690a3d",
+  "lufs": -14.0,
+  "phases": {
+   "1": -16.6,
+   "2": -14.33,
+   "3": -12.47,
+   "4": -13.59,
+   "intro": -15.39
+  },
+  "tp": -2.4
+ },
  "P01": {
   "files": [
    "P01_1_base.ogg",

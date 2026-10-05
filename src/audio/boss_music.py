@@ -260,7 +260,7 @@ class BossMusic:
             self.next_at = self.t if sync else self._next_bar()
         if self.next_at is not None and self.switch_at is None and self.t >= self.next_at:
             riser = self._get(f"{sid}_{self.phase + 1}_riser")
-            rl = riser.get_length() if riser is not None else self.bar
+            rl = riser.get_length() if riser is not None else 0.0   # 라이저 파일이 없으면 (음표 데이터 곡) 마디 경계에서 바로
             new = 1 - self.slot
             for lay in LAYERS:   # 지금 층은 라이저 마디 동안 사라짐
                 self.goal[(self.slot, lay)] = 0.0

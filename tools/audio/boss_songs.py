@@ -599,13 +599,14 @@ def check(songs: dict) -> int:
         txt = json.dumps(sp)
         if '"#4"' in txt:
             print(sid, "전설에 #4 (환상 동기 재료)"); bad += 1
-        motif_ok = any(has_owner_motif(l["notes"]) for p in sp["phases"] for l in p.get("lead", []))
+        motif_ok = any(has_owner_motif(l["notes"]) for p in sp["phases"] for l in p.get("lead", [])) or \
+            (bool(sp.get("notes")) and notes_owner_motif(sp["notes"]))
         if any(has_nameless_motif(l["notes"]) for p in sp["phases"] for l in p.get("lead", [])):
             print(sid, "전설에 환상의 4음 동기"); bad += 1
         if not motif_ok:
             print(sid, "주인의 동기 없음"); bad += 1
         for i, p in enumerate(sp["phases"]):
-            if len(p["chords"]) != p.get("bars", 16):
+            if not sp.get("notes") and len(p["chords"]) != p.get("bars", 16):   # 음표 데이터 곡은 화음 목록이 없음
                 print(sid, i + 1, "페이즈 화성 길이가 마디 수와 다름", len(p["chords"])); bad += 1
     print("서명 검사:", "ok" if not bad else f"{bad}개 문제")
     return bad
@@ -1167,6 +1168,37 @@ def nordic_songs() -> dict:
     return {"L11-NORDIC": song}
 
 
+# ───────────────────────── 음표 데이터: 천해왕 오르시엘 (ORSIEL_BGM.md, DESIGN.md 43-27) ─────────────────────────
+# data/music/orsiel_notes.json 의 음표를 그대로 연주 (src/audio/boss_notes.py). 여기서는 페이즈 박자와 이름만 — 음은 하나도 만들지 않음.
+# 138 · 4/4 → 2페이즈 7/8 → 4/4, C 프리지안 → 4페이즈 C장조. 오케스트라 L12 는 남겨 둠.
+def orsiel_songs() -> dict:
+    d = json.load(open(os.path.join(os.path.dirname(PAT), "music", "orsiel_notes.json"), encoding="utf-8"))
+    sigs = sorted((s["beat"], s["sig"]) for s in d["time_signatures"])
+
+    def meter(beat):
+        cur = "4/4"
+        for b, sg in sigs:
+            if beat + 1e-6 >= b:
+                cur = sg
+        return [int(v) for v in cur.split("/")]
+    loops = sorted(d["loops"].values())
+    song = dict(kind="legend", notes="orsiel", replaces="L12", root=60, scale="minor", bpm=d["bpm"], meter=[4, 4], fish="orsiel",
+                reverb=[0.2, 1.2], master={"mid_cut_db": -3.0},
+                phases=[dict(meter=meter(a), loop=[a, b], bright_choir=(k == 3)) for k, (a, b) in enumerate(loops)])
+    return {"L12-ORSIEL": song}
+
+
+def notes_owner_motif(name: str) -> bool:
+    """음표 데이터의 주선율(horn · trumpet)에 주인의 동기(으뜸음 → 5도 위 → 4도 위, 1:1:2)가 있는가."""
+    d = json.load(open(os.path.join(os.path.dirname(PAT), "music", f"{name}_notes.json"), encoding="utf-8"))
+    for tr in ("horn", "trumpet"):
+        ns = sorted((n["start"], n["pitch"], n["dur"]) for n in d["notes"] if n["track"] == tr)
+        for a, b, c in zip(ns, ns[1:], ns[2:]):
+            if b[1] - a[1] == 7 and c[1] - a[1] == 5 and abs(b[2] - a[2]) < 1e-6 and abs(c[2] - 2 * a[2]) < 1e-6 and a[1] % 12 == 0:
+                return True
+    return False
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -1186,6 +1218,7 @@ def main(argv) -> int:
     songs.update(baroque_songs())
     songs.update(flamenco_songs())
     songs.update(nordic_songs())
+    songs.update(orsiel_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):
