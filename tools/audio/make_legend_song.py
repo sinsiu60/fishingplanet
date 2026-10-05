@@ -277,7 +277,7 @@ if __name__ == "__main__":
     songs = json.load(open(os.path.join(ROOT, "data", "music_patterns.json"), encoding="utf-8"))["boss"]["songs"]
     jobs = [(c, c, None) for c in ("sharmion", "eldrasion")]
     for sid, sp in sorted(songs.items()):
-        if sp.get("kind") == "legend" and not sp.get("test") and not sp.get("rock"):   # 락 곡은 make_rock_legend_song.py
+        if sp.get("kind") == "legend" and not sp.get("test") and not sp.get("replaces"):   # 테마 곡(락·국악 …)은 각자의 make_*_legend_song.py
             tp = (sp["root"] - 2) % 12
             tp = tp - 12 if tp > 5 else tp   # D 에서 가까운 쪽으로 (−6~+5)
             jobs.append((sid, "eldrasion" if int(sid[1:]) >= 7 else "sharmion", tp))
