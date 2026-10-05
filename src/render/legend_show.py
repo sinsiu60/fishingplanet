@@ -453,6 +453,14 @@ class LegendShow:
                     L = r.uniform(40, 90)
                     self._branches.append(self._zigzag((x0, y0), (x0 + math.cos(a) * L, y0 + math.sin(a) * L * 0.6), 12))
                 self.uq["ring_t"] = self.t
+        elif kind == "ilseom" and stage == "climax":
+            # 일섬: 수면이 한 줄로 갈라지며 양쪽 끝에서 물기둥 (물보라 입자) — 검광은 그리기에서
+            self.uq["split_t"] = self.t
+            for side in (-1, 1):
+                x0 = fx + side * min(w * 0.42, 150)
+                for _ in range(min(self._budget(), n0)):
+                    self.uniq.append([x0 + r.uniform(-10, 10), wy, r.uniform(-30, 30) + side * 20, -r.uniform(160, 340),
+                                      r.uniform(0.8, 1.5), 1.5, "spray", r.uniform(1, 2.5)])
         elif kind == "lightning" and stage == "climax":
             # 낙뢰 1회: 지그재그 경로를 미리 만들어 둠 (번쩍임은 절정 1회 규칙 안)
             pts = [(fx + r.uniform(-40, 40), -5)]
@@ -514,6 +522,8 @@ class LegendShow:
             elif kd == "spark":
                 p[2] *= 1 - 1.8 * dt
                 p[3] += 520 * dt * sp
+            elif kd == "spray":
+                p[3] += 380 * dt * sp
         self.uniq = [p for p in self.uniq if p[4] > 0]
         kind, k = self.uq["kind"], self._uk()
         r = self.rnd
@@ -676,6 +686,37 @@ class LegendShow:
                     pts.append((fx + math.cos(an) * rr, fy + math.sin(an) * rr * 0.6))
                 c = tuple(int(v * (1 - u) * 0.9) for v in col)
                 pygame.draw.lines(light, c, False, pts, 2)
+        elif kind == "ilseom" and "split_t" in self.uq:
+            d = t - self.uq["split_t"]
+            span = min(w * 0.42, 150)
+            # 1) 수면이 한 줄로 갈라짐: 물고기 아래에서 양쪽으로 금빛 선이 뻗고, 그 위아래로 어두운 틈
+            u = smoothstep(clamp(d / 0.25, 0, 1))
+            fade = 1 - clamp((d - 1.0) / 1.2, 0, 1)
+            if fade > 0:
+                xl, xr = fx - span * u, fx + span * u
+                pygame.draw.rect(stage, (20, 40, 70), (xl, wy + 2, xr - xl, 4))
+                pygame.draw.line(light, tuple(int(v * 0.5 * fade) for v in col), (xl, wy + 4), (xr, wy + 4), 5)
+                pygame.draw.line(light, tuple(int(v * fade) for v in col), (xl, wy + 4), (xr, wy + 4), 2)
+            # 2) 양쪽 끝 물기둥: 솟았다가 무너짐
+            hgt = 120 * smoothstep(clamp((d - 0.12) / 0.3, 0, 1)) * (1 - clamp((d - 0.6) / 0.9, 0, 1))
+            if hgt > 2:
+                for side in (-1, 1):
+                    bx = fx + side * span * u
+                    poly = [(bx - 13, wy + 4), (bx - 6, wy - hgt), (bx + 6, wy - hgt * 0.92), (bx + 13, wy + 4)]
+                    pygame.draw.polygon(stage, (170, 205, 235), poly)
+                    pygame.draw.lines(stage, (235, 245, 255), False, poly[:3], 2)
+                    pygame.draw.lines(light, tuple(int(v * 0.35) for v in col), False, poly, 1)
+            # 3) 금빛 검광: 화면을 사선으로 한 번 번쩍 (0.28초, 번쩍임은 절정 1회 규칙 안)
+            if 0 <= d < 0.28:
+                g = clamp(d / 0.04, 0, 1)
+                a = (1 - clamp((d - 0.08) / 0.2, 0, 1)) * (0.5 if self.reduce else 1.0)
+                x0, y0 = fx + w * 0.55, fy - h * 0.55
+                x1, y1 = fx - w * 0.55, fy + h * 0.45
+                xe, ye = lerp(x0, x1, g), lerp(y0, y1, g)
+                pygame.draw.line(light, tuple(int(v * a * 0.5) for v in col), (x0, y0), (xe, ye), 10)
+                pygame.draw.line(light, tuple(int(v * a) for v in col), (x0, y0), (xe, ye), 4)
+                if a > 0.2:
+                    pygame.draw.line(stage, WHITE, (x0, y0), (xe, ye), 1)
         elif kind == "lightning" and self._bolt is not None:
             d = t - cl
             if 0 <= d < 0.6:
@@ -768,6 +809,10 @@ class LegendShow:
             elif kd == "wind":
                 c = tuple(int(v * 0.4 * life) for v in GOLD)
                 pygame.draw.line(light, c, (x, y), (x - 26, y), 1)
+            elif kd == "spray":   # 물기둥 물보라
+                c = lerp_color((150, 190, 225), (240, 248, 255), life)
+                stage.fill(c, (int(x), int(y), int(p[7]), int(p[7])))
+                light.fill(tuple(int(v * 0.25 * life) for v in col), (int(x), int(y), 1, 1))
             elif kd == "spark":   # 불꽃: 날아가는 방향으로 짧은 줄
                 tail = (x - p[2] * 0.025, y - p[3] * 0.025)
                 pygame.draw.line(light, tuple(int(v * life) for v in col), tail, (x, y), 2)

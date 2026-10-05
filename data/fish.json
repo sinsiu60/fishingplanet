@@ -2306,6 +2306,7 @@
   {
    "id": "marlin",
    "name": "청새치 '일섬'",
+   "theme": "ilseom",
    "spot": "offshore",
    "times": [
     "day"

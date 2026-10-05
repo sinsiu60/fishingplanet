@@ -27,6 +27,7 @@ from src.render.phantom_fx import PhantomFx, phantom_palette
 from src.fishing import phantom
 from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
+from src.audio import theme_sfx
 from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
 from src.scene.base import Scene
 from src.ui import fight_fx, fight_hud, hud, pattern_fx, signal_slots
@@ -141,6 +142,8 @@ class FishingScene(Scene):
         self.rain = Rain(canvas.get_width(), canvas.get_height())
         self.fog = Fog(canvas.get_width(), canvas.get_height())
         self.lightning = Lightning()
+        from src.render.ilseom_fx import IlseomFX
+        self.ilseom_fx = IlseomFX()   # 청새치 '일섬' 칼 연출 (ILSEOM.md, DESIGN.md 43-15)
         self.ambient = Ambient(canvas.get_width(), canvas.get_height(), self.cam.horizon)
         from src.audio.ambience import Ambience
         self.ambience = Ambience(self.sfx)  # 환경음: 바탕 + 무작위 조각 + 날씨 + 천둥 시간차 (32장 S7)
@@ -1397,6 +1400,7 @@ class FishingScene(Scene):
         self.rain.update(dt, self.weather, self.ripples, self.cam)
         self.fog.update(dt, self.weather)
         self.lightning.update(dt, self.weather, self.cam.horizon, self.cam.width)
+        self.ilseom_fx.update(dt)
         for ev in self.lightning.events:
             if ev == "strike":
                 self.ambience.strike()  # 천둥은 번개 뒤 거리만큼 늦게 (가까우면 쩍, 멀면 우르릉)
@@ -1981,7 +1985,14 @@ class FishingScene(Scene):
             need = self.save.float_need(fish, self.spot) if fish else 0
             if need > self.save.float_tier() and self.save.data["flags"].get("eldra_escape_tutorial"):
                 self.toasts.show(f"이 물고기를 잡으려면 [{float_name(need)}] 이상 필요", BAD, 3.0, 11)
-            self.sfx.play("sfx_roar", 0.6)
+            if fish and fish.get("theme") == "ilseom":
+                # 일섬: 환경음이 줄고 바람 소리만 (완전한 정적은 환상 전용) + 수면에 칼날 같은 물결 한 줄
+                self.sfx.duck_levels({"amb": -14.0}, hold=2.6, release=1.2)
+                theme_sfx.play(self.sfx, "ilseom", "wind", 0.8)
+                p = self.cam.project(c.bx, c.bz)
+                self.ilseom_fx.blade_ripple(p[1] if p else self.cam.horizon + 30)
+            else:
+                self.sfx.play("sfx_roar", 0.6)
             self.shake_kick = 1.5
         elif ev == "nibble":
             self.sfx.play("sfx_nibble", 0.8, haptic="nibble")
@@ -2142,7 +2153,13 @@ class FishingScene(Scene):
         소리 = 오디오 최종 팩 성공음 (grade: small / mid / big — 퍼펙트면 big_pop), 연출은 그 소리의 타격 시점에."""
         mp = self.screen_fx.map(pos)
         if perfect:
+            ilseom = self.fight is not None and self.fight.fish.get("theme") == "ilseom"
+
             def fx():
+                if ilseom:   # 일섬: 짧은 '챙!' + 화면 위쪽 절반 사선 베기 선 (화면 효과 줄이기면 선은 끔)
+                    theme_sfx.play(self.sfx, "ilseom", "chaeng", 0.7)
+                    if not self.settings.get("reduce_fx"):
+                        self.ilseom_fx.slash()
                 self.sparkles.burst(*pos, count=40, speed=1.7)
                 self.sparkles.burst(*pos, count=16, speed=0.6, ring=False)
                 self.screen_fx.perfect(mp, glow=self._glow_sec())
@@ -2345,6 +2362,11 @@ class FishingScene(Scene):
         elif ev in ("telegraph:rush", "telegraph:fake_rush"):
             self.sfx.play("legacy_bubbles", 0.45)  # 웅크림: 물을 빨아들이는 소리 (v0.8.14 롤백: 예전 소리)
             self.rush_hum_i = -1
+            if f.fish.get("theme") == "ilseom":   # 일섬: 수면에 물고기 방향 얇은 흰 선 (신호 표현은 그대로, 덧붙이기만)
+                fx_, fy_ = self._fish_screen()
+                dx, dy = fx_ - self.cam.width / 2, fy_ - self.cam.height
+                ln = max(1.0, (dx * dx + dy * dy) ** 0.5)
+                self.ilseom_fx.rush_line((fx_ - dx / ln * 70, fy_ - dy / ln * 70), (fx_ - dx / ln * 14, fy_ - dy / ln * 14))
         elif ev == "telegraph:jump":
             self.sfx.play("sfx_bubbles", 0.8)
             if f.brain.lightning_cue:
@@ -2352,6 +2374,10 @@ class FishingScene(Scene):
                 self.lightning.strike(self.cam.horizon, self.cam.width)
         elif ev.startswith("phase:"):
             n = int(ev.split(":")[1])
+            if f.fish.get("theme") == "ilseom" and n == len(f.fish.get("phases", [])):
+                theme_sfx.play(self.sfx, "ilseom", "jing", 0.9)   # 일섬 3페이즈: 징 + 가장자리 0.3초 어둡게
+                if not self.settings.get("reduce_fx"):
+                    self.ilseom_fx.vignette()
             if f.fish.get("rarity") == "phantom":
                 self.phantom_fx.pulse()  # 2페이즈: 보라 강도 100% 맥박 → 60%
                 key = f"phantom:{f.fish['id']}"
@@ -2699,6 +2725,7 @@ class FishingScene(Scene):
                     # 쌍둥이: 쉬는 녀석의 그림자 (조금 흐리게)
                     draw_fish_shadow(canvas, pal, cam, dict(sh, x=tx[0], z=tx[1], alpha=sh["alpha"] * 0.6, wag=6.0), t)
         self.ripples.draw(canvas, pal, cam)
+        self.ilseom_fx.draw(canvas, "world")
         self._draw_birds(canvas)
         self.bubbles.draw(canvas, pal)
         self.hazard_decor.draw(canvas, pal, cam, t, f.in_hazard if f is not None and f.phase == "fight" else None)
@@ -2768,6 +2795,7 @@ class FishingScene(Scene):
         self._draw_gimmick_world(canvas, pal)
         # 가짜 FOV (줌·패닝·기울기)
         self.screen_fx.apply_camera(canvas)
+        self.ilseom_fx.draw(canvas, "screen")
         if getattr(self, "scenic", False):
             return   # 이동 컷신의 도착 전경: 풍경·낚싯대까지만 (HUD·카드 없음)
         self._draw_event_banner(canvas)
