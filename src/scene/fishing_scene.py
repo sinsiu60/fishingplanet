@@ -2348,7 +2348,7 @@ class FishingScene(Scene):
         elif ev == "telegraph:jump":
             self.sfx.play("sfx_bubbles", 0.8)
             if f.brain.lightning_cue:
-                # 전설 '번개': 번개 섬광이 점프 박자
+                # 전설 '일렉트로': 번개 섬광이 점프 박자
                 self.lightning.strike(self.cam.horizon, self.cam.width)
         elif ev.startswith("phase:"):
             n = int(ev.split(":")[1])

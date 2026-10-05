@@ -178,7 +178,7 @@ Fierce Korean shamanic battle theme, a mountain-god tiger fish in a stormy night
 ```
 **Exclude** `pop, happy, EDM, synthwave, chinese erhu`
 
-### `legend_silver_bass` — 은빛 농어 '번개' (방파제)
+### `legend_silver_bass` — 은빛 농어 '일렉트로' (방파제)
 > 번개가 칠 때마다 뛰어오르는 은빛 농어. 두 번 연속 점프, 3페이즈에선 번개마다 점프.
 
 **Style**

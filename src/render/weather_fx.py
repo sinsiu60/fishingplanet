@@ -151,7 +151,7 @@ class Lightning:
             self._strike(horizon, width)
 
     def strike(self, horizon: int, width: int) -> None:
-        """강제로 번개 (전설 '번개'의 점프 박자)."""
+        """강제로 번개 (전설 '일렉트로'의 점프 박자)."""
         self.timer = 0.0
         self._strike(horizon, width)
 
