@@ -461,8 +461,8 @@ def phantom_songs() -> dict:
     song("P03", "dusk_bass", 55, 116,
          dict(chords=LYD1, base=[part("strings", "hold", 0.34, oct=1), part("harp", "arp", 0.24, oct=1, pattern="x..x..x.x..x..x."), pulse_bass], perc=PULSE,
               lead=[lead("harmonics", pab("P03"), 0.55, 1)], choir=[]),
-         dict(chords=LYD2, base=[part("strings", "hold", 0.42, oct=1), part("tremolo", "hold", 0.12, oct=2), harp_arp, pulse_bass], perc=PULSE2,
-              lead=[lead("harmonics", pba("P03"), 0.45, 1), lead("strings", pba("P03"), 0.16, 2)], choir=[CHOIR_A]))
+         dict(chords=LYD2, base=[part("strings", "hold", 0.46, oct=1), part("tremolo", "hold", 0.22, oct=2), harp_arp, pulse_bass], perc=PULSE2,
+              lead=[lead("harmonics", pba("P03"), 0.45, 1), lead("strings", pba("P03"), 0.24, 2)], choir=[CHOIR_A]))
     # P04 유성 다랑어 — A 리디안 128: 쏟아지는 별 같은 빠른 하강 아르페지오, 반짝이는 고음 → 아르페지오 2배 속도 + 별똥별 상승
     song("P04", "meteor_tuna", 57, 128,
          dict(chords=LYD1, base=[part("celesta", "fall", 0.3, oct=1, per_bar=8), pad, pulse_bass], perc=PULSE,
@@ -503,7 +503,7 @@ def phantom_songs() -> dict:
          p1=dict(chords=LYD1, base=[part("pizz", "ostinato", 0.32, pattern=wing), pad, part("synbass", "bass", 0.45, pattern="x.....x.....")],
                  perc=dict(pattern=dict(pulse="x.....x.....", shaker="..x..x..x..x"), crisis=dict(pulse="x..x..x..x..", shaker="xxxxxxxxxxxx")),
                  lead=[lead("flute", pab("P09"), 0.5, 1)], choir=[]),
-         p2=dict(chords=LYD2, base=[part("pizz", "ostinato", 0.26, pattern=wing), part("harp", "arp", 0.2, oct=1, pattern="x.x.x.x.x.x."), pad, part("synbass", "bass", 0.45, pattern="x.....x.....")],
+         p2=dict(chords=LYD2, base=[part("pizz", "ostinato", 0.3, pattern=wing), part("harp", "arp", 0.3, oct=1, pattern="x.x.x.x.x.x."), pad, part("synbass", "bass", 0.45, pattern="x.....x.....")],
                  perc=dict(pattern=dict(pulse="x..x..x..x..", shaker="..x..x..x..x"), crisis=dict(pulse="x.x.x.x.x.x.", shaker="xxxxxxxxxxxx")),
                  lead=[lead("flute", pba("P09"), 0.46, 1), lead("harp", pba("P09"), 0.26, 1)], choir=[CHOIR_A]))
     # P10 잿불 곰치 — F# 리디안 120: 타닥이는 불씨 같은 타악, 따뜻한 합창 → 불씨가 날아오르듯 고음 반짝임
@@ -534,8 +534,7 @@ def phantom_songs() -> dict:
                  lead=[lead("celesta", stack1 + nameless(0) + nameless(8), 0.38, 1), lead("glass", stack2, 0.3, 1), lead("flute", nameless(4) + nameless(12), 0.3, 1),
                        lead("reed", stack2, 0.18, 0)],
                  choir=[part("choir_a", "hold", 0.46), part("choir", "hold", 0.28, oct=-1)]))
-    for sid in ("P03", "P09"):   # B6 신호 가독성: 2페이즈 고음 층이 1~3kHz 를 채워 풀기 신호가 +3dB 미만 → 중음역을 더 비움
-        S[sid]["master"] = {"mid_cut_db": -4.0}
+    S["P01"]["master"] = {"tp": -2.5}   # 오르골·킥 어택이 OGG 압축 뒤 피크를 1dB 넘게 키움 → 여유 더
     for sid, sp in S.items():
         sp["_설명"] = f"{sid} — BOSS_BGM.md 환상 표 (B4, tools/audio/boss_songs.py 가 씀)"
     return S

@@ -140,10 +140,14 @@ def noise(n: int, rng) -> np.ndarray:
 # ───────────────────────── 악기 (한 음 → 모노) ─────────────────────────
 
 def _brass(f, n, vel, rng, bright=6.0, dark=False):
-    att = 0.06 if not dark else 0.09
-    br = 1.5 + (bright - 1.5) * np.clip(_t(n) / att, 0, 1) ** 0.6 * (0.7 + 0.3 * vel)
+    """금관: 여러 겹 톱니 + 밝아지는 배음. 어택에서 한 번 더 밝게 치솟았다(빰) 자리 잡음 — 힘 있게."""
+    att = 0.03 if not dark else 0.05
+    t = _t(n)
+    rise = np.clip(t / att, 0, 1) ** 0.6
+    blat = 1.0 + 0.45 * np.exp(-np.maximum(0, t - att) / 0.09)          # 어택 직후 과하게 밝음 → 가라앉음
+    br = 1.5 + (bright - 1.5) * rise * blat * (0.75 + 0.25 * vel)
     x = sum(additive(f, n, lambda k: 1.0 / k, br, vib=(5.2, 0.003), detune=d, rng=rng) for d in (-0.004, 0.0, 0.005)) / 3
-    return np.tanh(x * 1.4) * env_adsr(n, att, 0.4, 0.75, 0.12)
+    return np.tanh(x * 1.6) * env_adsr(n, att, 0.35, 0.72, 0.1)
 
 
 def i_brass(f, n, vel, rng):            # 낮은 금관 (트롬본·튜바풍)
@@ -169,9 +173,11 @@ def i_strings(f, n, vel, rng):          # 현악 (길게, 합주)
     return x * env_adsr(n, 0.12, 0.3, 0.85, 0.25)
 
 
-def i_spiccato(f, n, vel, rng):         # 현악 오스티나토 (짧게 튀김)
-    x = sum(additive(f, n, lambda k: 1.0 / k, 5.0, detune=d, rng=rng) for d in (-0.005, 0.005)) / 2
-    return x * env_adsr(n, 0.006, 0.07, 0.15, 0.04)
+def i_spiccato(f, n, vel, rng):         # 현악 오스티나토 (짧게 튀김 — 활이 튕기는 소리까지)
+    t = _t(n)
+    x = sum(additive(f, n, lambda k: 1.0 / k, 6.5, detune=d, rng=rng) for d in (-0.005, 0.005)) / 2
+    bow = _bw_filter(noise(n, rng), "bp", (f * 2, min(9000, f * 9))) * np.exp(-t * 90) * 0.35
+    return (x + bow) * env_adsr(n, 0.004, 0.06, 0.12, 0.03)
 
 
 def i_tremolo(f, n, vel, rng):          # 현악 트레몰로 (바람 같은 떨림)
@@ -337,10 +343,89 @@ def d_shaker(n, vel, rng):
     return _bw_filter(noise(n, rng), "bp", (4000, 9000)) * np.minimum(1, t / 0.012) * np.exp(-t * 35) * 0.5
 
 
+def d_kick(n, vel, rng):                 # 힘 있는 킥 (가슴을 치는 저음 + 딱 소리) — 박을 미는 쾌감
+    t = _t(n)
+    f = 46 + 110 * np.exp(-t * 32)
+    body = np.sin(2 * np.pi * np.cumsum(f) / RATE) * np.exp(-t * 7.5)
+    click = _bw_filter(noise(n, rng), "bp", (2500, 7000)) * np.exp(-t * 300) * 0.5
+    return np.tanh((body + click) * 2.2)
+
+
+def d_snare2(n, vel, rng):               # 두꺼운 스네어 (몸통 + 줄 소리 — 1~3kHz 는 비워 신호 자리)
+    t = _t(n)
+    body = np.sin(2 * np.pi * np.cumsum(180 + 60 * np.exp(-t * 40)) / RATE) * np.exp(-t * 22)
+    wires = _bw_filter(noise(n, rng), "bp", (3200, 9500)) * np.exp(-t * 14)
+    return np.tanh((body * 0.9 + wires * 0.9) * 1.5)
+
+
+def d_tom(n, vel, rng, f=110.0):         # 탐 (필인)
+    t = _t(n)
+    fr = f * (1 + 0.35 * np.exp(-t * 20))
+    x = np.sin(2 * np.pi * np.cumsum(fr) / RATE) * np.exp(-t * 8)
+    sk = _bw_filter(noise(n, rng), "bp", (400, 3000)) * np.exp(-t * 60) * 0.3
+    return np.tanh((x + sk) * 1.8)
+
+
+def d_crash(n, vel, rng):                # 크래시 (구간이 바뀌는 첫 박 — 확 열리는 순간)
+    t = _t(n)
+    x = _bw_filter(noise(n, rng), "hp", 3000) * np.exp(-t * 1.1)
+    shim = _bw_filter(noise(n, rng), "bp", (6000, 12000)) * np.exp(-t * 0.7) * 0.4
+    return (x + shim) * 0.9
+
+
+def d_ohat(n, vel, rng):                 # 열린 하이햇 (엇박)
+    t = _t(n)
+    return _bw_filter(noise(n, rng), "hp", 6500) * np.exp(-t * 14) * 0.55
+
+
+def d_softkick(n, vel, rng):             # 환상: 부드럽고 둥근 킥 (맥박)
+    t = _t(n)
+    f = 44 + 60 * np.exp(-t * 22)
+    return np.sin(2 * np.pi * np.cumsum(f) / RATE) * np.exp(-t * 6) * env_adsr(n, 0.004, 0.4, 0, 0.05) * 1.1
+
+
+def d_snap(n, vel, rng):                 # 환상: 손가락 튕김·가벼운 박수 (2·4박)
+    t = _t(n)
+    x = np.zeros(n)
+    for k, d in enumerate((0.0, 0.009, 0.018)):
+        s = int(d * RATE)
+        seg = _bw_filter(noise(n - s, rng), "bp", (3500, 9000)) * np.exp(-_t(n - s) * (90 if k < 2 else 30))
+        x[s:] += seg * (0.6 if k < 2 else 1.0)
+    return x * 0.7
+
+
 DRUMS = {k[2:]: v for k, v in dict(globals()).items() if k.startswith("d_") and callable(v)}
 DRUM_LEN = {"timp": 1.6, "bigdrum": 1.4, "taiko": 0.6, "snare": 0.35, "janggu": 0.4, "cymbal": 2.2, "hat": 0.12,
-            "metal": 0.5, "crackle": 0.15, "pulse": 0.6, "shaker": 0.15}
-DRUM_PAN = {"hat": 0.3, "shaker": -0.3, "metal": 0.25, "crackle": -0.2, "janggu": -0.15}
+            "metal": 0.5, "crackle": 0.15, "pulse": 0.6, "shaker": 0.15, "kick": 0.45, "snare2": 0.4, "tom": 0.6,
+            "crash": 2.6, "ohat": 0.3, "softkick": 0.5, "snap": 0.25}
+DRUM_PAN = {"hat": 0.3, "shaker": -0.3, "metal": 0.25, "crackle": -0.2, "janggu": -0.15, "ohat": 0.35, "snap": -0.1}
+
+# ── 쾌감 (DESIGN.md 43-12): 모든 곡에 자동으로 더하는 '미는 박' — 킥·스네어·하이햇, 페이즈가 오를수록 촘촘하게 ──
+# 단계 0~2 (1페이즈 → 마지막 페이즈), 박자 칸 16(4/4) / 12(3/4·6/8). crisis = 위기 타악에 더하는 것.
+DRIVE = {
+    "legend": {
+        16: [dict(kick="x.......x.....x.", snare2="....x.......x...", hat="x.x.x.x.x.x.x.x."),
+             dict(kick="x.....x.x.....x.", snare2="....x.......x..x", hat="x.xxx.xxx.xxx.xx", ohat="..x...x...x...x."),
+             dict(kick="x..x..x.x.x..x..", snare2="....x..x....x.x.", hat="xxxxxxxxxxxxxxxx", ohat="..x...x...x...x.")],
+        12: [dict(kick="x.....x.....", snare2="......x.....", hat="x.x.x.x.x.x."),
+             dict(kick="x.....x..x..", snare2="...x.....x..", hat="x.xxx.xxx.xx", ohat="..x.....x..."),
+             dict(kick="x..x..x..x..", snare2="...x..x..x.x", hat="xxxxxxxxxxxx", ohat="..x..x..x..x")],
+        "crisis": {16: dict(kick="x.x.x.x.x.x.x.x.", snare2="....x..x....x.xx", tom="............xxxx"),
+                   12: dict(kick="x.x.x.x.x.x.", snare2="...x..x..xxx", tom="........xxxx")},
+    },
+    "phantom": {
+        16: [dict(softkick="x.......x.......", shaker="..x...x...x...x.", hat="........x......."),
+             dict(softkick="x...x...x...x...", shaker="xxxxxxxxxxxxxxxx", snap="....x.......x...", ohat="..x...x...x...x."),
+             dict(softkick="x...x...x...x...", shaker="xxxxxxxxxxxxxxxx", snap="....x.......x...", ohat="..x...x...x...x.")],
+        12: [dict(softkick="x.....x.....", shaker="..x..x..x..x"),
+             dict(softkick="x.....x.....", shaker="xxxxxxxxxxxx", snap="......x.....", ohat="...x.....x.."),
+             dict(softkick="x.....x.....", shaker="xxxxxxxxxxxx", snap="......x.....", ohat="...x.....x..")],
+        "crisis": {16: dict(softkick="x.x.x.x.x.x.x.x.", snap="....x..x....x..x"), 12: dict(softkick="x..x..x..x..", snap="...x..x..x.x")},
+    },
+}
+FORM = [0.72, 0.86, 1.0, 1.0]   # 16마디 = 4마디 × 4 (가볍게 → 더함 → 가득 → 가득 + 필인) — 반복 안에서 쌓아 올리는 맛
+PUMP = {"legend": 0.28, "phantom": 0.45}   # 킥마다 바탕·합창을 잠깐 눌렀다 놓기 (숨 쉬는 느낌, 사이드체인)
+PUMP_LV = (1.0, 1.15, 1.35)                  # 박 단계가 오를수록 더 깊게 — 빽빽한 마지막 페이즈에서도 박이 튀어나오게
 
 
 # ───────────────────────── 곡 → 층 ─────────────────────────
@@ -417,7 +502,7 @@ class Song:
             for b in range(bars):
                 notes = cm[b] + [cm[b][0] + 12]
                 seq = notes + notes[-2:0:-1] if seq_kind == "updown" else notes[::-1] if seq_kind == "down" else \
-                    [notes[0]] if seq_kind == "root" else notes
+                    [notes[0]] if seq_kind == "root" else [notes[0], notes[0], notes[0] + 7, notes[0] + 12] if seq_kind == "rootfifth" else notes
                 k = 0
                 for i, ch in enumerate(pat):
                     if ch not in "xX":
@@ -499,6 +584,8 @@ class Song:
                         while tm > 45:
                             tm -= 12
                         mono = d_timp(n, vel, rng, f=hz(tm) * (1.5 if i % 8 == 4 else 1.0))
+                    elif k == "tom":
+                        mono = d_tom(n, vel, rng, f=max(75.0, 190.0 - 12.0 * (i % 8)))
                     else:
                         mono = fn(n, vel, rng)
                     self._place(buf, mono, b * self.bar + i * self.step, vel, DRUM_PAN.get(k, 0.0) + rng.uniform(-0.05, 0.05))
@@ -532,6 +619,102 @@ class Song:
         out[: len(x)] += x * (1 - mix * 0.4)
         return out
 
+    # ── 쾌감 (DESIGN.md 43-12) ──
+    def energy(self) -> bool:
+        return self.spec.get("energy", True)
+
+    def level(self, i: int) -> int:
+        """페이즈 → 박 단계 0~2 (첫 페이즈 0, 마지막 페이즈 2)."""
+        n = len(self.spec["phases"])
+        return 2 if n == 1 else int(round(i * 2 / (n - 1)))
+
+    def kind(self) -> str:
+        return "phantom" if self.spec.get("kind") == "phantom" else "legend"
+
+    def drive_pattern(self, lv: int, crisis: bool = False) -> dict:
+        d = DRIVE[self.kind()]
+        steps = 16 if self.steps == 16 else 12
+        pat = dict(d[steps][lv])
+        if crisis:
+            pat.update(d["crisis"][steps])
+        return pat
+
+    def render_drive(self, buf, pat: dict, bars: int, rng, crescendo=False) -> None:
+        """미는 박: 4마디마다 쌓아 올림(FORM), 0·8마디 첫 박 크래시, 7마디 끝 짧은 필인, 마지막 마디 끝 큰 필인(→ 다음 바퀴 크래시)."""
+        st, S = self.step, self.steps
+        fill_n = 4 if S == 16 else 3
+        legend = self.kind() == "legend"
+        for b in range(bars):
+            gf = FORM[min(3, b * 4 // max(4, bars))] if not crescendo else 0.45 + 0.55 * b / max(1, bars - 1)
+            big_fill = (b == bars - 1) and bars >= 4
+            for k, pp in pat.items():
+                pp = pp[:S]
+                for i, ch in enumerate(pp):
+                    if ch not in "xX":
+                        continue
+                    if big_fill and i >= S - fill_n and k not in ("hat", "shaker"):
+                        continue   # 필인 자리는 비워 둠
+                    vel = (1.0 if ch == "X" or i % (S // 4) == 0 else 0.78) * gf
+                    n = int(DRUM_LEN[k] * RATE)
+                    mono = d_tom(n, vel, rng, f=150.0) if k == "tom" else DRUMS[k](n, vel, rng)
+                    self._place(buf, mono, b * self.bar + i * st, vel, DRUM_PAN.get(k, 0.0) + rng.uniform(-0.04, 0.04))
+            if bars >= 8 and b in (0, 8):
+                self._place(buf, d_crash(int(DRUM_LEN["crash"] * RATE), 1.0, rng), b * self.bar, 0.8, rng.uniform(-0.3, 0.3))
+            if big_fill:   # 탐(전설)·스냅(환상) 내림 필인 + 마지막 칸 스네어
+                for j in range(fill_n):
+                    t0 = b * self.bar + (S - fill_n + j) * st
+                    if legend:
+                        self._place(buf, d_tom(int(0.6 * RATE), 1.0, rng, f=190.0 - 35.0 * j), t0, 0.85 + 0.05 * j, 0.4 - 0.27 * j)
+                        if j == fill_n - 1:
+                            self._place(buf, d_snare2(int(0.4 * RATE), 1.0, rng), t0, 1.0, 0.0)
+                    else:
+                        self._place(buf, d_snap(int(0.25 * RATE), 1.0, rng), t0, 0.6 + 0.12 * j, 0.0)
+                        self._place(buf, d_softkick(int(0.5 * RATE), 1.0, rng), t0, 0.55, 0.0)
+            elif bars >= 8 and b % 8 == 7:   # 작은 필인: 마지막 칸 두 개
+                for j in range(2):
+                    t0 = b * self.bar + (S - 2 + j) * st
+                    self._place(buf, (d_snare2 if legend else d_snap)(int(0.35 * RATE), 1.0, rng), t0, 0.55 + 0.2 * j, 0.0)
+
+    def drive_parts(self, lv: int, ph: dict) -> list:
+        """바탕에 더하는 빠른 낮은 오스티나토(전설: 질주하는 현 / 환상: 8분 신스 맥박) + 리듬 강조(전설 엇박 금관 / 환상 16분 벨)."""
+        S = self.steps
+        if self.kind() == "legend":
+            gallop = ("x.xxx.xxx.xxx.xx" if S == 16 else "x.xx.xx.xx.x") if lv >= 1 else ("x.x.x.x.x.x.x.x." if S == 16 else "x.x.x.x.x.x.")
+            out = [dict(inst="spiccato", style="ostinato", gain=0.3 if lv else 0.24, oct=-1, pattern=gallop, seq="rootfifth", len=1.2)]
+            if lv >= 1 and not any(p.get("style") == "hits" for p in ph.get("base", [])):
+                out.append(dict(inst="brass", style="hits", gain=0.3, oct=-1, len=1.4,
+                                pattern="X..X..X...X.X..." if S == 16 else "X..X..X.x..."))
+            return out
+        out = [dict(inst="synbass", style="pulse", gain=0.34, oct=-1, seq="root",
+                    pattern="x.x.x.x.x.x.x.x." if S == 16 else "x.x.x.x.x.x.")]
+        if lv >= 2:
+            out.append(dict(inst="celesta", style="arp", gain=0.15, oct=1, seq="up", pattern="x" * S, len=1.0, spread=0.7))
+        return out
+
+    def pump(self, x: np.ndarray, kicks: list, depth: float) -> np.ndarray:
+        """사이드체인: 킥마다 depth 만큼 눌렀다 0.15초에 걸쳐 놓기 (반복 길이 안에서 이어지게)."""
+        n = len(x)
+        env = np.ones(n)
+        rel = int(0.15 * RATE)
+        att = int(0.005 * RATE)
+        shape = np.concatenate([1 - depth * np.linspace(0, 1, att), 1 - depth * np.exp(-np.arange(rel) / (rel / 4))])
+        for t0 in kicks:
+            s = int(t0 * RATE) % n
+            seg = shape[: n - s]
+            env[s:s + len(seg)] = np.minimum(env[s:s + len(seg)], seg)
+            if len(seg) < len(shape):
+                rest = shape[len(seg):]
+                env[:len(rest)] = np.minimum(env[:len(rest)], rest)
+        return x * env[:, None]
+
+    def kick_times(self, pat: dict, bars: int) -> list:
+        out = []
+        for k in ("kick", "softkick"):
+            for i, ch in enumerate(pat.get(k, "")[: self.steps]):
+                if ch in "xX":
+                    out += [b * self.bar + i * self.step for b in range(bars)]
+        return sorted(out)
+
     # ── 층 만들기 ──
     def phase_info(self, i: int) -> tuple[int, str]:
         ph = self.spec["phases"][i]
@@ -549,6 +732,10 @@ class Song:
         """모든 층 (마스터링 전, 반복 층은 wrap 까지)."""
         sp = self.spec
         rv = sp.get("reverb", [0.25, 2.6])
+        en = self.energy()
+        if en:   # 잔향을 줄여 또렷하게 (넓게 번지면 밋밋해짐)
+            rv = [rv[0] * 0.62, rv[1] * 0.8]
+        prv = [rv[0] * (0.45 if en else 0.6), rv[1] * (0.6 if en else 0.7)]
         out = {}
         n16 = self.loop_len(self.bars)
         phases = sp["phases"]
@@ -559,20 +746,36 @@ class Song:
             if len(chords) < self.bars:
                 chords = (chords * (self.bars // len(chords) + 1))[: self.bars]
             pre = f"{i + 1}_"
-            out[pre + "base"] = self.wrap(self.render_layer(ph.get("base"), chords, root, scale, self.bars, rng, rv), n16)
+            lv = self.level(i)
+            on = en and ph.get("drive", True)
+            base_parts = list(ph.get("base") or []) + (self.drive_parts(lv, ph) if on else [])
+            base = self.wrap(self.render_layer(base_parts, chords, root, scale, self.bars, rng, rv), n16)
             perc = ph.get("perc", {})
-            out[pre + "perc"] = self.wrap(self.render_layer(None, chords, root, scale, self.bars, rng, [rv[0] * 0.6, rv[1] * 0.7],
-                                                            perc=perc.get("pattern", {})), n16)
+            dpat = self.drive_pattern(lv) if on else {}
+
+            def perc_layer(pattern, crisis):
+                buf = self._buf(self.bars * self.bar)
+                self.render_perc(buf, pattern, self.bars, rng, root=root)
+                if on:
+                    self.render_drive(buf, self.drive_pattern(lv, crisis), self.bars, rng)
+                return self.wrap(self.hall(buf, prv[0], prv[1], rng), n16)
+            out[pre + "perc"] = perc_layer(perc.get("pattern", {}), False)
             crisis = dict(perc.get("pattern", {}))
             for k, v in perc.get("crisis", {}).items():
                 crisis[k] = v
-            out[pre + "perc_crisis"] = self.wrap(self.render_layer(None, chords, root, scale, self.bars, rng, [rv[0] * 0.6, rv[1] * 0.7],
-                                                                   perc=crisis), n16)
+            out[pre + "perc_crisis"] = perc_layer(crisis, True)
             lead = ph.get("lead") or []
             out[pre + "lead"] = self.wrap(self.render_layer(lead, chords, root, scale, self.bars, np.random.default_rng(self.seed + i * 13 + 1), rv), n16)
             up = [dict(p, oct=p.get("oct", 0) + 1) for p in lead]
             out[pre + "lead_oct"] = self.wrap(self.render_layer(up, chords, root, scale, self.bars, np.random.default_rng(self.seed + i * 13 + 1), rv), n16)
-            out[pre + "choir"] = self.wrap(self.render_layer(ph.get("choir"), chords, root, scale, self.bars, rng, rv), n16)
+            choir = self.wrap(self.render_layer(ph.get("choir"), chords, root, scale, self.bars, rng, rv), n16)
+            if on:   # 킥마다 바탕·합창이 숨 쉬듯 (사이드체인)
+                kt = self.kick_times(dpat, self.bars)
+                depth = min(0.6, PUMP[self.kind()] * PUMP_LV[lv])
+                base = self.pump(base, kt, depth)
+                choir = self.pump(choir, kt, depth * 0.7)
+            out[pre + "base"] = base
+            out[pre + "choir"] = choir
             if i + 1 < len(phases):
                 out[pre + "riser"] = self.riser(i, rng, rv)
         out["intro_mix"] = self.intro(rv)
@@ -588,6 +791,13 @@ class Song:
         parts = it.get("parts", ph.get("base"))
         perc = it.get("perc", ph.get("perc", {}).get("pattern", {}))
         buf = self.render_layer(parts, chords, root, scale, 2, rng, rv, crescendo=True, perc=perc)
+        if self.energy():   # 인트로: 박이 점점 커지고 둘째 마디 뒷반은 스네어(환상 = 스냅) 롤 → 1페이즈 첫 박
+            self.render_drive(buf, self.drive_pattern(0), 2, rng, crescendo=True)
+            half = self.steps // 2
+            for j in range(half):
+                t0 = self.bar + (half + j) * self.step
+                fn = d_snare2 if self.kind() == "legend" else d_snap
+                self._place(buf, fn(int(0.35 * RATE), 1.0, rng), t0, 0.35 + 0.6 * j / max(1, half - 1), 0.0)
         if it.get("hit", True):   # 정적을 깨는 첫 타격
             hit = self._buf(1.5)
             self._place(hit, d_bigdrum(int(1.4 * RATE), 1.0, rng), 0.0, 1.0, 0.0)
@@ -615,6 +825,13 @@ class Song:
             vel = 0.3 + 0.7 * s / (k - 1)
             m = d_timp(int(0.5 * RATE), vel, rng, f=hz(root - 24)) if roll == "timp" else d_pulse(int(0.4 * RATE), vel, rng)
             self._place(buf, m, s * self.step, vel * 0.8, 0.0)
+        if self.energy():   # 스네어(환상: 셰이커) 16분 롤 크레셴도 → 다음 페이즈 첫 박 크래시
+            for s in range(k):
+                vel = 0.25 + 0.75 * (s / (k - 1)) ** 1.5
+                fn = d_snare2 if roll == "timp" else d_shaker
+                self._place(buf, fn(int(0.3 * RATE), vel, rng), s * self.step, vel, 0.0)
+                if s >= k // 2:   # 뒷반은 32분
+                    self._place(buf, fn(int(0.3 * RATE), vel, rng), (s + 0.5) * self.step, vel * 0.8, 0.0)
         inst = "strings" if roll == "timp" else "harp"
         for s in range(8):
             m = degree_to_midi(s + 1, nroot, nscale)
