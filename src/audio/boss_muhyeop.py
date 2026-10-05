@@ -401,7 +401,7 @@ class MuhyeopSong(Song):
         L = self.bar * 0.5
         buf = self._buf(L)
         self.sfx(buf, "wind", 0.0, L + 0.3, 0.6, -0.2, rng)
-        self.sfx(buf, "seureung", 0.04, min(0.85, L * 0.75), 1.8, 0.15, rng)
+        self.sfx(buf, "seureung", 0.0, min(0.85, L * 0.75), 1.8, 0.15, rng)
         buf = self.hall(buf, rv[0], rv[1], rng)
         n = int(round(L * RATE))
         out = buf[: n + int(RATE * 0.02)].copy()
