@@ -11,6 +11,7 @@ E단조로 시작 → E장조로 마무리 (파워 코드엔 3음이 없으니 �
   card 1.9초    리드 기타 주인의 동기 E → B → A (4분 · 4분 · 2분)
   record 2.6초  E장조: 파워 코드 + 리드 G# 길게 (떨림)
   afterglow     마지막 E 강타 → 길게 울리고 피드백이 천천히 사라짐
+  지지직        전기 소리(boss_rock.g_zap): 쾅·낙뢰(절정, 0.12·0.26초 다시 침 — 연출과 같은 시각)·동기 음마다·마지막, 연출 내내 작게 지글거림
   짧은 버전은 같은 순서를 짧은 마커로 (쾅 → 절정 → 동기 → 마무리), 대기(loop)는 조용히 울리는 E 화음 + 피드백.
 
 출력: assets/music_generated/legend_catch_{full,short,loop}_L03-ROCK.ogg (+ legend_catch_markers.json 에 추가)
@@ -92,6 +93,11 @@ def feedback(m: float, dur: float, swell: bool) -> np.ndarray:
     return R.g_feedback(hz(m), n_of(dur), RNG, swell=swell)
 
 
+def zap(dur: float, mode: str = "decay") -> np.ndarray:
+    """전기 '지지직' (boss_rock.g_zap)."""
+    return R.g_zap(1000.0, n_of(dur), RNG, mode=mode)
+
+
 def kit(name: str, vel: float = 1.0, f: float = 150.0) -> np.ndarray:
     if name == "kick":
         return d_kick(n_of(0.45), vel, RNG)
@@ -130,6 +136,8 @@ def compose(variant: str) -> tuple[np.ndarray, dict]:
     tr = ps.Track(aft + tail)
     # 1) hit: 전투 곡 마지막 코드 그대로 (E 파워 코드 + 크래시 + 킥)
     band_hit(tr, hit, E2, rise + 0.25)
+    tr.add(zap(0.6), hit, 0.42, -0.3)                                 # 지지직!
+    tr.add(zap(aft - rise + 0.3, "flat"), rise, 0.08, 0.35)            # 연출 내내 작게 지글거림 (전기 줄기)
     # 2) rise: 탐 연타 상승 (점점 빠르고 세게) + 킥 8분
     toms = (95.0, 125.0, 160.0, 200.0)
     k, i = rise, 0
@@ -160,12 +168,17 @@ def compose(variant: str) -> tuple[np.ndarray, dict]:
     # 4) climax: 전체 밴드 강타 + 리드 큰 벤딩
     hold = card - cl + 0.15
     band_hit(tr, cl, E2, hold + 0.2, 1.15)
+    tr.add(zap(0.4, "swell"), cl - 0.4, 0.25, 0.2)                    # 낙뢰 직전 차오름
+    tr.add(zap(0.9), cl, 0.55, -0.2)                                  # 낙뢰: 크게 지지직
+    tr.add(zap(0.35), cl + 0.12, 0.3, 0.3)                            # 다시 침 (연출과 같은 0.12 · 0.26초)
+    tr.add(zap(0.3), cl + 0.26, 0.22, -0.35)
     tr.add(lead(88, hold, big_bend=True), cl, 0.5, 0.1)          # E6 로 크게 끌어올림
     # 5) card: 주인의 동기 E → B → A (4분 · 4분 · 2분) — 리드 기타 + 옥타브 아래 겹
     q = (rec - card) / 2
     st = card
     for j, (nn, d) in enumerate(zip((76, 83, 81), (q, q, 2 * q + 0.15))):
         tr.add(lead(nn, d), st, 0.5, 0.1)
+        tr.add(zap(0.18), st, 0.18, (-0.4, 0.4, 0.0)[j])                 # 동기 음마다 짧게 튐
         tr.add(lead(nn - 12, d), st, 0.28, -0.25)
         if j < 2:
             tr.add(kit("kick"), st, 0.4)
@@ -186,6 +199,7 @@ def compose(variant: str) -> tuple[np.ndarray, dict]:
     tr.add(lead(88, tail * 0.85), aft, 0.32, -0.1)
     fb = feedback(88 + 12, tail, False)
     tr.add(fb, aft + 0.25, 0.22, 0.2)
+    tr.add(zap(tail * 0.9), aft, 0.32, -0.25)                          # 마지막 지지직 → 피드백과 함께 사라짐
     y = ps.reverb(tr.buf, rt60=0.8, wet=0.14)
     n_end = int((aft + tail) * SR)
     y = y[:, :n_end]

@@ -536,7 +536,7 @@
   "legend_catch_full_L03-ROCK": {
    "len": 5.5,
    "peak_db": -2.0,
-   "rms_db": -13.3,
+   "rms_db": -13.1,
    "markers": {
     "hit": 0.0,
     "rise": 0.3,
@@ -552,7 +552,7 @@
   "legend_catch_short_L03-ROCK": {
    "len": 3.0,
    "peak_db": -2.0,
-   "rms_db": -14.2,
+   "rms_db": -13.7,
    "markers": {
     "hit": 0.0,
     "rise": 0.15,
@@ -568,7 +568,7 @@
   "legend_catch_loop_L03-ROCK": {
    "len": 4.0,
    "peak_db": -12.0,
-   "rms_db": -23.5,
+   "rms_db": -23.7,
    "markers": {}
   }
  }

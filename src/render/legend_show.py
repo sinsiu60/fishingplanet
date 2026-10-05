@@ -85,6 +85,9 @@ class LegendShow:
         self.final = variant == "final"
         self._fish_pose = None
         self._bolt = None
+        self._branches: list = []   # electro: 절정 낙뢰 곁가지
+        self._arcs: list = []       # electro: 물고기 몸을 타고 튀는 전기 (0.04초마다 새로)
+        self._arc_t = -9.0
 
     def _lower(self) -> None:
         if not self.low:
@@ -246,7 +249,7 @@ class LegendShow:
         # 금빛 색조 (따뜻하게, 절정 근처에서 조금 더)
         warm = 0.10 + 0.08 * _env(t, m["scales"], m["climax"], m["card"], m["afterglow"])
         tint = pygame.Surface((w, h))
-        tint.fill(tuple(int(v * warm) for v in (255, 170, 40)))
+        tint.fill(tuple(int(v * warm) for v in self.uq.get("tint", (255, 170, 40))))
         stage.blit(tint, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
         if self.intro is not None and t < 0.5:
             # 뜰채 단계에서 어두워졌던 하늘·금빛 기둥이 0.5초에 걸쳐 걷힘 (화면 전환이 튀지 않게)
@@ -312,7 +315,7 @@ class LegendShow:
         for i in range(n):
             a = -math.pi / 2 + (i - (n - 1) / 2) * (math.pi * 1.7 / n)
             wa = 0.13 + 0.03 * math.sin(self.clock * 1.5 + i * 1.3)
-            col = tuple(int(v * k * self.ray_gain * (0.24 if i % 2 else 0.14)) for v in (255, 170, 50))
+            col = tuple(int(v * k * self.ray_gain * (0.24 if i % 2 else 0.14)) for v in self.uq.get("ray", (255, 170, 50)))
             pygame.draw.polygon(light, col, [(fx, fy), (fx + math.cos(a - wa / 2) * L, fy + math.sin(a - wa / 2) * L),
                                              (fx + math.cos(a + wa / 2) * L, fy + math.sin(a + wa / 2) * L)])
 
@@ -433,6 +436,23 @@ class LegendShow:
             for _ in range(min(self._budget(), n0)):
                 self.uniq.append([fx + r.uniform(-80, 80), wy + r.uniform(-4, 10), r.uniform(-6, 6), -r.uniform(14, 40),
                                   r.uniform(2.0, 3.5), 3.5, "chip", r.uniform(0, math.tau)])
+        elif kind == "electro" and stage in ("hit", "climax"):
+            # 일렉트로: 쾅·절정에 불꽃(스파크) 터짐, 절정엔 하늘에서 낙뢰 + 곁가지 3개 + 전기 고리
+            n = min(self._budget(), n0 * (2 if stage == "climax" else 1))
+            for _ in range(max(0, n)):
+                a = r.uniform(0, math.tau)
+                spd = r.uniform(120, 380) * (1.3 if stage == "climax" else 1.0)
+                self.uniq.append([fx, fy, math.cos(a) * spd, math.sin(a) * spd - 60, r.uniform(0.25, 0.7), 0.7, "spark", 0])
+            if stage == "climax":
+                self._bolt = self._zigzag((fx + r.uniform(-40, 40), -5), (fx, fy - 10), 20)
+                self._branches = []
+                for _ in range(3):
+                    i0 = r.randrange(1, max(2, len(self._bolt) - 2))
+                    x0, y0 = self._bolt[i0]
+                    a = r.choice((-1, 1)) * r.uniform(0.5, 1.1) + math.pi / 2
+                    L = r.uniform(40, 90)
+                    self._branches.append(self._zigzag((x0, y0), (x0 + math.cos(a) * L, y0 + math.sin(a) * L * 0.6), 12))
+                self.uq["ring_t"] = self.t
         elif kind == "lightning" and stage == "climax":
             # 낙뢰 1회: 지그재그 경로를 미리 만들어 둠 (번쩍임은 절정 1회 규칙 안)
             pts = [(fx + r.uniform(-40, 40), -5)]
@@ -441,6 +461,40 @@ class LegendShow:
                 y += r.uniform(14, 26)
                 pts.append((pts[-1][0] * 0.7 + fx * 0.3 + r.uniform(-18, 18), min(y, fy - 10)))
             self._bolt = pts
+
+    def _zigzag(self, a, b, seg: float) -> list:
+        """a → b 지그재그 (번개·전기 줄기)."""
+        r = self.rnd
+        n = max(2, int(math.hypot(b[0] - a[0], b[1] - a[1]) / seg))
+        nx, ny = -(b[1] - a[1]), b[0] - a[0]
+        ln = math.hypot(nx, ny) or 1.0
+        nx, ny = nx / ln, ny / ln
+        pts = [a]
+        for i in range(1, n):
+            u = i / n
+            j = r.uniform(-1, 1) * seg * 0.45
+            pts.append((lerp(a[0], b[0], u) + nx * j, lerp(a[1], b[1], u) + ny * j))
+        pts.append(b)
+        return pts
+
+    def _make_arcs(self) -> None:
+        """물고기 몸 둘레에서 바깥으로 튀는 짧은 전기 줄기 (지지직)."""
+        r = self.rnd
+        fx, fy = self.fish_pos()
+        hl = self.length * self.fish_scale() * 0.5
+        n = 1 if self.reduce else (2 if self.low else 4)
+        if self.t > self.m["climax"] - 0.1:
+            n += 0 if self.reduce else 2
+        self._arcs = []
+        for _ in range(n):
+            a = r.uniform(0, math.tau)
+            x0, y0 = fx + math.cos(a) * hl * 0.85, fy + math.sin(a) * hl * 0.32
+            L = r.uniform(18, 55)
+            arc = self._zigzag((x0, y0), (x0 + math.cos(a) * L, y0 + math.sin(a) * L * 0.8), 7)
+            self._arcs.append((arc, r.uniform(0.55, 1.0)))
+            if r.random() < 0.35:   # 몸을 가로지르는 줄기
+                b = a + math.pi + r.uniform(-0.6, 0.6)
+                self._arcs.append((self._zigzag((x0, y0), (fx + math.cos(b) * hl * 0.8, fy + math.sin(b) * hl * 0.3), 8), r.uniform(0.4, 0.8)))
 
     def _update_unique(self, dt: float, sp: float) -> None:
         for p in self.uniq:
@@ -457,9 +511,15 @@ class LegendShow:
                 p[3] = p[3] * (1 - 0.9 * dt) + 8 * dt
             elif kd == "drop_r":
                 p[3] += 200 * dt
+            elif kd == "spark":
+                p[2] *= 1 - 1.8 * dt
+                p[3] += 520 * dt * sp
         self.uniq = [p for p in self.uniq if p[4] > 0]
         kind, k = self.uq["kind"], self._uk()
         r = self.rnd
+        if kind == "electro" and k > 0.05 and self.clock - self._arc_t >= (0.08 if self.reduce else 0.04):
+            self._arc_t = self.clock
+            self._make_arcs()
         if k > 0.2 and self._budget() > 0:
             half = 0.5 if self.reduce else 1.0
             if kind == "gold_rain" and r.random() < 40 * k * dt * half * 2:
@@ -472,6 +532,13 @@ class LegendShow:
             elif kind == "reeds_bow" and self.t > self.m["climax"] - 0.1 and r.random() < 26 * k * dt * half:
                 self.uniq.append([-10, r.uniform(self.h * 0.2, self.h * 0.9), r.uniform(260, 380), r.uniform(-8, 8), 1.6, 1.6,
                                   "wind", 0])
+            elif kind == "electro":
+                if r.random() < 40 * k * dt * half:   # 몸에서 계속 튀는 불꽃
+                    fx, fy = self.fish_pos()
+                    a = r.uniform(0, math.tau)
+                    spd = r.uniform(80, 220)
+                    self.uniq.append([fx + r.uniform(-30, 30), fy + r.uniform(-8, 8), math.cos(a) * spd, math.sin(a) * spd - 40,
+                                      r.uniform(0.2, 0.5), 0.5, "spark", 0])
             elif kind == "spear" and self.t > self.m["climax"] and r.random() < 10 * k * dt * half:
                 self.uniq.append([-10, self.water_y + r.uniform(-30, 30), r.uniform(300, 420), 0, 1.4, 1.4, "wind", 0])
 
@@ -482,7 +549,13 @@ class LegendShow:
         w, h, t, m, wy = self.w, self.h, self.t, self.m, self.water_y
         fx, fy = self.fish_pos()
         cl = m["climax"]
-        if kind == "cloud_part":
+        if kind == "electro":
+            # 물고기 둘레 푸른 전기 기운 (지지직 떨림) — 절정에 크게
+            fl = 0.75 + 0.25 * self.rnd.random() if not self.reduce else 0.9
+            big = 1 + 0.6 * _env(t, cl - 0.05, cl + 0.05, cl + 0.5, cl + 1.4)
+            _add_circle(light, tuple(int(v * 0.16 * k * fl * big) for v in col), (fx, fy), int(self.length * 0.55 * big))
+            _add_circle(light, tuple(int(v * 0.12 * k * fl * big) for v in col), (fx, fy), int(self.length * 0.32 * big))
+        elif kind == "cloud_part":
             # 구름이 좌우로 갈라지며 가운데로 금빛 햇살
             u = smoothstep(clamp((t - m["scales"]) / (cl - m["scales"] + 0.6), 0, 1))
             for side in (-1, 1):
@@ -572,6 +645,37 @@ class LegendShow:
                     pygame.draw.line(light, tuple(int(v * 0.4) for v in c), (x0, y0), (xe, ye), 7)
                     pygame.draw.line(light, c, (x0, y0), (xe, ye), 3)
                     pygame.draw.line(stage, lerp_color((60, 40, 20), WHITE, fade), (x0, y0), (xe, ye), 1)
+        elif kind == "electro":
+            arc_k = k * (0.6 if self.reduce else 1.0)
+            for pts, a0 in self._arcs:   # 지지직: 0.04초마다 모양이 바뀌는 짧은 전기 줄기
+                if arc_k <= 0.02:
+                    break
+                a = arc_k * a0
+                pygame.draw.lines(light, tuple(int(v * a * 0.35) for v in col), False, pts, 5)
+                pygame.draw.lines(light, tuple(int(v * a) for v in col), False, pts, 2)
+                pygame.draw.lines(stage, lerp_color(col, WHITE, 0.7), False, pts, 1)
+            d = t - cl
+            if self._bolt is not None and 0 <= d < 0.7:
+                # 낙뢰 + 곁가지, 0.12·0.26초에 같은 길로 약하게 다시 침 (큰 번쩍임은 절정 1회만)
+                re = max(_env(d, 0.0, 0.03, 0.08, 0.2), 0.45 * _env(d, 0.12, 0.14, 0.17, 0.24), 0.3 * _env(d, 0.26, 0.28, 0.31, 0.4))
+                a = re * (1 - d / 0.7) * (0.5 if self.reduce else 1.0)
+                for pts in [self._bolt] + self._branches:
+                    wd = 8 if pts is self._bolt else 4
+                    pygame.draw.lines(light, tuple(int(v * a * 0.45) for v in col), False, pts, wd)
+                    pygame.draw.lines(light, tuple(int(v * a) for v in col), False, pts, max(2, wd // 2))
+                    if a > 0.15:
+                        pygame.draw.lines(stage, WHITE, False, pts, 1)
+            rt = self.uq.get("ring_t")
+            if rt is not None and 0 <= t - rt < 0.45:   # 전기 고리: 지그재그 원이 퍼짐
+                u = (t - rt) / 0.45
+                R = 20 + 110 * u
+                pts = []
+                for i in range(25):
+                    an = i * math.tau / 24
+                    rr = R * (1 + self.rnd.uniform(-0.08, 0.08))
+                    pts.append((fx + math.cos(an) * rr, fy + math.sin(an) * rr * 0.6))
+                c = tuple(int(v * (1 - u) * 0.9) for v in col)
+                pygame.draw.lines(light, c, False, pts, 2)
         elif kind == "lightning" and self._bolt is not None:
             d = t - cl
             if 0 <= d < 0.6:
@@ -664,6 +768,10 @@ class LegendShow:
             elif kd == "wind":
                 c = tuple(int(v * 0.4 * life) for v in GOLD)
                 pygame.draw.line(light, c, (x, y), (x - 26, y), 1)
+            elif kd == "spark":   # 불꽃: 날아가는 방향으로 짧은 줄
+                tail = (x - p[2] * 0.025, y - p[3] * 0.025)
+                pygame.draw.line(light, tuple(int(v * life) for v in col), tail, (x, y), 2)
+                light.fill(tuple(int(v * life) for v in WHITE), (int(x), int(y), 2, 2))
 
     def _draw_dragon(self, stage, light, col) -> None:
         """승천: 물보라가 용의 형상(구불구불한 몸 + 뿔 머리)으로 솟아 하늘로 오르고, 절정 뒤 금빛으로 흩어짐."""

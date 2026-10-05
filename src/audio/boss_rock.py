@@ -163,6 +163,38 @@ def g_slide(f, n, rng, take=0):
     return amp(out, 4.0, tight=300) * (1 - t / t[-1]) * 0.7
 
 
+def g_zap(f, n, rng, take=0, mode="decay"):
+    """전기 '지지직': 불규칙한 딱딱 튀는 소리(방전) + 전선 웅웅거림(100Hz 배음)이 끊겼다 이어졌다.
+    mode = decay(확 튀고 사라짐) · flat(계속 지글거림) · swell(점점 커짐)."""
+    t = _t(n)
+    x = np.zeros(n)
+    i = 0
+    while i < n:   # 방전 딸깍: 0.5~9ms 간격, 길이 0.2~1.5ms
+        ln = int(rng.uniform(0.0002, 0.0015) * RATE) + 1
+        x[i:i + ln] += rng.uniform(-1, 1, min(ln, n - i)) * rng.uniform(0.3, 1.0)
+        i += int(rng.exponential(0.0035) * RATE) + int(0.0005 * RATE)
+    hum = np.sign(np.sin(2 * np.pi * 100 * t)) * 0.5 + np.sign(np.sin(2 * np.pi * 300 * t + 1.0)) * 0.25
+    gate = np.zeros(n)
+    i = 0
+    while i < n:   # 웅웅거림이 20~90ms 씩 켜졌다 꺼짐
+        ln = int(rng.uniform(0.02, 0.09) * RATE)
+        if rng.random() < 0.55:
+            gate[i:i + ln] = rng.uniform(0.4, 1.0)
+        i += ln
+    gate = _bw_filter(gate, "lp", 200)
+    y = _bw_filter(x, "bp", (1200, 9000)) * 1.4 + _bw_filter(hum * gate, "bp", (180, 4000)) * 0.35
+    y = np.tanh(2.5 * y)
+    if mode == "decay":
+        e = np.minimum(1, t / 0.002) * np.exp(-t * 5.0)
+    elif mode == "swell":
+        e = (t / t[-1]) ** 1.5
+    else:
+        e = np.ones(n)
+    r = min(n, int(0.03 * RATE))
+    e[-r:] *= np.linspace(1, 0, r)
+    return y * e / (float(np.abs(y).max()) or 1.0)
+
+
 def d_ride(n, vel, rng):
     t = _t(n)
     bell = sum(a * np.sin(2 * np.pi * fr * t) for fr, a in ((3100, 0.5), (4570, 0.35), (6210, 0.25))) * np.exp(-t * 6)
@@ -171,7 +203,8 @@ def d_ride(n, vel, rng):
 
 
 GTR = {"gtr_mute": g_mute, "gtr_power": g_power, "gtr_low": g_low, "gtr_lead": g_lead, "gtr_lead_t": g_lead, "gtr_harm": g_lead,
-       "bass_gtr": g_bass, "feedback": g_feedback, "pickslide": g_slide}
+       "bass_gtr": g_bass, "feedback": g_feedback, "pickslide": g_slide, "zap": g_zap,
+       "zap_swell": lambda f, n, rng, take=0: g_zap(f, n, rng, take, "swell")}
 
 
 # ───────────────────────── 곡 ─────────────────────────
@@ -353,6 +386,7 @@ class RockSong(Song):
         self.note(buf, "bass_gtr", e2 - 12, pick, self.bar * 0.7, 0.9, 0.0, rng, rel=0.05)
         self._place(buf, d_kick(int(DRUM_LEN["kick"] * RATE), 1.0, rng), pick, 1.1, 0.0)
         self._place(buf, d_crash(int(DRUM_LEN["crash"] * RATE), 1.0, rng), pick, 0.75, 0.2)
+        self.note(buf, "zap", 60, 0.0, pick + 0.5, 0.45, -0.3, rng, rel=0.0)   # 지지직 (전기)
         for j in range(4):
             t0 = pick + (S - 4 + j) * st
             self._place(buf, d_tom(int(0.6 * RATE), 1.0, rng, f=(200.0, 160.0, 125.0, 95.0)[j]), t0, 0.8, 0.45 - 0.3 * j)
@@ -372,6 +406,7 @@ class RockSong(Song):
         buf = self._buf(self.bar)
         self.note(buf, "pickslide", root, 0.0, self.bar * 0.55, 0.9, -0.3, rng, rel=0.0)
         self.note(buf, "pickslide", root, 0.0, self.bar * 0.55, 0.85, 0.3, rng, rel=0.0)
+        self.note(buf, "zap_swell", 61, self.bar * 0.45, self.bar * 0.55, 0.3, 0.35, rng, rel=0.0)   # 지지직 점점 커짐
         toms = (220.0, 180.0, 145.0, 110.0)
         for s in range(S):
             vel = 0.45 + 0.55 * s / (S - 1)
@@ -397,6 +432,7 @@ class RockSong(Song):
         self.note(hit, "bass_gtr", e2 - 12, 0.0, 0.42, 0.9, 0.0, rng, rel=0.0)
         self._place(hit, d_kick(int(DRUM_LEN["kick"] * RATE), 1.0, rng), 0.0, 1.1, 0.0)
         self._place(hit, d_crash(int(DRUM_LEN["crash"] * RATE), 1.0, rng), 0.0, 0.7, 0.2)
+        self.note(buf, "zap", 62, 0.0, 1.2, 0.4, -0.25, rng, rel=0.0)   # 합선된 듯 지지직
         k = int(0.42 * RATE)
         hit[k:] = 0
         hit[k - int(0.008 * RATE):k] *= np.linspace(1, 0, int(0.008 * RATE))[:, None]
