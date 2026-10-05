@@ -492,6 +492,39 @@
   },
   "tp": -2.3
  },
+ "L08-TRANCE": {
+  "files": [
+   "L08-TRANCE_1_base.ogg",
+   "L08-TRANCE_1_lead.ogg",
+   "L08-TRANCE_1_lead_oct.ogg",
+   "L08-TRANCE_1_perc.ogg",
+   "L08-TRANCE_1_perc_crisis.ogg",
+   "L08-TRANCE_1_riser.ogg",
+   "L08-TRANCE_2_base.ogg",
+   "L08-TRANCE_2_lead.ogg",
+   "L08-TRANCE_2_lead_oct.ogg",
+   "L08-TRANCE_2_perc.ogg",
+   "L08-TRANCE_2_perc_crisis.ogg",
+   "L08-TRANCE_2_riser.ogg",
+   "L08-TRANCE_3_base.ogg",
+   "L08-TRANCE_3_choir.ogg",
+   "L08-TRANCE_3_lead.ogg",
+   "L08-TRANCE_3_lead_oct.ogg",
+   "L08-TRANCE_3_perc.ogg",
+   "L08-TRANCE_3_perc_crisis.ogg",
+   "L08-TRANCE_fail.ogg",
+   "L08-TRANCE_intro.ogg"
+  ],
+  "hash": "efa559167737927e",
+  "lufs": -14.01,
+  "phases": {
+   "1": -14.69,
+   "2": -15.68,
+   "3": -12.31,
+   "intro": -15.6
+  },
+  "tp": -2.0
+ },
  "L09": {
   "files": [
    "L09_1_base.ogg",

@@ -995,6 +995,47 @@ def celtic_songs() -> dict:
     return {"L07-CELTIC": song}
 
 
+# ───────────────────────── 트랜스: 결정어왕 프리시아 (BOSS_BGM.md 엘드라시온 L08, DESIGN.md 43-23) ─────────────────────────
+# A단조 158 · 4/4, src/audio/boss_trance.py. 오케스트라 L08 은 남겨 둠. 선율은 트랜스식 3·3·2 (점8분 · 점8분 · 8분) 당김.
+TR_A = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                       # 주인의 동기
+        [1, 0, 3, .75], [1, .75, 4, .75], [1, 1.5, 5, .5], [1, 2, 3, .75], [1, 2.75, 2, .75], [1, 3.5, 1, .5],
+        [2, 0, 6, .75], [2, .75, 5, .75], [2, 1.5, 3, .5], [2, 2, 5, 2],
+        [3, 0, 7, .75], [3, .75, 5, .75], [3, 1.5, 4, .5], [3, 2, 2, 1], [3, 3, 5, 1],
+        [4, 0, 8, 1], [4, 1, 12, 1], [4, 2, 11, 2],                                     # 동기 한 옥타브 위
+        [5, 0, 10, .75], [5, .75, 11, .75], [5, 1.5, 12, .5], [5, 2, 10, .75], [5, 2.75, 9, .75], [5, 3.5, 8, .5],
+        [6, 0, 13, .75], [6, .75, 12, .75], [6, 1.5, 10, .5], [6, 2, 12, 2],
+        [7, 0, 11, .75], [7, .75, 10, .75], [7, 1.5, 9, .5], [7, 2, 8, 2]]
+
+
+def trance_songs() -> dict:
+    mel = TR_A + [[b + 8, at, d, ln] for b, at, d, ln in TR_A if b < 7] + [[15, 0, 8, 1.75], [15, 2, 7, 1], [15, 3, 5, 1]]
+    kick = "x...x...x...x..."
+    hats = dict(kick=kick, ohat="..x...x...x...x.", hat="x.x.x.x.x.x.x.x.")
+    crisis = dict(kick="x...x...x...x.x.", snare="....x..x....x.xx", clap="....x.......x...")
+    build = list(range(14, 16))
+    p3kick = [kick] * 15 + ["................"]                     # 마지막 마디는 킥 빠짐 (빌드업)
+    p3snare = [""] * 14 + ["x...x...x...x...", "xxxxxxxxxxxxxxx."]   # 빌드업 몰아치기 (마지막 16분 비움)
+    song = dict(kind="legend", trance=True, replaces="L08", root=57, scale="minor", bpm=158, meter=[4, 4], fish="prisia",
+                reverb=[0.18, 1.2], master={"mid_cut_db": -3.0},
+                phases=[dict(chords=[1, 6, 3, 7] * 4,
+                             base=[part("pluck", "arp", 0.16), part("sub", "sub", 0.32), part("pad", "pad", 0.1)],
+                             perc=dict(pattern=dict(hats), crisis=crisis),
+                             lead=[lead("pluck", mel, 1.1, 1)], choir=[]),
+                        dict(chords=[6, 4, 1, 7] * 4, mid_cut_extra=-5.0,
+                             base=[part("gate", "gate", 0.08), part("sub", "sub", 0.32), part("pad", "pad", 0.08)],
+                             perc=dict(pattern=dict(hats, clap="....x.......x..."), crisis=crisis),
+                             lead=[lead("bell", mel, 0.6, 1)], choir=[]),
+                        dict(chords=[1, 6, 3, 7, 1, 6, 3, 7, 6, 7, 1, 6, 4, 7, 1, 1], pump=0.5,
+                             base=[part("gate", "gate", 0.11, mute=[15]), part("sub", "sub", 0.32, mute=[15]), part("pad", "pad", 0.14),
+                                   part("pluck", "arp", 0.13, oct=1, mute=build), part("hit", "orch_hits", 0.3, every=4),
+                                   part("noise", "riser", 0.35, spans=[[14, 16]])],
+                             perc=dict(pattern=dict(kick=p3kick, ohat="..x...x...x...x.", hat="x.x.x.x.x.x.x.x.", clap="....x.......x...",
+                                                    snare=p3snare, crash=["x...............", "", "", ""]), crisis=crisis),
+                             lead=[lead("lead", mel, 0.34, 1), lead("bell", mel, 0.28, 1, pan=0.2)],
+                             choir=[part("choir", "choir_hold", 0.35, mute=[14])])])
+    return {"L08-TRANCE": song}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -1010,6 +1051,7 @@ def main(argv) -> int:
     songs.update(organ_songs())
     songs.update(epic_songs())
     songs.update(celtic_songs())
+    songs.update(trance_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):

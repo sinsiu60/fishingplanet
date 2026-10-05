@@ -52,6 +52,9 @@ def song_hash(spec: dict, master: dict) -> str:
     if spec.get("celtic"):   # 켈틱 곡은 boss_celtic.py 도 (DESIGN.md 43-22) — 성가는 boss_organ, 도우미는 boss_muhyeop 에서
         for f in ("boss_celtic.py", "boss_organ.py", "boss_muhyeop.py"):
             src += open(os.path.join(ROOT, "src", "audio", f), "rb").read().replace(b"\r\n", b"\n")
+    if spec.get("trance"):   # 트랜스 곡은 boss_trance.py 도 (DESIGN.md 43-23) — 도우미는 boss_muhyeop 에서
+        for f in ("boss_trance.py", "boss_muhyeop.py"):
+            src += open(os.path.join(ROOT, "src", "audio", f), "rb").read().replace(b"\r\n", b"\n")
     if spec.get("rock"):     # 락 곡은 boss_rock.py 도 (DESIGN.md 43-14)
         src += open(os.path.join(ROOT, "src", "audio", "boss_rock.py"), "rb").read().replace(b"\r\n", b"\n")
     return hashlib.sha1(src + json.dumps([spec, master], sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
@@ -133,6 +136,8 @@ def main(argv: list[str]) -> int:
             from src.audio.boss_epic import EpicSong as cls
         if spec.get("celtic"):
             from src.audio.boss_celtic import CelticSong as cls
+        if spec.get("trance"):
+            from src.audio.boss_trance import TranceSong as cls
         stems, rep = boss_synth.master(cls(sid, spec, mcfg).stems(), len(spec["phases"]), dict(mcfg, **spec.get("master", {})))
         for old in os.listdir(out):
             if old.startswith(sid + "_"):
