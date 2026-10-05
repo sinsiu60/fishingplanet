@@ -294,6 +294,41 @@
   },
   "tp": -2.41
  },
+ "L05-ORGAN": {
+  "files": [
+   "L05-ORGAN_1_base.ogg",
+   "L05-ORGAN_1_choir.ogg",
+   "L05-ORGAN_1_lead.ogg",
+   "L05-ORGAN_1_lead_oct.ogg",
+   "L05-ORGAN_1_perc.ogg",
+   "L05-ORGAN_1_perc_crisis.ogg",
+   "L05-ORGAN_1_riser.ogg",
+   "L05-ORGAN_2_base.ogg",
+   "L05-ORGAN_2_choir.ogg",
+   "L05-ORGAN_2_lead.ogg",
+   "L05-ORGAN_2_lead_oct.ogg",
+   "L05-ORGAN_2_perc.ogg",
+   "L05-ORGAN_2_perc_crisis.ogg",
+   "L05-ORGAN_2_riser.ogg",
+   "L05-ORGAN_3_base.ogg",
+   "L05-ORGAN_3_choir.ogg",
+   "L05-ORGAN_3_lead.ogg",
+   "L05-ORGAN_3_lead_oct.ogg",
+   "L05-ORGAN_3_perc.ogg",
+   "L05-ORGAN_3_perc_crisis.ogg",
+   "L05-ORGAN_fail.ogg",
+   "L05-ORGAN_intro.ogg"
+  ],
+  "hash": "5c7da8325c0e9e34",
+  "lufs": -14.0,
+  "phases": {
+   "1": -14.24,
+   "2": -14.7,
+   "3": -13.09,
+   "intro": -16.96
+  },
+  "tp": -2.24
+ },
  "L06": {
   "files": [
    "L06_1_base.ogg",

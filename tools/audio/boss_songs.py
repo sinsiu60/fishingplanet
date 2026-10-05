@@ -816,6 +816,49 @@ def sangun_songs() -> dict:
     return {"L02-SANGUN": song}
 
 
+# ───────────────────────── 심해 대성당: 실러캔스 '태고' (SHARMION_THEMES.md 5장, DESIGN.md 43-18) ─────────────────────────
+# B♭단조 136, src/audio/boss_organ.py.
+OG_A = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                   # 주인의 동기
+        [1, 0, 3, 1], [1, 1, 4, .5], [1, 1.5, 5, .5], [1, 2, 6, 1], [1, 3, 5, 1],
+        [2, 0, 4, 1.5], [2, 1.5, 3, .5], [2, 2, 2, 1], [2, 3, "#7", 1],
+        [3, 0, 1, 2], [3, 2, 3, 1], [3, 3, 5, 1],
+        [4, 0, 8, 1], [4, 1, 7, .5], [4, 1.5, 6, .5], [4, 2, 5, 1], [4, 3, 6, 1],
+        [5, 0, 4, 1], [5, 1, 3, 1], [5, 2, 4, 1], [5, 3, 5, 1],
+        [6, 0, 6, 1.5], [6, 1.5, 5, .5], [6, 2, 4, 1], [6, 3, "#7", 1],
+        [7, 0, 8, 4]]
+OG_B = [[8, 0, 8, 1], [8, 1, 12, 1], [8, 2, 11, 2],                                  # 동기 한 옥타브 위
+        [9, 0, 10, 1], [9, 1, 11, .5], [9, 1.5, 12, .5], [9, 2, 13, 1], [9, 3, 12, 1],
+        [10, 0, 11, 1.5], [10, 1.5, 10, .5], [10, 2, 9, 1], [10, 3, 8, 1],
+        [11, 0, 7, 2], [11, 2, 5, 2],
+        [12, 0, 6, 1], [12, 1, 5, 1], [12, 2, 4, 1], [12, 3, 3, 1],
+        [13, 0, 4, 1], [13, 1, 5, 1], [13, 2, 6, 2],
+        [14, 0, 5, 1], [14, 1, 4, 1], [14, 2, "#7", 2],
+        [15, 0, 8, 4]]
+
+
+def organ_songs() -> dict:
+    mel = OG_A + OG_B
+    low = [[b, at, d - 7 if isinstance(d, int) else "#0" if d == "#7" else d, ln] for b, at, d, ln in mel]
+    heart = "x...x...x..x...."
+    song = dict(kind="legend", organ=True, replaces="L05", root=58, scale="minor", bpm=136, meter=[4, 4], fish="coelacanth",
+                reverb=[0.22, 1.9], master={"mid_cut_db": -3.0},
+                phases=[dict(chords=[1, 1, 6, 6, 4, 4, "5M", "5M", 1, 1, 6, 4, 7, 3, "5M", 1],
+                             base=[part("organ", "pedal", 0.45), part("organ", "toccata", 0.2)],
+                             perc=dict(pattern=dict(heart=heart, bell=4), crisis=dict(heart="x.x.x.x.x.x..x..", accent="x.......x.......")),
+                             lead=[lead("organ", mel, 0.55, 1)], choir=[part("chant", "chant_hold", 0.5)]),
+                        dict(chords=[1, 1, 4, 4, 6, 6, "5M", "5M", 1, 1, 6, 6, 4, "5M", "5M", 1], mid_cut_extra=-5.0,
+                             base=[part("organ", "pedal", 0.42), part("organ", "toccata", 0.16, oct=-1)],
+                             perc=dict(pattern=dict(heart=heart, bell=4), crisis=dict(heart="x.x.x.x.x.x..x..", accent="x.......x.......")),
+                             lead=[lead("organ", low, 0.4, 1), lead("whisper", mel, 0.7, 0, pan=0.2)],
+                             choir=[part("whisper", "chant_hold", 0.55)]),
+                        dict(chords=[1, 1, 6, 6, 4, 4, "5M", "5M", 6, 4, 1, 1, 4, "5M", "5M", 1],
+                             base=[part("organ", "pedal", 0.5), part("organ_full", "toccata", 0.17)],
+                             perc=dict(pattern=dict(heart=heart, bell=2), crisis=dict(heart="x.x.x.x.x.x..x..", accent="x...x...x...x...")),
+                             lead=[lead("chant", mel, 1.3, 0), lead("organ_full", mel, 0.22, 1, pan=-0.2)],
+                             choir=[part("chant", "chant_hold", 0.6)])])
+    return {"L05-ORGAN": song}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -828,6 +871,7 @@ def main(argv) -> int:
     songs.update(muhyeop_songs())
     songs.update(jazz_songs())
     songs.update(sangun_songs())
+    songs.update(organ_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):

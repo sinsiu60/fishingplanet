@@ -2872,6 +2872,7 @@
   {
    "id": "coelacanth",
    "name": "실러캔스 '태고'",
+   "theme": "taego",
    "spot": "deep",
    "times": [
     "night"

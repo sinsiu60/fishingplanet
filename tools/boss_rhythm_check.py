@@ -84,6 +84,9 @@ def measure(sid: str, spec: dict, mcfg: dict) -> dict:
     if spec.get("sangun"):
         from src.audio import boss_sangun
         cls = boss_sangun.SangunSong
+    if spec.get("organ"):
+        from src.audio import boss_organ
+        cls = boss_organ.OrganSong
     D = dry_class(cls)
     s = D(sid, spec, mcfg)
     # 1페이즈만: 층 이름을 바꿔 가며 기록 (stems 를 그대로 돌리되 1페이즈 기록만 씀)

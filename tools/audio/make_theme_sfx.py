@@ -4,6 +4,7 @@
       ilseom (청새치 '일섬', boss_muhyeop): seureung · chaeng · jing · wind
       yeoubi (황금잉어 '여우비', boss_jazz): piano (가짜 지침 예고 '띵—') · coin (퍼펙트 금화 '띵')
       sangun (산신 쏘가리 '산군', boss_sangun): claw (퍼펙트 발톱 '촥')
+      taego (실러캔스 '태고', boss_organ): bell (퍼펙트 맑은 작은 종 '딩')
       게임은 src/audio/theme_sfx.py 가 'sfx_<테마>_<이름>' 으로 불러옴 (assets/sfx/<테마>/<이름>.ogg 가 있으면 그것 우선)
 사용: python tools/audio/make_theme_sfx.py [테마 …]
 """
@@ -20,6 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 sys.path.insert(0, ROOT)
 from src.audio import boss_jazz as J  # noqa: E402
 from src.audio import boss_muhyeop as M  # noqa: E402
+from src.audio import boss_organ as OG  # noqa: E402
 from src.audio import boss_sangun as SG  # noqa: E402
 from src.audio.boss_synth import RATE  # noqa: E402
 
@@ -39,7 +41,8 @@ def sounds() -> dict:
             "ilseom/wind": wind,
             "yeoubi/piano": piano,
             "yeoubi/coin": J.s_coin(n(0.6), rng),
-            "sangun/claw": SG.s_claw(n(0.45), rng)}
+            "sangun/claw": SG.s_claw(n(0.45), rng),
+            "taego/bell": OG.d_smallbell(n(1.6), 1.0, rng)}
 
 
 def main() -> int:

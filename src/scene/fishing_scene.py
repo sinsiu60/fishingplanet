@@ -2166,6 +2166,8 @@ class FishingScene(Scene):
                     theme_sfx.play(self.sfx, "yeoubi", "coin", 0.55)
                 elif theme == "sangun":   # 산군: 짧은 발톱 '촥'
                     theme_sfx.play(self.sfx, "sangun", "claw", 0.55)
+                elif theme == "taego":    # 태고: 맑은 작은 종 '딩'
+                    theme_sfx.play(self.sfx, "taego", "bell", 0.5)
                 self.sparkles.burst(*pos, count=40, speed=1.7)
                 self.sparkles.burst(*pos, count=16, speed=0.6, ring=False)
                 self.screen_fx.perfect(mp, glow=self._glow_sec())
