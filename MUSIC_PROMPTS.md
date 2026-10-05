@@ -187,7 +187,7 @@ Electrifying boss theme for a silver sea bass that leaps with every lightning st
 ```
 **Exclude** `slow, ballad, lo-fi, dubstep wobble, vocals`
 
-### `legend_marlin` — 청새치 '창' (먼바다)
+### `legend_marlin` — 청새치 '일섬' (먼바다)
 > 창 같은 주둥이를 가진 바다의 왕. 바다 끝까지 질주하고, 3페이즈엔 꼬리로 수면을 세 번 내려친다.
 
 **Style**
