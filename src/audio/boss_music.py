@@ -71,10 +71,12 @@ class BossMusic:
     def spec(self, sid: str) -> dict | None:
         return self.cfg.get("boss", {}).get("songs", {}).get(sid)
 
-    def timing(self, sid: str) -> tuple[float, float]:
+    def timing(self, sid: str, phase: int = 0) -> tuple[float, float]:
+        """(4분음표, 마디) 초. 페이즈마다 빠르기·박자가 다를 수 있음 (phases[i].bpm · meter — 예: L04-MUHYEOP 12/8 → 4/4)."""
         sp = self.spec(sid)
-        num, den = sp.get("meter", [4, 4])
-        q = 60.0 / sp["bpm"]
+        ph = sp["phases"][phase] if phase < len(sp["phases"]) else {}
+        num, den = ph.get("meter", sp.get("meter", [4, 4]))
+        q = 60.0 / ph.get("bpm", sp["bpm"])
         return q, q * num * 4 / den
 
     def song_for(self, fish_id: str | None) -> str | None:
@@ -278,6 +280,7 @@ class BossMusic:
             for ch in self.lay_ch[self.old_slot].values():
                 ch.stop()
             self.loop_t0 = self.switch_at
+            self.q, self.bar = self.timing(sid, self.phase)   # 새 페이즈의 마디 (빠르기·박자가 바뀌는 곡)
             self.switch_at = self.next_at = None
             self.tired_until = None   # 새 페이즈는 보통 주선율부터
             self._bar_i = None

@@ -160,6 +160,40 @@
   },
   "tp": -2.1
  },
+ "L04-MUHYEOP": {
+  "files": [
+   "L04-MUHYEOP_1_base.ogg",
+   "L04-MUHYEOP_1_lead.ogg",
+   "L04-MUHYEOP_1_lead_oct.ogg",
+   "L04-MUHYEOP_1_perc.ogg",
+   "L04-MUHYEOP_1_perc_crisis.ogg",
+   "L04-MUHYEOP_1_riser.ogg",
+   "L04-MUHYEOP_2_base.ogg",
+   "L04-MUHYEOP_2_choir.ogg",
+   "L04-MUHYEOP_2_lead.ogg",
+   "L04-MUHYEOP_2_lead_oct.ogg",
+   "L04-MUHYEOP_2_perc.ogg",
+   "L04-MUHYEOP_2_perc_crisis.ogg",
+   "L04-MUHYEOP_2_riser.ogg",
+   "L04-MUHYEOP_3_base.ogg",
+   "L04-MUHYEOP_3_choir.ogg",
+   "L04-MUHYEOP_3_lead.ogg",
+   "L04-MUHYEOP_3_lead_oct.ogg",
+   "L04-MUHYEOP_3_perc.ogg",
+   "L04-MUHYEOP_3_perc_crisis.ogg",
+   "L04-MUHYEOP_fail.ogg",
+   "L04-MUHYEOP_intro.ogg"
+  ],
+  "hash": "b6cd09290f1d3ed5",
+  "lufs": -14.0,
+  "phases": {
+   "1": -14.92,
+   "2": -14.93,
+   "3": -11.75,
+   "intro": -17.91
+  },
+  "tp": -2.35
+ },
  "L05": {
   "files": [
    "L05_1_base.ogg",
