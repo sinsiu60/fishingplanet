@@ -651,11 +651,11 @@ def rock_songs() -> dict:
     rock = dict(kind="legend", rock=True, replaces="L03", root=52, scale="minor", bpm=168, meter=[4, 4], fish="silver_bass", reverb=[0.1, 0.7],
                 master={"mid_cut_db": -3.0},
                 phases=[dict(chords=[1, 1, 6, 7, 1, 1, 6, 7, 1, 1, 4, 4, 6, 7, 1, 1], base=base,
-                             lead=[lead("gtr_lead", p1_lead, 1.3, 1)], choir=[]),
+                             lead=[lead("gtr_lead", p1_lead, 0.75, 1)], choir=[]),
                         dict(chords=[1, 1, 6, 6, 3, 3, 7, 7, 1, 1, 6, 6, 4, 4, 5, 5], base=base,
-                             lead=[lead("gtr_lead", ab("L03"), 2.0, 1)], choir=[]),
+                             lead=[lead("gtr_lead", ab("L03"), 1.0, 1)], choir=[]),
                         dict(chords=[1, 1, 6, 7, 1, 1, 6, 7, 4, 4, 1, 1, 6, 7, 5, 5], base=base,
-                             lead=[lead("gtr_lead", p3, 1.3, 1)], choir=[lead("gtr_harm", harm, 0.8, 1, pan=0.45)])])
+                             lead=[lead("gtr_lead", p3, 0.8, 1)], choir=[lead("gtr_harm", harm, 0.5, 1, pan=0.45)])])
     return {"L03-ROCK": rock}
 
 

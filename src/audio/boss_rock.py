@@ -115,10 +115,19 @@ def contour(f, n, dur, q, bend: bool, tired: bool = False) -> np.ndarray:
 
 
 def g_lead(f, n, rng, take=0, dur=0.0, q=0.36, tired=False):
+    """리드 기타: 리듬 기타처럼 '찢어지게' — 두 줄을 살짝 어긋나게(맥놀이) + 옥타브 아래 줄을 함께 눌러 2단 찌그러짐에 넣음,
+    음높이는 손가락처럼 미세하게 흔들림. 1박 이상 = 떨림, 2박 이상 = 온음 벤딩."""
     bend = dur >= 1.9 * q or (tired and dur >= 0.9 * q)
-    x = _osc(contour(f, n, dur, q, bend, tired), 0.55, top=7000) + _pick(n, rng, 3500, 0.15)
-    y = amp(x, 12.0, tight=220)
-    return y * _env(n, 0.004, 0.35, 0.06)
+    f_t = contour(f, n, dur, q, bend, tired)
+    t = _t(n)
+    drift = 1 + 0.0015 * np.sin(2 * np.pi * rng.uniform(0.7, 1.6) * t + rng.uniform(0, 6.28))   # 손가락 흔들림
+    f_t = f_t * drift
+    x = _osc(f_t, 0.5, top=9000) + 0.8 * _osc(f_t * 1.0045, 0.6, top=9000) + 0.5 * _osc(f_t * 0.5, 0.8, top=9000)
+    x += _pick(n, rng, 4000, 0.35)
+    y = amp(x, 22.0, tight=150)
+    y = np.tanh(1.8 * y)   # 한 번 더 눌러 끝이 갈라지게
+    y = _bw_filter(y, "lp", 6500)
+    return y / (float(np.abs(y).max()) or 1.0) * _env(n, 0.003, 0.25, 0.05)
 
 
 def g_bass(f, n, rng, take=0):
