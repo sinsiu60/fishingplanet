@@ -3,8 +3,9 @@
 출력: assets/sfx_generated/<테마>/<이름>.ogg (최대 −3dBFS)
       ilseom (청새치 '일섬', boss_muhyeop): seureung · chaeng · jing · wind
       yeoubi (황금잉어 '여우비', boss_jazz): piano (가짜 지침 예고 '띵—') · coin (퍼펙트 금화 '띵')
+      sangun (산신 쏘가리 '산군', boss_sangun): claw (퍼펙트 발톱 '촥')
       게임은 src/audio/theme_sfx.py 가 'sfx_<테마>_<이름>' 으로 불러옴 (assets/sfx/<테마>/<이름>.ogg 가 있으면 그것 우선)
-사용: python tools/audio/make_theme_sfx.py
+사용: python tools/audio/make_theme_sfx.py [테마 …]
 """
 import os
 import shutil
@@ -19,6 +20,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 sys.path.insert(0, ROOT)
 from src.audio import boss_jazz as J  # noqa: E402
 from src.audio import boss_muhyeop as M  # noqa: E402
+from src.audio import boss_sangun as SG  # noqa: E402
 from src.audio.boss_synth import RATE  # noqa: E402
 
 OUT = os.path.join(ROOT, "assets", "sfx_generated")
@@ -36,12 +38,16 @@ def sounds() -> dict:
             "ilseom/jing": M.d_jing(n(3.0), 1.0, rng) * np.linspace(1, 0, n(3.0)) ** 0.7,
             "ilseom/wind": wind,
             "yeoubi/piano": piano,
-            "yeoubi/coin": J.s_coin(n(0.6), rng)}
+            "yeoubi/coin": J.s_coin(n(0.6), rng),
+            "sangun/claw": SG.s_claw(n(0.45), rng)}
 
 
 def main() -> int:
     ff = shutil.which("ffmpeg")
+    only = sys.argv[1:]   # 테마 이름을 주면 그 테마만 (다른 테마 파일을 다시 쓰지 않게)
     for name, x in sounds().items():
+        if only and name.split("/")[0] not in only:
+            continue
         os.makedirs(os.path.dirname(os.path.join(OUT, name)), exist_ok=True)
         x = x / (np.abs(x).max() or 1.0) * 10 ** (-3 / 20)
         st = np.stack([x, x], axis=1)

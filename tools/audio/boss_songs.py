@@ -771,6 +771,51 @@ def jazz_songs() -> dict:
     return {"L01-JAZZ": song}
 
 
+# ───────────────────────── 북과 목 노래: 산신 쏘가리 '산군' (SHARMION_THEMES.md 2장, DESIGN.md 43-17) ─────────────────────────
+# E단조 5음(E·G·A·B·D) 156, src/audio/boss_sangun.py. 선율 도수는 5음(1·3·4·5·7)만.
+SG_A = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                   # 주인의 동기 (마두금)
+        [1, 0, 3, .5], [1, .5, 4, .5], [1, 1, 3, .5], [1, 1.5, 1, .5], [1, 2, 7, 1], [1, 3, 5, 1],
+        [2, 0, 5, 1.5], [2, 1.5, 4, .5], [2, 2, 3, 1], [2, 3, 1, 1],
+        [3, 0, 1, 2], [3, 2, 7, .5], [3, 2.5, 5, .5], [3, 3, 4, 1],
+        [4, 0, 8, 1], [4, 1, 7, .5], [4, 1.5, 5, .5], [4, 2, 4, 1], [4, 3, 5, 1],
+        [5, 0, 7, .5], [5, .5, 8, .5], [5, 1, 10, 1], [5, 2, 8, 2],
+        [6, 0, 7, 1], [6, 1, 5, 1], [6, 2, 4, 1], [6, 3, 3, 1],
+        [7, 0, 1, 2], [7, 2, 3, .5], [7, 2.5, 4, .5], [7, 3, 5, 1]]
+SG_B = [[8, 0, 8, 1], [8, 1, 12, 1], [8, 2, 11, 2],                                  # 동기 한 옥타브 위
+        [9, 0, 10, .5], [9, .5, 11, .5], [9, 1, 10, .5], [9, 1.5, 8, .5], [9, 2, 7, 1], [9, 3, 8, 1],
+        [10, 0, 10, 1.5], [10, 1.5, 11, .5], [10, 2, 12, 2],
+        [11, 0, 11, 1], [11, 1, 10, 1], [11, 2, 8, 2],
+        [12, 0, 7, .5], [12, .5, 8, .5], [12, 1, 10, 1], [12, 2, 8, 1], [12, 3, 7, 1],
+        [13, 0, 5, 1], [13, 1, 4, 1], [13, 2, 3, 2],
+        [14, 0, 4, .5], [14, .5, 5, .5], [14, 1, 7, 1], [14, 2, 5, 1], [14, 3, 4, 1],
+        [15, 0, 1, 4]]
+
+
+def sangun_songs() -> dict:
+    mel = SG_A + SG_B
+    swap = [[b - 8 if b >= 8 else b + 8, at, d, ln] for b, at, d, ln in mel]
+    k1 = dict(big="x..x..x.x..x..x.", hand="xxxxxxxxxxxxxxxx", low="....x.......x...", gain=0.85)
+    k2 = dict(k1, gain=1.0)
+    k3 = dict(k1, big="x..x..x.x..x.xx.", gain=1.15)
+    crisis = dict(low="x.x.x.x.x.x.x.x.", shout="x...x...x...x...")
+    song = dict(kind="legend", sangun=True, replaces="L02", root=64, scale="minor", bpm=156, meter=[4, 4], fish="tiger_mandarin",
+                reverb=[0.15, 1.1], master={"mid_cut_db": -2.0},
+                phases=[dict(chords=[1, 1, 7, 7, 1, 1, 4, 5, 1, 1, 7, 7, 4, 4, 5, 1],
+                             base=[part("throat", "throat", 0.8, sharp=0.6), part("morin", "morin_ost", 0.42, oct=-1)],
+                             perc=dict(pattern=k1, crisis=crisis),
+                             lead=[lead("morin", mel, 0.55, 0)], choir=[]),
+                        dict(chords=[1, 1, 7, 7, 4, 4, 5, 5, 1, 1, 7, 3, 4, 4, 5, 1],
+                             base=[part("throat", "throat", 0.8, sharp=0.8), part("morin", "morin_ost", 0.46, oct=-1, busy=True)],
+                             perc=dict(pattern=k2, crisis=crisis),
+                             lead=[lead("morin", swap, 0.55, 0)], choir=[part("shout", "shouts", 3.0, cells=[0, 10])]),
+                        dict(chords=[1, 1, 7, 7, 3, 3, 4, 5, 1, 1, 7, 7, 4, 5, 5, 1],
+                             base=[part("throat", "throat", 0.85, sharp=1.6), part("morin", "morin_ost", 0.5, oct=-1, busy=True)],
+                             perc=dict(pattern=k3, crisis=crisis),
+                             lead=[lead("horn", mel, 0.6, 0), lead("morin", mel, 0.3, -1, pan=-0.25)],
+                             choir=[part("shout", "shouts", 3.4, cells=[0, 6, 10])])])
+    return {"L02-SANGUN": song}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -782,6 +827,7 @@ def main(argv) -> int:
     songs.update(rock_songs())
     songs.update(muhyeop_songs())
     songs.update(jazz_songs())
+    songs.update(sangun_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):

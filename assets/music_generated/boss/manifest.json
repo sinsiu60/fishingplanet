@@ -97,6 +97,40 @@
   },
   "tp": -3.03
  },
+ "L02-SANGUN": {
+  "files": [
+   "L02-SANGUN_1_base.ogg",
+   "L02-SANGUN_1_lead.ogg",
+   "L02-SANGUN_1_lead_oct.ogg",
+   "L02-SANGUN_1_perc.ogg",
+   "L02-SANGUN_1_perc_crisis.ogg",
+   "L02-SANGUN_1_riser.ogg",
+   "L02-SANGUN_2_base.ogg",
+   "L02-SANGUN_2_choir.ogg",
+   "L02-SANGUN_2_lead.ogg",
+   "L02-SANGUN_2_lead_oct.ogg",
+   "L02-SANGUN_2_perc.ogg",
+   "L02-SANGUN_2_perc_crisis.ogg",
+   "L02-SANGUN_2_riser.ogg",
+   "L02-SANGUN_3_base.ogg",
+   "L02-SANGUN_3_choir.ogg",
+   "L02-SANGUN_3_lead.ogg",
+   "L02-SANGUN_3_lead_oct.ogg",
+   "L02-SANGUN_3_perc.ogg",
+   "L02-SANGUN_3_perc_crisis.ogg",
+   "L02-SANGUN_fail.ogg",
+   "L02-SANGUN_intro.ogg"
+  ],
+  "hash": "05ec5432f74e53b9",
+  "lufs": -14.0,
+  "phases": {
+   "1": -15.57,
+   "2": -14.17,
+   "3": -12.63,
+   "intro": -21.22
+  },
+  "tp": -2.38
+ },
  "L03": {
   "files": [
    "L03_1_base.ogg",

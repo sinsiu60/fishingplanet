@@ -1084,6 +1084,7 @@
   {
    "id": "tiger_mandarin",
    "name": "산신 쏘가리 '산군'",
+   "theme": "sangun",
    "spot": "valley",
    "times": [
     "night"

@@ -37,6 +37,9 @@ def song_hash(spec: dict, master: dict) -> str:
         src += open(os.path.join(ROOT, "src", "audio", "boss_battle.py"), "rb").read().replace(b"\r\n", b"\n")
     if spec.get("muhyeop"):  # 국악 무협 곡은 boss_muhyeop.py 도 (DESIGN.md 43-15)
         src += open(os.path.join(ROOT, "src", "audio", "boss_muhyeop.py"), "rb").read().replace(b"\r\n", b"\n")
+    if spec.get("sangun"):   # 북과 목 노래 곡은 boss_sangun.py 도 (DESIGN.md 43-17) — 일부를 boss_muhyeop 에서 가져옴
+        for f in ("boss_sangun.py", "boss_muhyeop.py"):
+            src += open(os.path.join(ROOT, "src", "audio", f), "rb").read().replace(b"\r\n", b"\n")
     if spec.get("jazz"):     # 재즈 곡은 boss_jazz.py 도 (DESIGN.md 43-16) — 악기 일부를 boss_muhyeop·boss_rock 에서 가져옴
         for f in ("boss_jazz.py", "boss_muhyeop.py", "boss_rock.py"):
             src += open(os.path.join(ROOT, "src", "audio", f), "rb").read().replace(b"\r\n", b"\n")
@@ -113,6 +116,8 @@ def main(argv: list[str]) -> int:
             from src.audio.boss_muhyeop import MuhyeopSong as cls
         if spec.get("jazz"):
             from src.audio.boss_jazz import JazzSong as cls
+        if spec.get("sangun"):
+            from src.audio.boss_sangun import SangunSong as cls
         stems, rep = boss_synth.master(cls(sid, spec, mcfg).stems(), len(spec["phases"]), dict(mcfg, **spec.get("master", {})))
         for old in os.listdir(out):
             if old.startswith(sid + "_"):

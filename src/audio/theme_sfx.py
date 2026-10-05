@@ -1,13 +1,13 @@
 """테마 전설 연출 효과음 (DESIGN.md 43-15): 'sfx_<테마>_<이름>' 을 처음 쓸 때 불러 둔다.
 
 찾는 순서: assets/sfx/<테마>/<이름>.ogg|wav (직접 고른 음원) → assets/sfx_generated/<테마>/<이름>.ogg (tools/audio/make_theme_sfx.py)
-테마: ilseom (청새치 '일섬' — 스릉 · 챙 · 징 · 바람) · yeoubi (황금잉어 '여우비' — 피아노 '띵—' · 금화 '띵')
+테마: ilseom (청새치 '일섬' — 스릉 · 챙 · 징 · 바람) · yeoubi (황금잉어 '여우비' — 피아노 '띵—' · 금화 '띵') · sangun (산신 쏘가리 '산군' — 발톱 '촥')
 """
 import pygame
 
 from src.core.paths import asset_path
 
-NAMES = {"ilseom": ("seureung", "chaeng", "jing", "wind"), "yeoubi": ("piano", "coin")}
+NAMES = {"ilseom": ("seureung", "chaeng", "jing", "wind"), "yeoubi": ("piano", "coin"), "sangun": ("claw",)}
 
 
 def ensure(sfx, theme: str | None) -> None:
