@@ -1,2 +1,2 @@
 """게임 버전 (릴리즈 태그 v<VERSION>, buildozer.spec version 과 같게)."""
-VERSION = "1.2.1"
+VERSION = "1.3.0"
