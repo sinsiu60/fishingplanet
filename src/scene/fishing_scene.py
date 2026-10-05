@@ -2397,7 +2397,7 @@ class FishingScene(Scene):
                 self.dragon_fx = DragonTransform(self.screen_fx.map(pos))
                 self.game.slowmo(1.2, 0.4)
         elif ev == "phase_heal":
-            # 전설 3페이즈: 기운을 되찾는다 (체력 50%, 용등 100%) — 용 변신은 배너가 대신 알림
+            # 전설 3페이즈: 기운을 되찾는다 (체력 50%, 등용 100%) — 용 변신은 배너가 대신 알림
             if not f.brain.dragon:
                 self.toasts.show(f"기운을 되찾았다! 체력 {f.stamina_frac * 100:.0f}%", (255, 140, 120), 2.6, 11)
         elif ev == "telegraph:turn":

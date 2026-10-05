@@ -172,7 +172,7 @@ def draw_closeup(canvas, t: float, sc: dict) -> None:
 
 
 def draw_c302(canvas, t: float, sc: dict, world=None) -> None:
-    """비밀 장소 바위: 배경 그대로 시점 오른쪽 이동(2초) → 바위 #6E6E78 80x50 + 받침대 2개 #5A3D2A → 새긴 글자 클로즈업."""
+    """용문 폭포 바위: 배경 그대로 시점 오른쪽 이동(2초) → 바위 #6E6E78 80x50 + 받침대 2개 #5A3D2A → 새긴 글자 클로즈업."""
     f = Frame(canvas)
     if t < 3.0:
         pan = int(min(1.0, t / 2.0) * 40)
@@ -244,7 +244,7 @@ class CutsceneScene(Scene):
         self.spec = SPECS[sid]
         self.sc = story.scenes().get(sid, {})
         self.on_done = on_done
-        self.world = world            # 배경 스냅샷 (C3-02: 비밀 장소 그대로)
+        self.world = world            # 배경 스냅샷 (C3-02: 용문 폭포 그대로)
         self.skippable = skippable
         self.t = 0.0
         self.mouse = (0, 0)

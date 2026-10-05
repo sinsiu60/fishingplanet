@@ -126,7 +126,7 @@ class TravelScene(Scene):
             _mark(g.save, self.spot_id)
             self.fishing.backdrop = None
             g.save_now()
-            if first:   # 스토리: 비밀 장소·세계수 뿌리 샘 첫 방문 컷신(타이틀까지) 바로 뒤 (C3-02 · C5-04)
+            if first:   # 스토리: 용문 폭포·세계수 뿌리 샘 첫 방문 컷신(타이틀까지) 바로 뒤 (C3-02 · C5-04)
                 from src.story import runner
                 if runner.after_travel(g, self.fishing, self.spot_id):
                     return

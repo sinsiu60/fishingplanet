@@ -2,8 +2,8 @@
 
 - prologue: 새 게임 → P-01~P-04 컷신 → P-05 하루네 낚시점(상점 메뉴 숨김, 이름 입력) → 윤슬 마을
 - interior 장면: InteriorScene(script) — 대본 안의 {do: name|closeup|letter} 단계는 step() 이 화면을 띄우고 이어 간다
-- after_travel: 비밀 장소 첫 방문 컷신 뒤 C3-02 · 세계수 뿌리 샘 첫 방문 뒤 C5-04 (+마지막 장 종이 + 자막)
-- after_dragon_ending: 용등 엔딩 → C3-04(오두막 대화 → 편지 → 대화) → 기존 출항 컷신 (엘드라시온의 소문 연출 대신)
+- after_travel: 용문 폭포 첫 방문 컷신 뒤 C3-02 · 세계수 뿌리 샘 첫 방문 뒤 C5-04 (+마지막 장 종이 + 자막)
+- after_dragon_ending: 등용 엔딩 → C3-04(오두막 대화 → 편지 → 대화) → 기존 출항 컷신 (엘드라시온의 소문 연출 대신)
 - before_final_ending / after_final_ending: C5-05 선택 → 기존 최종 엔딩 → E-01
 - replay: 추억에서 다시 보기 (결과·기록은 바꾸지 않음)
 """
@@ -122,7 +122,7 @@ def play_c504(game, fishing, replay: bool = False) -> None:
 
 
 def after_dragon_ending(game, fishing) -> bool:
-    """용등 엔딩이 끝난 직후: C3-04 → 기존 출항 컷신 (편지 '엘드라시온의 소문' 대신)."""
+    """등용 엔딩이 끝난 직후: C3-04 → 기존 출항 컷신 (편지 '엘드라시온의 소문' 대신)."""
     save = game.save
     if not story.active(save) or story.seen(save, "C3-04"):
         return False
