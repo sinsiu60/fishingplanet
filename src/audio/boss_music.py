@@ -177,12 +177,15 @@ class BossMusic:
         if not self.active:
             return
         own = self._get(f"{self.song}_fail")
+        name, vol = "sfx_boss_fail", 1.0
+        if own is not None:   # 효과음 쪽으로 (음악 채널은 적응형 음악이 곧 다시 씀), 크기는 방금까지 듣던 곡과 같게
+            from src.audio.adaptive_music import GAIN
+            name = f"sfx_boss_fail_{self.song}"
+            self.sfx.sounds[name] = own
+            vb = self.sfx.settings_boss_vol if hasattr(self.sfx, "settings_boss_vol") else 1.0
+            vol = min(1.0, GAIN * self.cfg.get("state_gain", {}).get("boss", 1.0) * vb)
         self.stop()
-        if own is not None:
-            self.head_ch.set_volume(self._bus())
-            self.head_ch.play(own)
-        else:
-            self.sfx.play("sfx_boss_fail", 1.0)
+        self.sfx.play(name, vol)
 
     def unload(self) -> None:
         self.stop()
