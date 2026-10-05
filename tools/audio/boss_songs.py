@@ -1074,6 +1074,57 @@ def baroque_songs() -> dict:
     return {"L09-BAROQUE": song}
 
 
+# ───────────────────────── 플라멩코 메탈: 불꽃상어 이그니스 (BOSS_BGM.md 엘드라시온 L10, DESIGN.md 43-25) ─────────────────────────
+# E 프리지안 도미넌트 ("phrygdom" — boss_flamenco 가 등록) 176 · 4/4. E–F–E 반음 + 안달루시아 종지 Am–G–F–E. 오케스트라 L10 은 남겨 둠.
+FL_A = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                       # 주인의 동기 E→B→A (E)
+        [1, 0, 6, .5], [1, .5, 5, .5], [1, 1, 6, .5], [1, 1.5, 5, .5], [1, 2, 4, .5], [1, 2.5, 3, .5], [1, 3, 2, 1],   # F
+        [2, 0, 1, 1.5], [2, 1.5, 2, .5], [2, 2, 3, 1], [2, 3, 4, 1],                     # E
+        [3, 0, 5, .5], [3, .5, 6, .5], [3, 1, 5, .5], [3, 1.5, 4, .5], [3, 2, 3, 1], [3, 3, 2, 1],              # F
+        [4, 0, 8, 1], [4, 1, 12, 1], [4, 2, 11, 2],                                     # 동기 한 옥타브 위 (Am)
+        [5, 0, 12, .5], [5, .5, "b10", .5], [5, 1, 12, .5], [5, 1.5, 14, .5], [5, 2, 12, 1], [5, 3, "b10", 1],      # G
+        [6, 0, 13, .5], [6, .5, 12, .5], [6, 1, 11, .5], [6, 1.5, 9, .5], [6, 2, 9, 1], [6, 3, 10, 1],          # F
+        [7, 0, 8, 2], [7, 2, 9, .5], [7, 2.5, 8, .5], [7, 3, 7, 1]]                     # E
+
+
+def compas(strong=(3, 6, 8, 10, 12)) -> list:
+    """손뼉 12박 콤파스 (8분 하나 = 한 박, 강세 3·6·8·10·12) → 3마디 × 16칸 (두 바퀴). src/audio/boss_flamenco.compas 와 같음."""
+    cells = ["."] * 48
+    for c in range(1, 25):
+        cells[(c - 1) * 2] = "X" if (c - 1) % 12 + 1 in strong else "x"
+    return ["".join(cells[i * 16:(i + 1) * 16]) for i in range(3)]
+
+
+def flamenco_songs() -> dict:
+    mel = FL_A + [[b + 8, at, d, ln] for b, at, d, ln in FL_A if b < 7] + [[15, 0, 8, 1.75], [15, 2, 9, .5], [15, 2.5, 8, .5], [15, 3, 7, 1]]
+    ch = ["1", "2M", "1", "2M", "4m", "b3M", "2M", "1", "2M", "1", "4m", "b3M", "2M", "1", "2M", "1"]
+    song = dict(kind="legend", flamenco=True, replaces="L10", root=64, scale="phrygdom", bpm=176, meter=[4, 4], fish="ignis",
+                reverb=[0.15, 1.0], master={"mid_cut_db": -3.0},
+                phases=[dict(chords=ch,
+                             base=[part("nylon", "rasg", 0.2), part("bass", "bass", 0.4, pattern="x.......x.......")],
+                             perc=dict(pattern=dict(palma="COMPAS", clow="x..x..x...x..x..", cslap="....x..x....x.xx"),
+                                       crisis=dict(clow="x.x.x.x.x.x.x.x.", cslap="..x.x..x..x.x.xx")),
+                             lead=[lead("picado", mel, 0.95, 1)], choir=[]),
+                        dict(chords=ch,
+                             base=[part("nylon", "rasg", 0.17), part("gtr", "riff", 0.3), part("bass_gtr", "bass", 0.4, pattern="x.x.x.x.x.x.x.x.")],
+                             perc=dict(pattern=dict(palma="COMPAS", kick="x.xxx.xxx.xxx.xx", snare="....x.......x...", cslap="..........x.....",
+                                                    ride="x.x.x.x.x.x.x.x."),
+                                       crisis=dict(kick="xxxxxxxxxxxxxxxx", clow="x.x.x.x.x.x.x.x.")),
+                             lead=[lead("picado", mel, 0.95, 1)], choir=[]),
+                        dict(chords=ch,
+                             base=[part("nylon", "rasg", 0.17, pattern="R..D.uR..D.uR.D."), part("gtr", "riff", 0.32, pattern="m.mm.mmM-.mm.mM-"),
+                                   part("bass_gtr", "bass", 0.4, pattern="x.x.x.x.x.x.x.x."), part("shout", "shouts", 0.45, every=4)],
+                             perc=dict(pattern=dict(palma="COMPAS", kick="x.xxx.xxx.xxx.xx", snare="....x.......x...", ride="x.x.x.x.x.x.x.x.",
+                                                    crash=["x...............", "", "", ""], clow="x.......x......."),
+                                       crisis=dict(kick="xxxxxxxxxxxxxxxx", clow="x.x.x.x.x.x.x.x.", cslap="..x.x..x..x.x.xx")),
+                             lead=[lead("picado", mel, 0.8, 1), lead("gtr_lead", mel, 0.34, 0, pan=-0.2)],
+                             choir=[part("choir_a", "choir_hold", 0.6)])])
+    for ph in song["phases"]:
+        for d in (ph["perc"]["pattern"], ph["perc"].get("crisis", {})):
+            if d.get("palma") == "COMPAS":
+                d["palma"] = compas()
+    return {"L10-FLAMENCO": song}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -1091,6 +1142,7 @@ def main(argv) -> int:
     songs.update(celtic_songs())
     songs.update(trance_songs())
     songs.update(baroque_songs())
+    songs.update(flamenco_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):

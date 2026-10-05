@@ -622,6 +622,39 @@
   },
   "tp": -2.13
  },
+ "L10-FLAMENCO": {
+  "files": [
+   "L10-FLAMENCO_1_base.ogg",
+   "L10-FLAMENCO_1_lead.ogg",
+   "L10-FLAMENCO_1_lead_oct.ogg",
+   "L10-FLAMENCO_1_perc.ogg",
+   "L10-FLAMENCO_1_perc_crisis.ogg",
+   "L10-FLAMENCO_1_riser.ogg",
+   "L10-FLAMENCO_2_base.ogg",
+   "L10-FLAMENCO_2_lead.ogg",
+   "L10-FLAMENCO_2_lead_oct.ogg",
+   "L10-FLAMENCO_2_perc.ogg",
+   "L10-FLAMENCO_2_perc_crisis.ogg",
+   "L10-FLAMENCO_2_riser.ogg",
+   "L10-FLAMENCO_3_base.ogg",
+   "L10-FLAMENCO_3_choir.ogg",
+   "L10-FLAMENCO_3_lead.ogg",
+   "L10-FLAMENCO_3_lead_oct.ogg",
+   "L10-FLAMENCO_3_perc.ogg",
+   "L10-FLAMENCO_3_perc_crisis.ogg",
+   "L10-FLAMENCO_fail.ogg",
+   "L10-FLAMENCO_intro.ogg"
+  ],
+  "hash": "f202e16bd3e943c9",
+  "lufs": -14.03,
+  "phases": {
+   "1": -15.12,
+   "2": -14.1,
+   "3": -12.97,
+   "intro": -19.1
+  },
+  "tp": -2.0
+ },
  "L11": {
   "files": [
    "L11_1_base.ogg",
