@@ -611,6 +611,54 @@ def check(songs: dict) -> int:
     return bad
 
 
+# ───────────────────────── 락: 은빛 농어 '일렉트로' (ELECTRO.md, DESIGN.md 43-14) ─────────────────────────
+# E단조 168 · 4/4. 일렉 기타 2대 + 베이스 기타 + 드럼 (src/audio/boss_rock.py). 오케스트라 L03 은 남겨 두고 게임은 이 곡을 씀.
+RIFF = {"1": "MmmMmmMmMmmM3-4-", "*": "MmmMmmMmMmmMmmp-"}   # 16분 손바닥 뮤트 '둥둥둥둥', 마디 끝 G-A 파워 코드
+LICKS = ["{b}:2:5:.5 {b}:2.5:7:.5 {b}:3:8:1",
+         "{b}:2:8:.25 {b}:2.25:7:.25 {b}:2.5:5:.25 {b}:2.75:4:.25 {b}:3:5:1",
+         "{b}:2.5:3:.5 {b}:3:4:.5 {b}:3.5:5:.5",
+         "{b}:2:10:.5 {b}:2.5:8:.5 {b}:3:7:.5 {b}:3.5:8:.5"]
+PENT = [1, 3, 4, 5, 7, 8, 10, 11, 12, 14, 15]   # E단조 5음 (+옥타브)
+
+
+def solo(b0: int, b1: int) -> list:
+    """3페이즈 기타 솔로: 4마디마다 (16분 내림 → 큰 벤딩 → 16분 오름 → 벤딩 + 떨기)."""
+    out = []
+    for b in range(b0, b1):
+        k = (b - b0) % 4
+        if k == 0:     # 16분 내려오기
+            seq = [15, 14, 12, 11, 12, 11, 10, 8, 11, 10, 8, 7, 8, 7, 5, 4]
+            out += [[b, i * 0.25, d, 0.25] for i, d in enumerate(seq)]
+        elif k == 1:   # 큰 벤딩 2박 + 짧게 두 번
+            out += [[b, 0.0, 8, 2.0], [b, 2.0, 10, 0.5], [b, 2.5, 11, 0.5], [b, 3.0, 12, 1.0]]
+        elif k == 2:   # 16분 올라가기
+            seq = [5, 7, 8, 10, 7, 8, 10, 11, 8, 10, 11, 12, 10, 11, 12, 14]
+            out += [[b, i * 0.25, d, 0.25] for i, d in enumerate(seq)]
+        else:          # 벤딩 + 떨기 (트릴)
+            out += [[b, 0.0, 15, 2.0]] + [[b, 2.0 + i * 0.25, (14, 15)[i % 2], 0.25] for i in range(8)]
+    return out
+
+
+def rock_songs() -> dict:
+    base = [part("gtr", "riff", 1.3, riff=RIFF), part("bass_gtr", "bassriff", 0.5, riff=RIFF)]
+    licks = []
+    for i, b in enumerate((1, 3, 5, 7, 9, 11)):
+        licks += mel(LICKS[i % len(LICKS)].format(b=b))
+    p1_lead = licks + mel("12:0:8:.5 12:.5:7:.5 12:1:5:.5 12:1.5:4:.5 12:2:5:1 12:3:7:1 13:0:5:2 13:2:4:.5 13:2.5:3:.5 13:3:2:1") \
+        + motif(14, 0, 8, 1.0) + mel("15:0:8:4")              # 1페이즈 끝: 주인의 동기 (리드 기타, 크게)
+    p3 = motif(0, 0, 8, 2.0) + solo(2, 14) + mel("14:0:12:1 14:1:11:1 14:2:#7:2 15:0:8:4")   # 3페이즈 시작: 동기 크게 → 솔로
+    harm = [[b, at, (d + 2) if isinstance(d, int) else "#9", ln] for b, at, d, ln in p3]  # 두 번째 기타: 3도 위
+    rock = dict(kind="legend", rock=True, replaces="L03", root=52, scale="minor", bpm=168, meter=[4, 4], fish="silver_bass", reverb=[0.1, 0.7],
+                master={"mid_cut_db": -3.0},
+                phases=[dict(chords=[1, 1, 6, 7, 1, 1, 6, 7, 1, 1, 4, 4, 6, 7, 1, 1], base=base,
+                             lead=[lead("gtr_lead", p1_lead, 0.8, 1)], choir=[]),
+                        dict(chords=[1, 1, 6, 6, 3, 3, 7, 7, 1, 1, 6, 6, 4, 4, 5, 5], base=base,
+                             lead=[lead("gtr_lead", ab("L03"), 1.25, 1)], choir=[]),
+                        dict(chords=[1, 1, 6, 7, 1, 1, 6, 7, 4, 4, 1, 1, 6, 7, 5, 5], base=base,
+                             lead=[lead("gtr_lead", p3, 0.8, 1)], choir=[lead("gtr_harm", harm, 0.5, 1, pan=0.45)])])
+    return {"L03-ROCK": rock}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -619,6 +667,7 @@ BATTLE = {"L02": 168, "P04": 160}
 def main(argv) -> int:
     songs = legend_songs()
     songs.update(phantom_songs())
+    songs.update(rock_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):

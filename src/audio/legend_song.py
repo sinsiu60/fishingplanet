@@ -4,7 +4,7 @@
          → assets/music_generated/legend_catch_<버전>_<곡ID>.ogg (전설마다 그 파이팅 곡 조성, DESIGN.md 43)
          → assets/music_generated/legend_catch_<버전>_<대륙>.ogg (tools/audio/make_legend_song.py 합성본)
 버전: full / short / loop (final 은 full 곡). 보상 버스 'legend_song_*' — 속도·피치·필터 변경 없이 그대로 (AS_IS).
-곡ID = 전설 전용 파이팅 곡 ID (L01~L12). 없으면 대륙판.
+곡ID = 전설 전용 파이팅 곡 ID (L01~L12, L03-ROCK — 락 버전이 없으면 L03). 없으면 대륙판.
 """
 import pygame
 
@@ -13,7 +13,7 @@ from src.core.paths import asset_path
 
 def path_of(variant: str, cont: str, sid: str | None = None):
     variant = "full" if variant == "final" else variant
-    tags = ([sid] if sid else []) + [cont]
+    tags = ([sid] if sid else []) + ([sid.split("-")[0]] if sid and "-" in sid else []) + [cont]   # L03-ROCK → 없으면 L03
     cands = [asset_path("music", f"legend_catch_{variant}_{t}.ogg") for t in tags] + [asset_path("music", f"legend_catch_{variant}.ogg")]
     for t in tags:
         cands += [asset_path("music_generated", f"legend_catch_{variant}_{t}.ogg"), asset_path("music_generated", f"legend_catch_{variant}_{t}.wav")]

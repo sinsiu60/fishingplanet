@@ -8,7 +8,7 @@
   - 페이즈 전환: 다음 마디 경계에서 라이저(1마디) + 지금 층은 그 마디 동안 사라짐 → 라이저가 끝나는 순간 다음 페이즈 층
   - 위기: 다음 마디 경계에서 타악 ↔ 위기 타악 (둘 다 늘 돌고 음량만 바꿈)
   - 지침: 다음 마디 경계부터 2마디 동안 주선율 → 옥타브 주선율
-  - 실패: 바로 정지 + 낮은 '쿵'(sfx_boss_fail, 1.5초 잔향) / 성공: stop() — 전설·환상 포획 연결은 장면이 (B5)
+  - 실패: 바로 정지 + 낮은 '쿵'(sfx_boss_fail, 1.5초 잔향 — 곡 전용 <곡ID>_fail 이 있으면 그것) / 성공: stop() — 전설·환상 포획 연결은 장면이 (B5)
 음량: 층 × GAIN(0.35) × state_gain boss × 음악 버스(설정·덕킹) × 설정 '전설·환상 음악 음량' × 소리 구역.
 파일: assets/music/boss/<곡ID>_<페이즈>_<층>.ogg|wav (직접 고른 곡) → assets/music_generated/boss/… (합성본). 없는 층은 조용히.
 """
@@ -78,13 +78,16 @@ class BossMusic:
         return q, q * num * 4 / den
 
     def song_for(self, fish_id: str | None) -> str | None:
-        """물고기 id → 전용 곡 ID (music_patterns boss.songs 의 fish, 시험곡 제외)."""
+        """물고기 id → 전용 곡 ID (music_patterns boss.songs 의 fish, 시험곡 제외).
+        "replaces" 가 있는 곡(예: L03-ROCK → L03)은 구운 파일이 있으면 원래 곡 대신."""
         if not fish_id:
             return None
-        for sid, sp in self.cfg.get("boss", {}).get("songs", {}).items():
-            if sp.get("fish") == fish_id and not sp.get("test"):
+        found = [(sid, sp) for sid, sp in self.cfg.get("boss", {}).get("songs", {}).items()
+                 if sp.get("fish") == fish_id and not sp.get("test")]
+        for sid, sp in found:
+            if sp.get("replaces") and find(f"{sid}_1_base") is not None:
                 return sid
-        return None
+        return next((sid for sid, sp in found if not sp.get("replaces")), found[0][0] if found else None)
 
     def available(self, sid: str | None) -> bool:
         """그 곡의 층 파일이 있는가 (없으면 장면이 예전 보스 테마를 쓴다)."""
@@ -97,7 +100,7 @@ class BossMusic:
         self.snd = {}
         self.loaded_for = sid
         n = len(self.spec(sid)["phases"])
-        names = [f"{sid}_intro"] + [f"{sid}_{i}_{l}" for i in range(1, n + 1) for l in LAYERS + ("riser",)]
+        names = [f"{sid}_intro", f"{sid}_fail"] + [f"{sid}_{i}_{l}" for i in range(1, n + 1) for l in LAYERS + ("riser",)]
         self._steps = iter(names)
 
     def load_step(self, k: int = 1) -> bool:
@@ -170,11 +173,16 @@ class BossMusic:
             self.am.suspend(False)
 
     def fail(self) -> None:
-        """줄 끊김·도주: 바로 멈추고 낮은 '쿵' + 1.5초 잔향."""
+        """줄 끊김·도주: 바로 멈추고 낮은 '쿵' + 1.5초 잔향. 곡 전용 실패음(<곡ID>_fail — L03-ROCK: 코드 '콰앙' + 피드백)이 있으면 그것."""
         if not self.active:
             return
+        own = self._get(f"{self.song}_fail")
         self.stop()
-        self.sfx.play("sfx_boss_fail", 1.0)
+        if own is not None:
+            self.head_ch.set_volume(self._bus())
+            self.head_ch.play(own)
+        else:
+            self.sfx.play("sfx_boss_fail", 1.0)
 
     def unload(self) -> None:
         self.stop()

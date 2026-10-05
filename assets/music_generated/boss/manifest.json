@@ -95,6 +95,39 @@
   },
   "tp": -2.0
  },
+ "L03-ROCK": {
+  "files": [
+   "L03-ROCK_1_base.ogg",
+   "L03-ROCK_1_lead.ogg",
+   "L03-ROCK_1_lead_oct.ogg",
+   "L03-ROCK_1_perc.ogg",
+   "L03-ROCK_1_perc_crisis.ogg",
+   "L03-ROCK_1_riser.ogg",
+   "L03-ROCK_2_base.ogg",
+   "L03-ROCK_2_lead.ogg",
+   "L03-ROCK_2_lead_oct.ogg",
+   "L03-ROCK_2_perc.ogg",
+   "L03-ROCK_2_perc_crisis.ogg",
+   "L03-ROCK_2_riser.ogg",
+   "L03-ROCK_3_base.ogg",
+   "L03-ROCK_3_choir.ogg",
+   "L03-ROCK_3_lead.ogg",
+   "L03-ROCK_3_lead_oct.ogg",
+   "L03-ROCK_3_perc.ogg",
+   "L03-ROCK_3_perc_crisis.ogg",
+   "L03-ROCK_fail.ogg",
+   "L03-ROCK_intro.ogg"
+  ],
+  "hash": "094a97220c379e3d",
+  "lufs": -14.0,
+  "phases": {
+   "1": -15.67,
+   "2": -14.18,
+   "3": -12.64,
+   "intro": -15.35
+  },
+  "tp": -2.62
+ },
  "L04": {
   "files": [
    "L04_1_base.ogg",
