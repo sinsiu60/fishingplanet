@@ -185,6 +185,16 @@ def heartbeat() -> np.ndarray:
 
 # ───────────────────────── 공간·마무리 ─────────────────────────
 
+def breath(y: np.ndarray, at: float, pre: float = 0.07, depth: float = 0.25) -> np.ndarray:
+    """강타 직전 '숨' (전설의 노래, DESIGN.md 43-20): at 직전 pre 초 동안 전체를 depth 배로 눌러 at 의 강타가 마커에서 또렷하게 튀어나오게."""
+    a, r, e = int((at - pre) * SR), int(0.02 * SR), int((at - 0.003) * SR)
+    g = np.ones(y.shape[1])
+    g[a:a + r] = np.linspace(1, depth, r)
+    g[a + r:e] = depth
+    g[e:int(at * SR)] = np.linspace(depth, 1, int(at * SR) - e)
+    return y * g
+
+
 def reverb(buf: np.ndarray, rt60: float = 3.6, wet: float = 0.38) -> np.ndarray:
     n = int(rt60 * 1.1 * SR)
     t = np.arange(n) / SR

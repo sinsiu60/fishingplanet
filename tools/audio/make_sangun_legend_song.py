@@ -123,6 +123,8 @@ def compose(variant: str) -> tuple[np.ndarray, dict]:
     y = y[:, :n_end]
     fade = int(0.4 * SR)
     y[:, -fade:] *= np.linspace(1, 0, fade)
+    for at in (cl,):   # 강타 직전 '숨' — 앞 소리에 묻히지 않고 마커에서 또렷하게 (S6)
+        y = ps.breath(y, at)
     return master(y, -2.0, 1.35 if short else 1.5), dict(m)   # 평균 음량을 L02 전설의 노래와 같게
 
 

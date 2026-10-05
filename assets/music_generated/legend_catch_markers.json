@@ -574,7 +574,7 @@
   "legend_catch_full_L04-MUHYEOP": {
    "len": 5.5,
    "peak_db": -2.0,
-   "rms_db": -14.4,
+   "rms_db": -14.5,
    "markers": {
     "hit": 0.0,
     "rise": 0.3,
@@ -590,7 +590,7 @@
   "legend_catch_short_L04-MUHYEOP": {
    "len": 3.0,
    "peak_db": -2.0,
-   "rms_db": -14.6,
+   "rms_db": -14.4,
    "markers": {
     "hit": 0.0,
     "rise": 0.15,
@@ -612,7 +612,7 @@
   "legend_catch_full_L01-JAZZ": {
    "len": 5.5,
    "peak_db": -4.0,
-   "rms_db": -16.9,
+   "rms_db": -17.1,
    "markers": {
     "hit": 0.0,
     "rise": 0.3,
@@ -628,7 +628,7 @@
   "legend_catch_short_L01-JAZZ": {
    "len": 3.0,
    "peak_db": -2.4,
-   "rms_db": -15.8,
+   "rms_db": -15.9,
    "markers": {
     "hit": 0.0,
     "rise": 0.15,
@@ -650,7 +650,7 @@
   "legend_catch_full_L02-SANGUN": {
    "len": 5.5,
    "peak_db": -2.0,
-   "rms_db": -14.0,
+   "rms_db": -14.1,
    "markers": {
     "hit": 0.0,
     "rise": 0.3,
@@ -666,7 +666,7 @@
   "legend_catch_short_L02-SANGUN": {
    "len": 3.0,
    "peak_db": -2.0,
-   "rms_db": -13.3,
+   "rms_db": -13.4,
    "markers": {
     "hit": 0.0,
     "rise": 0.15,

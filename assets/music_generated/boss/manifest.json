@@ -121,15 +121,15 @@
    "L02-SANGUN_fail.ogg",
    "L02-SANGUN_intro.ogg"
   ],
-  "hash": "05ec5432f74e53b9",
+  "hash": "23bf0647cfaf9a6d",
   "lufs": -14.0,
   "phases": {
-   "1": -15.57,
-   "2": -14.17,
-   "3": -12.63,
-   "intro": -21.22
+   "1": -16.37,
+   "2": -13.79,
+   "3": -12.53,
+   "intro": -22.02
   },
-  "tp": -2.38
+  "tp": -2.49
  },
  "L03": {
   "files": [
@@ -385,7 +385,7 @@
    "L06-EPIC_fail.ogg",
    "L06-EPIC_intro.ogg"
   ],
-  "hash": "16614e19ce6e1540",
+  "hash": "7b0550509e94806e",
   "lufs": -14.0,
   "phases": {
    "1": -13.56,

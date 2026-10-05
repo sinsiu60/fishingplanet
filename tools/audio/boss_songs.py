@@ -807,11 +807,11 @@ def sangun_songs() -> dict:
                         dict(chords=[1, 1, 7, 7, 4, 4, 5, 5, 1, 1, 7, 3, 4, 4, 5, 1],
                              base=[part("throat", "throat", 0.8, sharp=0.8), part("morin", "morin_ost", 0.46, oct=-1, busy=True)],
                              perc=dict(pattern=k2, crisis=crisis),
-                             lead=[lead("morin", swap, 0.55, 0)], choir=[part("shout", "shouts", 3.0, cells=[0, 10])]),
+                             lead=[lead("morin", swap, 0.8, 0)], choir=[part("shout", "shouts", 3.0, cells=[0, 10])]),
                         dict(chords=[1, 1, 7, 7, 3, 3, 4, 5, 1, 1, 7, 7, 4, 5, 5, 1],
                              base=[part("throat", "throat", 0.85, sharp=1.6), part("morin", "morin_ost", 0.5, oct=-1, busy=True)],
                              perc=dict(pattern=k3, crisis=crisis),
-                             lead=[lead("horn", mel, 0.6, 0), lead("morin", mel, 0.3, -1, pan=-0.25)],
+                             lead=[lead("horn", mel, 0.85, 0), lead("morin", mel, 0.4, -1, pan=-0.25)],
                              choir=[part("shout", "shouts", 3.4, cells=[0, 6, 10])])])
     return {"L02-SANGUN": song}
 
@@ -889,8 +889,9 @@ MED_IL = [[12, 0, 8, 1], [12, 1, 12, 1], [12, 2, 11, 2], [13, 0, 12, .5], [13, .
 MED_ORGAN = [[16, 0, 1, 1], [16, 1, 5, 1], [16, 2, 4, 2], [17, 0, 3, 1], [17, 1, 4, 1], [17, 2, 5, 1], [17, 3, 6, 1],
              [18, 0, 5, 1], [18, 1, 4, 1], [18, 2, 3, 1], [18, 3, 2, 1], [19, 0, 0, 2], [19, 2, 5, 2]]
 # 용 변신 (src/render/dragon.py, 게임 시간 번개 0.8·1.05 · 섬광 1.3초)을 실제 시간으로: 변신과 함께 슬로모션 1.2초 × 0.4배
-# → 번개 1.2 + (0.8 − 0.48) = 1.52 · 1.77초, 섬광 2.02초. 이 라이저만 마디를 기다리지 않고 바로 시작 (src/audio/boss_music.py).
-DRAGON_SYNC = {"bolts": [1.52, 1.77], "flash": 2.02, "tail_bars": 1}
+# → 번개 1.2 + (0.8 − 0.48) ≈ 1.5 · 1.75초, 섬광 2.0초 (S6 게임 측정). 이 라이저만 마디를 기다리지 않고 바로 시작하지만
+# 페이즈 이벤트 다음 프레임에 시작하므로 (src/audio/boss_music.py) 한 프레임(0.017초)을 앞당겨 둠.
+DRAGON_SYNC = {"bolts": [1.483, 1.733], "flash": 1.983, "tail_bars": 1}
 
 
 def epic_songs() -> dict:
