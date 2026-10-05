@@ -361,6 +361,40 @@
   },
   "tp": -2.8
  },
+ "L06-EPIC": {
+  "files": [
+   "L06-EPIC_1_base.ogg",
+   "L06-EPIC_1_choir.ogg",
+   "L06-EPIC_1_lead.ogg",
+   "L06-EPIC_1_lead_oct.ogg",
+   "L06-EPIC_1_perc.ogg",
+   "L06-EPIC_1_perc_crisis.ogg",
+   "L06-EPIC_1_riser.ogg",
+   "L06-EPIC_2_base.ogg",
+   "L06-EPIC_2_lead.ogg",
+   "L06-EPIC_2_lead_oct.ogg",
+   "L06-EPIC_2_perc.ogg",
+   "L06-EPIC_2_perc_crisis.ogg",
+   "L06-EPIC_2_riser.ogg",
+   "L06-EPIC_3_base.ogg",
+   "L06-EPIC_3_choir.ogg",
+   "L06-EPIC_3_lead.ogg",
+   "L06-EPIC_3_lead_oct.ogg",
+   "L06-EPIC_3_perc.ogg",
+   "L06-EPIC_3_perc_crisis.ogg",
+   "L06-EPIC_fail.ogg",
+   "L06-EPIC_intro.ogg"
+  ],
+  "hash": "16614e19ce6e1540",
+  "lufs": -14.0,
+  "phases": {
+   "1": -13.56,
+   "2": -15.29,
+   "3": -13.04,
+   "intro": -17.99
+  },
+  "tp": -2.67
+ },
  "L07": {
   "files": [
    "L07_1_base.ogg",

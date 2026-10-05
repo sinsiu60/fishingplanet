@@ -253,15 +253,18 @@ class BossMusic:
         self.t += dt
         sid = self.song
         # 페이즈 전환 예약 → 다음 마디 경계에 라이저
+        # 연출에 맞춘 라이저 (스펙 phases[n].sync — 등용 변신, DESIGN.md 43-19)는 마디를 기다리지 않고 바로, 지금 층은 0.25초 만에
+        phs = (self.spec(sid) or {}).get("phases", [])
+        sync = self.want_phase > self.phase and self.phase + 1 < len(phs) and bool(phs[self.phase + 1].get("sync"))
         if self.want_phase > self.phase and self.next_at is None and self.t >= self.loop_t0:
-            self.next_at = self._next_bar()
+            self.next_at = self.t if sync else self._next_bar()
         if self.next_at is not None and self.switch_at is None and self.t >= self.next_at:
             riser = self._get(f"{sid}_{self.phase + 1}_riser")
             rl = riser.get_length() if riser is not None else self.bar
             new = 1 - self.slot
             for lay in LAYERS:   # 지금 층은 라이저 마디 동안 사라짐
                 self.goal[(self.slot, lay)] = 0.0
-                self.fade_rate[(self.slot, lay)] = 1.0 / max(0.1, rl)
+                self.fade_rate[(self.slot, lay)] = 1.0 / (0.25 if sync else max(0.1, rl))
             self.phase += 1
             self._start_phase(new, self.phase, rl, riser)
             self.old_slot, self.slot = self.slot, new

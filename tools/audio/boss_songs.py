@@ -605,8 +605,8 @@ def check(songs: dict) -> int:
         if not motif_ok:
             print(sid, "주인의 동기 없음"); bad += 1
         for i, p in enumerate(sp["phases"]):
-            if len(p["chords"]) != 16:
-                print(sid, i + 1, "페이즈 화성이 16마디가 아님", len(p["chords"])); bad += 1
+            if len(p["chords"]) != p.get("bars", 16):
+                print(sid, i + 1, "페이즈 화성 길이가 마디 수와 다름", len(p["chords"])); bad += 1
     print("서명 검사:", "ok" if not bad else f"{bad}개 문제")
     return bad
 
@@ -859,6 +859,86 @@ def organ_songs() -> dict:
     return {"L05-ORGAN": song}
 
 
+# ───────────────────────── 에픽: 용문잉어 '등용' (SHARMION_THEMES.md 6장, DESIGN.md 43-19) ─────────────────────────
+# D 화성단음계 160 · 4/4, src/audio/boss_epic.py. 다섯 테마 악기는 각 모듈에서 그대로 가져옴. 기존 L06 은 남겨 두고 게임은 이 곡.
+EP_A = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2],                                      # 주인의 동기
+        [1, 0, 3, 1], [1, 1, 4, .5], [1, 1.5, 5, .5], [1, 2, 6, 1], [1, 3, 5, 1],
+        [2, 0, 4, 1.5], [2, 1.5, 3, .5], [2, 2, 2, 1], [2, 3, 0, 1],
+        [3, 0, 1, 2], [3, 2, 3, 1], [3, 3, 5, 1],
+        [4, 0, 8, 1], [4, 1, 12, 1], [4, 2, 11, 2],                                   # 동기 한 옥타브 위
+        [5, 0, 10, 1], [5, 1, 11, .5], [5, 1.5, 12, .5], [5, 2, 13, 1], [5, 3, 12, 1],
+        [6, 0, 11, 1], [6, 1, 10, 1], [6, 2, 9, 1], [6, 3, 7, 1],
+        [7, 0, 8, 3], [7, 3, 7, 1]]
+EP_B = [[8, 0, 1, 1], [8, 1, 5, 1], [8, 2, 4, 2],
+        [9, 0, 6, 1], [9, 1, 5, .5], [9, 1.5, 4, .5], [9, 2, 3, 1], [9, 3, 4, 1],
+        [10, 0, 5, 1.5], [10, 1.5, 6, .5], [10, 2, 7, 1], [10, 3, 8, 1],
+        [11, 0, 9, 2], [11, 2, 8, 1], [11, 3, 7, 1],
+        [12, 0, 8, 1], [12, 1, 12, 1], [12, 2, 11, 2],
+        [13, 0, 10, 1], [13, 1, 9, 1], [13, 2, 8, 1], [13, 3, 7, 1],
+        [14, 0, 6, 1], [14, 1, 5, 1], [14, 2, 7, 2],
+        [15, 0, 8, 4]]
+# 2페이즈 메들리 (4마디씩): 여우비 트럼펫 → 색소폰 받기 / 산군 호른 / 일렉트로 리드 기타 / 일섬 태평소 / 태고 오르간
+MED_JAZZ = [[0, 0, 1, 1], [0, 1, 5, 1], [0, 2, 4, 2], [1, 0, 5, .5], [1, .5, 6, .5], [1, 1, 5, .5], [1, 1.5, 4, .5], [1, 2, 3, 1], [1, 3, 2, 1]]
+MED_SAX = [[2, 0, 1, .5], [2, .5, 3, .5], [2, 1, 5, .5], [2, 1.5, 7, .5], [2, 2, 8, 1], [2, 3, 7, 1], [3, 0, 8, 2], [3, 2, 5, 1], [3, 3, 7, 1]]
+MED_SANGUN = [[4, 0, 1, 1], [4, 1, 5, 1], [4, 2, 4, 2], [5, 0, 3, 1], [5, 1, 4, 1], [5, 2, 5, 2],
+              [6, 0, 6, 1], [6, 1, 5, 1], [6, 2, 4, 1], [6, 3, 3, 1], [7, 0, 2, 2], [7, 2, 0, 2]]
+MED_ROCK = [[8, 0, 8, 1], [8, 1, 12, 1], [8, 2, 11, 2], [9, 0, 10, .5], [9, .5, 11, .5], [9, 1, 12, 1], [9, 2, 13, 1], [9, 3, 12, 1],
+            [10, 0, 11, 1], [10, 1, 10, 1], [10, 2, 9, 1], [10, 3, 8, 1], [11, 0, 7, 2], [11, 2, 5, 2]]
+MED_IL = [[12, 0, 8, 1], [12, 1, 12, 1], [12, 2, 11, 2], [13, 0, 12, .5], [13, .5, 11, .5], [13, 1, 10, .5], [13, 1.5, 9, .5],
+          [13, 2, 8, 1], [13, 3, 9, 1], [14, 0, 10, 1.5], [14, 1.5, 9, .5], [14, 2, 8, 1], [14, 3, 7, 1], [15, 0, 8, 2], [15, 2, 5, 2]]
+MED_ORGAN = [[16, 0, 1, 1], [16, 1, 5, 1], [16, 2, 4, 2], [17, 0, 3, 1], [17, 1, 4, 1], [17, 2, 5, 1], [17, 3, 6, 1],
+             [18, 0, 5, 1], [18, 1, 4, 1], [18, 2, 3, 1], [18, 3, 2, 1], [19, 0, 0, 2], [19, 2, 5, 2]]
+# 용 변신 (src/render/dragon.py, 게임 시간 번개 0.8·1.05 · 섬광 1.3초)을 실제 시간으로: 변신과 함께 슬로모션 1.2초 × 0.4배
+# → 번개 1.2 + (0.8 − 0.48) = 1.52 · 1.77초, 섬광 2.02초. 이 라이저만 마디를 기다리지 않고 바로 시작 (src/audio/boss_music.py).
+DRAGON_SYNC = {"bolts": [1.52, 1.77], "flash": 2.02, "tail_bars": 1}
+
+
+def epic_songs() -> dict:
+    mel = EP_A + EP_B
+    strings16 = part("spiccato", "ostinato", 0.3)
+    bass8 = part("bass", "bass", 0.42, pattern="x.x.x.x.x.x.x.x.")
+    ch1 = [1, 6, 4, 5, 1, 4, 6, 5, 1, 6, 5, 6, 1, 4, 5, 1]
+    ch3 = [1, 6, 4, 5, 1, 4, 6, 5, 1, 6, "b2M", 5, 1, 4, 5, 1]
+    song = dict(kind="legend", epic=True, replaces="L06", root=62, scale="harmonic", bpm=160, meter=[4, 4], fish="dragon_carp",
+                reverb=[0.2, 1.2], master={"mid_cut_db": -3.0},
+                phases=[dict(chords=ch1,
+                             base=[part("roar", "hold", 0.26, oct=-1), part("strings", "hold", 0.15), strings16, bass8],
+                             perc=dict(pattern={"obig": "X.......x.......", "timp": "x.....x.x.......", "taiko": "x..x..x...x..x..",
+                                                "snare": "....x.......x...", "crash": ["x...............", "", "", ""]},
+                                       crisis={"obig": "X...x...X...x...", "timp": "x.x.x.x.x.x.xxxx", "big": "x.......x......."}),
+                             lead=[lead("brass", mel, 0.75, 0), lead("horn", mel, 0.4, -1, pan=-0.2)],
+                             choir=[part("choir", "hold", 0.5)]),
+                        dict(bars=20, chords=[1, 4, 5, 1, 1, 1, 6, 5, 1, 6, 4, 5, 1, 4, 1, 5, 6, 4, 5, 5],
+                             base=[strings16, bass8,
+                                   part("trumpet_open", "section", 0.42, span=[0, 4], pattern="x..x......X..x.."),
+                                   part("throat", "throat", 0.65, span=[4, 8]),
+                                   part("gtr_mute", "riff", 0.75, span=[8, 12], pattern="mm.mm.mmM--.mm.m"),
+                                   part("organ", "pedal", 0.45, span=[16, 20]), part("organ", "toccata", 0.2, span=[16, 20])],
+                             perc=dict(pattern={"brush@0-4": "x.x.x.x.x.x.x.x.", "ride@0-4": "x..xx..xx..xx..x", "kick@0-4": "x.........x.....",
+                                                "big@4-8": "X..x..x.X...x.x.", "obig@4-8": "x.......x.......",
+                                                "kick@8-12": "x..x..x.x..x..x.", "snare@8-12": "....x.......x...", "ride@8-12": "x.x.x.x.x.x.x.x.",
+                                                "kung@12-16": "x..x..x.x.......", "taiko@12-16": "x.......x.......", "obig@12-16": "x...............", "deok@12-16": "..x..x...xx.x.x.", "jing@12-13": "x...............",
+                                                "obig@16-20": "x.......x.......", "bell@16-17": "x...............", "timp@16-20": "x...x...x...x...",
+                                                "crash@0-20": ["x...", "", "", ""]},
+                                       crisis={"obig": "X...x...X...x...", "timp": "x.x.x.x.x.x.xxxx"}),
+                             lead=[lead("trumpet_open", MED_JAZZ, 0.5, 0), lead("sax", MED_SAX, 0.5, 0, pan=-0.15),
+                                   lead("horn", MED_SANGUN, 0.55, 0), lead("gtr_lead", MED_ROCK, 0.62, -1),
+                                   lead("taepyeongso", MED_IL, 0.95, 0), lead("organ_full", MED_ORGAN, 0.4, 0)],
+                             choir=[]),
+                        dict(chords=ch3, sync=DRAGON_SYNC, tired_choir=1.4,
+                             base=[strings16, bass8, part("brass", "hits", 0.3, pattern="X.....x.....x...", len=2),
+                                   part("organ", "pedal", 0.42), part("organ", "toccata", 0.16, oct=-1, band=[60, 900]),
+                                   part("throat", "throat", 0.4, band=[60, 1200]),
+                                   part("gtr_mute", "riff", 0.36, pattern="mm.mm.mmM--.mm.m", band=[150, 2500])],
+                             perc=dict(pattern={"obig": "X.......x.......", "big": "x.....x...x.....", "timp": "x...x...x...x...",
+                                                "taiko": "x.xx.xx.x.xx.xx.", "snare": "....x.......x...", "deok": "..x...x...x...x.",
+                                                "crash": ["x...............", "", "", ""], "jing": ["x...............", "", "", "", "", "", "", ""]},
+                                       crisis={"obig": "X...X...X...X...", "big": "x.x.x.x.x.x.x.x.", "timp": "x.x.x.x.x.x.xxxx"}),
+                             lead=[lead("taepyeongso", mel, 0.55, 0, band=[400, 9000]), lead("trumpet_open", mel, 0.45, 0, pan=0.2, band=[400, 9000])],
+                             choir=[part("choir_a", "hold", 0.55)])])
+    return {"L06-EPIC": song}
+
+
 # 전투감 곡 (BOSS_BGM_FIX.md, DESIGN.md 43-13): 빠르기표 + src/audio/boss_battle.py 연주법 (리듬 뼈대 · 소리 정리)
 # F2 시범 = L02 · P04. 나머지 22곡은 사용자가 들어 보고 승인한 뒤 (F3)
 BATTLE = {"L02": 168, "P04": 160}
@@ -872,6 +952,7 @@ def main(argv) -> int:
     songs.update(jazz_songs())
     songs.update(sangun_songs())
     songs.update(organ_songs())
+    songs.update(epic_songs())
     for sid, bpm in BATTLE.items():
         songs[sid].update(bpm=bpm, battle=True)
     if check(songs) or check_phantom(songs):
