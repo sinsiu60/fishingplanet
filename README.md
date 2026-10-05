@@ -55,8 +55,8 @@ AI 작곡용 프롬프트와 파일 이름은 [MUSIC_PROMPTS.md](MUSIC_PROMPTS.m
 
 ## 안드로이드 APK 빌드
 
-**방법 1 — GitHub에서 받기 (설치 없음)**: 저장소 Actions → `build` 실행 → 맨 아래 Artifacts의 `MiniFishing-android`
-(디버그 APK)와 `MiniFishing-windows`(exe 폴더). 브랜치에 push하면 자동으로 돌고, Actions 화면의 "Run workflow"로도 실행.
+**방법 1 — GitHub에서 받기 (설치 없음)**: 저장소 Actions → `build` 실행 → 맨 아래 Artifacts의 `MiniFishing-android-arm64-v8a`(64비트 폰) ·
+`MiniFishing-android-armeabi-v7a`(32비트 폰 — 안드로이드 8 무렵, 디버그 APK)와 `MiniFishing-windows`(exe 폴더). 브랜치에 push하면 자동으로 돌고, Actions 화면의 "Run workflow"로도 실행.
 
 **방법 2 — WSL2 우분투에서 직접**: 프로젝트를 WSL 홈(예: `~/fishingplanet`)에 두고
 ```

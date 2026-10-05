@@ -10,7 +10,7 @@ source.dir = .
 source.include_exts = py,json,ttf,txt,png,ogg,wav,mp3
 source.exclude_dirs = tools, build, dist, bin, .venv, .github, .buildozer, android, __pycache__
 source.exclude_patterns = *.bat,*.md,requirements*.txt,dist_readme.txt
-version = 1.3.0
+version = 1.3.1
 
 # pygame-ce는 p4a 레시피가 없어서 pygame을 쓴다 — 로컬 레시피(android/recipes/pygame)로 2.6.1, 코드는 pygame 2.1.3·2.6.1 호환 확인 (DESIGN.md 26장)
 # numpy = 효과음 합성, pyjnius·android = 진동·화면 켜짐·공유 (src/platform/android.py)
@@ -32,7 +32,8 @@ android.api = 35
 android.minapi = 24
 android.ndk = 28c
 android.accept_sdk_license = True
-# armeabi-v7a(32비트 옛 폰)는 뺐다: p4a가 두 번째 아키텍처에서 pip venv를 재사용하다 깨짐 (2017년 이후 폰은 거의 64비트)
+# 한 빌드엔 아키텍처 하나만: p4a가 두 번째 아키텍처에서 pip venv를 재사용하다 깨짐.
+# GitHub 빌드는 이 줄을 arm64-v8a / armeabi-v7a(32비트 — 안드로이드 8 무렵 폰)로 바꿔 APK 두 개를 따로 만든다 (minapi 24 = 안드로이드 7.0부터)
 android.archs = arm64-v8a
 android.allow_backup = True
 p4a.bootstrap = sdl2

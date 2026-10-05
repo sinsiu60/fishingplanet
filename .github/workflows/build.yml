@@ -60,10 +60,20 @@ jobs:
           path: dist/MiniFishing
 
   android-apk:
+    # 64비트(arm64-v8a)와 32비트(armeabi-v7a, 안드로이드 8 무렵 폰 상당수)를 따로 빌드 —
+    # 한 빌드에 두 아키텍처를 넣으면 p4a 가 두 번째에서 pip venv 를 재사용하다 깨진다 (buildozer.spec 주석)
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64-v8a, armeabi-v7a]
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+      - name: 아키텍처 (${{ matrix.arch }})
+        run: |
+          sed -i 's/^android.archs = .*/android.archs = ${{ matrix.arch }}/' buildozer.spec
+          grep -n '^android.archs' buildozer.spec
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -100,15 +110,16 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: buildozer-${{ hashFiles('buildozer.spec', 'android/recipes/**/*.py') }}-v2
+          key: buildozer-${{ matrix.arch }}-${{ hashFiles('buildozer.spec', 'android/recipes/**/*.py') }}-v2
       - name: APK 빌드 (debug)
         run: yes | buildozer android debug
       - name: APK 안 pygame 모듈에 빠진 함수가 없는지 (폰에서 'cannot locate symbol' 로 꺼지는 것 방지)
         run: |
           set -e
           T=$(mktemp -d)
-          unzip -q -o bin/*.apk 'lib/arm64-v8a/libpybundle.so' -d "$T"
-          mkdir -p "$T/pb" && tar xzf "$T/lib/arm64-v8a/libpybundle.so" -C "$T/pb" --no-same-permissions
+          A=${{ matrix.arch }}
+          unzip -q -o bin/*.apk "lib/$A/libpybundle.so" -d "$T"
+          mkdir -p "$T/pb" && tar xzf "$T/lib/$A/libpybundle.so" -C "$T/pb" --no-same-permissions
           chmod -R u+rwX "$T/pb"   # 묶음 안 폴더 권한이 막혀 있으면 find 가 아무것도 못 찾는다 (예전엔 '0개 검사'로 그냥 통과)
           bad=0
           for so in $(find "$T/pb" -path '*site-packages/pygame/*.so'); do
@@ -134,6 +145,8 @@ jobs:
           cnt=$(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)
           echo "pygame 모듈 ${cnt}개 검사"
           [ "$cnt" -gt 10 ] || { echo "::error::APK 에서 pygame 모듈을 못 찾음 (${cnt}개)"; exit 1; }
+          # 아래 최적화 검사는 AArch64 명령 비율 기준이라 64비트만 (32비트도 같은 레시피 -O2)
+          [ "$A" = "arm64-v8a" ] || exit $bad
           # 최적화 확인: -O0 이면 반투명 blit 함수가 거의 스택 ldr/str 뿐이라 폰에서 수십 배 느리다 (v0.8.11 파이팅 렉)
           # NDK 의 llvm-objdump 우선 (러너 기본 것은 AArch64 를 못 읽을 수 있음)
           OBJDUMP=$(find ~/.buildozer -path '*toolchains/llvm/prebuilt/*' -name 'llvm-objdump' 2>/dev/null | head -1)
@@ -162,7 +175,7 @@ jobs:
           echo "$line" | grep -Eq '\)0x(0|6)$' || { echo "::error::가로가 아님: $line"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
-          name: MiniFishing-android
+          name: MiniFishing-android-${{ matrix.arch }}
           path: bin/*.apk
 
   release:
@@ -183,7 +196,8 @@ jobs:
           echo "TAG=$V" >> "$GITHUB_ENV"
           mkdir -p out
           (cd art/MiniFishing-windows && zip -qr "../../out/MiniFishing-${V}-windows.zip" .)
-          cp art/MiniFishing-android/*.apk "out/MiniFishing-${V}-android.apk"
+          cp art/MiniFishing-android-arm64-v8a/*.apk "out/MiniFishing-${V}-android.apk"
+          cp art/MiniFishing-android-armeabi-v7a/*.apk "out/MiniFishing-${V}-android-32bit.apk"
           ls -la out
       - uses: softprops/action-gh-release@v2
         with:
