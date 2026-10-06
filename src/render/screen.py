@@ -106,7 +106,9 @@ class PixelScreen:
         # 창 형식이 캔버스와 다르면 transform.scale 로 창에 바로 쓸 수 없다 → 작은 캔버스를 창 형식으로 한 번 옮긴 뒤 확대
         self.same_fmt = (self.window.get_bitsize() == 32 and self.window.get_masks()[:3] == self.canvas.get_masks()[:3])
         self._conv = None if self.same_fmt else pygame.Surface((width, height), 0, self.window)
-        self.fmt_note = f"창 {fmt_name(self.window)} · 캔버스 {fmt_name(self.canvas)}"
+        import os
+        out = "GPU 확대" if self.gpu else ("CPU 확대 (안전 모드)" if os.environ.get("FP_SAFE") else "CPU 확대") if self.mobile else ""
+        self.fmt_note = f"창 {fmt_name(self.window)} · 캔버스 {fmt_name(self.canvas)}" + (f" · {out}" if out else "")
 
     def _src(self) -> pygame.Surface:
         """창 형식의 캔버스 (같으면 캔버스 그대로)."""

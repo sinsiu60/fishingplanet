@@ -13,16 +13,31 @@ SHADOW = (10, 12, 24)
 def text(canvas, s: str, pos, color, size: int = 11, anchor: str = "topleft", shadow: bool | None = None) -> pygame.Rect:
     """shadow = None: 글자색이 밝으면 어두운 그림자, 어두운 글자(밝은 종이·말풍선 위)면 그림자 없음 — 검은 글자에 검은 그림자가
     겹치면 획이 뭉개져 읽기 힘들다."""
-    s = localize(s)  # 모바일이면 PC 조작 문구를 터치 문구로 (PC는 그대로)
-    font = get_font(size)
-    img = font.render(s, False, color)
+    img, sh = _rendered(s, color, size, shadow)
     rect = img.get_rect(**{anchor: pos})
-    if shadow is None:
-        shadow = 0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2] >= 120
-    if shadow:
-        canvas.blit(font.render(s, False, SHADOW), rect.move(1, 1))
+    if sh is not None:
+        canvas.blit(sh, rect.move(1, 1))
     canvas.blit(img, rect)
     return rect
+
+
+_TXT: dict = {}
+
+
+def _rendered(s: str, color, size: int, shadow):
+    """(글자 그림, 그림자 그림 또는 None) — 같은 글자·색·크기는 한 번만 그린다 (폰에서 Font.render 가 프레임당 수 ms, DESIGN.md 44)."""
+    key = (s, tuple(color), size, shadow)
+    hit = _TXT.get(key)
+    if hit is None:
+        if len(_TXT) > 600:
+            _TXT.clear()
+        t = localize(s)  # 모바일이면 PC 조작 문구를 터치 문구로 (PC는 그대로)
+        font = get_font(size)
+        img = font.render(t, False, color)
+        if shadow is None:
+            shadow = 0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2] >= 120
+        hit = _TXT[key] = (img, font.render(t, False, SHADOW) if shadow else None)
+    return hit
 
 
 # ── 색 태그 글자: "{purple}물이 조용해지거든{/}, 줄을…" (대사 강조 — 환상 힌트 등) ──

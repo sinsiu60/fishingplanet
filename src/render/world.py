@@ -224,14 +224,18 @@ def draw_mountains(canvas, pal, cam, terrain: str = "hills", t: float = 0.0) -> 
         if len(memo) > 20000:
             memo.clear()
         base = int(round(off))
-        pts = [(0, hz + 1)]
-        for x in range(0, cam.width + 4, 3):
-            u = x + base
-            h = memo.get(u)
-            if h is None:
-                h = memo[u] = fn(u)  # 지형 높이는 위치마다 늘 같다 → 한 번만 계산 (폰 렉, v0.8.7)
-            pts.append((x, hz - h))
-        pts.append((cam.width, hz + 1))
+        pkey = (base, cam.width, hz)   # 둘러보지 않는 동안은 같은 윤곽 → 점 목록째 기억 (DESIGN.md 44)
+        pts = memo.get(pkey)
+        if pts is None:
+            pts = [(0, hz + 1)]
+            for x in range(0, cam.width + 4, 3):
+                u = x + base
+                h = memo.get(u)
+                if h is None:
+                    h = memo[u] = fn(u)  # 지형 높이는 위치마다 늘 같다 → 한 번만 계산 (폰 렉, v0.8.7)
+                pts.append((x, hz - h))
+            pts.append((cam.width, hz + 1))
+            memo[pkey] = pts
         pygame.draw.polygon(canvas, color, pts)
     if terrain == "peaks":
         # 봉우리 눈
@@ -346,9 +350,14 @@ class Water:
         return out | np.uint32(am) if am else out
 
     @staticmethod
-    def _put(canvas, xs: np.ndarray, ys: np.ndarray, vals: np.ndarray) -> None:
-        """픽셀 쓰기 — 같은 자리에 여러 번이면 나중 것 (fill 을 차례로 부른 것과 같게)."""
+    def _put(canvas, xs: np.ndarray, ys: np.ndarray, vals: np.ndarray, dup: bool = True) -> None:
+        """픽셀 쓰기 — 같은 자리에 여러 번이면 나중 것 (fill 을 차례로 부른 것과 같게). dup=False = 겹치는 자리가 없음."""
         if not len(xs):
+            return
+        if not dup:
+            px = pygame.surfarray.pixels2d(canvas)
+            px[xs, ys] = vals
+            del px
             return
         h = canvas.get_height()
         lin = xs.astype(np.int64) * h + ys.astype(np.int64)
@@ -362,20 +371,36 @@ class Water:
         cam = self.cam
         hz, H, W = cam.horizon, cam.height, cam.width
         light, dark = pal["wave_light"], pal["wave_dark"]
-        rows = []   # 줄마다 (번호, 거리, y0, 배율, 진폭, 마루 색)
-        for i, z in enumerate(self.depths):
-            y0 = cam.row_for_distance(z)
-            if y0 >= H:
-                continue
-            near = clamp(1.0 - z / 50.0, 0.25, 1.0)
-            crest = lerp_color(lerp_color(top, bottom, (y0 - hz) / (H - hz)), light, near)
-            rows.append((i, z, y0, cam.f / z, min(2.0, 5.0 / z) * amp_mult, crest))
-        if not rows:
+        rkey = (tuple(top), tuple(bottom), tuple(light), tuple(dark), hz, H, cam.f, cam.cam_h)
+        cache = self.__dict__.setdefault("_rows_cache", {})
+        st = cache.get(rkey)
+        if st is None:   # 줄마다 고정값 (번호 · 거리 · 배율 · y · 진폭 · 색) — 팔레트 · 화면이 같으면 그대로 (DESIGN.md 44)
+            rows = []
+            for i, z in enumerate(self.depths):
+                y0 = cam.row_for_distance(z)
+                if y0 >= H:
+                    continue
+                near = clamp(1.0 - z / 50.0, 0.25, 1.0)
+                crest = lerp_color(lerp_color(top, bottom, (y0 - hz) / (H - hz)), light, near)
+                rows.append((i, z, y0, cam.f / z, min(2.0, 5.0 / z), crest))
+            n = len(rows)
+            st = None
+            if n:
+                ybase = np.empty(2 * n)
+                ybase[0::2] = [r[2] for r in rows]
+                ybase[1::2] = [r[2] + max(1, r[3] * 0.05) for r in rows]
+                cols = np.empty((2 * n, 3), dtype=np.int64)
+                cols[0::2] = [r[5] for r in rows]
+                cols[1::2] = tuple(dark)
+                st = dict(n=n, idx=np.array([r[0] for r in rows], dtype=np.float64), zz=np.array([r[1] for r in rows]),
+                          ss=np.array([r[3] for r in rows]), ybase=ybase, amp0=np.array([r[4] for r in rows]),
+                          vals=self._mapped(canvas, cols), near=(np.array([r[1] for r in rows]) < 18)[:, None])
+            if len(cache) > 32:
+                cache.clear()
+            cache[rkey] = st
+        if st is None:
             return
-        n = len(rows)
-        idx = np.array([r[0] for r in rows], dtype=np.float64)
-        zz = np.array([r[1] for r in rows])
-        ss = np.array([r[3] for r in rows])
+        n, idx, zz, ss, ybase = st["n"], st["idx"], st["zz"], st["ss"], st["ybase"]
         # 월드 좌우 좌표로 패턴을 만들어 둘러볼 때 수면이 같이 움직이게
         U = (self.xs[None, :] - cam.cx) / ss[:, None] + cam.yaw * zz[:, None]
         phase = t * (0.9 + 0.05 * idx) + idx * 1.7
@@ -383,14 +408,8 @@ class Water:
         # 줄마다 [마루, 골] 두 칸 (골은 가까운 줄 z < 18 만)
         M = np.zeros((2 * n, W + 2), dtype=bool)
         M[0::2, 1:-1] = wave > 0.45
-        M[1::2, 1:-1] = (wave < -0.55) & (zz < 18)[:, None]
-        ybase = np.empty(2 * n)
-        ybase[0::2] = [r[2] for r in rows]
-        ybase[1::2] = [r[2] + max(1, r[3] * 0.05) for r in rows]
-        amps = np.repeat([r[4] for r in rows], 2)
-        cols = np.empty((2 * n, 3), dtype=np.int64)
-        cols[0::2] = [r[5] for r in rows]
-        cols[1::2] = tuple(dark)
+        M[1::2, 1:-1] = (wave < -0.55) & st["near"]
+        amps = np.repeat(st["amp0"] * amp_mult, 2)
         flat = M.ravel()
         d = np.diff(flat.view(np.int8))
         starts = np.flatnonzero(d == 1) + 1                 # 구간 시작 (평평하게 편 자리)
@@ -404,8 +423,9 @@ class Water:
         xs = pix % (W + 2) - 1
         ys = ys_run[run]
         keep = (ys < H) & (ys >= 0)
-        vals = self._mapped(canvas, cols)[srow[run]]
-        self._put(canvas, xs[keep], ys[keep], vals[keep])
+        vals = st["vals"][srow[run]]
+        # 겹치는 자리는 numpy 가 앞에서부터 차례로 쓰므로 나중 줄이 남는다 (정렬로 골라낸 것과 같음 — 검사로 확인)
+        self._put(canvas, xs[keep], ys[keep], vals[keep], dup=False)
 
     def _draw_reflection(self, canvas, pal, bx: float, t: float, strength: float) -> None:
         cam = self.cam
@@ -439,7 +459,7 @@ class Water:
         a, cnt, rows, vals = a[live], cnt[live], hz + r[live], self._mapped(canvas, cols[live])
         rep = np.repeat(np.arange(len(a)), cnt)
         offs = np.arange(cnt.sum()) - np.repeat(np.cumsum(cnt) - cnt, cnt)
-        self._put(canvas, a[rep] + offs, rows[rep], vals[rep])
+        self._put(canvas, a[rep] + offs, rows[rep], vals[rep], dup=False)   # 줄마다 다른 행 → 겹침 없음
 
 
 # ───────────────────────── 앞쪽 갈대 ─────────────────────────
@@ -496,6 +516,7 @@ class HazardDecor:
 
     def draw(self, canvas, pal, cam, t: float, active_hz=None) -> None:
         warn = active_hz is not None and int(t * 6) % 2 == 0
+        pad_col = lerp_color(pal["reed"], pal["water_top"], 0.25)   # 줄기마다 다시 계산하지 않게
         for it in self.items:
             p = cam.project(it["x"], it["z"])
             if p is None:
@@ -507,7 +528,7 @@ class HazardDecor:
             hot = warn and it["hz"] is active_hz
             if it["type"] == "weeds":
                 col = pal["reed"] if not hot else (200, 80, 60)
-                pad = lerp_color(pal["reed"], pal["water_top"], 0.25) if not hot else (220, 110, 80)
+                pad = pad_col if not hot else (220, 110, 80)
                 w = clamp(0.5 * s * k, 2, 26)
                 pygame.draw.ellipse(canvas, pad, (sx - w / 2, sy - max(1, w * 0.12), w, max(2, w * 0.25)))
                 h = clamp(0.7 * s * k, 3, 24)
