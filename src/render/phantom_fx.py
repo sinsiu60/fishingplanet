@@ -5,7 +5,7 @@ UI·HUD·신호 슬롯은 팔레트를 쓰지 않으므로 그대로.
 
 상태 (mode):
   bloom   착수 → 파장이 퍼짐 (0.2~2.2초) → 화면 전체 보라 → 대사 (2.4~4.4초) → 입질까지 유지
-  fight   파이팅 중 강도 fight_k(0.6), 2페이즈 진입 때 1.0 으로 맥박
+  fight   파이팅 중 강도 fight_k(0.6). 2페이즈 진입은 컷신(phantom_phase2)이 k_override 로 60% → 100% → 60%
   restore 포획 컷이 끝난 뒤 restore_sec 에 걸쳐 원래 색
   retreat 실패·직접 회수: 사라진 지점으로 보라가 빨려 들어감 (retreat_sec)
 """
@@ -59,6 +59,7 @@ class PhantomFx:
         self.k_from = 0.0
         self.reduce = False          # 화면 효과 줄이기: 파장 대신 페이드
         self.pulse_t = -1.0
+        self.k_override: float | None = None   # 2페이즈 컷신이 강도를 직접 잡는 동안 (PHANTOM_PHASE2.md)
         self.events: list[str] = []
         self.fired: set = set()
 
@@ -124,6 +125,8 @@ class PhantomFx:
                     self.pulse_t = -1.0
                 else:
                     self.k = max(self.k, lerp(fk, 1.0, math.sin(math.pi * p)))
+            if self.k_override is not None:
+                self.k = self.k_override
         elif self.mode == "restore":
             u = clamp(self.t / self.cfg["restore_sec"], 0, 1)
             self.k = self.k_from * (1 - smoothstep(u))

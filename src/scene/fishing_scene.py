@@ -152,6 +152,15 @@ class FishingScene(Scene):
         from src.render.hook_cine import HookCine
         self.hook_cine = HookCine()   # 고등급 입질 연출 ① 예고 · ② 챔질 연출 (DETAILS B, DT4~DT6)
         self.cine_full = False        # 디버그 Shift+F3: 본 종이어도 늘 전체 버전
+        # 환상 2페이즈 컷신 (PHANTOM_PHASE2.md, DESIGN.md 33-12)
+        self.p2 = None              # Phase2Cine (재생 중 · 재개 뒤 보라 강도 되돌리는 0.5초까지)
+        self.p2_pending = None      # 2페이즈 진입 → 패턴 판정이 끝나면 시작 {"mode", "t"}
+        self.p2_force = None        # 디버그 Shift+F4/F6: 다음 2페이즈 컷신 버전 강제
+        self.p2_card = None         # 첫 만남 신호 카드 (컷신이 끝난 뒤, 재개 전)
+        self.p2_on = False          # 2페이즈 손 보랏빛 켜짐
+        self.p2_aura = 0.0          # 손 보랏빛 페이드 0~1
+        self.p2_log: list = []      # 컷신 전후 수치 (검증용)
+        self.sig_dim_t = 0.0
         self.cine_clock = time.perf_counter   # 입질 연출 시계 (실제 시간, 시험에선 바꿔 끼움)
         # 손 · 장비 · 잡은 직후 (DETAILS C · D, DT7)
         self.wet_t = 0.0            # 뜰채로 건진 뒤 젖은 손 남은 시간
@@ -562,6 +571,11 @@ class FishingScene(Scene):
             return
         if self.training is not None and self.training.handle(a):
             return
+        if self.p2 is not None and self.p2.blocking and a.name != "back":
+            # 2페이즈 컷신: 입력 무시, 0.5초 이후 탭 = 건너뛰기 (마지막 단계 → 다음 박에서 재개)
+            if a.name in ("primary", "confirm", "reel_tap") and self.p2.can_skip():
+                self.p2.skip()
+            return
         n = a.name
         if n == "item":
             if f is not None and f.phase == "fight":
@@ -598,6 +612,9 @@ class FishingScene(Scene):
                 if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
                     self.cine_full = not self.cine_full   # Shift+F3: 입질 연출 늘 전체 버전 (DT4 디버그)
                     self.toasts.show(f"[테스트] 입질 연출 늘 전체 버전: {'켬' if self.cine_full else '끔'}", INFO, 1.5, 11)
+            elif a.value in ("F4", "F6") and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    self._p2_debug("full" if a.value == "F4" else "short")   # 환상 2페이즈 컷신 바로 보기
             elif a.value in ("F3", "F4", "F5", "F6"):
                 if f is None and self.fish_cfg.get("debug_keys"):
                     self._cycle_debug(a.value)
@@ -1323,6 +1340,7 @@ class FishingScene(Scene):
             self.fight.log.spot = self.spot_id
             self.fight.log.save(str(save_dir() / "fight_logs"))
         self.fight = None
+        self._p2_clear()
         self.landing = None
         self.dragon_fx = None
         self.legend_fx.end_fight()   # 여우비 빗줄기 끝
@@ -1404,7 +1422,9 @@ class FishingScene(Scene):
         self.toasts.update(dt)
         self.toasts.sink = self._say if self._fight_text_mode() else None
         self.sig_dim_t = max(0.0, getattr(self, "sig_dim_t", 0.0) - dt)
-        self.signal_audio.update(dt, self.fight if self.fight is not None and self.fight.phase == "fight" else None)
+        self.signal_audio.update(dt, self.fight if self.fight is not None and self.fight.phase == "fight"
+                                 and not (self.p2 is not None and self.p2.blocking) else None)
+        self._p2_aura_tick(dt)
         self._rush_audio()
         fighting = self.fight is not None and self.fight.phase in ("fight", "net")
         if not fighting:  # N5 거리감: 파이팅 중엔 fight_audio 가 물고기 거리로, 그 밖엔 찌(루어)까지 거리로
@@ -1986,6 +2006,8 @@ class FishingScene(Scene):
                 if news.get("chest"):
                     self.game.guide.event("chest_card")   # TG-10
             return
+        if self._p2_tick(dt):
+            return   # 2페이즈 컷신: 파이팅 완전 정지 (물고기 · 장력 · 줄 · 바늘 · 꼬임 · 패턴 시계)
         reeling = self.game.input.held("reel") and f.phase == "fight"
         fp = getattr(self, "tut_force_pattern", None)
         if fp and f.phase == "fight" and f.elapsed > 1.5 and f.brain.state in ("idle", "tired", "recover"):
@@ -2267,7 +2289,9 @@ class FishingScene(Scene):
         """파이팅 연속음: 릴 클릭·드랙 풀림·장력 삐걱임·줄 실금·드랙 딸깍·몸부림 (src/audio/fight_audio.py)."""
         f = self.fight
         fa = self.fight_audio
-        if f is not None and f.phase == "fight":
+        if self.p2 is not None and self.p2.blocking:
+            fa.stop()   # 컷신 동안 파이팅 연속음 없음
+        elif f is not None and f.phase == "fight":
             far = self.cast_far
             zone = f.zone()
             if zone == "green" and f.tension >= f.green_high - fa.fc["yellow_frac"] * (f.green_high - f.green_low):
@@ -2293,7 +2317,8 @@ class FishingScene(Scene):
         amp = self.shake_kick
         f = self.fight
         fc = self.fish_cfg["fight"]
-        if f is not None and f.phase == "fight" and f.tension > fc["shake_start_tension"]:
+        if f is not None and f.phase == "fight" and f.tension > fc["shake_start_tension"] \
+                and not (self.p2 is not None and self.p2.blocking):
             amp += (f.tension - fc["shake_start_tension"]) / 30 * fc["shake_max_px"]
         if getattr(self, "thunder_shake", 0.0) > 0:
             self.thunder_shake -= dt
@@ -2670,6 +2695,168 @@ class FishingScene(Scene):
             self.tip_counts[key] = n + 1
             self.toasts.show(TIPS[key], INFO, 2.2, 11)
 
+    # ───────────────────────── 환상 2페이즈 컷신 (PHANTOM_PHASE2.md) ─────────────────────────
+    def _p2_values(self) -> dict:
+        """컷신 전후 비교용 파이팅 수치 (체력만 바뀌어야 함)."""
+        f = self.fight
+        return {"tension": round(f.tension, 4), "line": round(f.line_frac, 4), "twist": round(f.twist.value, 4),
+                "distance": round(f.distance, 4), "stamina": round(f.stamina_frac, 4), "drag": f.drag,
+                "brain": f.brain.state, "elapsed": round(f.elapsed, 4), "phase": f.brain.phase}
+
+    def _p2_music(self):
+        """환상 공통 곡이 돌고 있으면 그 재생기 (물속 버전 · 마디 · 박), 아니면 None."""
+        sb = self.game.boss.suno
+        return sb if sb.active and sb.song and sb.is_phantom(sb.song) else None
+
+    def _p2_start(self) -> None:
+        from src.core import fxq
+        from src.render.phantom_phase2 import Phase2Cine
+        f = self.fight
+        mode = (self.p2_pending or {}).get("mode")
+        self.p2_pending = None
+        seen = f.fish["id"] in phantom.state(self.save)["phase2_seen"]
+        full = mode == "full" or (mode is None and not seen)
+
+        def wait(kind, lead):
+            m = self._p2_music()
+            if m is None:
+                return None
+            return m.until_bar_after(lead) if kind == "bar" else m.until_beat_after(lead)
+
+        self.p2 = Phase2Cine(f.fish, full, bool(self.settings.get("reduce_fx")), fxq.level(), f.stamina_frac,
+                             (self.cam.width, self.cam.height), wait)
+        self.p2_log = [{"at": "start", "full": full, **self._p2_values()}]
+        self.fight_audio.stop()
+        self.signal_audio.stop()
+        self.toasts.items.clear()
+
+    def _p2_tick(self, dt: float) -> bool:
+        """True = 이번 틱 파이팅을 멈춤."""
+        f = self.fight
+        if getattr(self, "p2_dbg_wait", 0) > 0:
+            self.p2_dbg_wait -= dt
+            if self.p2_dbg_wait <= 0 and f.brain.phase == 0:
+                f.stamina = min(f.stamina, f.stamina_max * (f.fish.get("phase_at", [0.5])[0] - 0.01))
+        if self.p2_pending is not None and self.p2 is None:
+            self.p2_pending["t"] += dt
+            if f.phase == "fight" and (not f.pats or self.p2_pending["t"] > 2.0):   # 패턴 판정이 난 직후
+                self._p2_start()
+        cine = self.p2
+        if cine is None:
+            return False
+        was = cine.blocking
+        for ev in cine.update(dt):
+            if ev[0] == "sfx":
+                self.sfx.play(ev[1], ev[2])
+            elif ev[0] == "muffle":
+                m = self._p2_music()
+                if m is not None:
+                    m.set_muffle(ev[1], ev[2])
+            elif ev[0] == "resume":
+                self._p2_resume()
+        k = cine.k()
+        self.phantom_fx.k_override = k
+        if cine.finished:
+            self.p2 = None
+            self.phantom_fx.k_override = None
+        return was
+
+    def _p2_resume(self) -> None:
+        """재개: 체력 정확히 100% · 1초 유예 · 손 보랏빛 · 첫 만남 카드 · 세이브."""
+        f = self.fight
+        c = load_json("phantom/phase2_cutscene.json")
+        f.stamina = f.stamina_max * c["phase2_hp_percent"] / 100.0
+        b = f.brain
+        if b.state == "idle":
+            b.timer = c["grace_sec"]   # 새 패턴을 시작하지 않음 (장력 · 감기는 정상)
+        else:
+            b._enter("idle", c["grace_sec"])
+        self.p2_on = True
+        if self.p2 is not None and self.p2.full:
+            seen = phantom.state(self.save)["phase2_seen"]
+            if f.fish["id"] not in seen:
+                seen.append(f.fish["id"])
+        self.p2_log.append({"at": "resume", **self._p2_values()})
+        if self.p2_card and self.card is None:
+            self._open_card(self.p2_card, "fish")   # 고유 패턴 첫 만남: 정지 카드 (컷신 뒤, 재개 전)
+        self.p2_card = None
+
+    def _p2_clear(self) -> None:
+        if self.p2 is not None or self.p2_pending is not None:
+            m = self._p2_music()
+            if m is not None:
+                m.set_muffle(False, 0.15)
+        self.p2 = None
+        self.p2_pending = None
+        self.p2_card = None
+        self.p2_on = False
+        self.p2_dbg_wait = 0.0
+        self.phantom_fx.k_override = None
+
+    def _p2_aura_tick(self, dt: float) -> None:
+        f = self.fight
+        on = self.p2_on and f is not None and f.phase in ("fight", "net")
+        if self.p2_on and not on:
+            self.p2_on = False   # 포획 · 실패 · 도주: 0.3초에 걸쳐 사라짐
+        sec = load_json("phantom/phase2_cutscene.json")["hand"]["fade_sec"]
+        self.p2_aura = min(1.0, self.p2_aura + dt / sec) if on else max(0.0, self.p2_aura - dt / sec)
+
+    def _p2_draw_hand(self, canvas, geo) -> None:
+        """손 테두리: 컷신 번쩍(0.1초) · 2페이즈 동안 은은한 보랏빛 (30 ↔ 60%, 2초 주기). + 줄을 타는 빛 덩어리."""
+        if self.p2 is None and self.p2_aura <= 0:
+            return
+        from src.render.rod import hand_outline
+        c = load_json("phantom/phase2_cutscene.json")
+        H = c["hand"]
+        if self.p2 is not None and self.fight is not None and self.p2.blocking:
+            self.p2.draw_line_orb(canvas, getattr(self, "_fight_pts", None), geo)
+        a = 0.0
+        if self.p2_aura > 0:
+            br = H["lo"] + (H["hi"] - H["lo"]) * (0.5 - 0.5 * math.cos(math.tau * self.t / H["period"]))
+            a = br * self.p2_aura
+            w, h = canvas.get_size()
+            hand = pygame.Rect(int(geo["hand"][0]) - 16, int(geo["hand"][1]) - 16, 32, 32)
+            for sx, sy in signal_slots.slot_positions(w, h, self.touch, bool(self.touch and self.settings.get("touch_left"))):
+                if hand.colliderect((sx - 18, sy - 18, 36, 36)):
+                    a *= H["slot_overlap_mult"]   # 신호 슬롯과 겹치는 배치면 밝기 절반
+                    break
+        if self.p2 is not None:
+            a = max(a, self.p2.hand_alpha())
+        if a > 0:
+            hand_outline(canvas, geo, tuple(c["colors"]["rim"]), a, bool(self._hand_look().get("mitten")))
+
+    def _p2_debug(self, mode: str) -> None:
+        """디버그 Shift+F4(전체) / Shift+F6(짧은): 환상어 파이팅이면 곧바로 2페이즈 컷신, 아니면 다음 환상어로 파이팅을 열고 컷신."""
+        f = self.fight
+        if f is not None and f.phase == "fight" and f.fish.get("rarity") == "phantom":
+            if self.p2 is not None or self.p2_pending is not None:
+                return
+            if f.brain.phase == 0:
+                self.p2_force = mode
+                f.stamina = f.stamina_max * (f.fish.get("phase_at", [0.5])[0] - 0.01)   # 다음 틱에 2페이즈 진입
+            else:
+                self.p2_pending = {"mode": mode, "t": 0.0}
+            self.toasts.show(f"[테스트] 2페이즈 컷신 ({'전체' if mode == 'full' else '짧은'})", INFO, 1.2, 11)
+            return
+        if f is not None:
+            return
+        import copy
+        lst = phantom.all_phantoms()
+        i = getattr(self, "p2_dbg_i", -1) + 1
+        self.p2_dbg_i = i % len(lst)
+        fish = lst[self.p2_dbg_i]
+        self.bite.fish = copy.deepcopy(fish)
+        self.bite.cast_distance = 20.0
+        self.cast.bx, self.cast.bz = 2.0, 20.0   # 찌가 있던 자리 = 물고기 시작 위치
+        self.cast.state = CastState.HOOKED
+        self.phantom_fx.mode, self.phantom_fx.t, self.phantom_fx.k = "fight", 0.0, 1.0
+        self.phantom_fx.k_from = 1.0
+        self._start_fight()
+        self.p2_dbg_wait = 1.5   # 파이팅이 1.5초 흐른 뒤 체력을 2페이즈 기준 아래로 → 컷신
+        self.p2_force = mode
+        self.toasts.show(f"[테스트] 2페이즈 컷신 ({'전체' if mode == 'full' else '짧은'}) {self.p2_dbg_i + 1}/12 {fish['id']}",
+                         INFO, 2.0, 11)
+
     def _fish_screen(self, h: float = 0.0):
         f = self.fight
         x, z = f.fish_xz()
@@ -2814,10 +3001,13 @@ class FishingScene(Scene):
                 if not self.settings.get("reduce_fx"):
                     self.ilseom_fx.vignette()
             if f.fish.get("rarity") == "phantom":
-                self.phantom_fx.pulse()  # 2페이즈: 보라 강도 100% 맥박 → 60%
+                # 환상 2페이즈: 공통 페이즈 연출(거세짐 · 포효 · 번쩍 · 흔들림 · 슬로모션) 대신 전용 컷신 (PHANTOM_PHASE2.md).
+                # 지금 패턴 판정이 끝나면 시작, 첫 만남 신호 카드는 컷신이 끝난 뒤 재개 전에.
                 key = f"phantom:{f.fish['id']}"
-                if self.card is None and self.tutorial.want(key) and self.settings.get("signal_cards"):
-                    self._open_card(key, "fish")  # 고유 패턴 첫 만남: 정지 카드
+                self.p2_card = key if self.tutorial.want(key) and self.settings.get("signal_cards") else None
+                self.p2_pending = {"mode": self.p2_force, "t": 0.0}
+                self.p2_force = None
+                return
             pos = self._fish_screen()
             self.toasts.show("거세짐!", (255, 214, 90), 3.2, 11)
             self.sfx.play("sfx_roar", 1.0)
@@ -3280,6 +3470,7 @@ class FishingScene(Scene):
             reel_l = dict(reel_l, body=skin[2])
         self._draw_trail(canvas, "rod_skin", geo["tip"], 2)
         draw_rod(canvas, pal, geo, c.reel_angle, rod_l, reel_l, t, hand_look=self._hand_look())
+        self._p2_draw_hand(canvas, geo)
         self.life.draw_fly(canvas, geo["tip"], t)   # 낚싯대 끝 잠자리 (DT8)
         if self.bait_anim is not None and hanging:
             self._draw_bait_anim(canvas, pal, tip)
@@ -3382,6 +3573,8 @@ class FishingScene(Scene):
             hud.text(canvas, cap, r.center, (200, 230, 255), anchor="center")
         if self.debug and f is None and c.state == CastState.LANDED:
             fight_hud.draw_debug_lines(canvas, ["루어 (대기 중)"] + self.ctl.debug_lines(self.t)[2:])
+        if self.p2 is not None and self.p2.blocking and f is not None:
+            self.p2.draw_top(canvas, self._fish_screen())   # 2페이즈 컷신: 물속 장면 · 도약 · 체력 게이지 (맨 앞)
         if self.training is not None:
             self.training.draw(canvas, self.mouse)
         if self.card is not None:
@@ -3589,6 +3782,7 @@ class FishingScene(Scene):
         dx += self._wind_bend()   # 바람 쪽으로 휨 (A-2)
         pts = draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.25), sag, bias=0.6, dx=dx, color=color,
                         cracks=cracks, t=self.t)
+        self._fight_pts = pts   # 2페이즈 컷신: 빛이 이 줄을 타고 올라옴
         rush_cue.draw_pulse(canvas, pts, rph, self.t)   # 빛 펄스: 물고기 → 손
         rush_cue.draw_taut(canvas, pts, rph, self.t)    # 돌진 순간 줄이 튕김
         rush_cue.draw_light_pulse(canvas, pts, lph, self.t)

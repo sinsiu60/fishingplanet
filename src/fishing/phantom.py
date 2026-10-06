@@ -41,7 +41,7 @@ def state(save) -> dict:
     """세이브 data['phantom'] (옛 세이브는 _deep_merge 가 기본값으로 채움)."""
     ph = save.data.setdefault("phantom", {})
     for k, v in (("casts", {}), ("caught", {}), ("tutorial", False), ("notes", []), ("scales", 0), ("rewards", []),
-                 ("title_frame", False)):
+                 ("title_frame", False), ("phase2_seen", [])):   # phase2_seen: 2페이즈 컷신 전체 버전을 본 환상어
         ph.setdefault(k, v if not isinstance(v, (dict, list)) else type(v)())
     return ph
 

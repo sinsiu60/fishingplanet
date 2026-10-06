@@ -113,6 +113,9 @@ class SunoBoss:
         self._vol_q = {}
         self._late = False
         self._slot = 0
+        self.muffle = 0.0            # 환상 2페이즈 컷신 (PHANTOM_PHASE2.md): 물속 버전 비율 0~1
+        self.muffle_goal = 0.0
+        self.muffle_rate = 1.0
 
     # ── 곡 정보 ──
     def folder(self, sid: str):
@@ -128,6 +131,10 @@ class SunoBoss:
 
     def _loop_name(self, sid: str, phase: int = 0) -> str:
         return self.by_sid[sid].get("loop") or f"phase{phase + 1}_loop"
+
+    def _muffled_names(self, sid: str) -> list:
+        d = self.folder(sid)
+        return [n for n in ("intro_muffled", f"{self._loop_name(sid)}_muffled") if d is not None and (d / f"{n}.ogg").exists()]
 
     def is_phantom(self, sid) -> bool:
         return bool(sid) and self.by_sid.get(sid, {}).get("kind") == "phantom"
@@ -167,8 +174,8 @@ class SunoBoss:
         """읽을 순서: 인트로 · 1페이즈 · 포획 타격 · 그다음 페이즈들."""
         n = self.n_phases(sid)
         m = self._markers(sid)
-        if self.is_phantom(sid):
-            return ["intro", self._loop_name(sid)]
+        if self.is_phantom(sid):   # + 물속 버전 (같은 길이 · 위치 — 2페이즈 컷신)
+            return ["intro", self._loop_name(sid)] + self._muffled_names(sid)
         out = ["intro", "phase1_loop", m["crisis_layers"].get("phase1_loop"), "ending_hit"]
         for i in range(2, n + 1):
             out += [f"bridge_{i - 1}to{i}", f"phase{i}_loop", m["crisis_layers"].get(f"phase{i}_loop")]
@@ -261,7 +268,7 @@ class SunoBoss:
         """phase 0 = 인트로 + 1페이즈 (+위기층), phase ≥ 1 = 브리지 + 그 페이즈 반복 (+위기층)."""
         m = self._markers(sid)
         if self.is_phantom(sid):
-            return ["intro", self._loop_name(sid)]
+            return ["intro", self._loop_name(sid)] + self._muffled_names(sid)
         loop = f"phase{phase + 1}_loop"
         cr = (m["crisis_layers"].get(loop) or "")[:-4]
         head = "intro" if phase == 0 else f"bridge_{phase}to{phase + 1}"
@@ -291,7 +298,7 @@ class SunoBoss:
         intro = snd.get("intro")
         loop = snd.get(self._loop_name(sid))
         if self.by_sid[sid].get("gapless_intro") and intro is not None and loop is not None:
-            self._start_gapless(intro, loop)
+            self._start_gapless(intro, loop, snd.get("intro_muffled"), snd.get(f"{self._loop_name(sid)}_muffled"))
         elif intro is not None:
             self._play_seg("intro", intro, loop=False, cross=False)
             self.sched = (self.seg.length, lambda: self._enter_loop(0))
@@ -338,6 +345,61 @@ class SunoBoss:
 
     def tired(self) -> None:
         pass   # SUNO 곡엔 옥타브 주선율 층이 없다
+
+    def set_muffle(self, on: bool, sec: float) -> None:
+        """환상 2페이즈 컷신: 물속 버전으로 (on) / 원래 버전으로 — sec 초 동안 음량 비율만 바꿈 (멈추거나 처음으로 가지 않음)."""
+        self.muffle_goal = 1.0 if on else 0.0
+        self.muffle_rate = 1.0 / max(0.01, sec)
+
+    def has_muffled(self) -> bool:
+        return self.active and self.seg is not None and self.seg.cr_ch is not None and self.is_phantom(self.song)
+
+    def until_next_bar(self) -> float | None:
+        """다음 마디 첫 박까지 초 (intro 재생 중이면 intro 끝 = loop 시작). 곡이 안 돌면 None."""
+        if not self.active or self.seg is None:
+            return None
+        seg = self.seg
+        pos = seg.pos(self.t)
+        if pos < 0:
+            return -pos
+        b = next((x for x in seg.grid + [seg.length] if x > pos + 0.02), seg.length)
+        return b - pos
+
+    def until_next_beat(self) -> float | None:
+        if not self.active or self.seg is None:
+            return None
+        return max(0.0, self._next_beat() - self.t)
+
+    def _bounds_after(self, lead: float, beats: bool) -> float | None:
+        """지금부터 lead 초 뒤 이후 첫 마디(beats = 박) 첫 박까지 초. intro 중이면 intro 끝(= loop 시작)이 첫 마디."""
+        if not self.active or self.seg is None:
+            return None
+        seg = self.seg
+        pos = seg.pos(self.t)
+        p = pos + max(0.0, lead)
+        g = list(seg.grid) or [0.0]
+        bpb = max(1, int(self._markers(self.song).get("beats_per_bar", 4)))
+        if p <= 0.0:   # intro: 반복 구간 첫 마디 길이로 거꾸로 센 마디(박) — intro 끝 = 마디 첫 박
+            step = (g[1] - g[0]) if len(g) > 1 else 2.0
+            step = step / bpb if beats else step
+            return max(0.0, -step * math.floor(-p / step + 1e-6) - pos)
+        if seg.length <= 0:
+            return max(0.0, lead)
+        if beats:
+            ext = g + [seg.length]
+            g = [a + (b - a) * j / bpb for a, b in zip(ext, ext[1:]) for j in range(bpb)]
+        k = math.floor(p / seg.length) if seg.loop else 0
+        r = p - k * seg.length
+        b = next((x for x in g if x >= r - 1e-4), None)
+        if b is None:
+            k, b = k + 1, g[0]
+        return max(0.0, k * seg.length + b - pos)
+
+    def until_bar_after(self, lead: float = 0.0) -> float | None:
+        return self._bounds_after(lead, False)
+
+    def until_beat_after(self, lead: float = 0.0) -> float | None:
+        return self._bounds_after(lead, True)
 
     def catch(self) -> float:
         """포획 성공: 다음 박(일섬은 즉시)에서 ending_hit. 돌려주는 값 = 타격이 시작되기까지 초.
@@ -386,8 +448,13 @@ class SunoBoss:
             for ch, snd in ((seg.ch, seg.snd), (seg.cr_ch, seg.cr_snd)):
                 if snd is not None and ch.get_busy() and ch.get_queue() is None:
                     ch.queue(snd)
-        # 위기 층 음량 (0.5초 인 · 1초 아웃)
-        goal = 1.0 if (self.crisis and seg is not None and seg.loop and seg.cr_snd is not None) else 0.0
+        # 물속 버전 비율 (환상 2페이즈 컷신)
+        if self.muffle != self.muffle_goal:
+            step = dt * self.muffle_rate
+            self.muffle = min(self.muffle_goal, self.muffle + step) if self.muffle_goal > self.muffle else max(self.muffle_goal, self.muffle - step)
+        # 위기 층 음량 (0.5초 인 · 1초 아웃) — 환상 공통 곡은 위기 변화 없음 (그 채널은 물속 버전)
+        goal = 1.0 if (self.crisis and seg is not None and seg.loop and seg.cr_snd is not None
+                       and not self.is_phantom(self.song)) else 0.0
         rate = dt / (CRISIS_IN if goal > self.cr_level else CRISIS_OUT)
         self.cr_level = min(goal, self.cr_level + rate) if goal > self.cr_level else max(goal, self.cr_level - rate)
         if loader.busy():   # 일꾼이 OGG 를 푸는 동안은 믹서가 잠김 → 음량은 다음 프레임에 (O5)
@@ -409,7 +476,9 @@ class SunoBoss:
         if seg is None:
             return
         want = {seg.ch: bus}
-        if seg.cr_ch is not None:
+        if seg.cr_ch is not None and self.is_phantom(self.song):   # 원래 ↔ 물속: 같은 위치, 음량 비율만 (두 버전 같은 배율)
+            want = {seg.ch: bus * (1.0 - self.muffle), seg.cr_ch: bus * self.muffle}
+        elif seg.cr_ch is not None:
             want[seg.cr_ch] = bus * self.cr_level * (10 ** (CRISIS_DB / 20))
         for ch, v in want.items():
             q = round(v * 128)
@@ -446,19 +515,30 @@ class SunoBoss:
             cr_ch = None
         self.seg = _Seg(name, snd, ch, grid, length, loop, cr_snd, cr_ch, start=self.t)
 
-    def _start_gapless(self, intro, loop) -> None:
+    def _start_gapless(self, intro, loop, intro_m=None, loop_m=None) -> None:
         """환상 공통 곡: 같은 채널에 intro 를 틀고 loop 를 queue — 끝나는 순간 틈 없이 이어짐 (원곡과 똑같이).
-        그 뒤 반복은 update 가 큐가 빌 때마다 같은 loop 를 다시 queue."""
+        그 뒤 반복은 update 가 큐가 빌 때마다 같은 loop 를 다시 queue.
+        물속 버전(있으면)은 위기 채널에서 같은 프레임에 같은 방식으로 늘 같이 돌고(음량 0) 2페이즈 컷신이 음량 비율만 바꿈."""
         ch = self.ch_main[0]
         bus = self._bus()
         ch.set_volume(bus)
         self._vol_q[id(ch)] = round(bus * 128)
+        mch = self.ch_cr[0] if (intro_m is not None and loop_m is not None) else None
+        if mch is not None:
+            mch.set_volume(0.0)
+            self._vol_q[id(mch)] = 0
         ch.play(intro)
+        if mch is not None:
+            mch.play(intro_m)
         ch.queue(self._fade_in_copy(loop))   # 첫 반복만: 머리 3ms 페이드인 (intro 끝이 3ms 페이드아웃이라 바로 이으면 '틱')
+        if mch is not None:
+            mch.queue(self._fade_in_copy(loop_m))
         name = self._loop_name(self.song)
         length = loop.get_length()
         self.phase = 0
-        self.seg = _Seg(name, loop, ch, self._grid(self.song, name, length), length, True, start=self.t + intro.get_length())
+        self.muffle = self.muffle_goal = 0.0
+        self.seg = _Seg(name, loop, ch, self._grid(self.song, name, length), length, True,
+                        loop_m if mch is not None else None, mch, start=self.t + intro.get_length())
 
     _FADE_COPY: dict = {}
 
@@ -478,7 +558,8 @@ class SunoBoss:
                 c = pygame.sndarray.make_sound(a)
             except Exception:
                 c = snd
-            self._FADE_COPY.clear()
+            if len(self._FADE_COPY) > 4:
+                self._FADE_COPY.clear()
             self._FADE_COPY[key] = c
         return c
 

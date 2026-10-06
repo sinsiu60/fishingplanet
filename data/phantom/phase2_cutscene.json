@@ -1,0 +1,225 @@
+{
+ "_설명": "환상 2페이즈 진입 컷신 (PHANTOM_PHASE2.md, DESIGN.md 33-12). 시간 = 초, 색 = PHANTOM_PHASE2.md 그대로. eye = 물고기 길이 L 기준 눈 위치 (머리 왼쪽, 가운데 0 — fish_draw 의 모양에서 계산: [EYE_AT x, EYE_AT y × 몸 높이 비율]). 컷신에 물고기 이름 · 글자 없음 (name_ko 는 데이터 확인용).",
+ "phase2_hp_percent": 100,
+ "_phase2_hp_percent": "의도된 값 — 2페이즈는 체력 100%에서 시작해 파이팅이 길어지는 것이 목표. 회복량 · 2페이즈 난이도 · 패턴 빈도를 임의로 낮추지 않음",
+ "colors": {
+  "light": [
+   226,
+   210,
+   255
+  ],
+  "rim": [
+   180,
+   140,
+   240
+  ],
+  "bg_top": [
+   58,
+   34,
+   102
+  ],
+  "bg_bottom": [
+   20,
+   10,
+   38
+  ],
+  "dusk": [
+   [
+    217,
+    140,
+    200
+   ],
+   [
+    140,
+    90,
+    216
+   ]
+  ]
+ },
+ "full": {
+  "orb_sec": 0.8,
+  "orb_d": 6,
+  "line_glow_sec": 0.3,
+  "hand_flash_sec": 0.1,
+  "dive": [
+   0.8,
+   1.2
+  ],
+  "underwater": [
+   1.2,
+   2.6
+  ],
+  "turn": [
+   1.2,
+   1.8
+  ],
+  "heal": [
+   1.4,
+   2.2
+  ],
+  "eye": [
+   2.2,
+   2.6
+  ],
+  "rise": [
+   2.6,
+   3.2
+  ],
+  "jump_speed": 0.3,
+  "max_wait_bars": 1,
+  "swell_before": 0.6
+ },
+ "short": {
+  "orb_sec": 0.4,
+  "jump": [
+   0.4,
+   1.0
+  ],
+  "heal": [
+   0.4,
+   0.9
+  ]
+ },
+ "skip_after": 0.5,
+ "skip_heal_sec": 0.2,
+ "grace_sec": 1.0,
+ "k": {
+  "fight": 0.6,
+  "peak": 1.0,
+  "reduce_peak": 0.8,
+  "back_sec": 0.5
+ },
+ "hand": {
+  "lo": 0.3,
+  "hi": 0.6,
+  "period": 2.0,
+  "fade_sec": 0.3,
+  "slot_overlap_mult": 0.5
+ },
+ "gauge": {
+  "w": 150,
+  "h": 6,
+  "y": 20,
+  "tip_px": 2,
+  "flash_sec": 0.1
+ },
+ "particles": {
+  "high": 30,
+  "medium": 20,
+  "low": 10
+ },
+ "music": {
+  "to_muffled_sec": 0.3,
+  "back_sec": 0.15
+ },
+ "fish": {
+  "moon_shadow_carp": {
+   "name_ko": "달그림자 잉어",
+   "unique": "moon",
+   "desc": "수면 위로 둥근 달이 비치고, 달빛 기둥이 환상어까지 내려옴",
+   "eye": [
+    -0.42,
+    -0.05
+   ]
+  },
+  "mist_mandarin": {
+   "name_ko": "안개비늘 쏘가리",
+   "unique": "mist",
+   "desc": "보랏빛 안개가 환상어 주위를 천천히 맴돎",
+   "eye": [
+    -0.39,
+    -0.0836
+   ]
+  },
+  "dusk_bass": {
+   "name_ko": "노을빛 농어",
+   "unique": "dusk",
+   "desc": "수면이 보랏빛 노을색(#D98CC8 ~ #8C5AD8)으로 물듦",
+   "eye": [
+    -0.39,
+    -0.0798
+   ]
+  },
+  "meteor_tuna": {
+   "name_ko": "유성 다랑어",
+   "unique": "meteors",
+   "desc": "물속으로 빛줄기 같은 유성 2~3개가 비스듬히 떨어짐",
+   "eye": [
+    -0.38,
+    -0.06
+   ]
+  },
+  "abyss_lantern": {
+   "name_ko": "심연의 등불고기",
+   "unique": "lanterns",
+   "desc": "깊은 곳에서 등불이 하나씩 켜짐 (5개, 0.2초 간격)",
+   "eye": [
+    -0.4,
+    -0.09
+   ]
+  },
+  "echo_fish": {
+   "name_ko": "잔향어",
+   "unique": "echoes",
+   "desc": "환상어가 4마리로 겹쳐 보였다가 몸을 돌릴 때 하나로 합쳐짐",
+   "eye": [
+    -0.4,
+    -0.06
+   ]
+  },
+  "violet_reed_carp": {
+   "name_ko": "보랏빛 갈대잉어",
+   "unique": "reeds",
+   "desc": "물속에 갈대 줄기가 보랏빛으로 흔들림",
+   "eye": [
+    -0.42,
+    -0.048
+   ]
+  },
+  "amethyst_blindfish": {
+   "name_ko": "자수정 장님어",
+   "unique": "crystals",
+   "desc": "바닥에서 자수정 결정이 자라남 (3~4개)",
+   "eye": [
+    -0.4,
+    -0.06
+   ]
+  },
+  "sky_butterfly": {
+   "name_ko": "천공의 나비고기",
+   "unique": "butterflies",
+   "desc": "보랏빛 나비 모양 빛 5~6마리가 환상어 주위를 맴돎",
+   "eye": [
+    -0.4,
+    -0.048
+   ]
+  },
+  "ember_moray": {
+   "name_ko": "잿불 곰치",
+   "unique": "embers",
+   "desc": "보랏빛 불씨가 물속에서 위로 떠오름",
+   "eye": [
+    -0.4,
+    -0.024
+   ]
+  },
+  "aurora_smelt": {
+   "name_ko": "오로라 은빙어",
+   "unique": "aurora",
+   "desc": "수면 위 얼음 너머로 오로라가 일렁임 (환상 전용 표현)",
+   "eye": [
+    -0.4,
+    -0.051
+   ]
+  },
+  "dream_carp": {
+   "name_ko": "정령의 꿈잉어",
+   "unique": "spirits",
+   "desc": "작은 정령 빛 6~8개가 환상어 주위를 원을 그리며 돎",
+   "eye": [
+    -0.42,
+    -0.052
+   ]
+  }
+ }
+}

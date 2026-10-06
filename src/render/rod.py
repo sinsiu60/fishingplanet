@@ -258,3 +258,43 @@ def _draw_hand(canvas, pal, at, glove=None, mitten: bool = False) -> None:
         return
     nail = at(11, -4)
     pygame.draw.circle(canvas, scale_color(skin, 1.15), (int(nail[0]), int(nail[1])), 1)
+
+
+def hand_outline(canvas, geo: dict, color, alpha: float, mitten: bool = False) -> None:
+    """손(주먹 · 엄지 · 손가락) 바깥 테두리 1px — 환상 2페이즈 표시 (PHANTOM_PHASE2.md 5). alpha 0~1."""
+    if alpha <= 0.01:
+        return
+    hand = geo["hand"]
+    dx, dy = geo["dir"]
+    px, py = geo["perp"]
+    pad = 18
+    ox, oy = int(hand[0]) - pad, int(hand[1]) - pad
+
+    def at(u, v):
+        return (hand[0] + dx * u + px * v - ox, hand[1] + dy * u + py * v - oy)
+
+    if mitten:
+        fist = [at(-10, -6), at(-3, -8), at(6, -7), at(10, -2), at(10, 7), at(6, 11), at(-4, 12), at(-11, 7)]
+        thumb = [at(-1, -6), at(10, -7), at(13, -4), at(11, -2), at(2, -2)]
+        knuckles = []
+    else:
+        fist = [at(-9, -5), at(-3, -7), at(5, -6), at(8, -2), at(8, 5), at(5, 9), at(-4, 10), at(-10, 6)]
+        thumb = [at(-1, -5), at(9, -6), at(13, -4), at(12, -2), at(2, -2)]
+        knuckles = [at(-6 + i * 4, 8) for i in range(4)]
+    size = (pad * 2 + 1, pad * 2 + 1)
+    body = pygame.Surface(size, pygame.SRCALPHA)
+    for poly in (fist, thumb):
+        pygame.draw.polygon(body, (255, 255, 255), poly)
+        pygame.draw.polygon(body, (255, 255, 255), [(x + 1, y + 1) for x, y in poly])   # 그림자까지 손으로
+    for c in knuckles:
+        pygame.draw.circle(body, (255, 255, 255), (int(c[0]), int(c[1])), 3)
+        pygame.draw.circle(body, (255, 255, 255), (int(c[0] + 1), int(c[1] + 1)), 3)
+    m = pygame.mask.from_surface(body)
+    ring = pygame.Surface(size, pygame.SRCALPHA)
+    col = (*tuple(color)[:3], max(0, min(255, int(255 * alpha))))
+    grown = m.to_surface(setcolor=col, unsetcolor=(0, 0, 0, 0))
+    for ddx, ddy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        ring.blit(grown, (ddx, ddy))
+    inner = m.to_surface(setcolor=(0, 0, 0, 0), unsetcolor=(255, 255, 255, 255))
+    ring.blit(inner, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)   # 손 안쪽은 비움 → 바깥 1px 만
+    canvas.blit(ring, (ox, oy))

@@ -229,7 +229,7 @@ def new_data() -> dict:
         "legend_sales": {"day": "", "counts": {}},
         # 환상의 물고기 (33장): 낚시터별 착수 천장 카운트, 환상 도감, 첫 포획 튜토리얼, 수첩, 환상 비늘, 받은 수집 보상, 칭호 보라 테두리
         "phantom": {"casts": {}, "caught": {}, "tutorial": False, "notes": [], "scales": 0, "rewards": [],
-                    "title_frame": False},       # 오늘(실제 날짜) 전설 종별 판매 수 → 반복 판매 감가  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
+                    "title_frame": False, "phase2_seen": []},       # 오늘(실제 날짜) 전설 종별 판매 수 → 반복 판매 감가  # 소모품 효과 (행운의 떡밥 남은 캐스팅, 도시락 끝나는 플레이 시간)
         # ── 콘텐츠 업데이트 (DESIGN.md 27-8) ──
         "patterns_seen": [],                             # 만나 본 신규 패턴 (첫 만남 안내·도감 힌트)
         "pattern_mastery": {},                           # 패턴별 성공 횟수 → 예고 배율 (31장 C5)
