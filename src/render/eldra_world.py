@@ -44,7 +44,7 @@ def draw_aurora(canvas, pal, cam, t: float) -> None:
     off = cam.parallax(0.2)
     u = np.arange(0, W, 2) + off
     col_of = np.arange(W) // 2          # 열 c 를 칠하는 줄 = c // 2 번째 (x = 0, 2, 4 … 의 x 와 x+1)
-    rows = np.arange(H, dtype=np.int64)[None, :]
+    rows = np.arange(H, dtype=np.intp)[None, :]
     rs, gs, bs, ash = layer.get_shifts()
     out = np.zeros((W, H), dtype=np.uint32)
     for band, (col, y0, amp) in enumerate((((90, 255, 180), 34, 10), ((150, 120, 255), 54, 8), ((80, 220, 255), 22, 6))):
@@ -52,7 +52,7 @@ def draw_aurora(canvas, pal, cam, t: float) -> None:
         h = 18 + 10 * np.sin(u * 0.03 + band * 2 + t * 0.3)
         a = np.maximum(0, (70 * k * (0.6 + 0.4 * np.sin(u * 0.08 + t + band))).astype(np.int64))
         px = ((a.astype(np.uint32) << ash) | np.uint32((col[0] << rs) | (col[1] << gs) | (col[2] << bs)))[col_of]
-        ys, ye = y.astype(np.int64)[col_of], (y + h).astype(np.int64)[col_of]
+        ys, ye = y.astype(np.intp)[col_of], (y + h).astype(np.intp)[col_of]
         m = (rows >= ys[:, None]) & (rows <= ye[:, None])
         out = np.where(m, px[:, None], out)
     pygame.surfarray.blit_array(layer, out)

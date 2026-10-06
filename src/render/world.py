@@ -351,7 +351,7 @@ class Water:
         if not len(xs):
             return
         h = canvas.get_height()
-        lin = xs.astype(np.int64) * h + ys
+        lin = xs.astype(np.int64) * h + ys.astype(np.int64)
         _, last = np.unique(lin[::-1], return_index=True)
         last = len(lin) - 1 - last
         px = pygame.surfarray.pixels2d(canvas)
@@ -398,7 +398,7 @@ class Water:
             return
         srow = starts // (W + 2)
         sx = starts % (W + 2) - 1
-        ys_run = (ybase[srow] + np.sin(U[srow // 2, sx] * 0.8 + t * 1.5) * amps[srow]).astype(np.int64)
+        ys_run = (ybase[srow] + np.sin(U[srow // 2, sx] * 0.8 + t * 1.5) * amps[srow]).astype(np.intp)
         pix = np.flatnonzero(flat)
         run = np.searchsorted(starts, pix, side="right") - 1
         xs = pix % (W + 2) - 1
@@ -427,8 +427,8 @@ class Water:
         k = np.clip(strength * (1.0 - 0.55 * r / span), 0.0, 1.0)[:, None]
         refl = np.array(pal["reflection"], dtype=np.float64)
         cols = (water + (refl - water) * k).astype(np.int64)
-        x0 = (bx + jitter - length).astype(np.int64)
-        wdt = np.maximum(1, (length * 2).astype(np.int64))
+        x0 = (bx + jitter - length).astype(np.intp)   # 위치 · 개수는 np.intp (32비트 폰은 int32 — np.repeat 가 int64 개수를 거부, v1.3.2)
+        wdt = np.maximum(1, (length * 2).astype(np.intp))
         # 줄마다 [x0, x0 + 폭) — 화면 밖은 잘림 (fill 과 같게)
         a = np.clip(x0, 0, W)
         b = np.clip(x0 + wdt, 0, W)
