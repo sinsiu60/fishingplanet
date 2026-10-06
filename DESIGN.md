@@ -2992,12 +2992,14 @@ PC·터치 위반 0. 접근성 '신호 크기'는 배지·접근 원 크기, 색
 | 손 | `render/rod.py draw_rod(... hand_look=)` → `_draw_hand` 가 손 · 장갑을 다각형 · 타원으로 그림 (DT7 젖은 손 · 손때) | 같은 모양을 1px 테두리로 한 번 더 그리면 됨 (번쩍 · 남는 보랏빛 30↔60%) |
 | 줄 | 파이팅 중 `_draw_fight_line`: 낚싯대 끝 → 물고기가 있는 수면 지점 (파이팅 중엔 찌를 그리지 않음) | 빛 덩어리 경로 = 수면의 줄 입수점(찌 자리) → 낚싯대 끝 → 손 |
 | 환상 음악 | **환상 '공통 곡' 은 없음.** 환상 12종이 각자 전용 합성 곡 `P01`~`P12` (`music_patterns.json boss.songs`, 페이즈 2개, `assets/music_generated/boss/P0n_1_base/lead/lead_oct/perc/perc_crisis/riser`, `P0n_2_…`, `P0n_intro`, 12곡 합 60MB). 재생은 `audio/boss_music.BossMusic`: 층(stem) 여러 개를 적응형 음악 채널에 같은 순간 깔고 음량만 바꿈, 페이즈 전환 = 다음 마디 경계에 라이저 → 2페이즈 층. 마디 = `bpm · meter` 계산 (SUNO 전설처럼 `markers.json bar_starts_sec` 가 아님). 웹 빌드는 용량 때문에 이 곡 대신 기존 파이팅 음악 | 질문 1 |
-| 팩 파일 | 업로드에 `PHANTOM_PHASE2.md` 만 있고 `phantom_phase2_pack.zip` · `loop_muffled.ogg` · `intro_muffled.ogg` 는 없음, `assets/music/boss/phantom/` 폴더도 없음 | 질문 1 |
+| 팩 파일 | 저장소에 올린 `phantom_phase2_pack.zip` 을 풀어 `assets/music/boss/phantom/loop_muffled.ogg`(162.0초) · `intro_muffled.ogg`(4.36초, 48kHz 스테레오) 배치, zip 삭제. **짝이 되는 원본 `loop.ogg` · `intro.ogg` 는 팩에도 저장소(커밋 기록 포함)에도 없음** — 기존 환상 곡과 길이도 안 맞음 (P01~P12 1페이즈 반복 ≈37초 등, 머리 1.5~4.8초) | 질문 1 |
 | 세이브 | `phantom` 아래에 `caught` 등 | `phantom.phase2_seen` 추가 (옛 세이브는 빈 목록 — 질문 5) |
 
 ### 33-12-B. 질문 (답을 받은 뒤 구현)
 
-1. **음악**: 문서는 환상 공통 곡 `loop.ogg` + `loop_muffled.ogg` 를 전제하지만 이 게임은 환상마다 전용 합성 곡(12곡, 층 여러 개)이고 팩의 ogg 도 없음. 제안:
+1. **음악**: 문서는 환상 공통 곡 `loop.ogg` + `loop_muffled.ogg` 를 전제하지만 이 게임은 환상마다 전용 합성 곡(12곡, 층 여러 개)이고,
+   팩에는 물속 버전만 있고 원본 `loop.ogg` · `intro.ogg` 가 없음 (같은 위치로 함께 돌릴 짝이 없음). 공통 곡 원본 · `markers.json` 을 올려 주시면 문서대로
+   환상 12종이 그 공통 곡을 쓰게 바꿀 수 있음 (그 경우 지금의 환상 전용 합성 12곡은 안 씀 — 그게 의도인지도 함께). 원본이 없다면 제안:
    12곡의 **1페이즈 층 · 머리를 `bake_boss` 로 물속 버전으로 함께 굽기** (고음 깎기 + −6dB + 짧은 물속 울림, 길이 · 위치 똑같이 — 문서의 먹먹한 버전 규칙 그대로) →
    컷신 동안 같은 재생 위치에서 원래 층 ↔ 물속 층 음량만 바꿈. 재개 순간(다음 마디 첫 박)에 0.15초로 원래 소리로 돌아오면서 **그 박에서 바로 2페이즈 층으로 넘어감**
    (지금의 '라이저 → 2페이즈' 를 컷신의 '거꾸로 부풀어 오르는 소리 → 확 밝아짐' 이 대신). 늘어나는 용량 약 15~25MB(APK). 마디 첫 박은 곡의 bpm · 박자로 계산.
