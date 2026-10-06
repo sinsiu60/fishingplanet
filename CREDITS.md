@@ -32,3 +32,11 @@
 | 게임 안 이름 | 파일 | 원본 제목 | 만든 사람 | 출처 URL | 라이선스 | 수정 내용 | 추가한 날 |
 |---|---|---|---|---|---|---|---|
 | 전설 보스 곡 12종 (여우비 · 산군 · 일렉트로 · 일섬 · 태고 · 등용 · 실바 · 프리시아 · 에어리스 · 이그니스 · 보레알리스 · 오르시엘) | assets/music/boss/*/ | — | SUNO AI (v6) 생성, 이 프로젝트가 프롬프트 · 편집 | — | SUNO 이용 약관(상업 이용 가능 플랜) | 마디 단위 자르기 · 위기 타악 분리 · 곡별 음량 배율(`data/music/boss_bgm_gain.json`) | 2026-10-06 |
+
+## 환상 공통 파이팅 곡 (SUNO)
+환상 물고기 12종이 함께 쓰는 파이팅 곡(`assets/music/boss/phantom/` intro · loop)은 **SUNO AI (v6) 로 제작**했다 (`PHANTOM_BGM.md`, 구조 그림 `tools/audio/reference/boss_bgm/phantom_structure.png`).
+2페이즈 컷신용 물속 버전(`loop_muffled.ogg` · `intro_muffled.ogg`, 고음 깎기 · −6dB · 짧은 물속 울림)도 같은 곡에서 만들었다 (`PHANTOM_PHASE2.md`).
+
+| 게임 안 이름 | 파일 | 원본 제목 | 만든 사람 | 출처 URL | 라이선스 | 수정 내용 | 추가한 날 |
+|---|---|---|---|---|---|---|---|
+| 환상 공통 파이팅 곡 | assets/music/boss/phantom/*.ogg | — | SUNO AI (v6) 생성, 이 프로젝트가 프롬프트 · 편집 | — | SUNO 이용 약관(상업 이용 가능 플랜) | 머리 4.36초 · 반복 0:04~2:46 자르기(끝 ↔ 처음 0.5초 섞기), 마지막 8초 제외, 곡 배율(`data/music/boss_bgm_gain.json` phantom) | 2026-10-06 |

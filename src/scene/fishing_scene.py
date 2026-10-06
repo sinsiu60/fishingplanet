@@ -1541,6 +1541,11 @@ class FishingScene(Scene):
             if ev == "bloom_start":
                 self.game.haptics.vibrate("nibble", 0.3)   # 파장 시작: 아주 약하게
                 self.sfx.play("sfx_phantom_hum", 0.35)     # 아주 낮고 부드러운 울림 (작게)
+                b_ = self.game.boss   # 환상 공통 곡 (PHANTOM_BGM.md): 파장이 시작되는 순간 백그라운드 로딩 시작
+                ph = self.bite.phantom
+                sid_ = b_.song_for(ph["id"]) if ph and b_.enabled and self.training is None else None
+                if sid_ and not b_.active:
+                    b_.prepare(sid_)
             elif ev == "bloom_line":
                 self.game.haptics.vibrate("nibble", 0.7)   # 대사 등장 한 번
         fx.events.clear()

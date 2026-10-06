@@ -4,7 +4,7 @@
 평균 -14 LUFS 근처 · 최대 -1 dBTP 가 되는 **한 배율**을 곡마다 정한다 (층 사이 균형 유지). 게임은 그 배율을 채널 음량에 곱한다
 (배율 × 보스 버스(0.35 × state_gain …, 1 미만) 를 채널 음량으로 — 곱이 1.0 을 넘으면 거기서 자름).
 
-  python tools/audio/boss_suno_gain.py           12곡 전부
+  python tools/audio/boss_suno_gain.py           12곡 + 환상 공통 곡 전부
   python tools/audio/boss_suno_gain.py yeoubi    그 곡만
 """
 import json
@@ -39,7 +39,7 @@ def main(argv) -> int:
     out_path = "data/music/boss_bgm_gain.json"
     out = json.load(open(out_path, encoding="utf-8")) if os.path.exists(out_path) else {}
     meter = pyln.Meter(RATE)
-    for e in idx["legends"]:
+    for e in idx["legends"] + ([idx["phantom"]] if idx.get("phantom") else []):   # + 환상 공통 곡 (PHANTOM_BGM.md)
         sid = e["id"]
         if only and sid not in only:
             continue

@@ -70,5 +70,11 @@
   "true_peak_db": -3.49,
   "gain_db": 0.54,
   "gain": 1.0635
+ },
+ "phantom": {
+  "lufs": -15.86,
+  "true_peak_db": -3.37,
+  "gain_db": 1.86,
+  "gain": 1.239
  }
 }

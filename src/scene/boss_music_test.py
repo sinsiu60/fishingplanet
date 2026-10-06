@@ -41,6 +41,8 @@ class BossMusicTestScene(Scene):
             seen.add(v["fish"])
             legends.append(self.boss.song_for(v["fish"]) or sid)
         self.ids = legends + [k for k, v in songs.items() if not v.get("test") and v.get("kind") != "legend"]
+        if self.boss.suno.is_sid("phantom"):   # 환상 공통 곡 (PHANTOM_BGM.md — 12종 모두 이 곡)
+            self.ids.append("phantom")
         self.card_t = None     # SUNO 포획: (타격까지 남은 초, impact, card) 표시용
         self.names = _names()
         self.si = 0
@@ -114,6 +116,12 @@ class BossMusicTestScene(Scene):
     def _win(self) -> None:
         sfx = self.game.sfx
         sid, cont = self._sid(), self._cont()
+        if self._spec().get("kind") == "phantom":
+            from src.audio import phantom_song
+            self.boss.stop()                       # 즉시 완전히 멈춤 → 정적
+            name = phantom_song.preload(sfx, "full", cont)
+            self.after = (HUSH, name) if name else None
+            return
         if self.boss.is_suno(sid):
             if not self.boss.suno.active:
                 return
@@ -181,7 +189,7 @@ class BossMusicTestScene(Scene):
         ui.panel(c, (100, 20, 280, 160))
         text(c, "전설·환상 음악 테스트", (240, 30), ui.ACCENT, 11, "center")
         sp = self._spec()
-        name = self.names.get(sp.get("fish"), ("?", None))[0]
+        name = self.names.get(sp.get("fish"), ("?", None))[0] if sp.get("fish") else "공통 곡 (12종)"
         kind = "전설" if sp.get("kind") == "legend" else "환상"
         suno = self.boss.is_suno(self._sid())
         text(c, f"{self._sid()}  {kind} · {name}" + ("  [SUNO]" if suno else ""), (240, 54), ui.TEXT, 11, "center")

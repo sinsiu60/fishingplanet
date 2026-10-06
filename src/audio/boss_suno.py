@@ -9,6 +9,8 @@
 시각: 우리 시계 t(프레임 dt 누적)로 파일 안 위치를 계산 → 전환은 프레임 한 번 안(±8ms) 에서 시작, 크로스페이드가 덮는다.
 불러오기: src/audio/loader.py 일꾼 스레드, 쓰는 순서대로 한 파일씩 (OPTIMIZATION.md O5 — 메인은 기다리지 않음). 최근 2곡만 메모리에.
 음량: data/music/boss_bgm_gain.json 의 곡별 배율(평균 -14 LUFS · 최대 -1dBTP, 곡 안 모든 파일 같은 배율) × 보스 버스.
+환상 공통 곡 (PHANTOM_BGM.md): 색인 "phantom" 하나를 환상 12종이 함께 씀 — intro → loop 를 같은 채널에 queue 로 이어 붙여 틈 없이,
+곡 전체(loop)를 반복하고 페이즈 · 위기 변화 없음. 포획은 장면이 즉시 정지 → 정적 → 환상의 노래.
 """
 import json
 import math
@@ -73,6 +75,14 @@ class SunoBoss:
         self.index = _load_json(idx) if idx.exists() else {"legends": []}
         self.by_fish = {e.get("fish"): e for e in self.index["legends"] if e.get("fish")}
         self.by_sid = {e["id"]: e for e in self.index["legends"]}
+        ph = self.index.get("phantom")
+        if ph:   # 환상 공통 곡: 12종 모두 같은 곡
+            ph = dict(ph, kind="phantom")
+            self.by_sid[ph["id"]] = ph
+            pj = data_path("phantom.json")
+            if pj.exists():
+                for f in _load_json(pj).get("fish", []):
+                    self.by_fish[f["id"]] = ph
         gp = data_path("music", "boss_bgm_gain.json")
         self.gains = _load_json(gp) if gp.exists() else {}
         self.markers: dict = {}
@@ -114,17 +124,23 @@ class SunoBoss:
         e = self.by_fish.get(fish_id)
         return e["id"] if e and self.available(e["id"]) else None
 
+    def _loop_name(self, sid: str, phase: int = 0) -> str:
+        return self.by_sid[sid].get("loop") or f"phase{phase + 1}_loop"
+
+    def is_phantom(self, sid) -> bool:
+        return bool(sid) and self.by_sid.get(sid, {}).get("kind") == "phantom"
+
     def available(self, sid: str | None) -> bool:
         if not self.enabled or not self.is_sid(sid):
             return False
         d = self.folder(sid)
-        return d is not None and (d / "intro.ogg").exists() and (d / "phase1_loop.ogg").exists() and (d / "markers.json").exists()
+        return d is not None and (d / "intro.ogg").exists() and (d / f"{self._loop_name(sid)}.ogg").exists() and (d / "markers.json").exists()
 
     def spec(self, sid: str) -> dict | None:
         e = self.by_sid.get(sid)
         if not e:
             return None
-        return {"kind": "legend", "fish": e.get("fish"), "bpm": e.get("bpm"), "phases": [{} for _ in range(int(e.get("phases", 3)))],
+        return {"kind": e.get("kind", "legend"), "fish": e.get("fish"), "bpm": e.get("bpm"), "phases": [{} for _ in range(int(e.get("phases", 3)))],
                 "catch": e.get("catch", {}), "genre": e.get("genre"), "suno": True}
 
     def n_phases(self, sid: str) -> int:
@@ -149,6 +165,8 @@ class SunoBoss:
         """읽을 순서: 인트로 · 1페이즈 · 포획 타격 · 그다음 페이즈들."""
         n = self.n_phases(sid)
         m = self._markers(sid)
+        if self.is_phantom(sid):
+            return ["intro", self._loop_name(sid)]
         out = ["intro", "phase1_loop", m["crisis_layers"].get("phase1_loop"), "ending_hit"]
         for i in range(2, n + 1):
             out += [f"bridge_{i - 1}to{i}", f"phase{i}_loop", m["crisis_layers"].get(f"phase{i}_loop")]
@@ -201,7 +219,7 @@ class SunoBoss:
             if loader.ready(p):
                 snd = loader.take(p)
                 if snd is not None:
-                    if "_loop" in name:
+                    if "_loop" in name:   # (환상 공통 곡 loop 는 끝과 처음이 이미 0.5초 섞여 있어 손대지 않음)
                         _declick(snd)   # 반복 경계 '틱' 방지 (양끝 2ms 페이드 — 분석에서 경계 파형 단차 최대 0.76×RMS)
                     self.songs[sid][name] = snd
                 del steps[name]
@@ -240,6 +258,8 @@ class SunoBoss:
     def _phase_names(self, sid: str, phase: int) -> list:
         """phase 0 = 인트로 + 1페이즈 (+위기층), phase ≥ 1 = 브리지 + 그 페이즈 반복 (+위기층)."""
         m = self._markers(sid)
+        if self.is_phantom(sid):
+            return ["intro", self._loop_name(sid)]
         loop = f"phase{phase + 1}_loop"
         cr = (m["crisis_layers"].get(loop) or "")[:-4]
         head = "intro" if phase == 0 else f"bridge_{phase}to{phase + 1}"
@@ -267,7 +287,10 @@ class SunoBoss:
         self.sfx.boss_mode = True
         snd = self.songs[sid]
         intro = snd.get("intro")
-        if intro is not None:
+        loop = snd.get(self._loop_name(sid))
+        if self.by_sid[sid].get("gapless_intro") and intro is not None and loop is not None:
+            self._start_gapless(intro, loop)
+        elif intro is not None:
             self._play_seg("intro", intro, loop=False, cross=False)
             self.sched = (self.seg.length, lambda: self._enter_loop(0))
         else:
@@ -315,8 +338,12 @@ class SunoBoss:
         pass   # SUNO 곡엔 옥타브 주선율 층이 없다
 
     def catch(self) -> float:
-        """포획 성공: 다음 박(일섬은 즉시)에서 ending_hit. 돌려주는 값 = 타격이 시작되기까지 초."""
+        """포획 성공: 다음 박(일섬은 즉시)에서 ending_hit. 돌려주는 값 = 타격이 시작되기까지 초.
+        환상 공통 곡은 즉시 정지 (정적 → 환상의 노래는 장면이)."""
         if not self.active or self.ending:
+            return 0.0
+        if self.is_phantom(self.song):
+            self.stop()
             return 0.0
         self.ending = True
         self.want_phase = self.phase
@@ -417,8 +444,44 @@ class SunoBoss:
             cr_ch = None
         self.seg = _Seg(name, snd, ch, grid, length, loop, cr_snd, cr_ch, start=self.t)
 
+    def _start_gapless(self, intro, loop) -> None:
+        """환상 공통 곡: 같은 채널에 intro 를 틀고 loop 를 queue — 끝나는 순간 틈 없이 이어짐 (원곡과 똑같이).
+        그 뒤 반복은 update 가 큐가 빌 때마다 같은 loop 를 다시 queue."""
+        ch = self.ch_main[0]
+        bus = self._bus()
+        ch.set_volume(bus)
+        self._vol_q[id(ch)] = round(bus * 128)
+        ch.play(intro)
+        ch.queue(self._fade_in_copy(loop))   # 첫 반복만: 머리 3ms 페이드인 (intro 끝이 3ms 페이드아웃이라 바로 이으면 '틱')
+        name = self._loop_name(self.song)
+        length = loop.get_length()
+        self.phase = 0
+        self.seg = _Seg(name, loop, ch, self._grid(self.song, name, length), length, True, start=self.t + intro.get_length())
+
+    _FADE_COPY: dict = {}
+
+    def _fade_in_copy(self, snd, ms: float = 3.0):
+        """같은 소리의 복사본 — 머리 ms 만 0 → 1 로 (intro → loop 첫 이음새용, 그 뒤 반복은 원본: 끝 → 처음이 이미 매끈)."""
+        key = id(snd)
+        c = self._FADE_COPY.get(key)
+        if c is None:
+            try:
+                import numpy as np
+                import pygame
+                a = pygame.sndarray.array(snd).copy()
+                n = min(len(a), int(pygame.mixer.get_init()[0] * ms / 1000))
+                if n > 1:
+                    ramp = np.linspace(0.0, 1.0, n)
+                    a[:n] = (a[:n] * (ramp[:, None] if a.ndim > 1 else ramp)).astype(a.dtype)
+                c = pygame.sndarray.make_sound(a)
+            except Exception:
+                c = snd
+            self._FADE_COPY.clear()
+            self._FADE_COPY[key] = c
+        return c
+
     def _enter_loop(self, phase: int) -> None:
-        name = f"phase{phase + 1}_loop"
+        name = self._loop_name(self.song, phase)
         snd = self._snd(name)
         if snd is None:
             return

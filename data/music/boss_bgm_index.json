@@ -255,5 +255,18 @@
       "fish": "orsiel"
     }
   ],
-  "fish_rule": "fish = 게임 전설 id (data/fish.json, 이름으로 매칭 — prisia ↔ pricia 철자 주의)"
+  "fish_rule": "fish = 게임 전설 id (data/fish.json, 이름으로 매칭 — prisia ↔ pricia 철자 주의)",
+  "phantom": {
+    "_설명": "PHANTOM_BGM.md: 환상 12종 모두 이 곡 하나 (P01~P12 합성 곡 계획 대체). 페이즈로 나누지 않고 곡 전체(loop)를 반복 — 페이즈 전환 · 위기 때 음악 변화 없음. intro → loop 틈 없이 (같은 채널 queue).",
+    "id": "phantom",
+    "name": "환상 공통 파이팅 곡",
+    "phases": 1,
+    "bpm": "118.5 고정",
+    "genre": "SUNO AI (v6)",
+    "folder": "assets/music/boss/phantom/",
+    "markers": "assets/music/boss/phantom/markers.json",
+    "loop": "loop",
+    "gapless_intro": true,
+    "catch": {"start": "stop", "after": "즉시 정지 → 정적 0.35초 → 환상의 노래 (PHANTOM_CATCH_SHOW)"}
+  }
 }
