@@ -63,6 +63,8 @@ class _Seg:
 
     def pos(self, t: float) -> float:
         p = t - self.start
+        if p < 0:   # 아직 앞 파일(환상 공통 곡 intro)이 나오는 중 — 반복 구간 시작 전 (음수 그대로)
+            return p
         return p % self.length if self.loop and self.length > 0 else p
 
 
@@ -513,7 +515,7 @@ class SunoBoss:
         pos = seg.pos(self.t)
         bounds = [g for i, g in enumerate(seg.grid) if i % PHRASE == 0] + [seg.length]
         b = next((x for x in bounds if x > pos + 0.02), seg.length)
-        k = math.floor((self.t - seg.start) / seg.length) if seg.loop and seg.length > 0 else 0
+        k = max(0, math.floor((self.t - seg.start) / seg.length)) if seg.loop and seg.length > 0 else 0
         return seg.start + k * seg.length + b
 
     def _next_beat(self) -> float:
@@ -528,7 +530,7 @@ class SunoBoss:
         nb = g[i] + math.ceil((pos - g[i]) / beat + 1e-6) * beat
         if nb <= pos + 0.02:
             nb += beat
-        k = math.floor((self.t - seg.start) / seg.length) if seg.loop and seg.length > 0 else 0
+        k = max(0, math.floor((self.t - seg.start) / seg.length)) if seg.loop and seg.length > 0 else 0
         return seg.start + k * seg.length + nb
 
     def debug(self) -> dict:
@@ -536,9 +538,9 @@ class SunoBoss:
         bar = None
         if seg is not None:
             pos = seg.pos(self.t)
-            bar = sum(1 for x in seg.grid if x <= pos)
+            bar = sum(1 for x in seg.grid if x <= pos) if pos >= 0 else 0
         return {"song": self.song, "phase": self.phase + 1, "crisis": self.cr_level > 0.01, "tired": False,
-                "t": round(self.t, 2), "bar": bar, "file": seg.name if seg else None, "suno": True}
+                "t": round(self.t, 2), "bar": bar, "file": (seg.name if seg.pos(self.t) >= 0 else "intro") if seg else None, "suno": True}
 
 
 class BossRouter:
