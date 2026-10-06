@@ -321,8 +321,9 @@ class Guide:
         if event.type == pygame.MOUSEBUTTONDOWN:
             return self.game.to_canvas(event.pos)
         if event.type == pygame.FINGERDOWN:
-            ww, wh = self.game.screen.window.get_size()
-            return self.game.to_canvas((event.x * ww, event.y * wh))
+            sc = self.game.screen
+            x, y = sc.finger_to_canvas(event.x, event.y)
+            return max(0, min(sc.width - 1, x)), max(0, min(sc.height - 1, y))
         return None
 
     def allow_action(self, scene, a) -> bool:

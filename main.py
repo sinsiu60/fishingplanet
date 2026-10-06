@@ -46,7 +46,8 @@ def main() -> None:
         # 지난번 실행이 통째로 죽었다 → 어디서 멈췄는지 보여 주고, 이번엔 소리 없이(안전 모드) 시작
         audio = False
         os.environ["SDL_AUDIODRIVER"] = "dummy"
-        bootlog.mark("안전 모드: 소리 끔")
+        os.environ["FP_SAFE"] = "1"   # 화면 확대도 예전 방식 (GPU 확대가 원인일 수도 있으니)
+        bootlog.mark("안전 모드: 소리 끔 · 화면 예전 방식")
         lines = list(bootlog.previous or [])
         if bootlog.fault:
             lines += ["", "충돌 위치 (faulthandler):"] + bootlog.fault

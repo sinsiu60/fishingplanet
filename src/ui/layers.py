@@ -9,13 +9,44 @@ import pygame
 _layers: dict = {}
 
 
-def layer(canvas, key: str) -> pygame.Surface:
+def layer(canvas, key: str, rects=None) -> pygame.Surface:
+    """rects 를 주면 그 칸들만 투명으로 지움 (put_rects 와 짝 — 그 칸 밖엔 그리지 않을 때)."""
     size = canvas.get_size()
     surf = _layers.get(key)
     if surf is None or surf.get_size() != size:
         surf = _layers[key] = pygame.Surface(size, pygame.SRCALPHA)
-    surf.fill((0, 0, 0, 0))
+    if rects is None:
+        surf.fill((0, 0, 0, 0))
+    else:
+        for r in rects:
+            surf.fill((0, 0, 0, 0), r)
     return surf
+
+
+def merged(rects) -> list:
+    """겹치는 칸끼리 합쳐 서로 안 겹치는 칸 목록으로 (두 번 섞이지 않게)."""
+    out = [pygame.Rect(r) for r in rects]
+    changed = True
+    while changed:
+        changed = False
+        for i in range(len(out)):
+            for j in range(i + 1, len(out)):
+                if out[i].colliderect(out[j]):
+                    out[i] = out[i].union(out.pop(j))
+                    changed = True
+                    break
+            if changed:
+                break
+    return out
+
+
+def put_rects(canvas, surf: pygame.Surface, rects) -> None:
+    """층의 그 칸들만 섞는다 — 화면 전체 반투명 섞기는 폰(pygame 2.6)에서 수 ms (DESIGN.md 44)."""
+    bounds = surf.get_rect()
+    for r in rects:
+        r = pygame.Rect(r).clip(bounds)
+        if r.w and r.h:
+            canvas.blit(surf, r.topleft, r)
 
 
 def solid(canvas, key: str, color) -> pygame.Surface:

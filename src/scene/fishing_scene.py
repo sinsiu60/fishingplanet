@@ -222,6 +222,8 @@ class FishingScene(Scene):
         self.hazard_decor = world.HazardDecor(self.spot["hazards"])
         self.screen_fx.sway = self.theme.get("sway", 0)
         self.game.sfx.set_space(spot_id)  # N5: 낚시터 잔향·먹먹함 (공간별로 미리 구운 소리)
+        # 전설 등장 '드론' · 환상 파장 울림: 처음 울리는 순간 파일 읽느라 멈추지 않게 미리 (DESIGN.md 44)
+        self.game.sfx.prefetch(("sfx_legend_appear", "sfx_phantom_hum"))
 
     @property
     def weather(self) -> str:
@@ -1049,22 +1051,15 @@ class FishingScene(Scene):
             self.toasts.show("돈이 모자라요", BAD, 1.5, 11)
 
     def _preload_catch_song(self, fish: dict) -> None:
-        """환상·전설 파이팅 시작 때 포획 곡을 미리 올려 둔다 (포획 순간 파일 읽기로 끊기지 않게)."""
+        """환상·전설 파이팅 시작 때 포획 곡을 일꾼 스레드에 맡겨 둔다 (포획 순간 파일 읽기로 끊기지 않게 — 맡기기만 하고
+        기다리지 않음, 다가올 때 이미 맡겼으면 그대로. 포획 순간 preload 가 다 읽힌 것을 가져감, DESIGN.md 44)."""
         cont = self.spot.get("continent", "sharmion")
         if phantom.is_phantom(fish):
-            from src.audio import phantom_song as song
-            variants = ("full", "short", "extended", "loop")
+            from src.audio import phantom_song
+            phantom_song.prefetch(self.sfx, cont)
         elif fish.get("rarity") == "legend":
-            from src.audio import legend_song as song
-            variants = ("full", "short", "loop")
-            sid = self.game.boss.song_for(fish["id"])
-            for v in variants:
-                song.preload(self.sfx, v, cont, sid)   # 전설마다 그 파이팅 곡 조성 (DESIGN.md 43)
-            return
-        else:
-            return
-        for v in variants:
-            song.preload(self.sfx, v, cont)
+            from src.audio import legend_song
+            legend_song.prefetch(self.sfx, cont, self.game.boss.song_for(fish["id"]))   # 전설마다 그 파이팅 곡 조성 (DESIGN.md 43)
 
     def _end_fight(self) -> None:
         last = self.fight.result if self.fight is not None else None
@@ -1365,7 +1360,16 @@ class FishingScene(Scene):
         fish = f.fish if f is not None else (self.bite.fish if self.bite.state in (BiteState.APPROACH, BiteState.NIBBLE, BiteState.BITE) else None)
         sid = b.song_for(fish["id"]) if fish and (fish.get("rarity") == "legend" or phantom.is_phantom(fish)) else None
         if sid and not b.active and b.loaded_for != sid:
-            b.prepare(sid)   # 다가오는 동안·파장 동안 한 프레임에 한 파일씩
+            b.prepare(sid)   # 다가오는 동안·파장 동안 일꾼 스레드가 읽음 (src/audio/loader.py)
+            # 포획 순간·테마 연출에 쓸 소리도 지금 맡겨 둠 — 절정에서 파일 읽느라 멈추지 않게 (DESIGN.md 44)
+            from src.audio import legend_song, phantom_song, theme_sfx
+            cont = self.spot.get("continent", "sharmion")
+            if phantom.is_phantom(fish):
+                phantom_song.prefetch(self.sfx, cont)
+            else:
+                legend_song.prefetch(self.sfx, cont, sid)
+            theme_sfx.prefetch(self.sfx, fish.get("theme"))
+            self.sfx.prefetch(("sfx_legend_fanfare", "sfx_chest_legend", "sfx_phantom_hum"))
         if f is not None and f.phase in ("fight", "net"):
             if sid and not b.active and getattr(self, "boss_fight", None) is not f:
                 if b.start(sid):
@@ -3136,17 +3140,21 @@ class FishingScene(Scene):
         fight_hud.draw_boss_bar(canvas, pal, f)
         dim = 1.0 - 0.55 * min(1.0, self.sig_dim_t / 0.3)
         qr = getattr(self, "quest_run", None)
-        if qr is not None and qr.items:
-            self._faded(canvas, 150 * dim, lambda c: fight_hud.draw_quest_icon(c, qr.hud_lines(),
-                                                                                  self.hud_inset if self.touch else 0))
+        w = self.cam.width
+        inset = self.hud_inset if self.touch else 0
+        if qr is not None and qr.items:   # 칸 = 각 HUD 가 그리는 자리 + 여유 (fight_hud · icons 좌표)
+            self._faded(canvas, 150 * dim, lambda c: fight_hud.draw_quest_icon(c, qr.hud_lines(), inset),
+                        (w - inset - 32, 8, 32, 30))
+        dist_area = (w - inset - 64, 0, 64, 18)
         if self.touch:
             # 드랙·소모품·조작 안내는 터치 버튼이 대신한다
-            self._faded(canvas, 200 * dim, lambda c: fight_hud.draw_distance(c, pal, f, self.hud_inset))
+            self._faded(canvas, 200 * dim, lambda c: fight_hud.draw_distance(c, pal, f, self.hud_inset), dist_area)
         else:
             need = self._drag_needed(f)
-            self._faded(canvas, 255 if need else 120 * dim, lambda c: fight_hud.draw_drag(c, pal, f, need, t))
-            self._faded(canvas, 200 * dim, lambda c: fight_hud.draw_distance(c, pal, f))
-            self._faded(canvas, 150 * dim, lambda c: self._draw_fight_items(c, pal, f))
+            self._faded(canvas, 255 if need else 120 * dim, lambda c: fight_hud.draw_drag(c, pal, f, need, t),
+                        (0, 212, 40 + 7 * f.drag_steps, 26))
+            self._faded(canvas, 200 * dim, lambda c: fight_hud.draw_distance(c, pal, f), dist_area)
+            self._faded(canvas, 150 * dim, lambda c: self._draw_fight_items(c, pal, f), (0, 228, 120, 28))
         if phantom.blessing_active(self.save):
             hud.draw_blessing(canvas, self.cam.width - 64 - (self.hud_inset if self.touch else 0), 12, None, t)  # 아이콘만
         if f.phase == "fight":
@@ -3548,23 +3556,29 @@ class FishingScene(Scene):
                                 "fight_cfg": self.fish_cfg["fight"],
                                 "judge_busy": any(it["t"] < 0.8 for it in self.popups.items)})
 
-    def _layer(self, canvas) -> pygame.Surface:
+    def _layer(self, canvas, area=None) -> pygame.Surface:
         lay = getattr(self, "_fade_layer", None)
         if lay is None or lay.get_size() != canvas.get_size():
             lay = self._fade_layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
         lay.set_alpha(255)  # None 이면 픽셀 알파 섞기가 꺼져 투명 칸이 검게 덮인다
-        lay.fill((0, 0, 0, 0))
+        lay.fill((0, 0, 0, 0), area)
         return lay
 
-    def _faded(self, canvas, alpha: float, fn) -> None:
-        """우선순위 낮은 HUD를 반투명으로 (31장 C6)."""
+    def _faded(self, canvas, alpha: float, fn, area=None) -> None:
+        """우선순위 낮은 HUD를 반투명으로 (31장 C6).
+        area = 그 HUD 가 그려지는 칸 (x, y, w, h): 그 칸만 지우고 섞는다 — 화면 전체 반투명 섞기는 pygame 2.6(폰)에서
+        한 번에 수 ms 라서 (DESIGN.md 44). 없으면 화면 전체."""
         if alpha >= 250:
             fn(canvas)
             return
-        lay = self._layer(canvas)
+        lay = self._layer(canvas, area)
         fn(lay)
         lay.set_alpha(int(max(0, alpha)))
-        canvas.blit(lay, (0, 0))
+        if area is None:
+            canvas.blit(lay, (0, 0))
+        else:
+            r = pygame.Rect(area).clip(lay.get_rect())
+            canvas.blit(lay, r.topleft, r)
 
     def _drag_needed(self, f) -> bool:
         """드랙 칸을 진하게: 돌진·힘 모으기·장력 빨강, 또는 방금 드랙을 바꿨을 때."""

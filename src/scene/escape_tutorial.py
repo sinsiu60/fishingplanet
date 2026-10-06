@@ -63,8 +63,7 @@ class EscapeTutorialScene(Scene):
         self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(170 * min(1.0, self.age / 0.2)))
+        ui.backdrop(canvas, self.fishing, int(170 * min(1.0, self.age / 0.2)), "escape_tutorial")
         canvas = self.ui_canvas(canvas)
         box = pygame.Rect(40, 36, 400, 204)
         ui.panel(canvas, box, border=(255, 214, 120))

@@ -77,7 +77,9 @@ class SettingsScene(Scene):
                lambda: s.set("fps", 30 if s.get("fps") == 60 else 60))
         perf = ("성능 표시 (FPS·처리 시간)", "toggle", lambda: s.get("perf_overlay"),
                 lambda: s.set("perf_overlay", not s.get("perf_overlay")))
-        return [size, alpha, left, vib, fps, perf, transfer]
+        gpu = ("빠른 화면 출력 (GPU · 다시 켜면 적용)", "toggle", lambda: s.get("gpu_present"),
+               lambda: s.set("gpu_present", not s.get("gpu_present")))
+        return [size, alpha, left, vib, fps, gpu, perf, transfer]
 
     def _access_rows(self) -> list[tuple]:
         """접근성 (31장 C6). 예고 배율은 랭크 판정에 영향 없음 — 결과 화면에 작게 표시."""

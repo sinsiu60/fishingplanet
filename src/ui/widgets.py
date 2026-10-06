@@ -33,6 +33,32 @@ def dim(canvas, alpha: int = 150) -> None:
     canvas.blit(solid(canvas, "dim", (6, 8, 20, alpha)), (0, 0))
 
 
+_BACK: dict = {}
+
+
+def backdrop(canvas, below, alpha: int, key: str = "menu") -> None:
+    """메뉴 뒤 배경 = 아래 화면 + 어둡게 (dim). 메뉴가 떠 있는 동안 아래 화면은 업데이트되지 않아 멈춘 그림이므로,
+    다 어두워진 뒤엔 한 번 그린 것을 붙여 쓴다 (30프레임마다 다시 · 어둡기가 바뀌면 바로 다시, DESIGN.md 44).
+    아래 화면이 알려 준 튜토리얼 강조 자리(targets)도 그대로 다시 알려 준다."""
+    from src.render.screen import opaque
+    from src.tutorial import targets
+    c = _BACK.get(key)
+    sig = (id(below), canvas.get_size(), int(alpha))
+    if c is None or c["sig"] != sig or c["n"] >= 30:
+        before = {k: len(v) for k, v in targets._marks.items()}
+        below.draw(canvas)
+        dim(canvas, alpha)
+        surf = c["surf"] if c is not None and c["surf"].get_size() == canvas.get_size() else opaque(canvas.get_size())
+        surf.blit(canvas, (0, 0))
+        marks = {k: list(v[before.get(k, 0):]) for k, v in targets._marks.items() if len(v) > before.get(k, 0)}
+        _BACK[key] = {"sig": sig, "surf": surf, "n": 0, "marks": marks}
+        return
+    canvas.blit(c["surf"], (0, 0))
+    c["n"] += 1
+    for k, v in c["marks"].items():
+        targets._marks.setdefault(k, []).extend(v)
+
+
 class Button:
     def __init__(self, rect, label: str, action=None, enabled: bool = True, size: int = 11, accent=ACCENT):
         self.rect = pygame.Rect(rect)

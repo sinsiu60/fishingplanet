@@ -42,9 +42,12 @@ def canvas_size_for(window_w: int, window_h: int) -> tuple[int, int]:
 
 
 class PixelScreen:
-    def __init__(self, width: int, height: int, scale: int | None, title: str, mobile_window=None):
-        """mobile_window: None = PC, (w, h) = 모바일 미리보기 창 크기, (0, 0) = 기기 전체 화면."""
+    def __init__(self, width: int, height: int, scale: int | None, title: str, mobile_window=None, gpu: bool = False):
+        """mobile_window: None = PC, (w, h) = 모바일 미리보기 창 크기, (0, 0) = 기기 전체 화면.
+        gpu: 모바일에서 확대를 GPU 에 맡김 (pygame SCALED — 캔버스 크기 그대로 올리고 기기 해상도 확대는 SDL 렌더러가.
+             예전처럼 CPU 로 2400x1080 까지 키워 통째로 다시 올리지 않음, DESIGN.md 44). 실패하면 예전 방식."""
         self.mobile = mobile_window is not None
+        self.gpu = False
         self.overlay = None  # 창 위에 덧그리는 함수 (모바일 미리보기: 노치·진동 표시)
         self.shake = (0, 0)  # 화면 흔들림 (캔버스 픽셀)
         try:
@@ -54,13 +57,31 @@ class PixelScreen:
             pass
         if self.mobile:
             flags = pygame.FULLSCREEN if tuple(mobile_window) == (0, 0) else 0
-            self.window = pygame.display.set_mode(tuple(mobile_window), flags)
-            ww, wh = self.window.get_size()
-            width, height = canvas_size_for(ww, wh)
-            self.fscale = min(ww / width, wh / height)
-            self.scale = self.fscale
-            dw, dh = int(width * self.fscale), int(height * self.fscale)
-            self.dest = pygame.Rect((ww - dw) // 2, (wh - dh) // 2, dw, dh)
+            if gpu:
+                # 창을 처음부터 SCALED 로 만든다 (이미 만든 창을 SCALED 로 바꾸면 렌더러를 못 만드는 기기가 있음 — pygame 2.6)
+                try:
+                    if flags:
+                        d = (pygame.display.get_desktop_sizes() or [(0, 0)])[0]
+                        ww, wh = max(d), min(d)   # 가로 고정 게임
+                    else:
+                        ww, wh = mobile_window
+                    if ww <= 0 or wh <= 0:
+                        raise pygame.error("화면 크기 모름")
+                    width, height = canvas_size_for(ww, wh)
+                    self.window = pygame.display.set_mode((width, height), flags | pygame.SCALED)
+                    self.gpu = True
+                    self._gpu_dest(width, height)
+                except pygame.error:
+                    self.gpu = False
+            if not self.gpu:
+                self.window = pygame.display.set_mode(tuple(mobile_window), flags)
+                ww, wh = self.window.get_size()
+                width, height = canvas_size_for(ww, wh)
+                self.fscale = min(ww / width, wh / height)
+                self.scale = self.fscale
+                dw, dh = int(width * self.fscale), int(height * self.fscale)
+                self.dest = pygame.Rect((ww - dw) // 2, (wh - dh) // 2, dw, dh)
+                self.device_size = (ww, wh)   # 손가락 좌표(0~1) → 기기 픽셀
         self.width = width
         self.height = height
         self.canvas = opaque((width, height))
@@ -111,12 +132,46 @@ class PixelScreen:
         self._conv = None if self.same_fmt else pygame.Surface((self.width, self.height), 0, self.window)
 
     def to_canvas(self, pos: tuple[int, int]) -> tuple[int, int]:
-        """창 좌표(마우스·손가락) → 캔버스 좌표."""
+        """창 좌표(마우스) → 캔버스 좌표. GPU 모드는 SDL 이 마우스 좌표를 이미 캔버스 크기로 바꿔 준다."""
+        if self.gpu:
+            return int(pos[0]), int(pos[1])
         if self.mobile:
             return (int((pos[0] - self.dest.x) / self.fscale), int((pos[1] - self.dest.y) / self.fscale))
         return pos[0] // self.scale, pos[1] // self.scale
 
+    def _gpu_dest(self, width: int, height: int) -> None:
+        """GPU 모드: 실제 창 크기와 렌더러 배율로 화면 안 캔버스 자리(손가락 좌표 변환)를 다시 잡는다."""
+        ww, wh = pygame.display.get_window_size()
+        sx = sy = min(ww / width, wh / height)
+        try:
+            from pygame._sdl2 import video
+            sx, sy = video.Renderer.from_window(video.Window.from_display_module()).scale
+        except Exception:
+            pass
+        self.device_size = (ww, wh)
+        self.fscale = self.scale = sx
+        dw, dh = int(width * sx), int(height * sy)
+        self.dest = pygame.Rect((ww - dw) // 2, (wh - dh) // 2, dw, dh)
+
+    def finger_to_canvas(self, nx: float, ny: float) -> tuple[int, int]:
+        """손가락 이벤트 좌표(창 기준 0~1) → 캔버스 좌표."""
+        if self.mobile:
+            ww, wh = self.device_size
+            return (int((nx * ww - self.dest.x) * self.width / self.dest.w),
+                    int((ny * wh - self.dest.y) * self.height / self.dest.h))
+        ww, wh = self.window.get_size()
+        return self.to_canvas((nx * ww, ny * wh))
+
     def present(self) -> None:
+        if self.gpu:
+            # 캔버스 크기 그대로 창 표면에 → flip 때 SDL 렌더러가 GPU 로 기기 해상도까지 확대
+            if self.shake == (0, 0):
+                self.window.blit(self.canvas, (0, 0))
+            else:
+                self.window.fill((0, 0, 0))
+                self.window.blit(self.canvas, self.shake)
+            pygame.display.flip()
+            return
         if self.mobile:
             # 폰은 창이 기기 해상도(예: 2400x1080)라 프레임마다 전체를 칠하고 새로 확대해 붙이면 무겁다 (v0.8.7):
             # 흔들림이 없으면 화면 안 그 자리에 바로 확대해 쓰고, 검은 띠는 흔들림이 있었을 때만 다시 칠한다.

@@ -14,6 +14,7 @@
 """
 import pygame
 
+from src.audio import loader
 from src.core.paths import asset_path
 
 LAYERS = ("base", "perc", "perc_crisis", "lead", "lead_oct", "choir")
@@ -23,13 +24,24 @@ TIRED_BARS = 2
 FADE_SEC = 0.12    # 마디 경계에서 층 음량 바꿀 때 (딸깍 방지)
 
 
+_FOUND: dict = {}
+
+
 def find(name: str):
+    """구운 파일 경로 (한 번 찾은 결과를 기억 — 매 프레임 song_for 가 부르므로 디스크를 다시 뒤지지 않게)."""
+    if name in _FOUND:
+        return _FOUND[name]
+    hit = None
     for d in (asset_path("music", "boss"), asset_path("music_generated", "boss")):
         for ext in (".ogg", ".wav"):
             p = d / (name + ext)
             if p.exists():
-                return p
-    return None
+                hit = p
+                break
+        if hit is not None:
+            break
+    _FOUND[name] = hit
+    return hit
 
 
 class BossMusic:
@@ -95,41 +107,69 @@ class BossMusic:
         """그 곡의 층 파일이 있는가 (없으면 장면이 예전 보스 테마를 쓴다)."""
         return bool(sid) and self.enabled and self.spec(sid) is not None and find(f"{sid}_1_base") is not None
 
-    # ── 불러오기 (한 번에 한 파일 — 입질 전·파장 동안 프레임마다 조금씩) ──
+    # ── 불러오기: 일꾼 스레드가 한 파일씩 '띄엄띄엄' 읽고 (src/audio/loader.py), 프레임마다 다 된 것만 가져온다 (DESIGN.md 44) ──
+    # OGG 를 푸는 동안은 SDL 믹서가 잠겨 (pygame 2.6 · ce 같음) 메인 루프의 소리 호출도 그만큼 기다린다 → 한꺼번에 25개를 이어서
+    # 풀면 전설이 다가오는 몇 초 내내 끊긴다. 그래서 쓰는 순서대로 하나씩, 사이에 쉬면서: 1페이즈(인트로 · 층 · 실패 · 라이저)는
+    # 다가오는 동안 0.5초 간격, 나머지 페이즈는 챔질 뒤 1페이즈를 듣는 동안 0.8초 간격. 쓸 차례에 아직이면 그 파일만 기다림.
+    DRIP_BEFORE = 0.5
+    DRIP_AFTER = 0.8
+
     def prepare(self, sid: str) -> None:
         if not self.available(sid) or self.loaded_for == sid:
             return
+        for p in (self._steps or {}).values():   # 다른 곡을 읽던 중이면 그만 읽음
+            loader.drop(p)
         self.snd = {}
         self.loaded_for = sid
         n = len(self.spec(sid)["phases"])
-        names = [f"{sid}_intro", f"{sid}_fail"] + [f"{sid}_{i}_{l}" for i in range(1, n + 1) for l in LAYERS + ("riser",)]
-        self._steps = iter(names)
-
-    def load_step(self, k: int = 1) -> bool:
-        """k 개 불러옴. 다 됐으면 True."""
-        if self._steps is None:
-            return True
-        for _ in range(k):
-            name = next(self._steps, None)
-            if name is None:
-                self._steps = None
-                return True
+        names = [f"{sid}_intro"] + [f"{sid}_1_{l}" for l in LAYERS] + [f"{sid}_fail", f"{sid}_1_riser"] + \
+            [f"{sid}_{i}_{l}" for i in range(2, n + 1) for l in LAYERS + ("riser",)]
+        self._steps = {}     # 이름 → 경로 (아직 안 가져온 것, 순서 = 읽을 순서)
+        for name in dict.fromkeys(names):
             p = find(name)
             if p is not None:
-                try:
-                    self.snd[name] = pygame.mixer.Sound(str(p))
-                except Exception as e:
-                    print("boss music:", name, e)
+                self._steps[name] = str(p)
+        self._drip_wait = 0.0
+        self._drip_next()
+
+    def _drip_next(self) -> None:
+        """맡긴 것 중 아직 읽는 중인 게 없으면 다음 파일 하나를 맡김."""
+        if not self._steps:
+            return
+        if any(loader.pending(p) for p in self._steps.values()):
+            return
+        for p in self._steps.values():
+            if not loader.ready(p):
+                loader.request(p)
+                self._drip_wait = self.DRIP_AFTER if self.active else self.DRIP_BEFORE
+                return
+
+    def load_step(self, k: int = 1, dt: float = 0.0) -> bool:
+        """다 읽힌 파일을 가져오고, 쉴 시간이 지났으면 다음 하나를 맡김 (기다리지 않음). 다 됐으면 True.
+        k > 1 이면 쉬지 않고 바로 다음 것 (시험 도구가 다 읽을 때까지 돌릴 때)."""
+        if self._steps is None:
+            return True
+        for name, p in list(self._steps.items()):
+            if loader.ready(p):
+                snd = loader.take(p)
+                if snd is not None:
+                    self.snd[name] = snd
+                del self._steps[name]
+        if not self._steps:
+            self._steps = None
+            return True
+        self._drip_wait = getattr(self, "_drip_wait", 0.0) - dt
+        if self._drip_wait <= 0 or k > 1:
+            self._drip_next()
         return False
 
     def _get(self, name: str):
         if name not in self.snd and self.loaded_for is not None:
-            p = find(name)   # 미리 못 불렀으면 지금 (한 번 끊길 수 있음)
-            if p is not None:
-                try:
-                    self.snd[name] = pygame.mixer.Sound(str(p))
-                except Exception:
-                    return None
+            p = (self._steps or {}).pop(name, None) or find(name)
+            if p is not None:   # 아직 다 안 읽혔으면 이 파일만 기다림 (보통은 미리 다 읽혀 있음)
+                snd = loader.take(p, wait=True)
+                if snd is not None:
+                    self.snd[name] = snd
         return self.snd.get(name)
 
     def _silence(self, sec: float) -> pygame.mixer.Sound:
@@ -145,8 +185,7 @@ class BossMusic:
         if not self.available(sid):
             return False
         self.prepare(sid)
-        while not self.load_step(4):
-            pass
+        self.load_step()   # 다 된 것만 — 나머지는 쓸 때 _get 이 그 파일만 기다리거나, update 가 계속 가져옴
         self.am.suspend(True)
         self.sfx.boss_mode = True   # 덕킹 −2dB · 릴 −2dB (환경음 −6dB 는 장면이 set_base_duck("boss_fight"))
         self.song = sid
@@ -191,6 +230,8 @@ class BossMusic:
 
     def unload(self) -> None:
         self.stop()
+        for p in (self._steps or {}).values():
+            loader.drop(p)
         self.snd = {}
         self.loaded_for = None
         self._steps = None
@@ -246,9 +287,9 @@ class BossMusic:
         return self.loop_t0 + k * self.bar
 
     def update(self, dt: float) -> None:
+        if self._steps is not None:
+            self.load_step(dt=dt)
         if not self.active:
-            if self._steps is not None:
-                self.load_step(1)
             return
         self.t += dt
         sid = self.song

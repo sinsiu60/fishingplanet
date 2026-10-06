@@ -123,8 +123,11 @@ def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0
          pitch: float = 0.0) -> None:
     """버튼을 반투명으로 그린다. pressed = 지금 눌린 버튼 id."""
     a = cfg()["button_alpha"][settings.get("touch_alpha")]
-    from src.ui.layers import layer as _layer, put as _put
-    layer = _layer(canvas, "touch_ui")
+    from src.ui.layers import layer as _layer, merged, put_rects
+    # 버튼 칸만 지우고 섞는다 (그 밖엔 그리지 않음) — 동그라미 버튼은 칸이 정사각형이 아닐 수 있어 원 둘레까지
+    rects = merged(c.rect.union(pygame.Rect(c.center[0] - c.r, c.center[1] - c.r, 2 * c.r, 2 * c.r)).inflate(6, 6)
+                   for c in controls)
+    layer = _layer(canvas, "touch_ui", rects)
     for c in controls:
         on = c.id in pressed
         ca = a // 2 if c.id == "item" and not on else a  # 소모품(우선순위 5)은 더 옅게 (31장 C6)
@@ -145,7 +148,7 @@ def draw(canvas, controls: list[Control], pressed: set, settings, aim: float = 0
             pygame.draw.line(layer, (220, 228, 245, a // 2), (c.center[0], c.rect.y + 16), (c.center[0], c.rect.bottom - 16))
             pygame.draw.circle(layer, (255, 220, 120, 200) if on else (200, 210, 230, min(255, a + 30)),
                                (kx, ky), kr)
-    _put(canvas, layer)
+    put_rects(canvas, layer, rects)
     for c in controls:
         col = (255, 228, 140) if c.id in pressed else TEXT
         if c.id == "pad":

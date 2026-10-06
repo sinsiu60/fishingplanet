@@ -60,8 +60,7 @@ class PauseScene(Scene):
         self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(160 * min(1.0, self.age / 0.15)))
+        ui.backdrop(canvas, self.fishing, int(160 * min(1.0, self.age / 0.15)), "pause")
         canvas = self.ui_canvas(canvas)
         w = canvas.get_width()
         ui.panel(canvas, (w // 2 - 90, PANEL_Y, 180, PANEL_H))

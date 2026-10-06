@@ -54,8 +54,7 @@ class AchievementsScene(Scene):
         self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
+        ui.backdrop(canvas, self.fishing, int(170 * min(1.0, self.age / 0.15)), "achievements_scene")
         canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (8, 6, 464, 260))
         side_menu.trophy(canvas, 22, 16, (255, 255, 255), self.age)

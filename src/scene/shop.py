@@ -597,8 +597,7 @@ class ShopScene(Scene):
         if self.host is not None:
             self.host.draw_shop_backdrop(canvas)   # 건물 안: 배경 + 왼쪽 초상화 + 반응 대사
         else:
-            self.fishing.draw(canvas)
-            ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
+            ui.backdrop(canvas, self.fishing, int(170 * min(1.0, self.age / 0.15)), "shop")
         canvas = self.ui_canvas(canvas)
         fr = self.frame
         canvas.fill(ui.SHADOW, fr.move(2, 2))

@@ -259,8 +259,7 @@ class InventoryScene(Scene):
 
     # ── 그리기 ──
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
+        ui.backdrop(canvas, self.fishing, int(170 * min(1.0, self.age / 0.15)), "inventory")
         canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (8, 6, 464, 258))
         text(canvas, "인벤토리", (16, 16), ui.ACCENT, 16, "midleft")

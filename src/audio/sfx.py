@@ -26,12 +26,18 @@ class _Sounds(dict):
     def __getitem__(self, name):
         snd = dict.__getitem__(self, name)
         if snd is None:
-            try:
-                snd = pygame.mixer.Sound(self.paths[name])
-            except Exception:
+            from src.audio import loader
+            snd = loader.take(self.paths[name], wait=True)   # prefetch 로 맡겼으면 보통 이미 다 읽혀 있음
+            if snd is None:
                 snd = pygame.mixer.Sound(buffer=bytes(64))  # 못 읽으면 무음
             dict.__setitem__(self, name, snd)
         return snd
+
+    def prefetch(self, name: str) -> None:
+        """긴 소리를 쓰기 전에 일꾼 스레드에 맡겨 둔다 (src/audio/loader.py, DESIGN.md 44)."""
+        if name in self.paths and dict.get(self, name) is None:
+            from src.audio import loader
+            loader.request(self.paths[name])
 
     def get(self, name, default=None):
         return self[name] if name in self else default
@@ -572,6 +578,15 @@ class Sfx:
                     pygame.mixer.Channel(i).stop()
             self.active.clear()
         self.loops.clear()
+
+    def prefetch(self, names) -> None:
+        """긴 소리(처음 쓸 때 읽는 것)를 미리 일꾼 스레드에 맡김 — 실내 버전 '~indoor' 도 같이 (DESIGN.md 44)."""
+        if not self.enabled:
+            return
+        for n in names:
+            for k in (n, f"{n}~indoor"):
+                if k in self.sounds:
+                    self.sounds.prefetch(k)
 
     def loop(self, name: str, on: bool, volume: float = 1.0) -> None:
         """반복 재생 켜기/끄기. 켜진 채로 다시 부르면 볼륨만 바뀐다."""

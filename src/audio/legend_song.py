@@ -6,8 +6,7 @@
 버전: full / short / loop (final 은 full 곡). 보상 버스 'legend_song_*' — 속도·피치·필터 변경 없이 그대로 (AS_IS).
 곡ID = 전설 전용 파이팅 곡 ID (L01~L12, L03-ROCK — 락 버전이 없으면 L03). 없으면 대륙판.
 """
-import pygame
-
+from src.audio import loader
 from src.core.paths import asset_path
 
 
@@ -27,6 +26,16 @@ def name_of(variant: str, cont: str, sid: str | None = None) -> str:
     return f"legend_song_{'full' if variant == 'final' else variant}_{sid or cont}"
 
 
+def prefetch(sfx, cont: str, sid: str | None = None) -> None:
+    """파이팅이 시작될 때 버전들을 일꾼 스레드에 맡겨 둔다 (src/audio/loader.py, DESIGN.md 44)."""
+    if not getattr(sfx, "enabled", False):
+        return
+    for v in ('full', 'short', 'loop'):
+        p = path_of(v, cont, sid)
+        if p is not None:
+            loader.request(p)
+
+
 def preload(sfx, variant: str, cont: str, sid: str | None = None) -> str | None:
     if not getattr(sfx, "enabled", False):
         return None
@@ -36,8 +45,8 @@ def preload(sfx, variant: str, cont: str, sid: str | None = None) -> str | None:
     p = path_of(variant, cont, sid)
     if p is None:
         return None
-    try:
-        sfx.sounds[name] = pygame.mixer.Sound(str(p))
-    except Exception:
+    snd = loader.take(p, wait=True)   # prefetch 로 미리 맡겼으면 이미 다 읽혀 있음 (포획 순간 끊김 없게)
+    if snd is None:
         return None
+    sfx.sounds[name] = snd
     return name

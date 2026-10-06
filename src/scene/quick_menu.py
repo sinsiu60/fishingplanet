@@ -67,8 +67,7 @@ class QuickMenuScene(Scene):
         self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(150 * min(1.0, self.age / 0.15)))
+        ui.backdrop(canvas, self.fishing, int(150 * min(1.0, self.age / 0.15)), "quick_menu")
         canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (240 - 176, 34, 352, 194))
         text(canvas, "수집" if self.collect else "가방", (240, 50), ui.ACCENT, 16, "center")

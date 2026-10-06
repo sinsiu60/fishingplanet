@@ -174,8 +174,7 @@ class TouchInput(PcInput):
                 return Action("back")
             return super().translate(event)  # 미리보기에서 키보드도 그대로
         if et in (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP):
-            ww, wh = self.game.screen.window.get_size()
-            pos = self.game.screen.to_canvas((event.x * ww, event.y * wh))
+            pos = self.game.screen.finger_to_canvas(event.x, event.y)
             fid = event.finger_id
             kind = {pygame.FINGERDOWN: "down", pygame.FINGERMOTION: "move", pygame.FINGERUP: "up"}[et]
         elif et in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):

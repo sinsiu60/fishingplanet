@@ -384,4 +384,32 @@ class ScreenFX:
     def _blit_vignette(self, canvas, color, amount: float) -> None:
         v = self._vignette(color)
         v.set_alpha(int(255 * clamp(amount, 0, 1)))
-        canvas.blit(v, (0, 0))
+        for r in self._vig_strips():   # 가운데 완전히 투명한 칸은 건너뜀 (같은 그림, 섞는 넓이 ~20% 적게)
+            canvas.blit(v, r.topleft, r)
+
+    def _vig_strips(self) -> list:
+        """비네트에서 알파가 있는 곳 = 화면 - 가운데 투명 직사각형 → 겹치지 않는 4칸 (위 · 아래 · 왼쪽 · 오른쪽)."""
+        st = getattr(self, "_strips", None)
+        if st is None or st[0] != (self.w, self.h):
+            zero = self._mask <= 0.0     # [x, y]
+            cx, cy = self.w // 2, self.h // 2
+            x0 = x1 = cx
+            y0 = y1 = cy
+            grew = zero[cx, cy]
+            while grew:   # 가운데에서 네 방향으로, 칸 전체가 투명인 동안 넓힌다
+                grew = False
+                if x0 > 0 and zero[x0 - 1, y0:y1 + 1].all():
+                    x0 -= 1; grew = True
+                if x1 < self.w - 1 and zero[x1 + 1, y0:y1 + 1].all():
+                    x1 += 1; grew = True
+                if y0 > 0 and zero[x0:x1 + 1, y0 - 1].all():
+                    y0 -= 1; grew = True
+                if y1 < self.h - 1 and zero[x0:x1 + 1, y1 + 1].all():
+                    y1 += 1; grew = True
+            if not zero[cx, cy]:
+                rects = [pygame.Rect(0, 0, self.w, self.h)]
+            else:
+                rects = [pygame.Rect(0, 0, self.w, y0), pygame.Rect(0, y1 + 1, self.w, self.h - y1 - 1),
+                         pygame.Rect(0, y0, x0, y1 - y0 + 1), pygame.Rect(x1 + 1, y0, self.w - x1 - 1, y1 - y0 + 1)]
+            st = self._strips = ((self.w, self.h), [r for r in rects if r.w > 0 and r.h > 0])
+        return st[1]

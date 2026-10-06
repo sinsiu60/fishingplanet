@@ -5,6 +5,7 @@ world.draw_mountains / FOREGROUND 가 이 모듈의 함수를 부른다. 색은 
 import math
 import random
 
+import numpy as np
 import pygame
 
 from src.core.mathutil import clamp, lerp_color, scale_color
@@ -27,19 +28,34 @@ def _ridge(canvas, cam, color, fn, factor: float) -> None:
 
 # ───────────────────────── 하늘 연출 ─────────────────────────
 
+_AURORA = {}
+
+
 def draw_aurora(canvas, pal, cam, t: float) -> None:
-    """오로라: 밤에 진하게, 낮에도 아주 옅게."""
+    """오로라: 밤에 진하게, 낮에도 아주 옅게.
+    띠 3개 × 2px 간격 세로줄(굵기 2)을 numpy 로 한꺼번에 층에 쓴다 (DESIGN.md 44 — 예전엔 프레임마다 draw.line 900번 · 새 층).
+    줄 하나 = 열 x, x+1 · 행 int(y) ~ int(y + h) (pygame.draw.line 굵기 2 와 같은 칸), 뒤 띠가 앞 띠를 덮음 (그대로)."""
     night = pal.get("stars", 0.0)
     k = 0.25 + 0.75 * night
-    layer = pygame.Surface((cam.width, cam.horizon), pygame.SRCALPHA)
+    W, H = cam.width, cam.horizon
+    layer = _AURORA.get((W, H))
+    if layer is None:
+        layer = _AURORA[(W, H)] = pygame.Surface((W, H), pygame.SRCALPHA)
     off = cam.parallax(0.2)
+    u = np.arange(0, W, 2) + off
+    col_of = np.arange(W) // 2          # 열 c 를 칠하는 줄 = c // 2 번째 (x = 0, 2, 4 … 의 x 와 x+1)
+    rows = np.arange(H, dtype=np.int64)[None, :]
+    rs, gs, bs, ash = layer.get_shifts()
+    out = np.zeros((W, H), dtype=np.uint32)
     for band, (col, y0, amp) in enumerate((((90, 255, 180), 34, 10), ((150, 120, 255), 54, 8), ((80, 220, 255), 22, 6))):
-        for x in range(0, cam.width, 2):
-            u = x + off
-            y = y0 + amp * math.sin(u * 0.02 + t * 0.4 + band) + 5 * math.sin(u * 0.055 - t * 0.7)
-            h = 18 + 10 * math.sin(u * 0.03 + band * 2 + t * 0.3)
-            a = int(70 * k * (0.6 + 0.4 * math.sin(u * 0.08 + t + band)))
-            pygame.draw.line(layer, (*col, max(0, a)), (x, y), (x, y + h), 2)
+        y = y0 + amp * np.sin(u * 0.02 + t * 0.4 + band) + 5 * np.sin(u * 0.055 - t * 0.7)
+        h = 18 + 10 * np.sin(u * 0.03 + band * 2 + t * 0.3)
+        a = np.maximum(0, (70 * k * (0.6 + 0.4 * np.sin(u * 0.08 + t + band))).astype(np.int64))
+        px = ((a.astype(np.uint32) << ash) | np.uint32((col[0] << rs) | (col[1] << gs) | (col[2] << bs)))[col_of]
+        ys, ye = y.astype(np.int64)[col_of], (y + h).astype(np.int64)[col_of]
+        m = (rows >= ys[:, None]) & (rows <= ye[:, None])
+        out = np.where(m, px[:, None], out)
+    pygame.surfarray.blit_array(layer, out)
     canvas.blit(layer, (0, 0))
 
 

@@ -249,8 +249,7 @@ class MapScene(Scene):
 
     # ───────────────────────── 그리기 ─────────────────────────
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(170 * min(1.0, self.age / 0.15)))
+        ui.backdrop(canvas, self.fishing, int(170 * min(1.0, self.age / 0.15)), "map_scene")
         canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (6, 6, 468, 260))
         text(canvas, "지도", (14, 16), ui.ACCENT, 16, "midleft")

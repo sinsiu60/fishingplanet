@@ -54,6 +54,10 @@ class Ambience:
     def update(self, dt: float, spot: str, period: str, weather: str, fighting: bool = False,
                legend: bool = False, season: str | None = None) -> None:
         c = self.cfg
+        if getattr(self, "_pf_spot", None) != spot:   # 이 낚시터 바탕 + 모든 날씨 바탕 · 천둥을 미리 (날씨가 바뀌는 순간 끊김 없게)
+            self._pf_spot = spot
+            names = [b[0] for b in [c["spots"].get(spot, {}).get("bed")] + [w.get("bed") for w in c["weather"].values()] if b]
+            self.sfx.prefetch(names + ["amb_thunder_near", "amb_thunder_far"])
         fog = weather == "fog"
         self.sfx.muffle = fog
         mult = c["legend_mult"] if legend else 1.0

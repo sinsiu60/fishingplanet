@@ -14,10 +14,18 @@ def is_frozen() -> bool:
     return getattr(sys, "frozen", False)
 
 
+_ROOT = None
+
+
 def resource_root() -> Path:
-    if is_frozen():
-        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
-    return Path(__file__).resolve().parents[2]
+    """한 번만 계산 (Path.resolve 는 디스크를 뒤져서 매 프레임 부르면 폰에서 수 ms — DESIGN.md 44)."""
+    global _ROOT
+    if _ROOT is None:
+        if is_frozen():
+            _ROOT = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+        else:
+            _ROOT = Path(__file__).resolve().parents[2]
+    return _ROOT
 
 
 def data_path(*parts: str) -> Path:

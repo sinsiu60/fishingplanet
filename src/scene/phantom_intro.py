@@ -48,8 +48,7 @@ class PhantomIntroScene(Scene):
         self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(190 * min(1.0, self.age / 0.3)))
+        ui.backdrop(canvas, self.fishing, int(190 * min(1.0, self.age / 0.3)), "phantom_intro")
         canvas = self.ui_canvas(canvas)
         w = canvas.get_width()
         box = pygame.Rect(w // 2 - 200, 30, 400, 210)

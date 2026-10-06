@@ -331,51 +331,115 @@ class Water:
             self._draw_reflection(canvas, pal, x, t, strength)
 
         # 3) 물결 줄
+        self._draw_waves(canvas, pal, t, amp_mult, top, bottom)
+
+    # 물결 · 반사광은 numpy 로 한꺼번에 계산해 캔버스 픽셀에 바로 쓴다 (DESIGN.md 44):
+    # 예전엔 줄 26개 × 마루·골 구간마다 · 반사광 줄마다 파이썬에서 fill 을 불러 (프레임당 300번 남짓) 폰에서 가장 무거운 그림이었다.
+    # 계산식 · 그리는 순서(마루 → 골, 먼 줄 → 가까운 줄, 겹치면 나중 것)는 그대로.
+    @staticmethod
+    def _mapped(canvas, cols: np.ndarray) -> np.ndarray:
+        """(n, 3) 색 → 캔버스 픽셀 값 (불투명 32비트)."""
+        rs, gs, bs, _ = canvas.get_shifts()
+        cols = cols.astype(np.uint32)
+        out = (cols[:, 0] << rs) | (cols[:, 1] << gs) | (cols[:, 2] << bs)
+        am = canvas.get_masks()[3]
+        return out | np.uint32(am) if am else out
+
+    @staticmethod
+    def _put(canvas, xs: np.ndarray, ys: np.ndarray, vals: np.ndarray) -> None:
+        """픽셀 쓰기 — 같은 자리에 여러 번이면 나중 것 (fill 을 차례로 부른 것과 같게)."""
+        if not len(xs):
+            return
+        h = canvas.get_height()
+        lin = xs.astype(np.int64) * h + ys
+        _, last = np.unique(lin[::-1], return_index=True)
+        last = len(lin) - 1 - last
+        px = pygame.surfarray.pixels2d(canvas)
+        px[xs[last], ys[last]] = vals[last]
+        del px
+
+    def _draw_waves(self, canvas, pal, t: float, amp_mult: float, top, bottom) -> None:
+        cam = self.cam
+        hz, H, W = cam.horizon, cam.height, cam.width
         light, dark = pal["wave_light"], pal["wave_dark"]
+        rows = []   # 줄마다 (번호, 거리, y0, 배율, 진폭, 마루 색)
         for i, z in enumerate(self.depths):
             y0 = cam.row_for_distance(z)
-            if y0 >= cam.height:
+            if y0 >= H:
                 continue
-            s = cam.f / z
-            # 월드 좌우 좌표로 패턴을 만들어 둘러볼 때 수면이 같이 움직이게
-            u = (self.xs - cam.cx) / s + cam.yaw * z
-            phase = t * (0.9 + 0.05 * i) + i * 1.7
-            wave = np.sin(u * 1.3 + phase) * np.sin(u * 0.37 - phase * 0.6 + i)
-            amp = min(2.0, 5.0 / z) * amp_mult
             near = clamp(1.0 - z / 50.0, 0.25, 1.0)
-            crest_color = lerp_color(lerp_color(top, bottom, (y0 - hz) / (cam.height - hz)), light, near)
-            self._draw_runs(canvas, wave > 0.45, y0, amp, u, t, crest_color)
-            if z < 18:
-                self._draw_runs(canvas, wave < -0.55, y0 + max(1, s * 0.05), amp, u, t, dark)
-
-    def _draw_runs(self, canvas, mask, y0, amp, u, t, color) -> None:
-        if not mask.any():
+            crest = lerp_color(lerp_color(top, bottom, (y0 - hz) / (H - hz)), light, near)
+            rows.append((i, z, y0, cam.f / z, min(2.0, 5.0 / z) * amp_mult, crest))
+        if not rows:
             return
-        d = np.diff(np.concatenate(([0], mask.view(np.int8), [0])))
-        starts = np.flatnonzero(d == 1)
-        ends = np.flatnonzero(d == -1)
-        for a, b in zip(starts, ends):
-            y = int(y0 + math.sin(u[a] * 0.8 + t * 1.5) * amp)
-            if y < self.cam.height:
-                canvas.fill(color, (int(a), y, int(b - a), 1))
+        n = len(rows)
+        idx = np.array([r[0] for r in rows], dtype=np.float64)
+        zz = np.array([r[1] for r in rows])
+        ss = np.array([r[3] for r in rows])
+        # 월드 좌우 좌표로 패턴을 만들어 둘러볼 때 수면이 같이 움직이게
+        U = (self.xs[None, :] - cam.cx) / ss[:, None] + cam.yaw * zz[:, None]
+        phase = t * (0.9 + 0.05 * idx) + idx * 1.7
+        wave = np.sin(U * 1.3 + phase[:, None]) * np.sin(U * 0.37 - phase[:, None] * 0.6 + idx[:, None])
+        # 줄마다 [마루, 골] 두 칸 (골은 가까운 줄 z < 18 만)
+        M = np.zeros((2 * n, W + 2), dtype=bool)
+        M[0::2, 1:-1] = wave > 0.45
+        M[1::2, 1:-1] = (wave < -0.55) & (zz < 18)[:, None]
+        ybase = np.empty(2 * n)
+        ybase[0::2] = [r[2] for r in rows]
+        ybase[1::2] = [r[2] + max(1, r[3] * 0.05) for r in rows]
+        amps = np.repeat([r[4] for r in rows], 2)
+        cols = np.empty((2 * n, 3), dtype=np.int64)
+        cols[0::2] = [r[5] for r in rows]
+        cols[1::2] = tuple(dark)
+        flat = M.ravel()
+        d = np.diff(flat.view(np.int8))
+        starts = np.flatnonzero(d == 1) + 1                 # 구간 시작 (평평하게 편 자리)
+        if not len(starts):
+            return
+        srow = starts // (W + 2)
+        sx = starts % (W + 2) - 1
+        ys_run = (ybase[srow] + np.sin(U[srow // 2, sx] * 0.8 + t * 1.5) * amps[srow]).astype(np.int64)
+        pix = np.flatnonzero(flat)
+        run = np.searchsorted(starts, pix, side="right") - 1
+        xs = pix % (W + 2) - 1
+        ys = ys_run[run]
+        keep = (ys < H) & (ys >= 0)
+        vals = self._mapped(canvas, cols)[srow[run]]
+        self._put(canvas, xs[keep], ys[keep], vals[keep])
 
     def _draw_reflection(self, canvas, pal, bx: float, t: float, strength: float) -> None:
         cam = self.cam
         hz = cam.horizon
         span = cam.height - hz
-        for r in range(1, span, 1):
-            if (r + int(t * 6)) % 3 == 0:
-                continue
-            y = hz + r
-            half = 1 + r * 0.22
-            jitter = math.sin(r * 0.71 + t * 2.1) * half * 0.35
-            length = half * (0.6 + 0.4 * math.sin(r * 1.37 + t * 3.3))
-            if length < 0.8:
-                continue
-            water = lerp_color(pal["water_top"], pal["water_bottom"], (r / span) ** 0.55)
-            k = strength * (1.0 - 0.55 * r / span)
-            color = lerp_color(water, pal["reflection"], k)
-            canvas.fill(color, (int(bx + jitter - length), y, max(1, int(length * 2)), 1))
+        W = cam.width
+        r = np.arange(1, span)
+        r = r[(r + int(t * 6)) % 3 != 0]
+        half = 1 + r * 0.22
+        jitter = np.sin(r * 0.71 + t * 2.1) * half * 0.35
+        length = half * (0.6 + 0.4 * np.sin(r * 1.37 + t * 3.3))
+        ok = length >= 0.8
+        r, jitter, length = r[ok], jitter[ok], length[ok]
+        if not len(r):
+            return
+        wt, wb = np.array(pal["water_top"], dtype=np.float64), np.array(pal["water_bottom"], dtype=np.float64)
+        q = np.clip((r / span) ** 0.55, 0.0, 1.0)[:, None]
+        water = (wt + (wb - wt) * q).astype(np.int64).astype(np.float64)   # lerp_color 와 같은 정수 자르기
+        k = np.clip(strength * (1.0 - 0.55 * r / span), 0.0, 1.0)[:, None]
+        refl = np.array(pal["reflection"], dtype=np.float64)
+        cols = (water + (refl - water) * k).astype(np.int64)
+        x0 = (bx + jitter - length).astype(np.int64)
+        wdt = np.maximum(1, (length * 2).astype(np.int64))
+        # 줄마다 [x0, x0 + 폭) — 화면 밖은 잘림 (fill 과 같게)
+        a = np.clip(x0, 0, W)
+        b = np.clip(x0 + wdt, 0, W)
+        cnt = b - a
+        live = cnt > 0
+        if not live.any():
+            return
+        a, cnt, rows, vals = a[live], cnt[live], hz + r[live], self._mapped(canvas, cols[live])
+        rep = np.repeat(np.arange(len(a)), cnt)
+        offs = np.arange(cnt.sum()) - np.repeat(np.cumsum(cnt) - cnt, cnt)
+        self._put(canvas, a[rep] + offs, rows[rep], vals[rep])
 
 
 # ───────────────────────── 앞쪽 갈대 ─────────────────────────

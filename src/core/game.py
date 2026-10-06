@@ -33,8 +33,13 @@ class Game:
         self.tick_dt = 1.0 / self.tick_rate
         self.fps_cap = cfg.get("fps_cap", 144)
         from src.platform.detect import mobile_window
+        from src.platform.detect import IS_ANDROID
+        import os as _os
+        # 폰: 기기 해상도 확대를 GPU 에 (설정 '화면 출력' — 안전 모드(지난번 실행이 꺼짐)면 예전 방식, DESIGN.md 44)
+        gpu = (IS_ANDROID or _os.environ.get("FP_GPU") == "1") and self.settings.get("gpu_present") \
+            and not _os.environ.get("FP_SAFE")
         self.screen = PixelScreen(cfg["width"], cfg["height"], self.settings.get("scale") or cfg.get("scale"),
-                                  cfg["title"], mobile_window())
+                                  cfg["title"], mobile_window(), gpu=gpu)
         pygame.mouse.set_visible(False)  # 커서는 캔버스에 직접 그린다
         self.input = create_input(self)  # 마우스·키보드·터치 → 행동 (src/platform/input.py)
         if self.input.kind == "touch":
@@ -52,7 +57,8 @@ class Game:
             self.screen.overlay = self.preview.draw
             pygame.display.set_caption(self.preview.caption())
         self.clock = pygame.time.Clock()
-        bootlog.mark(f"화면 {self.screen.canvas.get_size()} · {self.screen.fmt_note} · 입력 {self.input.kind}")
+        bootlog.mark(f"화면 {self.screen.canvas.get_size()} · {self.screen.fmt_note} · 입력 {self.input.kind}"
+                     f"{' · GPU 확대' if self.screen.gpu else ''}")
         if self.screen.mobile:
             self._loading_frame()
             from src.platform.detect import IS_ANDROID

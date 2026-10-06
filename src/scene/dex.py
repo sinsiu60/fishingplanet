@@ -200,8 +200,12 @@ class DexScene(Scene):
 
     def spot_fish(self) -> list[dict]:
         """그 낚시터 물고기: 일반 → 고급 → 희귀 → 전설 (왼쪽 위부터, 같은 등급은 fish.json 순서)."""
-        lst = [f for f in self.fish if f["spot"] == self._tab_list()[self.tabs.index][0]]
-        return sorted(lst, key=lambda f: self.RARITY_ORDER.get(f["rarity"], 9))
+        spot = self._tab_list()[self.tabs.index][0]   # (예전엔 물고기마다 탭 목록을 다시 만들어 프레임당 수천 번 — DESIGN.md 44)
+        c = getattr(self, "_sf_cache", None)
+        if c is None or c[0] != spot:
+            lst = [f for f in self.fish if f["spot"] == spot]
+            c = self._sf_cache = (spot, tuple(sorted(lst, key=lambda f: self.RARITY_ORDER.get(f["rarity"], 9))))
+        return list(c[1])
 
     def card_rect(self, i: int) -> pygame.Rect:
         fishes = self.spot_fish()
@@ -287,8 +291,7 @@ class DexScene(Scene):
         self.mouse = self.ui_pointer()
 
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(180 * min(1.0, self.age / 0.15)))
+        ui.backdrop(canvas, self.fishing, int(180 * min(1.0, self.age / 0.15)), "dex")
         canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (6, 6, 468, 260))
         self._draw_cover(canvas)

@@ -133,8 +133,7 @@ class QuestBoardScene(Scene):
 
     # ── 그리기 ──
     def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)
-        ui.dim(canvas, int(180 * min(1.0, self.age / 0.15)))
+        ui.backdrop(canvas, self.fishing, int(180 * min(1.0, self.age / 0.15)), "quest_board")
         canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (6, 6, 468, 260))
         text(canvas, f"의뢰 게시판 · {CONT_KO.get(self.cont, '')}", (14, 16), ui.ACCENT, 16, "midleft")

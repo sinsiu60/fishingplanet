@@ -18,6 +18,8 @@ import math
 
 import pygame
 
+from src.audio import loader
+
 from src.audio import music_synth
 
 LAYERS = ("theme", "pad", "shimmer", "fight", "fight_heavy", "fight_bright", "crisis", "perc_lo", "perc_hi", "rise",
@@ -70,18 +72,44 @@ class AdaptiveMusic:
             self.ch_sting = pygame.mixer.Channel(base + len(LAYERS))
 
     # ── 파일 ──
-    def _load(self, name: str) -> pygame.mixer.Sound | None:
-        from src.core import bootlog
+    @staticmethod
+    def _path(name: str):
         from src.core.paths import asset_path
-        bootlog.mark(f"  음악 {name}")
         for d in ("music", "music_generated"):
             for ext in (".ogg", ".wav"):
                 p = asset_path(d, name + ext)
                 if p.exists():
-                    try:
-                        return pygame.mixer.Sound(str(p))
-                    except Exception as e:
-                        bootlog.mark(f"  {name} 읽기 실패: {e!r}")
+                    return p
+        return None
+
+    def _prefetch(self, ctx) -> None:
+        """맥락이 바뀌면 그 층 파일들을 일꾼 스레드에 맡김 (src/audio/loader.py) — 바꾸는 순간 메인 루프가 멈추지 않게."""
+        if ctx is None or getattr(self, "_pf_ctx", None) == ctx:
+            return
+        self._pf_ctx = ctx
+        for n in self._names(ctx).values():
+            if n not in self.cache:
+                p = self._path(n)
+                if p is not None:
+                    loader.request(p)
+
+    def _files_ready(self, ctx) -> bool:
+        for n in self._names(ctx).values():
+            if n not in self.cache:
+                p = self._path(n)
+                if p is not None and loader.pending(p):
+                    return False
+        return True
+
+    def _load(self, name: str) -> pygame.mixer.Sound | None:
+        from src.core import bootlog
+        bootlog.mark(f"  음악 {name}")
+        p = self._path(name)
+        if p is not None:
+            snd = loader.take(p, wait=True)   # 미리 맡겼으면 보통 이미 다 읽혀 있음
+            if snd is not None:
+                return snd
+            bootlog.mark(f"  {name} 읽기 실패")
         self.missing.append(name)
         from src.platform.detect import IS_MOBILE
         if IS_MOBILE:
@@ -150,6 +178,7 @@ class AdaptiveMusic:
                 ch.stop()
             self.ch_sting.stop()
         self.ctx = self.ctx_next = None
+        self._pf_ctx = None
         self.sounds = {}
         self.cache = {}
         self.level = {k: 0.0 for k in LAYERS}
@@ -244,7 +273,9 @@ class AdaptiveMusic:
         self.quiet = quiet
         if self.ctx_next is not None:
             self.ctx_fade -= dt
-            if self.ctx_fade <= 0:
+            self._prefetch(self.ctx_next)
+            # 파일이 다 읽힐 때까지 지금 소리를 그대로 (읽기는 일꾼 스레드 — 못 읽는 파일은 바로 '다 됨'으로 침)
+            if self.ctx_fade <= 0 and self._files_ready(self.ctx_next):
                 self._restart()
         if self.ctx is None:
             return
