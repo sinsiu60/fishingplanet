@@ -15,6 +15,8 @@ GREEN, RED, SLACK = (70, 180, 95), (205, 62, 58), (80, 98, 130)
 PANEL = (24, 30, 50)
 
 
+_RANK: dict = {}   # 랭크 도장 글자 (크기별)
+
 def _vbar(canvas, x, y, w, h, frac, color, bg=(36, 40, 56)):
     canvas.fill(SHADOW, (x - 1, y - 1, w + 2, h + 2))
     canvas.fill(bg, (x, y, w, h))
@@ -270,8 +272,13 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
         canvas.fill(SHADOW, box.move(2, 2))
         canvas.fill(PANEL, box)
         pygame.draw.rect(canvas, rc, box, max(2, int(2 * scale)))
-        img = get_font(16).render(result["rank"], False, rc)
-        img = pygame.transform.scale(img, (int(img.get_width() * scale * 1.3), int(img.get_height() * scale * 1.3)))
+        rk = (result["rank"], tuple(rc), round(scale, 4))
+        img = _RANK.get(rk)   # 커지는 도장은 0.14초뿐, 찍힌 뒤(scale 1.0)는 매 프레임 같은 그림 (O2)
+        if img is None:
+            if len(_RANK) > 64:
+                _RANK.clear()
+            img = get_font(16).render(result["rank"], False, rc)
+            img = _RANK[rk] = pygame.transform.scale(img, (int(img.get_width() * scale * 1.3), int(img.get_height() * scale * 1.3)))
         canvas.blit(img, img.get_rect(center=box.center))
         if k >= 1:
             # 찍힌 뒤 퍼지는 고리

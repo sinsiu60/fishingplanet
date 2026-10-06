@@ -5187,6 +5187,10 @@ PC(서버) 숫자는 폰보다 5~10배 빠르므로 비율로 본다. 폰과 같
   파이팅 '감기' 는 `input.held` 를 대신해 넣음, 튜토리얼은 매 프레임 끔), `src/scene/bench_result.py` 결과 화면, 설정 → 접근성 3줄,
   `tools/perf/run_bench.py`(cProfile 상위 20) · `analyze_log.py`. 결과표·병목 목록·고칠 순서는 OPTIMIZATION.md "O1 결과". 기기 로그는 `tools/perf/logs/`.
   찾은 버그: `mutation.py apply` 의 함수 안 `load_json` 재import (frenzy + tired_sec 없음 → UnboundLocalError).
+- **O2 (화면 그리기 기본, 기기 없이)**: `fonts._Font.size` 캐시, 튜토리얼 `overlay.dim` 구멍이 바뀔 때만, 줄 글로우 레이어 재사용(상자만),
+  엘드라 안개 · 후광 띠 캐시, 등대 빛 Surface 재사용(거울 그리기), 배 등불 캐시, 마을 하늘 · 바다 · 바닥 정적 레이어(`village._baked`) +
+  별 · 윤슬 좌표 1회 + 간판 글자 캐시, `shop_ui.btext` 캐시, 랭크 도장 캐시, 측면 비네트는 알파 있는 열만, 찌 확대 말풍선 그라데이션 1회.
+  19장면 × 10프레임 + 단위 비교 11종 전부 픽셀 동일. PC B5 −36% · B6 −45% 그리기, B1~B4 는 오차 안 (O3 · O4 몫). 표는 OPTIMIZATION.md "O2 결과".
 - **v1.3.6** (갤럭시 탭 32비트: v1.3.5 첫 장면 `splash.draw` 의 blit 에서 `Fatal Python error: Bus error`, 안전 모드로도 같음):
   pygame 2.6.1 에 묶인 옛 sse2neon 의 `_mm_storel_epi64` 가 8바이트 대신 `*a` 16바이트를 읽고 되쓴다. 32비트 블리터는
   `STORE_M128_INTO_64`(픽셀 2개 = 8바이트, 주소 4바이트 정렬)로 이걸 쓰는데, ARM32 는 `__m128i` 정렬 힌트가 붙은 `vld1 [r:64]` 라

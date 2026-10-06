@@ -3675,9 +3675,14 @@ class FishingScene(Scene):
         surf = getattr(self, "_zoom_surf", None)
         if surf is None:
             surf = self._zoom_surf = pygame.Surface((W, H)).convert()
-        top, bot = pal["water_top"], pal["water_bottom"]
-        for y in range(0, H, 2):
-            surf.fill(lerp_color(top, bot, y / H), (0, y, W, 2))
+        top, bot = tuple(pal["water_top"]), tuple(pal["water_bottom"])
+        gk = (top, bot, W, H)
+        if getattr(self, "_zoom_gk", None) != gk:   # 물빛 그라데이션은 색이 바뀔 때만 (O2)
+            grad = self._zoom_grad = pygame.Surface((W, H)).convert()
+            for y in range(0, H, 2):
+                grad.fill(lerp_color(top, bot, y / H), (0, y, W, 2))
+            self._zoom_gk = gk
+        surf.blit(self._zoom_grad, (0, 0))
         t = self.t
         for i in range(5):                                  # 잔물결
             yy = int(6 + i * 11 + math.sin(t * 1.4 + i) * 2)

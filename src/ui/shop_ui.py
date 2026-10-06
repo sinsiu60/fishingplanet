@@ -24,16 +24,24 @@ CYAN = (110, 230, 220)
 DARK_TEXT = (40, 30, 10)
 
 
+_BT: dict = {}
+
+
 def btext(canvas, s: str, pos, color, size: int = 11, anchor: str = "topleft", shadow: bool = True) -> pygame.Rect:
     """굵은 글자 (픽셀 글꼴을 1px 옆으로 한 번 더). 그림자는 1px 오른쪽 아래."""
-    s = localize(s)
-    font = get_font(size)
-    img = font.render(s, False, color)
+    key = (s, tuple(color), size)
+    hit = _BT.get(key)   # 같은 글자 · 색 · 크기는 한 번만 그린다 (O2 — 상점 · 도감 목록의 굵은 글자가 매 프레임 render)
+    if hit is None:
+        if len(_BT) > 400:
+            _BT.clear()
+        t_ = localize(s)
+        font = get_font(size)
+        hit = _BT[key] = (font.render(t_, False, color), font.render(t_, False, SHADOW))
+    img, sh = hit
     w, h = img.get_size()
     r = pygame.Rect(0, 0, w + 1, h)
     setattr(r, anchor, pos)
     if shadow:
-        sh = font.render(s, False, SHADOW)
         canvas.blit(sh, (r.x + 1, r.y + 1))
         canvas.blit(sh, (r.x + 2, r.y + 1))
     canvas.blit(img, r.topleft)

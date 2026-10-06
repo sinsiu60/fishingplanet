@@ -74,6 +74,17 @@ class Droplets:
 
 # ───────────────────────── 찌 ─────────────────────────
 
+
+_GLOW: dict = {}
+
+
+def _glow_layer(size) -> pygame.Surface:
+    g = _GLOW.get(size)
+    if g is None:
+        _GLOW.clear()
+        g = _GLOW[size] = pygame.Surface(size, pygame.SRCALPHA)
+    return g
+
 def draw_bobber(canvas, pal, x: float, y: float, size: float, floating: bool, dip: float = 0.0) -> None:
     """size: 찌 전체 높이(px). floating이면 아래쪽은 물에 잠김. dip: 0~1 추가 잠김."""
     x, y = int(x), int(y)
@@ -181,10 +192,18 @@ def draw_line(canvas, pal, start, end, sag: float, bias: float = 0.5, dx: float 
         pts.append((a * start[0] + b * ctrl[0] + c * end[0], a * start[1] + b * ctrl[1] + c * end[1]))
     col = color or pal["line"]
     if pal.get("line_glow") and color in (None, pal["line"]):
-        # 고티어 줄: 은은한 빛
-        g = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
-        pygame.draw.lines(g, (*pal["line_glow"], 70), False, pts, 3)
-        canvas.blit(g, (0, 0))
+        # 고티어 줄: 은은한 빛 — 화면 크기 투명 레이어는 재사용하고, 줄이 지나는 상자만 지우고 그리고 붙인다 (O2)
+        g = _glow_layer(canvas.get_size())
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        box = pygame.Rect(int(min(xs)) - 8, int(min(ys)) - 8, int(max(xs) - min(xs)) + 17, int(max(ys) - min(ys)) + 17)
+        box = box.clip(g.get_rect())
+        if box.w > 0 and box.h > 0:
+            g.set_clip(box)
+            g.fill((0, 0, 0, 0))
+            pygame.draw.lines(g, (*pal["line_glow"], 70), False, pts, 3)
+            g.set_clip(None)
+            canvas.blit(g, box.topleft, box)
     pygame.draw.lines(canvas, col, False, pts, 1)
     if pal.get("line_marks") and color in (None, pal["line"]):
         # PE 합사처럼 색 마디

@@ -61,14 +61,27 @@ def draw_aurora(canvas, pal, cam, t: float) -> None:
 
 # ───────────────────────── 지형 ─────────────────────────
 
+
+_BANDS: dict = {}
+
+
+def _band(w: int, h: int, rgba) -> pygame.Surface:
+    """한 색 반투명 띠 (안개 · 수정 후광): 매 프레임 새 Surface 대신 색 · 크기별로 한 번만 (O2)."""
+    key = (w, h, tuple(rgba))
+    s = _BANDS.get(key)
+    if s is None:
+        if len(_BANDS) > 16:
+            _BANDS.clear()
+        s = _BANDS[key] = pygame.Surface((w, h), pygame.SRCALPHA)
+        s.fill(key[2])
+    return s
+
 def _marsh(canvas, pal, cam, t):
     _ridge(canvas, cam, pal["mountain_far"], lambda u: 10 + 5 * math.sin(u * 0.02) + 3 * math.sin(u * 0.07 + 1), 0.4)
     reed = lerp_color(pal["mountain_near"], (200, 210, 225), 0.35)
     _ridge(canvas, cam, reed, lambda u: 5 + 2.5 * abs(math.sin(u * 0.6)) + 2 * abs(math.sin(u * 1.3 + 1)), 0.8)
     # 수면 위 옅은 안개 띠
-    mist = pygame.Surface((cam.width, 14), pygame.SRCALPHA)
-    mist.fill((*lerp_color(pal["sky_bottom"], (230, 235, 245), 0.5), 60))
-    canvas.blit(mist, (0, cam.horizon - 6))
+    canvas.blit(_band(cam.width, 14, (*lerp_color(pal["sky_bottom"], (230, 235, 245), 0.5), 60)), (0, cam.horizon - 6))
 
 
 def _cave(canvas, pal, cam, t):
@@ -91,9 +104,7 @@ def _cave(canvas, pal, cam, t):
         base = hz - 2
         pygame.draw.polygon(canvas, col, [(x - 3, base), (x + 3, base), (x + 1 + lean * h, base - h)])
         pygame.draw.line(canvas, lerp_color(col, (255, 255, 255), 0.5), (x, base), (x + lean * h * 0.8, base - h * 0.8))
-    halo = pygame.Surface((cam.width, 30), pygame.SRCALPHA)
-    halo.fill((*glow, 18))
-    canvas.blit(halo, (0, hz - 30))
+    canvas.blit(_band(cam.width, 30, (*glow, 18)), (0, hz - 30))
 
 
 def _sky_isles(canvas, pal, cam, t):

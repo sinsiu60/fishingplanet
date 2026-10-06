@@ -377,9 +377,14 @@ class ScreenFX:
             alpha[:] = (np.repeat((k ** 1.5)[:, None], self.h, axis=1) * 200).astype(np.uint8)
             del alpha
             self._vignettes[key] = surf
+            lit = np.nonzero(k > 0)[0]   # 알파가 있는 열만 (나머지 72% 는 완전히 투명 — 섞을 필요 없음, O2)
+            self._vignettes[("side_rect", direction)] = pygame.Rect(int(lit[0]), 0, int(lit[-1] - lit[0] + 1), self.h) \
+                if len(lit) else pygame.Rect(0, 0, 0, 0)
         v = self._vignettes[key]
         v.set_alpha(int(255 * clamp(amount, 0, 1)))
-        canvas.blit(v, (0, 0))
+        r = self._vignettes[("side_rect", direction)]
+        if r.w:
+            canvas.blit(v, r.topleft, r)
 
     def _blit_vignette(self, canvas, color, amount: float) -> None:
         v = self._vignette(color)

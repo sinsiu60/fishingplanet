@@ -39,11 +39,28 @@ def _resolve_font_file() -> str | None:
     return str(bundled) if bundled.exists() else None
 
 
+class _Font(pygame.font.Font):
+    """size() 캐시 (OPTIMIZATION.md O2): 글자 폭 재기는 글리프 배치라 그리기만큼 비싼데 같은 문구를 매 프레임 잰다
+    (벤치에서 Font.size 9~21회/프레임). 같은 문구는 한 번만."""
+
+    def __init__(self, *a):
+        super().__init__(*a)
+        self._sz: dict = {}
+
+    def size(self, text):
+        r = self._sz.get(text)
+        if r is None:
+            if len(self._sz) > 3000:
+                self._sz.clear()
+            r = self._sz[text] = super().size(text)
+        return r
+
+
 def get_font(size: int) -> pygame.font.Font:
     global _font_file, _resolved
     if not _resolved:
         _font_file = _resolve_font_file()
         _resolved = True
     if size not in _cache:
-        _cache[size] = pygame.font.Font(_font_file, size)
+        _cache[size] = _Font(_font_file, size)
     return _cache[size]

@@ -48,6 +48,8 @@ def body_screen_pos(cam, body) -> tuple[float, float] | None:
 
 # ───────────────────────── 하늘 ─────────────────────────
 
+_BEAM: dict = {}  # 등대 빛 Surface 재사용 (O2)
+_LAMP: dict = {}  # 배 등불 (O2)
 _GRAD: dict = {}  # 그라데이션 캐시: 색·크기가 같으면 줄마다 다시 칠하지 않고 한 번에 붙인다 (폰 렉, v0.8.7)
 
 
@@ -270,17 +272,18 @@ def _draw_lighthouse(canvas, pal, cam, t: float) -> None:
         a = t * 1.6
         reach = 110 * abs(math.cos(a))
         side = 1 if math.sin(a) > 0 else -1
-        beam = pygame.Surface((int(reach) + 2, 20), pygame.SRCALPHA)
+        bw = int(reach) + 2
+        beam = _BEAM.get("surf")   # 재사용 (O2): 매 프레임 새 Surface + flip 대신 왼쪽일 땐 거울로 그린다
+        if beam is None:
+            beam = _BEAM["surf"] = pygame.Surface((112, 20), pygame.SRCALPHA)
+        beam.fill((0, 0, 0, 0), (0, 0, bw, 20))
         for i in range(int(reach)):
             k = i / max(1, reach)
             half = 1 + k * 7
             alpha = int(110 * night * (1 - k) ** 0.8)
-            pygame.draw.line(beam, (255, 245, 200, alpha), (i, 10 - half), (i, 10 + half))
-        if side < 0:
-            beam = pygame.transform.flip(beam, True, False)
-            canvas.blit(beam, (x - reach, hz - 46))
-        else:
-            canvas.blit(beam, (x, hz - 46))
+            xx = i if side > 0 else bw - 1 - i
+            pygame.draw.line(beam, (255, 245, 200, alpha), (xx, 10 - half), (xx, 10 + half))
+        canvas.blit(beam, (x - reach, hz - 46) if side < 0 else (x, hz - 46), (0, 0, bw, 20))
 
 
 def _draw_waterfall(canvas, pal, cam, t: float) -> None:
@@ -607,12 +610,19 @@ def draw_boat(canvas, pal, t: float) -> None:
 
 def draw_ship_lamp(canvas, pal, cam) -> None:
     """심해: 배 조명이 비추는 수면."""
-    glow = pygame.Surface((cam.width, cam.height), pygame.SRCALPHA)
-    for i, (z, w, a) in enumerate(((9.5, 3.4, 28), (8.5, 2.4, 34), (7.8, 1.4, 44))):
+    rings = []
+    for z, w, a in ((9.5, 3.4, 28), (8.5, 2.4, 34), (7.8, 1.4, 44)):
         y = cam.row_for_distance(z)
         rx = w * cam.f / z
         ry = rx * cam.cam_h / z * 1.8
-        pygame.draw.ellipse(glow, (190, 230, 210, a), (cam.cx - rx, y - ry, rx * 2, ry * 2))
+        rings.append((cam.cx - rx, y - ry, rx * 2, ry * 2, a))
+    key = (cam.width, cam.height, tuple(rings))
+    glow = _LAMP.get(key)   # 카메라가 같으면 같은 그림 (O2: 매 프레임 전체 화면 Surface 대신)
+    if glow is None:
+        _LAMP.clear()
+        glow = _LAMP[key] = pygame.Surface((cam.width, cam.height), pygame.SRCALPHA)
+        for x0, y0, ww, hh, a in rings:
+            pygame.draw.ellipse(glow, (190, 230, 210, a), (x0, y0, ww, hh))
     canvas.blit(glow, (0, 0))
 
 

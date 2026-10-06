@@ -34,10 +34,29 @@ def _add_glow(canvas, pos, r: int, col) -> None:
 
 
 # ───────────────────────── 배경 ─────────────────────────
+_BAKED: dict = {}   # 정적 레이어 (O2): 하늘 · 바다 그라데이션 · 바닥 — 색(시간대)이 바뀔 때만 다시 굽는다
+_STARS: dict = {}
+_GLINTS: list = []
+
+
+def _baked(key, w: int, h: int, paint) -> pygame.Surface:
+    s = _BAKED.get(key)
+    if s is None:
+        if len(_BAKED) > 12:
+            _BAKED.clear()
+        s = _BAKED[key] = pygame.Surface((max(1, w), max(1, h)))
+        paint(s)
+    return s
+
+
 def _sky(canvas, pal, w):
-    top, bot = pal["sky_top"], pal["sky_bottom"]
-    for y in range(0, HORIZON, 3):
-        canvas.fill(lerp_color(top, bot, y / HORIZON), (0, y, w, 3))
+    top, bot = tuple(pal["sky_top"]), tuple(pal["sky_bottom"])
+
+    def paint(s):
+        for y in range(0, HORIZON, 3):
+            s.fill(lerp_color(top, bot, y / HORIZON), (0, y, w, 3))
+    # 마지막 3줄 띠가 수평선을 2줄 넘는 것까지 그대로 (바다가 덮는다)
+    canvas.blit(_baked(("sky", top, bot, w), w, HORIZON + 2, paint), (0, 0))
 
 
 def _celestial(canvas, pal, hour, ox, w, t):
@@ -55,9 +74,11 @@ def _celestial(canvas, pal, hour, ox, w, t):
     y = HORIZON - 70 * math.sin(math.pi * u) - 4
     pygame.draw.circle(canvas, (230, 230, 245), (int(x), int(y)), 7)
     pygame.draw.circle(canvas, pal["sky_top"], (int(x) + 3, int(y) - 2), 6)
-    rnd = random.Random(4)
-    for _ in range(40):
-        sx, sy = rnd.uniform(0, w), rnd.uniform(0, HORIZON - 20)
+    stars = _STARS.get(w)
+    if stars is None:
+        rnd = random.Random(4)
+        stars = _STARS[w] = [(rnd.uniform(0, w), rnd.uniform(0, HORIZON - 20)) for _ in range(40)]
+    for sx, sy in stars:
         if (math.sin(t * 2 + sx) + 1) * 0.5 > 0.3:
             canvas.fill((220, 225, 240), (int(sx), int(sy), 1, 1))
     return x
@@ -86,15 +107,18 @@ def _far(canvas, pal, ox, w, style):
 
 
 def _sea(canvas, pal, ox, w, t, sun_x, night):
-    top, bot = pal["water_top"], pal["water_bottom"]
-    for y in range(HORIZON, SEA_BOTTOM, 2):
-        canvas.fill(lerp_color(top, bot, (y - HORIZON) / (SEA_BOTTOM - HORIZON)), (0, y, w, 2))
+    top, bot = tuple(pal["water_top"]), tuple(pal["water_bottom"])
+
+    def paint(s):
+        for y in range(HORIZON, SEA_BOTTOM, 2):
+            s.fill(lerp_color(top, bot, (y - HORIZON) / (SEA_BOTTOM - HORIZON)), (0, y - HORIZON, w, 2))
+    canvas.blit(_baked(("sea", top, bot, w), w, SEA_BOTTOM - HORIZON, paint), (0, HORIZON))
     # 윤슬: 해(달) 아래 반짝이는 물결 조각
-    rnd = random.Random(7)
+    if not _GLINTS:
+        rnd = random.Random(7)
+        _GLINTS.extend((rnd.uniform(-60, 60), rnd.uniform(HORIZON + 3, SEA_BOTTOM - 2)) for _ in range(70))
     light = pal.get("wave_light", (220, 230, 240))
-    for i in range(70):
-        bx = rnd.uniform(-60, 60)
-        y = rnd.uniform(HORIZON + 3, SEA_BOTTOM - 2)
+    for i, (bx, y) in enumerate(_GLINTS):
         spread = 0.4 + (y - HORIZON) / (SEA_BOTTOM - HORIZON)
         x = sun_x + bx * spread * 2.2
         k = (math.sin(t * 3 + i * 1.7) + 1) * 0.5
@@ -108,22 +132,29 @@ def _sea(canvas, pal, ox, w, t, sun_x, night):
 
 
 def _ground(canvas, pal, ox, w, h, style):
+    # 바탕 + 가로 이음매는 색이 같으면 같은 그림 → 구워 두고, 가로로 움직이는 세로 이음매만 매 프레임 (O2)
     if style == "wood":
         base = lerp_color((120, 88, 60), pal.get("sky_bottom", (200, 200, 200)), 0.08)
         dark = lerp_color(base, (40, 30, 20), 0.35)
-        canvas.fill(base, (0, SEA_BOTTOM, w, h - SEA_BOTTOM))
+        step = 7
+    else:
+        base = lerp_color((96, 100, 120), pal.get("sky_bottom", (200, 200, 200)), 0.1)
+        dark = lerp_color(base, (30, 30, 50), 0.4)
+        step = 12
+
+    def paint(s):
+        s.fill(base)
+        for y in range(0, h - SEA_BOTTOM, step):
+            s.fill(dark, (0, y, w, 1))
+    canvas.blit(_baked(("ground", style, base, dark, w, h), w, h - SEA_BOTTOM, paint), (0, SEA_BOTTOM))
+    if style == "wood":
         for y in range(SEA_BOTTOM, h, 7):
-            canvas.fill(dark, (0, y, w, 1))
             off = (y * 37) % 60
             for x in range(-off - int(ox) % 60, w, 60):
                 canvas.fill(dark, (x, y, 1, 7))
         canvas.fill(lerp_color(base, (255, 255, 255), 0.15), (0, SEA_BOTTOM, w, 2))
     else:
-        base = lerp_color((96, 100, 120), pal.get("sky_bottom", (200, 200, 200)), 0.1)
-        dark = lerp_color(base, (30, 30, 50), 0.4)
-        canvas.fill(base, (0, SEA_BOTTOM, w, h - SEA_BOTTOM))
         for row, y in enumerate(range(SEA_BOTTOM, h, 12)):
-            canvas.fill(dark, (0, y, w, 1))
             off = 24 if row % 2 else 0
             for x in range(-int(ox) % 48 - 48 + off, w, 48):
                 canvas.fill(dark, (x, y, 1, 12))
@@ -139,9 +170,22 @@ def _window(canvas, x, y, ww, hh, night, frame):
     canvas.fill(frame, (x + ww // 2, y, 1, hh))
 
 
+_TXT: dict = {}
+
+
+def _txt(s: str, col) -> pygame.Surface:
+    """간판 · 계절 아이콘 · 이름표 글자: 같은 글자는 한 번만 그린다 (O2)."""
+    key = (s, tuple(col))
+    img = _TXT.get(key)
+    if img is None:
+        if len(_TXT) > 200:
+            _TXT.clear()
+        img = _TXT[key] = get_font(11).render(s, False, col)
+    return img
+
+
 def _sign(canvas, cx, y, label, col_bg, col_fg):
-    f = get_font(11)
-    img = f.render(label, False, col_fg)
+    img = _txt(label, col_fg)
     r = pygame.Rect(0, 0, img.get_width() + 8, 13)
     r.center = (cx, y)
     canvas.fill(col_bg, r)
@@ -224,7 +268,7 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
             from src.core.season import ICON
             col = {"spring": (255, 170, 200), "summer": (120, 200, 90), "autumn": (230, 140, 60), "winter": (200, 230, 255)}[season]
             pygame.draw.circle(canvas, col, (r.centerx, r.centery), 9)
-            img = get_font(11).render(ICON[season], False, (40, 40, 40))
+            img = _txt(ICON[season], (40, 40, 40))
             canvas.blit(img, img.get_rect(center=r.center))
         _sign(canvas, x0 + w // 2, GROUND - 64, p["name"], (60, 44, 30) if style == "wood" else (40, 46, 80), (250, 236, 200))
         hit = pygame.Rect(x0 - 4, GROUND - 72, w + 8, 76)
@@ -321,7 +365,7 @@ def draw_npc(canvas, sx: float, spec: dict, t: float, season: str, hover: bool, 
     hit = pygame.Rect(sx - 12, top - 18, 24, fy - top + 18)
     if hover:
         pygame.draw.rect(canvas, (255, 236, 170), hit, 1)
-        img = get_font(11).render(spec["name"], False, (255, 240, 200))
+        img = _txt(spec["name"], (255, 240, 200))
         r = img.get_rect(midbottom=(sx, hit.y - 2))
         canvas.fill((20, 20, 30), r.inflate(4, 2))
         canvas.blit(img, r)

@@ -23,13 +23,17 @@ def _blink(t: float) -> float:
 
 def dim(canvas, rects, t: float, strong: bool = True) -> None:
     size = canvas.get_size()
-    sh = _dim_cache.get(size)
-    if sh is None:
-        sh = _dim_cache[size] = pygame.Surface(size, pygame.SRCALPHA)
-    sh.fill((0, 0, 0, DIM_ALPHA))
     holes = [r.inflate(6, 6) for r in rects]
-    for r in holes:
-        sh.fill((0, 0, 0, 0), r)
+    # 어둡게 + 구멍은 강조 자리가 바뀔 때만 다시 만든다 (매 프레임 전체 화면 fill 2번이 폰에서 ~20ms, OPTIMIZATION.md O2)
+    key = (size, tuple((r.x, r.y, r.w, r.h) for r in holes))
+    sh = _dim_cache.get("surf")
+    if sh is None or _dim_cache.get("key") != key:
+        if sh is None or sh.get_size() != size:
+            sh = _dim_cache["surf"] = pygame.Surface(size, pygame.SRCALPHA)
+        sh.fill((0, 0, 0, DIM_ALPHA))
+        for r in holes:
+            sh.fill((0, 0, 0, 0), r)
+        _dim_cache["key"] = key
     canvas.blit(sh, (0, 0))
     k = _blink(t)
     col = tuple(int(c * (0.45 + 0.55 * k)) for c in YELLOW)
