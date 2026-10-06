@@ -537,6 +537,8 @@ class ScreenWeather:
                 continue   # 보호 영역에 닿으면 즉시 투명
             trail = C["rain_drops"]["trail_sec"]
             for tx, ty, tt in d[6]:
+                if fight and P.hit_pt(tx, ty):
+                    continue   # 흘러내린 자국이 보호 영역까지 이어져 있으면 그 점만 안 그림 (DT12)
                 k = (1 - (d[5] - tt) / trail) * fa   # 1px 밝은 자국 0.5초 (도트라 반투명 대신 밝기 2단)
                 if k > 0.55:
                     canvas.fill((226, 242, 255), (int(tx), int(ty), 1, 1))
