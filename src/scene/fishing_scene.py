@@ -32,6 +32,7 @@ from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
 from src.scene.base import Scene
 from src.ui import fight_fx, fight_hud, hud, pattern_fx, signal_slots
 from src.ui import tutorial as tut
+from src.ui import widgets as ui_w
 
 
 def float_name(tier: int) -> str:
@@ -1942,10 +1943,12 @@ class FishingScene(Scene):
                 self.shake_kick = 2.5
             news = getattr(self, "catch_news", None) or {}
             if f.phase == "caught" and prev < 1.0 <= self.end_t:
-                if news.get("new"):
-                    self.sfx.play("ui_dex_new", 0.5)  # NEW! 도감 등록 배지와 함께 (N3: 작게)
-                elif news.get("record"):
+                if news.get("record") and not news.get("new"):
                     self.sfx.play("sfx_record", 0.85)  # 최대 크기 경신 배지와 함께
+            if f.phase == "caught":   # 도감 새 칸 = 도장 쾅 + 종이 툭 · 도감 별 = 작은 반짝 (DT10, 배지가 뜨는 순간)
+                for at, kind in fight_hud.badge_times(news):
+                    if prev < at <= self.end_t:
+                        self.sfx.play("ui_stamp" if kind == "stamp" else "ui_star", 0.6)
             if f.phase == "caught" and prev < 1.6 <= self.end_t and self.training is None:
                 self.game.guide.event("catch_shown")   # TG-03: 배지까지 다 뜬 뒤
                 if getattr(self, "print_offer", None) is not None and news.get("record"):
@@ -3304,7 +3307,7 @@ class FishingScene(Scene):
                 hud.text(canvas, f"찌 거리 {c.current_distance():.0f}m", (cam.width - 6 - inset, 30), pal["text"],
                          anchor="topright")
             sv = self.save.data
-            hud.text(canvas, f"{sv['money']:,}원", (cam.width - 6 - inset, 4), (255, 228, 140), anchor="topright")
+            hud.text(canvas, f"{ui_w.money_anim(sv['money']):,}원", (cam.width - 6 - inset, 4), (255, 228, 140), anchor="topright")
             bait = self.save.equipped("bait")["name"]
             hud.text(canvas, f"살림망 {len(sv['keepnet'])} · 미끼 {bait}", (cam.width - 6 - inset, 17), pal["text"],
                      anchor="topright")

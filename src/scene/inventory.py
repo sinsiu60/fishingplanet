@@ -264,7 +264,7 @@ class InventoryScene(Scene):
         ui.panel(canvas, (8, 6, 464, 258))
         text(canvas, "인벤토리", (16, 16), ui.ACCENT, 16, "midleft")
         d = self.save.data
-        text(canvas, f"{ui.money_text(d['money'])} · 비늘 {d['scales']} · 조각 {d['shards']}", (464, 16), ui.TEXT, 11,
+        text(canvas, f"{ui.money_text(ui.money_anim(d['money']))} · 비늘 {d['scales']} · 조각 {d['shards']}", (464, 16), ui.TEXT, 11,
              "midright")
         self.tabs.draw(canvas, self.mouse)
         self._draw_slots(canvas)

@@ -30,6 +30,8 @@
                          "sfx_coin", "sfx_reel_click",
                          "sfx_land", "sfx_thrash", "sfx_line_crack", "sfx_jerk", "sfx_great", "sfx_whip", "sfx_twist_turn",
                          "ui_click", "ui_tab"]},
+ "ui_db": -3.0,
+ "_ui_db": "DT10: UI 버스(ui_*) 전체를 3dB 작게 — 버튼 · 탭 · 상점 · 도감 소리가 낚시터 소리 위로 튀지 않게 (SOUND_CLEANUP 빼기 방향).",
  "max_same": 3,
  "min_interval": {"default": 0.025, "sfx_reel_click": 0.015, "sfx_line_crack": 0.06, "ui_click": 0.04, "amb_rain_drop": 0.05},
  "limiter": {"max_sum": 3.0, "release_sec": 0.4},

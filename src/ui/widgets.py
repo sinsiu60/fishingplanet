@@ -1,4 +1,10 @@
-"""메뉴·상점·도감 공통 UI 부품 (버튼, 패널, 탭)."""
+"""메뉴·상점·도감 공통 UI 부품 (버튼, 패널, 탭).
+
+손맛 (DETAILS.md G, DESIGN.md 45장 DT10): 버튼 · 탭을 누르면 0.08초 동안 1px 아래로 + 작은 클릭 소리,
+소지금은 0.5초 동안 숫자가 올라가며 동전 짤랑 한 번 (money_anim).
+"""
+import time
+
 import pygame
 
 from src.core.mathutil import lerp_color
@@ -19,6 +25,61 @@ TOUCH_SLOP = 3 if IS_MOBILE else 0
 
 def _hit(rect, pos) -> bool:
     return (rect.inflate(TOUCH_SLOP * 2, TOUCH_SLOP * 2) if TOUCH_SLOP else rect).collidepoint(pos)
+
+
+# ── 손맛 (DT10) ──
+SFX = None            # Game 이 넣어 줌 (효과음). 없으면 소리 없이 그림만
+PRESS_SEC = 0.08
+_PRESSED: dict = {}   # 눌린 버튼 자리 (x, y, w, h) → 누른 시각
+
+
+def press(rect, sound: bool = True) -> None:
+    """버튼이 눌렸다: 0.08초 동안 1px 아래로 + 부드러운 클릭 (같은 프레임의 다른 ui_click 은 최소 간격으로 걸러짐)."""
+    now = time.perf_counter()
+    if len(_PRESSED) > 64:
+        for k in [k for k, t0 in _PRESSED.items() if now - t0 > PRESS_SEC]:
+            del _PRESSED[k]
+    _PRESSED[tuple(pygame.Rect(rect))] = now
+    if sound and SFX is not None:
+        SFX.play("ui_click", 0.6)
+
+
+def pressed_dy(rect) -> int:
+    t0 = _PRESSED.get(tuple(pygame.Rect(rect)))
+    return 1 if t0 is not None and time.perf_counter() - t0 < PRESS_SEC else 0
+
+
+_MONEY = {"shown": None, "from": 0, "to": 0, "t0": 0.0}
+MONEY_SEC = 0.5
+
+
+def money_anim(v: int) -> int:
+    """지금 보여 줄 소지금: 값이 오르면 0.5초 동안 촤라락 올라감 + 동전 짤랑 한 번 (내려가면 바로).
+    판매처럼 이미 동전 소리가 난 순간이면 짤랑을 다시 내지 않는다."""
+    m = _MONEY
+    now = time.perf_counter()
+    if m["shown"] is None:
+        m.update(shown=v, to=v, **{"from": v})
+        return v
+    if v != m["to"]:
+        cur = _money_now(now)
+        if v > cur:
+            m.update(to=v, t0=now, **{"from": cur})
+            if SFX is not None:
+                last = max(SFX.last_play.get(n, -9.0) for n in ("sfx_coin", "ui_buy", "ui_coin"))
+                if SFX.clock - last > 0.3:
+                    SFX.play("ui_coin", 0.5)
+        else:
+            m.update(to=v, t0=now - MONEY_SEC, **{"from": v})
+    m["shown"] = _money_now(now)
+    return m["shown"]
+
+
+def _money_now(now: float) -> int:
+    m = _MONEY
+    u = min(1.0, (now - m["t0"]) / MONEY_SEC)
+    u = 1 - (1 - u) ** 3
+    return int(round(m["from"] + (m["to"] - m["from"]) * u))
 
 
 def panel(canvas, rect, border=BORDER, fill=PANEL) -> None:
@@ -75,14 +136,17 @@ class Button:
         hov = self.enabled and self.hovered(mouse)
         fill = PANEL_LIGHT if hov or selected else PANEL
         border = self.accent if (hov or selected) and self.enabled else BORDER
+        dy = pressed_dy(self.rect)
+        r = self.rect.move(0, dy)   # 눌림: 버튼 전체가 1px 아래로 (그림자는 그대로)
         canvas.fill(SHADOW, self.rect.move(1, 1))
-        canvas.fill(fill, self.rect)
-        pygame.draw.rect(canvas, border, self.rect, 1)
+        canvas.fill(fill, r)
+        pygame.draw.rect(canvas, border, r, 1)
         col = (TEXT if not hov else self.accent) if self.enabled else DIM
-        text(canvas, self.label, self.rect.center, col, self.size, "center")
+        text(canvas, self.label, r.center, col, self.size, "center")
 
     def click(self, mouse) -> bool:
         if self.enabled and _hit(self.rect, mouse) and self.action:
+            press(self.rect)
             self.action()
             return True
         return False
@@ -98,6 +162,7 @@ class Tabs:
         for i, (r, label) in enumerate(zip(self.rects, self.labels)):
             sel = i == self.index
             hov = r.collidepoint(mouse)
+            r = r.move(0, pressed_dy(r))
             canvas.fill(PANEL_LIGHT if sel else PANEL, r)
             pygame.draw.rect(canvas, ACCENT if sel else (BORDER if not hov else TEXT), r, 1)
             text(canvas, label, r.center, ACCENT if sel else (TEXT if hov else DIM), 11, "center")
@@ -105,6 +170,7 @@ class Tabs:
     def click(self, mouse) -> bool:
         for i, r in enumerate(self.rects):
             if _hit(r, mouse):
+                press(r, sound=False)   # 탭 소리(ui_tab)는 부르는 쪽이
                 self.index = i
                 return True
         return False

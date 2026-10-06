@@ -3,11 +3,16 @@ import pygame
 
 
 class Scene:
+    # 열릴 때 소리 (DT10 메뉴 소리) — 이름 또는 None. open_sound() 로 상황마다 바꿀 수 있음
+    OPEN_SOUND = None
     # True = 메뉴처럼 가운데 480x270 'UI 상자'에 그리는 씬 (모바일에서 화면비가 달라도 가운데). PC에선 상자 = 캔버스 전체.
     UI_FRAME = False
 
     def __init__(self, game):
         self.game = game
+
+    def open_sound(self):
+        return self.OPEN_SOUND
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """원시 이벤트 → 입력 계층이 '행동'으로 바꿔 handle_action 으로 넘긴다 (src/platform/input.py)."""
@@ -57,6 +62,7 @@ class Scene:
 class SceneManager:
     def __init__(self):
         self.stack: list[Scene] = []
+        self.on_push = None   # 화면이 열릴 때 (Game: 메뉴 여는 소리)
 
     @property
     def current(self) -> Scene | None:
@@ -64,6 +70,8 @@ class SceneManager:
 
     def push(self, scene: Scene) -> None:
         self.stack.append(scene)
+        if self.on_push is not None:
+            self.on_push(scene)
 
     def pop(self) -> None:
         if self.stack:

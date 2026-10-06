@@ -87,6 +87,7 @@ def score(kind: str, item: dict) -> float:
 
 
 class ShopScene(Scene):
+    OPEN_SOUND = "ui_drawer"   # 메뉴 소리 (DT10)
     UI_FRAME = True
 
     def __init__(self, game, fishing, tab: str | None = None, frame=None, host=None, tabs: list[str] | None = None,
@@ -604,7 +605,7 @@ class ShopScene(Scene):
         canvas.fill(su.WIN_BG, fr)
         pygame.draw.rect(canvas, su.BORDER, fr, 1)
         text(canvas, su.fit(self.title, fr.w - 110, 16), (fr.x + 8, fr.y + 9), ui.ACCENT, 16, "midleft")
-        su.price(canvas, self.save.money, (fr.right - 9, fr.y + 9), su.YELLOW, bold=True, big=True)
+        su.price(canvas, ui.money_anim(self.save.money), (fr.right - 9, fr.y + 9), su.YELLOW, bold=True, big=True)
         self._draw_tabs(canvas)
         for r in (self.LIST, self.DETAIL):
             canvas.fill(su.CELL_BG, r)

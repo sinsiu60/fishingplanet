@@ -69,6 +69,6 @@ class PauseScene(Scene):
             b.draw(canvas, self.mouse)
         s = self.game.save
         if s:
-            text(canvas, f"소지금 {ui.money_text(s.money)} · 도감 {s.dex_count()}종 · {ui.time_text(s.data['playtime'])}",
+            text(canvas, f"소지금 {ui.money_text(ui.money_anim(s.money))} · 도감 {s.dex_count()}종 · {ui.time_text(s.data['playtime'])}",
                  (w // 2, PANEL_Y + PANEL_H + 12), ui.DIM, 11, "center")
         draw_cursor(canvas, self.mouse)

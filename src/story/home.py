@@ -74,6 +74,7 @@ class HomeScene(InteriorScene):
 
 class JournalScene(Scene):
     """낚시 일지: 펼친 책 (왼쪽·오른쪽 쪽, 한 쪽에 4개)."""
+    OPEN_SOUND = "ui_paper"   # 메뉴 소리 (DT10)
 
     def __init__(self, game, room):
         super().__init__(game)

@@ -337,6 +337,8 @@ class Sfx:
         if bus == "sig" and self.boss_mode:   # 전설·환상 전용 곡 동안 신호 +2dB (DESIGN.md 43)
             g *= 10 ** (self.cfg.get("boss", {}).get("sig_db", 0) / 20)
         db = self.duck_db.get(bus, 0.0) + self.base_duck.get(bus, 0.0) + self.space_mask.get(bus, 0.0)
+        if bus == "ui":   # 손맛 UI (DT10): 모든 UI 소리는 작게 (SOUND_CLEANUP — 세계의 소리가 주인공)
+            db += self.cfg.get("ui_db", 0.0)
         g *= 10 ** (db / 20)
         if limit and bus not in ("sig", "mus"):
             g *= self.limiter

@@ -258,7 +258,7 @@ class MapScene(Scene):
             for b in self.cont_btns:
                 b.draw(canvas, self.mouse)
         got, total = self.save.continent_dex(self.cont)
-        text(canvas, f"{ui.money_text(self.save.money)} · 도감 {got}/{total}", (466, 16), ui.ACCENT, 11, "midright")
+        text(canvas, f"{ui.money_text(ui.money_anim(self.save.money))} · 도감 {got}/{total}", (466, 16), ui.ACCENT, 11, "midright")
         self._draw_map(canvas)
         self._draw_weather(canvas)
         self._draw_info(canvas)

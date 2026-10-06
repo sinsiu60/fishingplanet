@@ -237,6 +237,56 @@ def dex_badges(news: dict) -> list:
     return out
 
 
+def badge_times(news: dict | None) -> list:
+    """[(나타나는 시각, 종류 'stamp' | 'star')] — 도장 쾅(도감 새 칸) · 별 반짝(도감 별) 소리를 장면이 같은 순간에 낸다 (DT10)."""
+    out = []
+    for i, (label, _) in enumerate(catch_badges(news)):
+        kind = _badge_kind(label)
+        if kind:
+            out.append((1.0 + i * 0.15, kind))
+    return out
+
+
+def _badge_kind(label: str):
+    if label.startswith("NEW!") or label.startswith("환상 도감 등록"):
+        return "stamp"
+    if label.startswith("도감 ★"):
+        return "star"
+    return None
+
+
+def _badge(canvas, label: str, col, pos, age: float) -> None:
+    """기록 배지. 도감 새 칸 = 도장이 쾅 (1.3배 → 1배, 0.25초, 도장 테두리), 도감 별 = 반짝 튀어 오름 (1.2배 → 1배, 0.3초) (DT10)."""
+    kind = _badge_kind(label)
+    if kind is None:
+        text(canvas, label, pos, col, 11, "midleft")
+        return
+    dur, big = (0.25, 1.3) if kind == "stamp" else (0.3, 1.2)
+    u = clamp(age / dur, 0, 1)
+    sc = big + (1.0 - big) * (1 - (1 - u) ** 2)
+    img = get_font(11).render(label, False, col)
+    w0, h0 = img.get_size()
+    if kind == "stamp":   # 도장 테두리 (잉크 빨강), 찍힌 뒤에도 남음
+        box = pygame.Surface((w0 + 6, h0 + 2), pygame.SRCALPHA)
+        pygame.draw.rect(box, (220, 70, 60, 220), box.get_rect(), 1)
+        box.blit(img, (3, 1))
+        img, w0, h0 = box, w0 + 6, h0 + 2
+    if sc != 1.0:
+        img = pygame.transform.scale(img, (max(1, int(w0 * sc)), max(1, int(h0 * sc))))
+    x, y = pos
+    x -= 3 if kind == "stamp" else 0
+    dy = -int(4 * math.sin(math.pi * u)) if kind == "star" and u < 1 else 0   # 별: 살짝 튀어 오름
+    r = img.get_rect(midleft=(x - (img.get_width() - w0) // 2, y + dy))
+    canvas.blit(img, r)
+    if kind == "star" and u < 1:   # 반짝 십자
+        k = math.sin(math.pi * u)
+        cx, cy = r.x + int((get_font(11).size("도감 ")[0] + 4) * sc), r.centery - 1   # ★ 자리
+        c = (255, 250, 210)
+        ln = int(2 + 4 * k)
+        pygame.draw.line(canvas, c, (cx - ln, cy), (cx + ln, cy), 1)
+        pygame.draw.line(canvas, c, (cx, cy - ln), (cx, cy + ln), 1)
+
+
 def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) -> None:
     """획득 컷 정보: 이름·크기 → 랭크 도장 쾅 → 기록 → 가치 숫자 올라감 (순서대로)."""
     w = canvas.get_width()
@@ -302,7 +352,7 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
         badges = catch_badges(news)
         for i, (label, col) in enumerate(badges):
             if t > 1.0 + i * 0.15:
-                text(canvas, label, (12, 24 + i * 15), col, 11, "midleft")
+                _badge(canvas, label, col, (12, 24 + i * 15), t - (1.0 + i * 0.15))
     if news and news.get("legend_line") and t > 1.6:
         # 전설 첫 포획: 환상의 물고기 암시 한 줄 (33장 P6)
         k = clamp((t - 1.6) / 0.8, 0, 1)

@@ -71,6 +71,8 @@ class Game:
         self.sfx = Sfx(audio=audio)
         bootlog.mark(f"효과음 {len(self.sfx.sounds)}개 (실행 중 합성 {len(getattr(self.sfx, 'missing_baked', []))})")
         self.sfx.haptics = self.haptics  # play(..., haptic=종류) → 소리 어택 순간에 진동
+        from src.ui import widgets as _w
+        _w.SFX = self.sfx                # 손맛 UI (DT10): 버튼 눌림 소리 · 소지금 짤랑
         self.apply_audio_settings()
         self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
         from src.audio.adaptive_music import AdaptiveMusic
@@ -83,6 +85,7 @@ class Game:
         self.save = None            # 현재 SaveGame (메뉴에선 None)
         self.autosave_t = 0.0
         self.scenes = SceneManager()
+        self.scenes.on_push = self._scene_open_sound   # 메뉴 소리 (DT10): 도감 · 일지 종이, 상점 서랍, 설정 딸깍
         from src.tutorial.guide import Guide
         self.guide = Guide(self)    # 가이드 튜토리얼 (DESIGN.md 40)
         from src.core.perf import PerfMonitor
@@ -279,6 +282,14 @@ class Game:
     def slowmo(self, real_sec: float, scale: float) -> None:
         self.slow_timer = real_sec
         self.time_scale = scale
+
+    def _scene_open_sound(self, scene) -> None:
+        try:
+            name = scene.open_sound()
+        except Exception:
+            name = None
+        if name:
+            self.sfx.play(name, 0.7)
 
     def fade_in(self, sec: float = 0.5) -> None:
         """검은 화면에서 서서히 밝아지는 전환."""

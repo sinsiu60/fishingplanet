@@ -18,6 +18,7 @@ ROW_X = 150  # 줄 이름 오른쪽에 조절 버튼
 
 
 class SettingsScene(Scene):
+    OPEN_SOUND = "ui_tick"   # 메뉴 소리 (DT10)
     UI_FRAME = True
 
     def __init__(self, game):

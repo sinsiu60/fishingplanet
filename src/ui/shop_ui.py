@@ -131,6 +131,8 @@ def button(canvas, r: pygame.Rect, label: str, style: str, mouse) -> None:
     """style: fill(노랑 꽉 참) · outline(노랑 테두리) · dim(흐림, 못 누름)."""
     hov = r.collidepoint(mouse) and style != "dim"
     canvas.fill(SHADOW, r.move(1, 1))
+    from src.ui.widgets import pressed_dy
+    r = r.move(0, pressed_dy(r))   # 눌림 1px (DT10)
     if style == "fill":
         canvas.fill((255, 232, 150) if hov else YELLOW, r)
         btext(canvas, label, r.center, DARK_TEXT, 11, "center", shadow=False)

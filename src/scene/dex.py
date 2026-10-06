@@ -43,6 +43,7 @@ def draw_stars(canvas, x: int, y: int, flags: list[bool], gap: int = 6) -> None:
 
 
 class DexScene(Scene):
+    OPEN_SOUND = "ui_paper"   # 메뉴 소리 (DT10)
     UI_FRAME = True
 
     def __init__(self, game, fishing, phantom_tab: bool = False):

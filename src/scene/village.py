@@ -448,7 +448,7 @@ class VillageScene(Scene):
         canvas.blit(bar, (0, 0))
         sname = seasons.name(self.season, self.cont)
         text(canvas, f"{self.cfg['name']} · {sname} · {self.fishing.clock.label()}", (8, 11), (255, 240, 200), 11, "midleft")
-        text(canvas, ui.money_text(self.save.money), (w - 150, 11), ui.ACCENT, 11, "midright")
+        text(canvas, ui.money_text(ui.money_anim(self.save.money)), (w - 150, 11), ui.ACCENT, 11, "midright")
         labels = (("수집", "collection"), ("가방", "inventory"), ("설정", "settings"))
         self.btns = []
         for i, (lab, key) in enumerate(labels):

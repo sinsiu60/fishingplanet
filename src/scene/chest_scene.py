@@ -29,6 +29,10 @@ CARD_AT = {"common": 0.65, "rare": 1.05, "special": 1.45, "legend": 2.15}
 class ChestScene(Scene):
     UI_FRAME = True
 
+    def open_sound(self):
+        """메뉴 소리 (DT10): 어부의 수첩으로 바로 열면 종이 넘기는 소리."""
+        return "ui_paper" if TABS[self.tabs.index][0] == "diary" else None
+
     def __init__(self, game, fishing):
         super().__init__(game)
         self.fishing = fishing
