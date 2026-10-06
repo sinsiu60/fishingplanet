@@ -75,13 +75,6 @@ class Pygame2Recipe(CompiledComponentsPythonRecipe):
             )
             open("Setup", "w").write(setup_file)
 
-    def build_compiled_components(self, arch):
-        # 32비트(armeabi-v7a)도 NEON SIMD 블리터를 켠다 (DESIGN.md 44 v1.3.5): setup.py 의 '-enable-arm-neon'(라즈베리 파이용 옵션) =
-        # CFLAGS 에 -mfpu=neon + PG_ENABLE_ARM_NEON → sse2neon 으로 SSE2 블리터를 컴파일. 64비트는 자동(simd_blitters.h __aarch64__).
-        # 없으면 반투명 섞기가 일반 C 경로라 폰에서 화면 한 번에 27~33ms (갤럭시 탭 32비트 실측).
-        self.setup_extra_args = ['-enable-arm-neon'] if arch.arch == 'armeabi-v7a' else []
-        super().build_compiled_components(arch)
-
     def get_recipe_env(self, arch):
         env = super().get_recipe_env(arch)
         env['USE_SDL2'] = '1'
@@ -90,6 +83,12 @@ class Pygame2Recipe(CompiledComponentsPythonRecipe):
         # p4a 환경엔 최적화 옵션이 없어 pygame C 모듈이 -O0 으로 컴파일됐다 (v0.8.0~0.8.11):
         # 반투명 blit 한 번(600x270)이 폰에서 20~80ms → 파이팅 FPS 5~20. -O2 를 끝에 붙여 이긴다 (뒤에 오는 -O 가 적용됨).
         env["CFLAGS"] = env.get("CFLAGS", "") + " -O2"
+        if arch.arch == 'armeabi-v7a':
+            # 32비트도 NEON SIMD 블리터를 켠다 (DESIGN.md 44 v1.3.5). setup.py 의 '-enable-arm-neon' 옵션과 같은 효과
+            # (-mfpu=neon + PG_ENABLE_ARM_NEON → simd_blitters.h 가 sse2neon 으로 SSE2 블리터를 컴파일). 64비트는 자동(__aarch64__).
+            # 옵션 대신 CFLAGS 로 주는 이유: p4a 는 setup_extra_args 를 'pip install .' 에도 넘겨 pip 가 '-e nable-arm-neon' 으로 읽고 실패.
+            # 없으면 반투명 섞기가 일반 C 경로라 폰에서 화면 한 번에 27~33ms (갤럭시 탭 32비트 실측).
+            env["CFLAGS"] += " -mfpu=neon -DPG_ENABLE_ARM_NEON=1"
         return env
 
 
