@@ -33,6 +33,23 @@ class Pygame2Recipe(CompiledComponentsPythonRecipe):
                 if os.path.exists(c):
                     os.remove(c)
 
+            # 32비트 NEON 블리터 버스 에러 (v1.3.5, 갤럭시 탭: 첫 장면 blit 에서 SIGBUS). pygame 2.6.1 에 들어 있는 옛 sse2neon 의
+            # _mm_storel_epi64 가 8바이트를 쓰는 대신 *a 를 16바이트로 읽고 다시 쓴다 — 32비트 블리터(STORE_M128_INTO_64, 픽셀 2개 =
+            # 8바이트, 주소는 4바이트 정렬)에서 ARM32 는 __m128i 정렬 힌트(vld1 [r:64]) 때문에 정렬 안 된 주소에서 버스 에러.
+            # 64비트는 ENV64BIT 경로(_mm_cvtsi128_si64)라 안 걸린다. 상류(sse2neon 최신)와 같게 아래 8바이트만 vst1_s32 로 쓴다
+            # (int32 정렬 = 4 → 힌트 없음).
+            neon_h = join("src_c", "include", "sse2neon.h")
+            src = open(neon_h).read()
+            bad = ("FORCE_INLINE void _mm_storel_epi64(__m128i *a, __m128i b)\n{\n"
+                   "    uint64x1_t hi = vget_high_u64(vreinterpretq_u64_m128i(*a));\n"
+                   "    uint64x1_t lo = vget_low_u64(vreinterpretq_u64_m128i(b));\n"
+                   "    *a = vreinterpretq_m128i_u64(vcombine_u64(lo, hi));\n}\n")
+            good = ("FORCE_INLINE void _mm_storel_epi64(__m128i *a, __m128i b)\n{\n"
+                    "    vst1_s32((int32_t *) a, vget_low_s32(vreinterpretq_s32_m128i(b)));\n}\n")
+            assert bad in src or good in src, "pygame sse2neon.h 의 _mm_storel_epi64 가 바뀜 — 레시피 확인"
+            if bad in src:
+                open(neon_h, "w").write(src.replace(bad, good))
+
             setup_template = open(join("buildconfig", "Setup.Android.SDL2.in")).read()
             # pygame 2.6.1 안드로이드 템플릿 버그: aarch64 에선 NEON(sse2neon)으로 SIMD 블리터를 켜는데
             # surface 모듈에 simd_blitters_sse2.c / _avx2.c 가 빠져 있어 폰에서 'cannot locate symbol

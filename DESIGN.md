@@ -5187,3 +5187,8 @@ PC(서버) 숫자는 폰보다 5~10배 빠르므로 비율로 본다. 폰과 같
   파이팅 '감기' 는 `input.held` 를 대신해 넣음, 튜토리얼은 매 프레임 끔), `src/scene/bench_result.py` 결과 화면, 설정 → 접근성 3줄,
   `tools/perf/run_bench.py`(cProfile 상위 20) · `analyze_log.py`. 결과표·병목 목록·고칠 순서는 OPTIMIZATION.md "O1 결과". 기기 로그는 `tools/perf/logs/`.
   찾은 버그: `mutation.py apply` 의 함수 안 `load_json` 재import (frenzy + tired_sec 없음 → UnboundLocalError).
+- **v1.3.6** (갤럭시 탭 32비트: v1.3.5 첫 장면 `splash.draw` 의 blit 에서 `Fatal Python error: Bus error`, 안전 모드로도 같음):
+  pygame 2.6.1 에 묶인 옛 sse2neon 의 `_mm_storel_epi64` 가 8바이트 대신 `*a` 16바이트를 읽고 되쓴다. 32비트 블리터는
+  `STORE_M128_INTO_64`(픽셀 2개 = 8바이트, 주소 4바이트 정렬)로 이걸 쓰는데, ARM32 는 `__m128i` 정렬 힌트가 붙은 `vld1 [r:64]` 라
+  정렬 안 된 주소에서 SIGBUS (aarch64 는 `ENV64BIT` → `_mm_cvtsi128_si64` 라 안 걸림). 레시피 `prebuild_arch` 에서 상류 최신과 같게
+  `vst1_s32` 8바이트 쓰기로 패치. 다른 sse2neon 함수 중 포인터를 역참조하는 건 loadl/loadu/storeu 뿐이고 전부 힌트 없는 int32 접근.
