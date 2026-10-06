@@ -74,6 +74,8 @@ def value(save, a: dict) -> int:
         return int(d.get("quests", {}).get("done", 0))
     if t == "prints":
         return len(d.get("prints", {}))
+    if t == "release":
+        return int(d.get("details", {}).get("release_count", 0))
     if t == "phantoms":
         from src.fishing import phantom
         return len(phantom.state(save).get("caught", {}))

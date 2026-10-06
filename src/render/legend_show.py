@@ -920,6 +920,10 @@ class LegendShow:
             size = self.result["size"] * (1 - (1 - u) ** 3)
             s = font16.render(f"{size:.1f}cm", False, WHITE)
             canvas.blit(s, (cx - s.get_width() // 2, r.y + 44))
+        if self.news.get("stamp") and t >= m["record"]:
+            # 날씨 · 시간 · 장소 도장 (DETAILS D: 전설 · 환상 포획 연출은 그대로, 도장만) — 카드 오른쪽 아래
+            from src.ui.catch_stamp import draw_stamp
+            draw_stamp(canvas, self.news["stamp"], (r.right - 6, r.bottom - 3))
         if t >= m["record"] and self.result.get("rank"):   # 랭크: 왼쪽에 묵직하게
             u = clamp((t - m["record"]) / 0.12, 0, 1)
             rk = font16.render(self.result["rank"], False, GOLD_LIGHT if self.result["rank"] == "S" else WHITE)

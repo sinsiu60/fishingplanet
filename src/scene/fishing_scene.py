@@ -10,7 +10,7 @@ from src.core.config import game_config, load_json
 from src.core.fonts import get_font
 from src.core.game_clock import PERIODS, GameClock
 from src.core.weather import WEATHER_KO, Weather, roll_weather
-from src.core.mathutil import clamp, lerp, lerp_color, smoothstep
+from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 from src.fishing.bite import BiteController, BiteState, roll_size
 from src.fishing.casting import CastController, CastState
 from src.fishing.fight import LOSE_REASONS, Fight
@@ -152,6 +152,13 @@ class FishingScene(Scene):
         self.hook_cine = HookCine()   # 고등급 입질 연출 ① 예고 · ② 챔질 연출 (DETAILS B, DT4~DT6)
         self.cine_full = False        # 디버그 Shift+F3: 본 종이어도 늘 전체 버전
         self.cine_clock = time.perf_counter   # 입질 연출 시계 (실제 시간, 시험에선 바꿔 끼움)
+        # 손 · 장비 · 잡은 직후 (DETAILS C · D, DT7)
+        self.wet_t = 0.0            # 뜰채로 건진 뒤 젖은 손 남은 시간
+        self.bait_anim = None       # 미끼 끼우기 0.8초 (남은 시간)
+        self.last_bait = self.save.data.get("gear", {}).get("bait")
+        self.board = None           # 계측판 (MeasureBoard)
+        self.release_scene = None   # 놓아주기 1초 장면
+        self.release_item = None    # 놓아줄 수 있는 살림망 항목 (방금 잡은 일반 · 고급 · 희귀)
         from src.render.legend_hook_fx import LegendHookFx
         self.legend_fx = LegendHookFx()   # 전설 입질 연출 그림 (DT5)
         from src.render.phantom_hook_fx import PhantomHookFx
@@ -940,6 +947,16 @@ class FishingScene(Scene):
 
     def _left_click(self) -> None:
         c, f = self.cast, self.fight
+        if self.release_scene is not None:
+            return   # 놓아주기 장면 (1초) 중
+        if self.board is not None:
+            if self.board.can_skip():   # 계측판: 0.3초 이후 탭 = 바로 포획 카드
+                self.board = None
+                self.end_t = 0.0
+            return
+        if self.bait_anim is not None:
+            self.bait_anim = None   # 미끼 끼우기: 탭하면 건너뛰기
+            return
         if self.hook_cine.active:
             # ② 챔질 연출 중: 입력 무시, 0.5초 이후 탭하면 건너뛰기
             if self.hook_cine.can_skip():
@@ -965,6 +982,9 @@ class FishingScene(Scene):
             elif f.phase in ("caught", "lost") and self.end_t > fight_hud.CATCH_READY_T:
                 if f.phase == "caught" and self._print_btn() is not None and self._print_btn().collidepoint(self.mouse):
                     self._make_print(f)
+                    return
+                if f.phase == "caught" and self._release_btn() is not None and self._release_btn().collidepoint(self.mouse):
+                    self._release(f)
                     return
                 self._end_fight()
             return
@@ -1200,6 +1220,35 @@ class FishingScene(Scene):
             return None
         return pygame.Rect(self.cam.width - 134, 118, 124, 18)
 
+    def _release_btn(self):
+        """포획 카드 [놓아주기] (일반 · 고급 · 희귀, DETAILS D)."""
+        if self.release_item is None or self.release_scene is not None or self.end_t < fight_hud.CATCH_READY_T:
+            return None
+        return pygame.Rect(self.cam.width - 134, 150, 124, 18)
+
+    def _draw_release_btn(self, canvas) -> None:
+        r = self._release_btn()
+        if r is None:
+            return
+        hov = r.collidepoint(self.mouse)
+        canvas.fill((24, 44, 52) if hov else (18, 32, 40), r)
+        pygame.draw.rect(canvas, (150, 210, 220), r, 1)
+        hud.text(canvas, "놓아주기", r.center, (210, 240, 245), 11, "center")
+
+    def _release(self, f) -> None:
+        """놓아주기: 살림망에서 빼고(판매 안 됨) 도감 포인트 +1 (하루 20) → 헤엄쳐 사라지는 1초 장면 → 카드 닫기."""
+        from src.render.catch_board import ReleaseScene
+        got = self.save.release_last(self.release_item)
+        self.release_item = None
+        self.release_scene = ReleaseScene(f.result["fish"], f.result["size"], self.cam.width, self.cam.height)
+        self.sfx.play("sfx_splash_small", 0.7)
+        msg = "물로 돌려보냈다 · 도감 포인트 +1" if got["point"] else "물로 돌려보냈다 (오늘 도감 포인트는 다 받음)"
+        self.toasts.show(msg, (170, 230, 240), 2.4, 11)
+        if got["title"]:
+            from src.save.quests import shop_item
+            self.toasts.show(f"칭호 「{shop_item(got['title'])['name']}」", (255, 214, 90), 3.0, 11)
+        self.game.save_now()
+
     def _draw_print_btn(self, canvas) -> None:
         r = self._print_btn()
         if r is None:
@@ -1251,6 +1300,9 @@ class FishingScene(Scene):
         self.landing = None
         self.dragon_fx = None
         self.legend_fx.end_fight()   # 여우비 빗줄기 끝
+        self.board = None
+        self.release_scene = None
+        self.release_item = None
         self._check_new_spots()
         if last and last["fish"]["id"] == "dragon_carp" and not self.save.data.get("ending_seen"):
             self.save.data["ending_seen"] = True
@@ -1375,6 +1427,19 @@ class FishingScene(Scene):
         override = self.game.input.aim_override(self.fight is not None and self.fight.phase == "fight")
         if override is not None:
             aim = override  # 터치: 파이팅 중엔 릴 패드 노브가 방향
+        self.wet_t = max(0.0, self.wet_t - dt)
+        if self.legend_fx.rain_fight and not self.hook_cine.active and (self.fight is None or self.fight.phase not in ("fight", "net")):
+            self.legend_fx.end_fight()   # 여우비 빗줄기: 파이팅(뜰채 포함)이 끝나면 사라짐 (DT5)
+        cur_bait = self.save.data.get("gear", {}).get("bait")
+        if cur_bait != self.last_bait:
+            # 미끼를 바꿨다 → 낚싯대가 매달린 상태면 0.8초 미끼 끼우기 (DETAILS C)
+            self.last_bait = cur_bait
+            if self.cast.state == CastState.READY and self.fight is None and self.training is None:
+                self.bait_anim = load_json("details/hands_catch.json")["bait_anim"]["sec"]
+        if self.bait_anim is not None:
+            self.bait_anim -= dt
+            if self.bait_anim <= 0 or self.cast.state != CastState.READY:
+                self.bait_anim = None
         self.cast.update(dt, aim)
         for ev in self.cast.events:
             if ev == "splash":
@@ -1384,6 +1449,10 @@ class FishingScene(Scene):
                 self.sfx.play("sfx_cast_swing", 0.45 + 0.55 * self.cast.power)  # 휙 (파워만큼 크게)
                 lo, hi = load_json("details/map_details.json")["actions"]["cast_drops"]
                 self.cast_drops = [random.randint(lo, hi), 0.05]   # 날아가는 궤적을 따라 물방울 5~8개 (A-4)
+                if self.training is None:   # 낚싯대별 캐스팅 횟수 → 손잡이 손때 (C)
+                    rc = self.save.data.setdefault("details", {}).setdefault("rod_casts", {})
+                    rid = self.save.data["gear"]["rod"]
+                    rc[rid] = rc.get(rid, 0) + 1
         self.cast.events.clear()
         self._cast_audio()
 
@@ -1836,6 +1905,22 @@ class FishingScene(Scene):
             if self.landing is not None:
                 self._update_landing(dt)
                 return
+            if self.release_scene is not None:
+                self.release_scene.update(dt)
+                if self.release_scene.done:
+                    self.release_scene = None
+                    self._end_fight()
+                return
+            if self.board is not None:
+                from src.render.catch_board import size_class
+                for ev in self.board.update(dt):
+                    if ev == "flap":   # 크기 3단계 퍼덕 소리
+                        name = load_json("details/hands_catch.json")["board"]["flap_sfx"][size_class(self.board.size)]
+                        self.sfx.play(name, 0.8)
+                if self.board.done:
+                    self.board = None
+                    self.end_t = 0.0
+                return
             prev = self.end_t
             self.end_t += dt
             if f.phase == "caught" and prev < fight_hud.STAMP_T <= self.end_t:
@@ -2017,6 +2102,7 @@ class FishingScene(Scene):
             if handoff and ev == "fanfare":
                 continue
             if ev == "hit":
+                self.wet_t = load_json("details/hands_catch.json")["wet_hand"]["after_net_sec"]   # 젖은 손 10초 (C)
                 cls = self.landing.cls
                 # 뜰채로 건질 때: 화면 아래쪽 1/4 에 물방울 6~10개가 맺혔다가 흘러내림 (A-4)
                 W, H = self.cam.width, self.cam.height
@@ -2063,8 +2149,15 @@ class FishingScene(Scene):
                     self.shake_kick = 3.0
         if self.landing.done:
             chest = self.landing.chest
+            lf = self.landing.fish
             self.landing = None
             self.end_t = 0.0
+            # 계측판 (일반 · 고급 · 희귀): 포획 카드 전에 1.6초 (설정 '포획 장면' 보통 · 짧게 · 끄기)
+            mode = self.settings.get("catch_scene") or "normal"
+            hc = load_json("details/hands_catch.json")["board"]
+            if mode != "off" and self.fight is not None and lf.get("rarity") in hc["for"]:
+                from src.render.catch_board import MeasureBoard
+                self.board = MeasureBoard(self.fight.result["fish"], self.fight.result["size"], mode, self.cam.width, self.cam.height)
             self.sfx.play("sfx_catch")
             if chest:
                 from src.save import treasure
@@ -2832,6 +2925,11 @@ class FishingScene(Scene):
             f.result["fish"] = shown
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
+            hc = load_json("details/hands_catch.json")
+            self.release_item = (self.save.data["keepnet"][-1] if f.fish.get("rarity") in hc["release"]["for"]
+                                 and self.training is None and self.save.data["keepnet"] else None)
+            from src.ui.catch_stamp import stamp_text
+            self.catch_news["stamp"] = stamp_text(self.clock.hour, self.clock.period()[0], self.weather, self.season, self.spot)
             self.catch_news["chest"] = self.chest_drop
             if muts:
                 self.catch_news["mutations"] = list(muts)
@@ -3023,6 +3121,13 @@ class FishingScene(Scene):
             self.landing.draw(canvas, pal)
             self.screen_weather.draw_screen(canvas)   # 뜰채 물방울 · 날씨 (DT3)
             return
+        if self.board is not None:
+            self.board.draw(canvas, pal)              # 계측판 (DT7)
+            self.screen_weather.draw_screen(canvas)
+            return
+        if self.release_scene is not None:
+            self.release_scene.draw(canvas, pal)      # 놓아주기 1초 (DT7)
+            return
         if f is None:
             sh = self.bite.shadow if weather != "fog" else None  # 안개: 다가오는 그림자가 안 보인다
             if sh is not None and self.bite.fish is not None:
@@ -3122,7 +3227,9 @@ class FishingScene(Scene):
             rod_l = dict(rod_l, rod=skin[0], hi=skin[1])
             reel_l = dict(reel_l, body=skin[2])
         self._draw_trail(canvas, "rod_skin", geo["tip"], 2)
-        draw_rod(canvas, pal, geo, c.reel_angle, rod_l, reel_l, t)
+        draw_rod(canvas, pal, geo, c.reel_angle, rod_l, reel_l, t, hand_look=self._hand_look())
+        if self.bait_anim is not None and hanging:
+            self._draw_bait_anim(canvas, pal, tip)
 
         if hanging:
             bx, by = rod_tip_drop(tip, t)
@@ -3418,6 +3525,8 @@ class FishingScene(Scene):
             color = (255, 90, 70)
         cracks = 0.0 if lf >= 0.5 else (0.5 - lf) * 2
         sag = max(0.0, (45 - f.tension) * 0.35) + 1
+        if not f.reeling:   # 감지 않을 때 느슨한 처짐은 최대 8px (DETAILS C)
+            sag = min(sag, load_json("details/hands_catch.json")["line_slack"]["max_px"])
         if (d := self._pat_k(b, "reverse")) is not None and not b.doing("reverse"):
             sag += 10 * d  # 역주행 예고: 줄이 처진다
         from src.ui import rush_cue
@@ -3453,6 +3562,7 @@ class FishingScene(Scene):
             draw_catch_cut(canvas, pal, f.result, self.end_t)
             fight_hud.draw_catch_info(canvas, f.result, self.end_t, self.catch_news)
             self._draw_print_btn(canvas)
+            self._draw_release_btn(canvas)
             if qr is not None and qr.items and self.end_t > 1.0:
                 fight_hud.draw_quests(canvas, qr.hud_lines(), self.hud_inset if self.touch else 0)  # 의뢰 상세는 결과 화면에
             if self.end_t > 1.2:   # 왼쪽 위 기록 배지(최대 4줄) 아래 세로 — 가운데 글자를 가리지 않게
@@ -3959,6 +4069,50 @@ class FishingScene(Scene):
             hud.text(canvas, f"예고 ×{m:g}", (canvas.get_width() - 8 - inset, canvas.get_height() - 8), (150, 158, 180),
                      11, "bottomright")
 
+    def _hand_look(self) -> dict:
+        """손 · 장비 디테일 (DETAILS C): 계절 장갑 · 젖은 손 · 손잡이 손때."""
+        hc = load_json("details/hands_catch.json")
+        g = hc["gloves"]
+        glove, mitten = None, False
+        if self.spot_id in g["mitten_spots"]:
+            glove, mitten = tuple(g["mitten"]), True
+        elif self.season == "winter":
+            glove = tuple(g["knit"])
+        wet = 0
+        wh = hc["wet_hand"]
+        if self.weather in wh["weathers"] or self.wet_t > 0:
+            lo, hi = wh["dots"]
+            wet = lo + (int(self.t * 0.2) % (hi - lo + 1))
+        rid = self.save.data["gear"]["rod"]
+        rw = hc["rod_wear"]
+        n = self.save.data.get("details", {}).get("rod_casts", {}).get(rid, 0)
+        wear = 3 if rid in rw["always_worn"] else 1 + sum(1 for lv in rw["levels"][1:] if n >= lv)
+        return {"glove": glove, "mitten": mitten, "wet": wet, "wear": wear}
+
+    def _draw_bait_anim(self, canvas, pal, tip) -> None:
+        """미끼 끼우기 0.8초 (DETAILS C): 왼손이 아래에서 올라와 낚싯대 끝에 매달린 바늘에 미끼를 끼우고 내려감."""
+        sec = load_json("details/hands_catch.json")["bait_anim"]["sec"]
+        u = 1 - self.bait_anim / sec
+        bx, by = rod_tip_drop(tip, self.t)
+        hook = (bx, by + 6)
+        k = math.sin(math.pi * min(1.0, u))   # 올라왔다 내려감
+        start = (hook[0] - 70, canvas.get_height() + 20)
+        hx, hy = lerp(start[0], hook[0] - 6, k), lerp(start[1], hook[1] + 4, k)
+        skin, shadow = pal["hand"], pal["hand_shadow"]
+        g = self._hand_look()
+        if g["glove"] is not None:
+            from src.core.mathutil import scale_color as _sc
+            skin = _sc(g["glove"], 0.9)
+            shadow = _sc(skin, 0.72)
+        pygame.draw.polygon(canvas, pal["sleeve"], [(hx - 8, hy + 6), (hx + 2, hy + 8), (hx - 30, hy + 80), (hx - 48, hy + 70)])
+        pygame.draw.ellipse(canvas, shadow, (hx - 7, hy - 3, 14, 10))
+        pygame.draw.ellipse(canvas, skin, (hx - 8, hy - 4, 14, 10))
+        if 0.3 < u < 0.75:   # 손끝에 잡은 미끼가 바늘에 꿰어짐
+            wig = math.sin(self.t * 30) * 1
+            pygame.draw.line(canvas, (190, 110, 100), (hx + 4, hy - 2), (hook[0] + wig, hook[1] + 2), 2)
+        pygame.draw.line(canvas, scale_color(pal["line"], 0.9), (bx, by), hook, 1)
+        pygame.draw.arc(canvas, (200, 200, 210), (hook[0] - 2, hook[1] - 1, 4, 5), math.pi, math.tau, 1)   # 바늘
+
     def _wind_bend(self) -> float:
         """낚싯줄 휨: 줄 가운데가 바람 쪽으로 바람 세기에 비례해 최대 6px (DETAILS A-2)."""
         mx = load_json("details/weather_screen.json")["line_bend"]["max_px"]
@@ -3998,7 +4152,8 @@ class FishingScene(Scene):
         if c.state == CastState.RETRIEVE or dip > 0.5:
             sag = 3  # 팽팽
         else:
-            sag = 10 + abs(tip[0] - sx) * 0.04
+            # 감지 않고 장력이 낮으면 아래로 처진 곡선, 최대 8px (DETAILS C) — 바람 휨(dx)과 합쳐짐
+            sag = min(load_json("details/hands_catch.json")["line_slack"]["max_px"], 6 + abs(tip[0] - sx) * 0.04)
         self.last_line_pts = draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5 * (1 - dip)), sag, bias=0.6, dx=self._wind_bend())
         self._draw_trail(canvas, "float_skin", (sx, sy + bob), max(1, int(size * 0.3)))
         draw_bobber(canvas, self._bobber_pal(pal), sx, sy + bob, size, floating=True, dip=dip)

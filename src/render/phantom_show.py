@@ -679,6 +679,10 @@ class PhantomShow:
             size = self.result["size"] * (1 - (1 - u) ** 3)
             s = font16.render(f"{size:.1f}cm", False, WHITE)
             canvas.blit(s, (cx - s.get_width() // 2, r.y + 44))
+        if self.news.get("stamp") and t >= m["record"]:
+            # 날씨 · 시간 · 장소 도장 (DETAILS D: 전설 · 환상 포획 연출은 그대로, 도장만) — 카드 오른쪽 아래
+            from src.ui.catch_stamp import draw_stamp
+            draw_stamp(canvas, self.news["stamp"], (r.right - 6, r.bottom - 3))
         # 첫 포획: 도감에 보라 인장 + NEW
         if self.news.get("phantom_new") and t >= m["record"]:
             u = clamp((t - m["record"]) / 0.18, 0, 1)

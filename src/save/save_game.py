@@ -204,7 +204,8 @@ def new_data() -> dict:
         "owned": {k: [eq[k][0]["id"]] for k in GEAR_KINDS} | {"bait": ["worm"]},
         "keepnet": [],
         # 디테일 업데이트 (DESIGN.md 45장): seen_hook_cinematic = 전체 버전 입질 연출을 본 종 (DT4)
-        "details": {"seen_hook_cinematic": []},
+        "details": {"seen_hook_cinematic": [], "rod_casts": {}, "release_count": 0, "release_points": 0,
+                    "release_points_today": {"date": "", "n": 0}},
         "dex": {},
         "stats": {"catches": 0, "s_ranks": 0, "perfects": 0, "lost": 0, "earned": 0,
                   "chests_opened": 0, "s_ranks_eldra": 0, "double_perfects": 0, "mutations_caught": 0,
@@ -706,6 +707,35 @@ class SaveGame:
         if result["rank"] == "S":
             st["s_ranks"] += 1
         return news
+
+    def release_last(self, item: dict) -> dict:
+        """놓아주기 (DETAILS D, DT7): 방금 잡은 한 마리를 살림망에서 뺀다 (도감 · 숙련 · 업적은 이미 포획으로 기록).
+        도감 포인트 +1 (실제 날짜 하루 최대 20). 돌려주는 값 {"point": 받은 포인트, "count": 누적, "title": 새 칭호 id | None}."""
+        import datetime
+        c = load_json("details/hands_catch.json")["release"]
+        kn = self.data["keepnet"]
+        for i in range(len(kn) - 1, -1, -1):
+            if kn[i] is item:
+                kn.pop(i)
+                break
+        det = self.data.setdefault("details", {})
+        det["release_count"] = det.get("release_count", 0) + 1
+        today = datetime.date.today().isoformat()
+        day = det.setdefault("release_points_today", {"date": "", "n": 0})
+        if day.get("date") != today:
+            day["date"], day["n"] = today, 0
+        got = 0
+        if day["n"] < c["daily_max"]:
+            got = c["points_per"]
+            day["n"] += got
+            det["release_points"] = det.get("release_points", 0) + got
+        title = None
+        if det["release_count"] >= c["title_at"]:
+            cos = self.data.setdefault("cosmetics", {"titles": [], "float_skins": [], "rod_skins": []})
+            if c["title_id"] not in cos.setdefault("titles", []):
+                cos["titles"].append(c["title_id"])
+                title = c["title_id"]
+        return {"point": got, "count": det["release_count"], "title": title}
 
     def record_loss(self) -> None:
         self.data["stats"]["lost"] += 1

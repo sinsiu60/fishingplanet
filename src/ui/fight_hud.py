@@ -316,6 +316,10 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
         text(canvas, f"「{news['title']}」", (w // 2, 176), (255, 214, 90), 11, "center")  # 장착한 칭호
     if t > 1.2:
         text(canvas, "살림망에 보관했어요 (하루네 낚시점에서 판매)", (w // 2, 240), (170, 180, 200), 11, "center")
+    if news and news.get("stamp") and t > 1.1:
+        # 날씨 · 시간 · 장소 도장 (DETAILS D, 모든 등급) — 오른쪽 아래
+        from src.ui.catch_stamp import draw_stamp
+        draw_stamp(canvas, news["stamp"], (w - 10, canvas.get_height() - 30))
     if t > CATCH_READY_T + 0.5 and int(t * 2) % 2 == 0:
         text(canvas, "클릭해서 계속", (w // 2, 256), (170, 180, 200), 11, "center")
 

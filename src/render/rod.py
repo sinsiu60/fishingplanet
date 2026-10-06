@@ -54,8 +54,10 @@ def _c(v):
 
 
 def draw_rod(canvas: pygame.Surface, pal: dict, geo: dict, reel_angle: float, rod_look: dict | None = None,
-             reel_look: dict | None = None, t: float = 0.0) -> None:
-    """낚싯대(티어 외형) + 릴(티어 외형) + 낚싯대를 쥔 손. rod_look/reel_look = gear_look() (없으면 팔레트 색)."""
+             reel_look: dict | None = None, t: float = 0.0, hand_look: dict | None = None) -> None:
+    """낚싯대(티어 외형) + 릴(티어 외형) + 낚싯대를 쥔 손. rod_look/reel_look = gear_look() (없으면 팔레트 색).
+    hand_look (DETAILS C, DT7): glove = 장갑 색 | None, mitten = 두꺼운 방한 장갑, wet = 물기 점 수(0 = 마른 손), wear = 손잡이 손때 1~3."""
+    hl = hand_look or {}
     hand = geo["hand"]
     dx, dy = geo["dir"]
     px, py = geo["perp"]
@@ -110,9 +112,43 @@ def draw_rod(canvas: pygame.Surface, pal: dict, geo: dict, reel_angle: float, ro
         r = 2 + int(1.5 * abs(math.sin(t * 4)))
         pygame.draw.circle(canvas, glow, (int(tx), int(ty)), r)
 
+    _draw_wear(canvas, at, grip, int(hl.get("wear", 1)))
     _draw_reel(canvas, pal, at, reel_angle, reel_look, t)
     _draw_arm(canvas, pal, at)
-    _draw_hand(canvas, pal, at)
+    _draw_hand(canvas, pal, at, hl.get("glove"), bool(hl.get("mitten")))
+    if hl.get("wet"):
+        _draw_wet(canvas, at, int(hl["wet"]), t)
+
+
+def _draw_wear(canvas, at, grip, level: int) -> None:
+    """손잡이 손때 (외형만, DT7): 손 바로 앞 앞손잡이(엄지가 닿는 곳)에. 1 새것 / 2 살짝 닳음 (반들반들한 자국) / 3 많이 닳음 (거무스름한 때 + 반들한 줄)."""
+    if level <= 1:
+        return
+    worn = scale_color(grip, 1.3)
+    dirt = scale_color(grip, 0.55)
+    if level >= 3:
+        pygame.draw.line(canvas, dirt, at(15, -1), at(24, -1), 3)     # 손때로 거뭇해진 앞손잡이
+        pygame.draw.line(canvas, worn, at(16, -2), at(23, -2), 1)     # 엄지가 닳게 한 반들한 줄
+        for u in (17, 21):
+            x, y = at(u, 0)
+            canvas.fill(dirt, (int(x), int(y), 2, 1))
+    else:
+        for u in (17, 21):
+            x, y = at(u, -2)
+            canvas.fill(worn, (int(x), int(y), 2, 1))
+
+
+_WET = ((-6, -3), (-1, -5), (4, -4), (6, 2), (-3, 3), (1, 7))
+
+
+def _draw_wet(canvas, at, n: int, t: float) -> None:
+    """젖은 손: 손 위에 반짝이는 물기 점 n개 (번갈아 반짝)."""
+    for i, (u, v) in enumerate(_WET[:max(0, min(len(_WET), n))]):
+        x, y = at(u, v)
+        on = int(t * 3 + i * 1.7) % 3 != 0
+        canvas.fill((235, 248, 255) if on else (170, 200, 225), (int(x), int(y), 1, 1))
+        if on and (i + int(t * 2)) % 4 == 0:
+            canvas.fill((255, 255, 255), (int(x) - 1, int(y), 3, 1))
 
 
 def _draw_arm(canvas, pal, at) -> None:
@@ -175,10 +211,26 @@ def _draw_reel(canvas, pal, at, reel_angle: float, look: dict | None, t: float) 
     pygame.draw.circle(canvas, knob, (int(hx), int(hy)), 2 if shape in ("large", "ornate") else 1)
 
 
-def _draw_hand(canvas, pal, at) -> None:
-    """낚싯대를 쥔 주먹: 손등이 대를 덮고, 손가락 넷이 대 아래로 말려 감싸며, 엄지는 대 위에 길게 얹힘."""
+def _draw_hand(canvas, pal, at, glove=None, mitten: bool = False) -> None:
+    """낚싯대를 쥔 주먹: 손등이 대를 덮고, 손가락 넷이 대 아래로 말려 감싸며, 엄지는 대 위에 길게 얹힘.
+    glove = 장갑 색 (겨울 니트 · 빙해 방한, DT7) — 밤 · 날씨 팔레트의 손 밝기를 따라 어둡게."""
     skin, shadow = pal["hand"], pal["hand_shadow"]
+    if glove is not None:
+        lum = (skin[0] + skin[1] + skin[2]) / (3 * 200.0)   # 기본 낮 손 밝기 ≈ 200
+        skin = scale_color(tuple(glove), max(0.35, min(1.1, lum)))
+        shadow = scale_color(skin, 0.72)
     dark = scale_color(shadow, 0.8)
+    if mitten:
+        # 두꺼운 방한 장갑: 손가락 구분 없이 둥근 덩어리 + 손목 띠
+        fist = [at(-10, -6), at(-3, -8), at(6, -7), at(10, -2), at(10, 7), at(6, 11), at(-4, 12), at(-11, 7)]
+        pygame.draw.polygon(canvas, shadow, [(x + 1, y + 1) for x, y in fist])
+        pygame.draw.polygon(canvas, skin, fist)
+        pygame.draw.polygon(canvas, scale_color(skin, 1.12), [at(-8, -5), at(-2, -7), at(5, -6), at(1, -2), at(-6, -1)])
+        pygame.draw.line(canvas, scale_color(skin, 0.6), at(-9, -5), at(-9, 9), 2)   # 손목 띠
+        thumb = [at(-1, -6), at(10, -7), at(13, -4), at(11, -2), at(2, -2)]
+        pygame.draw.polygon(canvas, shadow, [(x + 1, y + 1) for x, y in thumb])
+        pygame.draw.polygon(canvas, skin, thumb)
+        return
     # 손등·주먹 (대를 감싼 둥근 덩어리, 낚싯대 방향으로 기울어짐)
     fist = [at(-9, -5), at(-3, -7), at(5, -6), at(8, -2), at(8, 5), at(5, 9), at(-4, 10), at(-10, 6)]
     pygame.draw.polygon(canvas, shadow, [(x + 1, y + 1) for x, y in fist])
@@ -198,5 +250,11 @@ def _draw_hand(canvas, pal, at) -> None:
     thumb = [at(-1, -5), at(9, -6), at(13, -4), at(12, -2), at(2, -2)]
     pygame.draw.polygon(canvas, shadow, [(x + 1, y + 1) for x, y in thumb])
     pygame.draw.polygon(canvas, skin, thumb)
+    if glove is not None:
+        # 니트 장갑: 손등에 짜임 줄무늬 + 손목 고무단
+        for u in (-6, -2, 2, 6):
+            pygame.draw.line(canvas, scale_color(skin, 0.82), at(u, -5), at(u, 4), 1)
+        pygame.draw.line(canvas, scale_color(skin, 1.15), at(-9, -4), at(-9, 8), 2)
+        return
     nail = at(11, -4)
     pygame.draw.circle(canvas, scale_color(skin, 1.15), (int(nail[0]), int(nail[1])), 1)

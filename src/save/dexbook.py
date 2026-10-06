@@ -114,7 +114,8 @@ def star_count(save, fish: dict) -> int:
 
 
 def points(save) -> int:
-    return sum(star_count(save, f) for f in all_species())
+    """도감 포인트 = 별 합 + 놓아주기로 받은 포인트 (DETAILS D, 45-D 확정 7 — 도감 보상 문턱에도 포함)."""
+    return sum(star_count(save, f) for f in all_species()) + int(save.data.get("details", {}).get("release_points", 0))
 
 
 def max_points(save=None) -> int:
