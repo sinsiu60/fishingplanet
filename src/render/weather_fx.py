@@ -197,6 +197,7 @@ class Ambient:
         self.flock: list | None = None
         self.flock_t = random.uniform(3, 10)
         self.fireflies_on = False   # 반딧불은 MapFx (여름 밤 · 저수지 · 계곡 · 습지, DETAILS A-5) 로 교체
+        self.flies_ok = True        # 날아다니는 잠자리 조건 (장면이 DETAILS E 조건으로 정함)
         self.gulls = [[random.uniform(0, w), random.uniform(20, horizon - 30), random.choice((-1, 1)),
                        random.uniform(12, 22), random.uniform(0, 6)] for _ in range(3)]
 
@@ -238,7 +239,7 @@ class Ambient:
 
     def draw(self, canvas, pal, period: str, weather: str, sea: bool, t: float) -> None:
         dry = weather == "clear"
-        if period in ("morning", "day") and dry and not sea:
+        if period in ("morning", "day") and dry and not sea and self.flies_ok:
             body = scale_color(lerp_color(pal["rod"], (40, 70, 160), 0.6), 1.0)
             wing = lerp_color(pal["sky_bottom"], (255, 255, 255), 0.6)
             for x, y, _, _, ph in self.flies:

@@ -159,6 +159,8 @@ class FishingScene(Scene):
         self.board = None           # 계측판 (MeasureBoard)
         self.release_scene = None   # 놓아주기 1초 장면
         self.release_item = None    # 놓아줄 수 있는 살림망 항목 (방금 잡은 일반 · 고급 · 희귀)
+        from src.render.ambient_life import AmbientLife
+        self.life = AmbientLife()   # 살아 있는 주변 (DETAILS E, DT8) — 그림 · 소리만
         from src.render.legend_hook_fx import LegendHookFx
         self.legend_fx = LegendHookFx()   # 전설 입질 연출 그림 (DT5)
         from src.render.phantom_hook_fx import PhantomHookFx
@@ -1710,6 +1712,15 @@ class FishingScene(Scene):
             "horizon": cam.horizon, "bobber": bob, "cam": cam, "ripples": self.ripples, "bubbles": self.bubbles,
             "droplets": self.droplets, "sfx": self.sfx, "screen": self.screen_weather,
             "played": getattr(self.ambience, "played", []), "wind": self.wind.x, "t": self.t})
+        lc = load_json("details/ambient_life.json")["dragonfly"]
+        self.ambient.flies_ok = (self.season in lc["seasons"] and self.clock.period()[0] in lc["periods"]
+                                 and self.spot_id in lc["spots"])   # 기존 날아다니는 잠자리도 문서 조건으로 (확정 6)
+        self.life.update(dt, {
+            "spot": self.spot_id, "season": self.season, "period": self.clock.period()[0], "weather": self.weather,
+            "fighting": f is not None, "cam": cam, "ripples": self.ripples, "sfx": self.sfx,
+            "reeling": (self.ctl.lure == "retrieve" or c.state == CastState.RETRIEVE
+                        or (f is not None and f.phase == "fight" and f.reeling)),
+            "bobber_xz": (c.bx, c.bz) if c.state == CastState.LANDED and f is None else None})
         self._update_action_drops(dt)
 
     def _update_action_drops(self, dt: float) -> None:
@@ -2339,6 +2350,7 @@ class FishingScene(Scene):
             self.bite.start((c.bx, c.bz), c.current_distance())
         self.idle_ripple_t = 0.0
         self.lure_idle_t = 0.0
+        self.life.on_cast_landed(self.season, self.clock.period()[0], self.spot_id)   # 잠자리 15% (E)
         self.game.guide.event("cast_landed")
 
     def _splash_at(self, x: float, z: float, big: float) -> None:
@@ -2367,10 +2379,12 @@ class FishingScene(Scene):
                 self.sfx.play("sfx_roar", 0.6)
             self.shake_kick = 1.5
         elif ev == "nibble":
+            self.life.scare_fly()   # 입질이 오면 잠자리가 날아감 (E)
             self.sfx.play("sfx_nibble", 0.8, haptic="nibble")
             big = self.save.cosmetic_on("sparkle_float")  # 반짝이 찌: 입질 파문이 더 잘 보임
             self.ripples.spawn(c.bx, c.bz, size=0.5 if big else 0.35, life=1.0 if big else 0.8)
         elif ev == "bite":
+            self.life.scare_fly()
             from src.render import hook_cine
             pl = hook_cine.plan(self.save, self.bite.fish, self.cine_full) if self.training is None else {"pre": False}
             pre = hook_cine.cfg().get(pl.get("rarity") or "", {}).get("pre") if pl["pre"] else None
@@ -3182,6 +3196,7 @@ class FishingScene(Scene):
         self.hook_cine.draw_pre(canvas, cam, pal)  # ① 입질 예고 (찌 · 줄보다 먼저 → 찌를 가리지 않음)
         self.legend_fx.draw_world(canvas, pal)      # ② 전설: 거대한 그림자 · 빨려 드는 물결 (찌보다 먼저)
         self.phantom_hfx.draw_world(canvas, pal)    # ② 환상: 보라 터짐 · 깊은 등불 · 달 조각
+        self.life.draw_world(canvas, pal, t)        # 먼 낚시꾼 · 배 · 물새 · 먼 점프 (DT8)
 
         geo = self._rod_geo()
         tip = geo["tip"]
@@ -3228,6 +3243,7 @@ class FishingScene(Scene):
             reel_l = dict(reel_l, body=skin[2])
         self._draw_trail(canvas, "rod_skin", geo["tip"], 2)
         draw_rod(canvas, pal, geo, c.reel_angle, rod_l, reel_l, t, hand_look=self._hand_look())
+        self.life.draw_fly(canvas, geo["tip"], t)   # 낚싯대 끝 잠자리 (DT8)
         if self.bait_anim is not None and hanging:
             self._draw_bait_anim(canvas, pal, tip)
 
@@ -4138,6 +4154,8 @@ class FishingScene(Scene):
             return
         sy += self.map_fx.tilt_dy(sx)   # 먼바다 기울기: 찌가 기운 수면에 붙어 있게
         ox, oy = self.hook_cine.bobber_offset()   # ① 전설: 찌가 거칠게 끌려 들어감
+        if c.state == CastState.LANDED:
+            ox += self.life.wake_dx()   # 지나간 배의 물결: 찌 그림만 좌우로 (입질 · 판정 무관, E)
         sx += ox
         sy += oy
         bob = 0.0

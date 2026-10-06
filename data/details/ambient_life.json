@@ -1,0 +1,51 @@
+{
+  "_설명": "DETAILS.md E 살아 있는 주변 (DESIGN.md 45장, DT8). 모두 그림 · 소리만 — 확률 · 판정 · 보상에 영향 없음. '낮' = 시간대 낮(10~17시).",
+  "dragonfly": {
+    "_설명": "봄 · 여름 · 가을 낮, 동네 저수지 · 계곡 · 은빛 갈대 습지. 찌가 떠 있는 동안 캐스팅마다 15% 확률로 낚싯대 끝에 내려앉음, 입질이 오거나 감기 시작하면 날아감. 기존 날아다니는 잠자리도 같은 조건으로 (45-D 확정 6)",
+    "seasons": ["spring", "summer", "autumn"],
+    "periods": ["day"],
+    "spots": ["reservoir", "valley", "marsh"],
+    "chance": 0.15,
+    "land_delay_sec": [2.0, 6.0]
+  },
+  "waterbird": {
+    "_설명": "낮, 동네 저수지 · 바다 방파제 · 은빛 갈대 습지. 2~3분에 1번 오리 또는 백로가 먼 수면에 내려앉았다가, 찌가 가까이 오면 날아감 (그 밖엔 40~70초 뒤 스스로)",
+    "periods": ["day"],
+    "spots": ["reservoir", "breakwater", "marsh"],
+    "every_sec": [120, 180],
+    "stay_sec": [40, 70],
+    "near_m": 7.0,
+    "dist_m": [24, 34]
+  },
+  "far_jump": {
+    "_설명": "모든 낚시터(심해 · 수정 동굴 제외), 20~40초마다 먼 수면에서 작은 물고기가 튀어 오름 (수면 징후와 별개, 작고 멀리). 파이팅 중엔 없음 (신호와 헷갈리지 않게)",
+    "exclude": ["deep", "crystal_cave"],
+    "every_sec": [20, 40],
+    "dist_m": [26, 40]
+  },
+  "boat": {
+    "_설명": "바다 방파제 · 먼바다, 2~4분에 1번 먼 배가 수평선을 지나가고, 잠시 뒤 물결이 밀려와 찌 그림만 좌우로 흔들림 (입질 · 판정 무관, 위아래로는 안 움직여 가짜 입질처럼 보이지 않게)",
+    "spots": ["breakwater", "offshore"],
+    "every_sec": [120, 240],
+    "speed_px_s": 14,
+    "wake_delay_sec": 6.0,
+    "wake_sec": 3.0,
+    "wake_px": 2.0
+  },
+  "frog": {
+    "_설명": "여름 · 가을 밤, 동네 저수지 · 계곡 · 은빛 갈대 습지. 개구리 울음 환경음, 릴을 감기 시작하면 뚝 그침, 10초 뒤 다시. (습지 환경음 조각의 계절 · 시간 무관 개구리는 이걸로 교체)",
+    "seasons": ["summer", "autumn"],
+    "periods": ["night"],
+    "spots": ["reservoir", "valley", "marsh"],
+    "every_sec": [3, 8],
+    "vol": 0.32,
+    "quiet_sec": 10
+  },
+  "angler": {
+    "_설명": "동네 저수지 · 바다 방파제, 아주 먼 곳에 사람 실루엣, 3~5분에 1번 낚싯대를 들어 올림",
+    "spots": ["reservoir", "breakwater"],
+    "every_sec": [180, 300],
+    "lift_sec": 2.2,
+    "angle_deg": {"reservoir": -24, "breakwater": 22}
+  }
+}
