@@ -1,7 +1,8 @@
-"""전설·환상 전용 BGM 테스트 (DESIGN.md 43, BOSS_BGM.md B5 디버그).
+"""전설·환상 전용 BGM 테스트 (DESIGN.md 43, BOSS_BGM.md B5 디버그 · BOSS_BGM_SUNO.md 보스 곡 테스트).
 
-설정 → 접근성 → 테스트: 전설·환상 음악. 곡(L01~L12 · P01~P12)과 페이즈를 골라 바로 재생하고
-위기·지침·실패·성공(전설 → 전설의 노래 / 환상 → 정적 0.35초 → 환상의 노래)을 눌러서 일으킨다. 기록은 안 남음.
+설정 → 접근성 → 테스트: 전설·환상 음악. 전설 12종(SUNO 곡 — 없으면 합성 곡) · 환상 12곡을 골라 바로 재생하고
+페이즈 전환·위기·실패·포획 성공(전설 SUNO → 다음 박 타격 + 카드 시각 표시 / 합성 전설 → 전설의 노래 / 환상 → 정적 → 환상의 노래)을
+버튼으로 일으킨다. 기록은 안 남음.
 """
 from src.core.config import load_json
 from src.scene.base import Scene
@@ -32,7 +33,15 @@ class BossMusicTestScene(Scene):
         super().__init__(game)
         self.boss = game.boss
         songs = self.boss.cfg.get("boss", {}).get("songs", {})
-        self.ids = [k for k, v in songs.items() if not v.get("test")]
+        # 전설은 물고기마다 하나(SUNO 가 있으면 그 곡, 없으면 합성 곡), 환상은 합성 곡 그대로
+        legends, seen = [], set()
+        for sid, v in songs.items():
+            if v.get("test") or v.get("kind") != "legend" or v.get("fish") in seen:
+                continue
+            seen.add(v["fish"])
+            legends.append(self.boss.song_for(v["fish"]) or sid)
+        self.ids = legends + [k for k, v in songs.items() if not v.get("test") and v.get("kind") != "legend"]
+        self.card_t = None     # SUNO 포획: (타격까지 남은 초, impact, card) 표시용
         self.names = _names()
         self.si = 0
         self.phase = 0
@@ -73,10 +82,19 @@ class BossMusicTestScene(Scene):
         self.after = None
         self.phase = 0
         self.crisis = False
-        if not self.boss.start(self._sid()):
+        self.card_t = None
+        sid = self._sid()
+        if not self.boss.available(sid):
             self.msg = "구운 파일이 없어요 (python tools/bake_boss.py)"
-        else:
+            self.pending = None
+            return
+        self.boss.prepare(sid)
+        if self.boss.start(sid):
             self.msg = ""
+            self.pending = None
+        else:   # 파일을 읽는 중 (기다리지 않음, O5) — update 가 다 읽히면 시작
+            self.msg = "불러오는 중…"
+            self.pending = sid
 
     def _next_phase(self) -> None:
         if self.boss.active:
@@ -96,6 +114,14 @@ class BossMusicTestScene(Scene):
     def _win(self) -> None:
         sfx = self.game.sfx
         sid, cont = self._sid(), self._cont()
+        if self.boss.is_suno(sid):
+            if not self.boss.suno.active:
+                return
+            info = self.boss.catch_info(sid)
+            wait = self.boss.catch()
+            self.card_t = [wait + info.get("impact_sec", 0.0), info.get("card_sec", 0.0) - info.get("impact_sec", 0.0), 0.0]
+            self.msg = f"타격까지 {wait:.2f}초 ({'즉시' if info.get('start') == 'immediate' else '다음 박'})"
+            return
         if self._spec().get("kind") == "phantom":
             from src.audio import phantom_song
             self.boss.stop()                       # 즉시 완전히 멈춤 → 정적
@@ -128,6 +154,15 @@ class BossMusicTestScene(Scene):
 
     def update(self, dt):
         self.mouse = self.ui_pointer()
+        pend = getattr(self, "pending", None)
+        if pend is not None and pend == self._sid():
+            if self.boss.start(pend):
+                self.msg = ""
+                self.pending = None
+        if self.card_t is not None:
+            self.card_t[2] += dt
+            if self.card_t[2] >= self.card_t[0] + self.card_t[1] + 2.0:
+                self.card_t = None
         if self.after is not None:
             t, name = self.after
             t -= dt
@@ -148,7 +183,8 @@ class BossMusicTestScene(Scene):
         sp = self._spec()
         name = self.names.get(sp.get("fish"), ("?", None))[0]
         kind = "전설" if sp.get("kind") == "legend" else "환상"
-        text(c, f"{self._sid()}  {kind} · {name}", (240, 54), ui.TEXT, 11, "center")
+        suno = self.boss.is_suno(self._sid())
+        text(c, f"{self._sid()}  {kind} · {name}" + ("  [SUNO]" if suno else ""), (240, 54), ui.TEXT, 11, "center")
         num, den = sp.get("meter", [4, 4])
         text(c, f"{sp.get('bpm', '?')} BPM · {num}/{den} · 페이즈 {len(sp.get('phases', []))}개", (240, 68), ui.DIM, 9, "center")
         self.btns[4].label = "위기 끄기" if self.crisis else "위기"
@@ -157,8 +193,12 @@ class BossMusicTestScene(Scene):
         d = self.boss.debug()
         if self.boss.active:
             st = f"재생 중 · 페이즈 {d['phase']} · 마디 {d['bar'] if d['bar'] is not None else '-'}" + \
-                 (" · 위기" if d["crisis"] else "") + (" · 지침(옥타브)" if d["tired"] else "")
+                 (f" · {d['file']}" if d.get("file") else "") + (" · 위기" if d["crisis"] else "") + (" · 지침(옥타브)" if d["tired"] else "")
         else:
             st = self.msg or ("정적…" if self.after else "멈춤")
+        if self.card_t is not None:
+            el, hit, card = self.card_t[2], self.card_t[0], self.card_t[0] + self.card_t[1]
+            stage = "쾅!" if hit <= el < card else ("포획 카드" if el >= card else "…")
+            text(c, f"포획: 타격 {hit:.2f}s · 카드 {card:.2f}s · 지금 {el:.2f}s  {stage}", (240, 142), ui.ACCENT, 9, "center")
         text(c, st, (240, 156), ui.ACCENT if self.boss.active else ui.DIM, 10, "center")
         draw_cursor(c, self.mouse)

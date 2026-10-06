@@ -1,0 +1,74 @@
+{
+ "dungyong": {
+  "lufs": -15.05,
+  "true_peak_db": -4.13,
+  "gain_db": 1.05,
+  "gain": 1.1286
+ },
+ "yeoubi": {
+  "lufs": -15.46,
+  "true_peak_db": -4.17,
+  "gain_db": 1.46,
+  "gain": 1.1836
+ },
+ "sangun": {
+  "lufs": -13.06,
+  "true_peak_db": -3.7,
+  "gain_db": -0.94,
+  "gain": 0.8976
+ },
+ "electro": {
+  "lufs": -16.21,
+  "true_peak_db": -5.36,
+  "gain_db": 2.21,
+  "gain": 1.2899
+ },
+ "ilseom": {
+  "lufs": -15.79,
+  "true_peak_db": -3.38,
+  "gain_db": 1.79,
+  "gain": 1.2285
+ },
+ "taego": {
+  "lufs": -14.48,
+  "true_peak_db": -3.23,
+  "gain_db": 0.48,
+  "gain": 1.0571
+ },
+ "silva": {
+  "lufs": -14.45,
+  "true_peak_db": -3.25,
+  "gain_db": 0.45,
+  "gain": 1.0532
+ },
+ "pricia": {
+  "lufs": -14.41,
+  "true_peak_db": -3.82,
+  "gain_db": 0.41,
+  "gain": 1.0485
+ },
+ "aeris": {
+  "lufs": -15.25,
+  "true_peak_db": -3.62,
+  "gain_db": 1.25,
+  "gain": 1.1543
+ },
+ "ignis": {
+  "lufs": -14.41,
+  "true_peak_db": -3.55,
+  "gain_db": 0.41,
+  "gain": 1.0489
+ },
+ "borealis": {
+  "lufs": -13.7,
+  "true_peak_db": -3.26,
+  "gain_db": -0.3,
+  "gain": 0.9661
+ },
+ "orsiel": {
+  "lufs": -14.54,
+  "true_peak_db": -3.49,
+  "gain_db": 0.54,
+  "gain": 1.0635
+ }
+}

@@ -1,0 +1,181 @@
+{
+  "title": "실바",
+  "beats_per_bar": 4,
+  "tempo_note": "약 138 BPM (마디 기준 133.1~141.7). 고정 BPM 대신 bar_starts_sec 사용",
+  "sample_rate": 48000,
+  "phases": 3,
+  "files": {
+    "intro": {
+      "file": "intro.ogg",
+      "source_start_sec": 0.0,
+      "source_end_sec": 21.913,
+      "type": "once",
+      "source_bars": [
+        1,
+        12
+      ],
+      "bar_starts_sec": [
+        0.428,
+        2.224,
+        4.0273,
+        5.8279,
+        7.6267,
+        9.4098,
+        11.1928,
+        12.9805,
+        14.7695,
+        16.5569,
+        18.3382,
+        20.1285,
+        21.9127
+      ]
+    },
+    "phase1_loop": {
+      "file": "phase1_loop.ogg",
+      "source_start_sec": 21.913,
+      "source_end_sec": 57.237,
+      "type": "loop",
+      "source_bars": [
+        13,
+        32
+      ],
+      "bar_starts_sec": [
+        1.7722,
+        3.5493,
+        5.3232,
+        7.0967,
+        8.8714,
+        10.6478,
+        12.4195,
+        14.1906,
+        15.9575,
+        17.7181,
+        19.4887,
+        21.25,
+        23.0106,
+        24.7711,
+        26.5325,
+        28.2907,
+        30.0491,
+        31.8085,
+        33.5668,
+        35.3246
+      ]
+    },
+    "bridge_1to2": {
+      "file": "bridge_1to2.ogg",
+      "source_start_sec": 67.782,
+      "source_end_sec": 78.284,
+      "type": "once",
+      "source_bars": [
+        39,
+        44
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.7471,
+        3.4929,
+        5.2485,
+        7.003,
+        8.754,
+        10.5021
+      ]
+    },
+    "phase2_loop": {
+      "file": "phase2_loop.ogg",
+      "source_start_sec": 78.284,
+      "source_end_sec": 106.07,
+      "type": "loop",
+      "source_bars": [
+        45,
+        60
+      ],
+      "bar_starts_sec": [
+        1.7465,
+        3.4972,
+        5.2389,
+        6.9823,
+        8.721,
+        10.4616,
+        12.2004,
+        13.9335,
+        15.6654,
+        17.399,
+        19.1359,
+        20.8613,
+        22.5889,
+        24.3217,
+        26.0551
+      ]
+    },
+    "bridge_2to3": {
+      "file": "bridge_2to3.ogg",
+      "source_start_sec": 112.985,
+      "source_end_sec": 126.804,
+      "type": "once",
+      "source_bars": [
+        65,
+        72
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.7294,
+        3.4599,
+        5.1877,
+        6.9123,
+        8.6405,
+        10.3691,
+        12.0943
+      ]
+    },
+    "phase3_loop": {
+      "file": "phase3_loop.ogg",
+      "source_start_sec": 126.804,
+      "source_end_sec": 154.262,
+      "type": "loop",
+      "source_bars": [
+        73,
+        88
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.7242,
+        3.4452,
+        5.1672,
+        6.8866,
+        8.6037,
+        10.3242,
+        12.0422,
+        13.7546,
+        15.4688,
+        17.1841,
+        18.8963,
+        20.6077,
+        22.3206,
+        24.0326,
+        25.7453,
+        27.458
+      ]
+    },
+    "ending_hit": {
+      "file": "ending_hit.ogg",
+      "source_start_sec": 173.027,
+      "source_end_sec": 179.36,
+      "type": "once",
+      "source_bars": [
+        100,
+        "끝"
+      ],
+      "bar_starts_sec": [
+        1.6955,
+        3.398,
+        5.0923
+      ]
+    }
+  },
+  "crisis_layers": {
+    "phase1_loop": "phase1_loop_crisis_perc.ogg",
+    "phase2_loop": "phase2_loop_crisis_perc.ogg",
+    "phase3_loop": "phase3_loop_crisis_perc.ogg"
+  }
+}

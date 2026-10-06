@@ -1,0 +1,221 @@
+{
+  "title": "오르시엘",
+  "beats_per_bar": 4,
+  "tempo_note": "약 143 BPM (마디 기준 137.1~146.2). 고정 BPM 대신 bar_starts_sec 사용",
+  "sample_rate": 48000,
+  "phases": 4,
+  "files": {
+    "intro": {
+      "file": "intro.ogg",
+      "source_start_sec": 0.0,
+      "source_end_sec": 21.083,
+      "type": "once",
+      "source_bars": [
+        1,
+        12
+      ],
+      "bar_starts_sec": [
+        0.236,
+        1.9669,
+        3.6972,
+        5.4379,
+        7.1741,
+        8.9241,
+        10.6532,
+        12.3946,
+        14.1411,
+        15.8814,
+        17.6118,
+        19.357
+      ]
+    },
+    "phase1_loop": {
+      "file": "phase1_loop.ogg",
+      "source_start_sec": 21.083,
+      "source_end_sec": 55.612,
+      "type": "loop",
+      "source_bars": [
+        13,
+        32
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.7318,
+        3.4686,
+        5.2001,
+        6.9301,
+        8.6655,
+        10.3962,
+        12.1237,
+        13.8455,
+        15.5651,
+        17.2868,
+        19.0152,
+        20.7357,
+        22.4624,
+        24.182,
+        25.9113,
+        27.6443,
+        29.3585,
+        31.0896,
+        32.8072
+      ]
+    },
+    "bridge_1to2": {
+      "file": "bridge_1to2.ogg",
+      "source_start_sec": 62.478,
+      "source_end_sec": 76.058,
+      "type": "once",
+      "source_bars": [
+        37,
+        44
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.7092,
+        3.4084,
+        5.1058,
+        6.8065,
+        8.4971,
+        10.1902,
+        11.8869,
+        13.5798
+      ]
+    },
+    "phase2_loop": {
+      "file": "phase2_loop.ogg",
+      "source_start_sec": 76.058,
+      "source_end_sec": 96.283,
+      "type": "loop",
+      "source_bars": [
+        45,
+        56
+      ],
+      "bar_starts_sec": [
+        1.691,
+        3.3856,
+        5.0805,
+        6.7681,
+        8.4572,
+        10.1362,
+        11.8215,
+        13.5045,
+        15.1877,
+        16.8632,
+        18.5422
+      ]
+    },
+    "bridge_2to3": {
+      "file": "bridge_2to3.ogg",
+      "source_start_sec": 89.562,
+      "source_end_sec": 96.283,
+      "type": "once",
+      "source_bars": [
+        53,
+        56
+      ],
+      "bar_starts_sec": [
+        1.6833,
+        3.3587,
+        5.0377
+      ]
+    },
+    "phase3_loop": {
+      "file": "phase3_loop.ogg",
+      "source_start_sec": 96.283,
+      "source_end_sec": 136.444,
+      "type": "loop",
+      "source_bars": [
+        57,
+        80
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.6826,
+        3.3623,
+        5.0408,
+        6.7153,
+        8.3983,
+        10.0748,
+        11.7571,
+        13.4321,
+        15.1106,
+        16.7811,
+        18.4568,
+        20.1322,
+        21.8099,
+        23.4798,
+        25.1515,
+        26.8223,
+        28.5009,
+        30.168,
+        31.8334,
+        33.5,
+        35.1636,
+        36.8319,
+        38.4983
+      ]
+    },
+    "bridge_3to4": {
+      "file": "bridge_3to4.ogg",
+      "source_start_sec": 149.767,
+      "source_end_sec": 159.694,
+      "type": "once",
+      "source_bars": [
+        89,
+        94
+      ],
+      "bar_starts_sec": [
+        1.6528,
+        3.3062,
+        4.9667,
+        6.621,
+        8.2777
+      ]
+    },
+    "phase4_loop": {
+      "file": "phase4_loop.ogg",
+      "source_start_sec": 159.694,
+      "source_end_sec": 179.559,
+      "type": "loop",
+      "source_bars": [
+        95,
+        106
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.6554,
+        3.3146,
+        4.9708,
+        6.6193,
+        8.2749,
+        9.9292,
+        11.5846,
+        13.2357,
+        14.8925,
+        16.545,
+        18.2066
+      ]
+    },
+    "ending_hit": {
+      "file": "ending_hit.ogg",
+      "source_start_sec": 184.525,
+      "source_end_sec": 188.8,
+      "type": "once",
+      "source_bars": [
+        110,
+        "끝"
+      ],
+      "bar_starts_sec": [
+        1.6492,
+        3.2983
+      ]
+    }
+  },
+  "crisis_layers": {
+    "phase1_loop": "phase1_loop_crisis_perc.ogg",
+    "phase2_loop": "phase2_loop_crisis_perc.ogg",
+    "phase3_loop": "phase3_loop_crisis_perc.ogg",
+    "phase4_loop": "phase4_loop_crisis_perc.ogg"
+  }
+}

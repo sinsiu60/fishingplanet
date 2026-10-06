@@ -1,0 +1,192 @@
+{
+  "title": "여우비",
+  "tempo_note": "약 140 BPM에서 시작해 끝으로 갈수록 약 144.6 BPM까지 조금씩 빨라짐. 고정 BPM 대신 bar_starts_sec 사용",
+  "sample_rate": 48000,
+  "files": {
+    "intro": {
+      "file": "intro.ogg",
+      "source_start_sec": 0.0,
+      "source_end_sec": 22.183,
+      "type": "once",
+      "source_bars": [
+        1,
+        12
+      ],
+      "bar_starts_sec": [
+        1.8019,
+        3.5258,
+        5.2374,
+        6.8897,
+        8.5827,
+        10.2799,
+        11.982,
+        13.6873,
+        15.3915,
+        17.1033,
+        18.7902,
+        20.4829
+      ]
+    },
+    "phase1_loop": {
+      "file": "phase1_loop.ogg",
+      "source_start_sec": 22.183,
+      "source_end_sec": 76.393,
+      "type": "loop",
+      "source_bars": [
+        13,
+        44
+      ],
+      "bar_starts_sec": [
+        1.6953,
+        3.4012,
+        5.1004,
+        6.7988,
+        8.4942,
+        10.1973,
+        11.8873,
+        13.5859,
+        15.2841,
+        16.9826,
+        18.6762,
+        20.3746,
+        22.0836,
+        23.777,
+        25.4679,
+        27.1644,
+        28.8616,
+        30.5512,
+        32.2384,
+        33.9515,
+        35.6434,
+        37.3442,
+        39.0326,
+        40.7189,
+        42.4016,
+        44.0897,
+        45.7832,
+        47.4683,
+        49.1487,
+        50.8394,
+        52.5292
+      ]
+    },
+    "bridge_1to2": {
+      "file": "bridge_1to2.ogg",
+      "source_start_sec": 84.788,
+      "source_end_sec": 91.504,
+      "type": "once",
+      "source_bars": [
+        50,
+        53
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.7025,
+        3.3859,
+        5.0524
+      ]
+    },
+    "phase2_loop": {
+      "file": "phase2_loop.ogg",
+      "source_start_sec": 91.504,
+      "source_end_sec": 111.598,
+      "type": "loop",
+      "source_bars": [
+        54,
+        65
+      ],
+      "bar_starts_sec": [
+        1.6806,
+        3.3689,
+        5.0435,
+        6.7194,
+        8.3977,
+        10.0724,
+        11.7476,
+        13.4222,
+        15.0903,
+        16.7535,
+        18.4245
+      ]
+    },
+    "bridge_2to3": {
+      "file": "bridge_2to3.ogg",
+      "source_start_sec": 118.267,
+      "source_end_sec": 131.622,
+      "type": "once",
+      "source_bars": [
+        70,
+        77
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.6773,
+        3.3492,
+        5.0127,
+        6.6807,
+        8.3486,
+        10.0151,
+        11.6887
+      ]
+    },
+    "phase3_loop": {
+      "file": "phase3_loop.ogg",
+      "source_start_sec": 131.622,
+      "source_end_sec": 171.488,
+      "type": "loop",
+      "source_bars": [
+        78,
+        101
+      ],
+      "bar_starts_sec": [
+        1.6587,
+        3.3159,
+        4.9838,
+        6.6437,
+        8.323,
+        9.9796,
+        11.6318,
+        13.2989,
+        14.9458,
+        16.5998,
+        18.2444,
+        19.8989,
+        21.592,
+        23.2525,
+        24.9186,
+        26.5792,
+        28.2449,
+        29.9078,
+        31.5669,
+        33.2302,
+        34.8939,
+        36.5489,
+        38.2082
+      ]
+    },
+    "ending_hit": {
+      "file": "ending_hit.ogg",
+      "source_start_sec": 176.475,
+      "source_end_sec": 179.96,
+      "type": "once",
+      "source_bars": [
+        105,
+        "끝"
+      ],
+      "bar_starts_sec": [
+        1.6565
+      ]
+    }
+  },
+  "crisis_layers": {
+    "phase1_loop": "phase1_loop_crisis_perc.ogg",
+    "phase2_loop": "phase2_loop_crisis_perc.ogg",
+    "phase3_loop": "phase3_loop_crisis_perc.ogg"
+  },
+  "notes": {
+    "ending_hit": "마지막 마디. 크게 울리다 딱 끊김",
+    "phrase_bars": 4
+  },
+  "beats_per_bar": 4,
+  "phases": 3
+}

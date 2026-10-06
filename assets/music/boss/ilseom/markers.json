@@ -1,0 +1,208 @@
+{
+  "title": "일섬",
+  "tempo_note": "약 172 BPM (시작 171.8 → 끝 173.5, 아주 조금 빨라짐). 고정 BPM 대신 bar_starts_sec 사용",
+  "sample_rate": 48000,
+  "files": {
+    "intro": {
+      "file": "intro.ogg",
+      "source_start_sec": 0.0,
+      "source_end_sec": 17.184,
+      "type": "once",
+      "source_bars": [
+        1,
+        12
+      ],
+      "bar_starts_sec": [
+        0.45,
+        1.8434,
+        3.2393,
+        4.6391,
+        6.0309,
+        7.4318,
+        8.8229,
+        10.2232,
+        11.6225,
+        13.0123,
+        14.4024,
+        15.7936,
+        17.1838
+      ]
+    },
+    "phase1_loop": {
+      "file": "phase1_loop.ogg",
+      "source_start_sec": 17.184,
+      "source_end_sec": 50.596,
+      "type": "loop",
+      "source_bars": [
+        13,
+        36
+      ],
+      "bar_starts_sec": [
+        1.3928,
+        2.7844,
+        4.1771,
+        5.5706,
+        6.9629,
+        8.3551,
+        9.7466,
+        11.14,
+        12.5354,
+        13.9313,
+        15.3205,
+        16.7122,
+        18.1085,
+        19.5003,
+        20.8871,
+        22.2841,
+        23.6724,
+        25.0644,
+        26.4545,
+        27.8496,
+        29.2385,
+        30.6269,
+        32.0194
+      ]
+    },
+    "bridge_1to2": {
+      "file": "bridge_1to2.ogg",
+      "source_start_sec": 53.376,
+      "source_end_sec": 58.943,
+      "type": "once",
+      "source_bars": [
+        39,
+        42
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.3893,
+        2.7833,
+        4.1739
+      ]
+    },
+    "phase2_loop": {
+      "file": "phase2_loop.ogg",
+      "source_start_sec": 58.943,
+      "source_end_sec": 92.317,
+      "type": "loop",
+      "source_bars": [
+        43,
+        66
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.3951,
+        2.7848,
+        4.1679,
+        5.5609,
+        6.9506,
+        8.3412,
+        9.7339,
+        11.124,
+        12.5123,
+        13.9012,
+        15.2897,
+        16.6813,
+        18.0717,
+        19.4644,
+        20.8546,
+        22.2468,
+        23.6402,
+        25.036,
+        26.4251,
+        27.8158,
+        29.2067,
+        30.5933,
+        31.9821
+      ]
+    },
+    "bridge_2to3": {
+      "file": "bridge_2to3.ogg",
+      "source_start_sec": 96.479,
+      "source_end_sec": 111.771,
+      "type": "once",
+      "source_bars": [
+        70,
+        80
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.4028,
+        2.7913,
+        4.1802,
+        5.5691,
+        6.9605,
+        8.3476,
+        9.7349,
+        11.1246,
+        12.5131,
+        13.9029
+      ]
+    },
+    "phase3_loop": {
+      "file": "phase3_loop.ogg",
+      "source_start_sec": 111.771,
+      "source_end_sec": 161.671,
+      "type": "loop",
+      "source_bars": [
+        81,
+        116
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.3873,
+        2.7762,
+        4.1659,
+        5.5524,
+        6.9437,
+        8.3357,
+        9.7255,
+        11.1157,
+        12.5036,
+        13.8909,
+        15.2789,
+        16.666,
+        18.0526,
+        19.4318,
+        20.8161,
+        22.2092,
+        23.5914,
+        24.9792,
+        26.3642,
+        27.7528,
+        29.135,
+        30.521,
+        31.9064,
+        33.2898,
+        34.6774,
+        36.0611,
+        37.449,
+        38.8321,
+        40.215,
+        41.5961,
+        42.9795,
+        44.3613,
+        45.7445,
+        47.1303,
+        48.5183
+      ]
+    },
+    "ending_hit": {
+      "file": "ending_hit.ogg",
+      "source_start_sec": 173.1,
+      "source_end_sec": 179.48,
+      "type": "once",
+      "impact_sec": 0.08
+    }
+  },
+  "crisis_layers": {
+    "phase1_loop": "phase1_loop_crisis_perc.ogg",
+    "phase2_loop": "phase2_loop_crisis_perc.ogg",
+    "phase3_loop": "phase3_loop_crisis_perc.ogg"
+  },
+  "notes": {
+    "ending_hit": "0.08초에 첫 타격, 짧은 정적-타격이 한 번 더 이어진 뒤 크게 울리다 사라짐",
+    "phrase_bars": 4
+  },
+  "beats_per_bar": 4,
+  "phases": 3
+}

@@ -1,0 +1,179 @@
+{
+  "title": "이그니스",
+  "beats_per_bar": 4,
+  "tempo_note": "약 150 BPM (마디 기준 147.9~151.3). 고정 BPM 대신 bar_starts_sec 사용",
+  "sample_rate": 48000,
+  "phases": 3,
+  "files": {
+    "intro": {
+      "file": "intro.ogg",
+      "source_start_sec": 13.326,
+      "source_end_sec": 32.527,
+      "type": "once",
+      "source_bars": [
+        9,
+        20
+      ],
+      "bar_starts_sec": [
+        1.5989,
+        3.1991,
+        4.8,
+        6.3876,
+        7.9896,
+        9.5999,
+        11.1881,
+        12.7918,
+        14.3901,
+        15.9855,
+        17.5947
+      ]
+    },
+    "phase1_loop": {
+      "file": "phase1_loop.ogg",
+      "source_start_sec": 32.527,
+      "source_end_sec": 58.127,
+      "type": "loop",
+      "source_bars": [
+        21,
+        36
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.5958,
+        3.1967,
+        4.7957,
+        6.3948,
+        7.9943,
+        9.5959,
+        11.2021,
+        12.801,
+        14.4005,
+        15.9952,
+        17.5953,
+        19.1928,
+        20.7941,
+        22.3923,
+        23.9925,
+        25.5995
+      ]
+    },
+    "bridge_1to2": {
+      "file": "bridge_1to2.ogg",
+      "source_start_sec": 58.127,
+      "source_end_sec": 67.72,
+      "type": "once",
+      "source_bars": [
+        37,
+        42
+      ],
+      "bar_starts_sec": [
+        1.6027,
+        3.1987,
+        4.7854,
+        6.3945,
+        7.9928
+      ]
+    },
+    "phase2_loop": {
+      "file": "phase2_loop.ogg",
+      "source_start_sec": 67.72,
+      "source_end_sec": 86.922,
+      "type": "loop",
+      "source_bars": [
+        43,
+        54
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.5999,
+        3.2016,
+        4.8007,
+        6.4031,
+        8.0061,
+        9.6107,
+        11.206,
+        12.8024,
+        14.4007,
+        16.0035,
+        17.6025
+      ]
+    },
+    "bridge_2to3": {
+      "file": "bridge_2to3.ogg",
+      "source_start_sec": 90.127,
+      "source_end_sec": 104.524,
+      "type": "once",
+      "source_bars": [
+        57,
+        65
+      ],
+      "bar_starts_sec": [
+        1.6015,
+        3.1911,
+        4.7884,
+        6.3888,
+        7.9894,
+        9.5877,
+        11.1869,
+        12.7884,
+        14.3965
+      ]
+    },
+    "phase3_loop": {
+      "file": "phase3_loop.ogg",
+      "source_start_sec": 104.524,
+      "source_end_sec": 142.916,
+      "type": "loop",
+      "source_bars": [
+        66,
+        89
+      ],
+      "bar_starts_sec": [
+        1.5968,
+        3.1953,
+        4.7954,
+        6.4014,
+        7.9973,
+        9.5998,
+        11.1989,
+        12.7994,
+        14.3961,
+        15.9974,
+        17.5991,
+        19.1947,
+        20.7982,
+        22.3955,
+        23.9977,
+        25.5994,
+        27.1993,
+        28.7998,
+        30.3931,
+        31.9992,
+        33.5924,
+        35.1997,
+        36.7959
+      ]
+    },
+    "ending_hit": {
+      "file": "ending_hit.ogg",
+      "source_start_sec": 173.318,
+      "source_end_sec": 178.8,
+      "type": "once",
+      "source_bars": [
+        109,
+        "끝"
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.5996,
+        3.2062,
+        4.8187
+      ]
+    }
+  },
+  "crisis_layers": {
+    "phase1_loop": "phase1_loop_crisis_perc.ogg",
+    "phase2_loop": "phase2_loop_crisis_perc.ogg",
+    "phase3_loop": "phase3_loop_crisis_perc.ogg"
+  }
+}

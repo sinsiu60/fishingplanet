@@ -75,8 +75,8 @@ class Game:
         self.music = Music(self.sfx)  # data/music/ 의 파일 (없으면 무음)
         from src.audio.adaptive_music import AdaptiveMusic
         self.adaptive = AdaptiveMusic(self.sfx)  # 적응형 음악 층 (32장 S6)
-        from src.audio.boss_music import BossMusic
-        self.boss = BossMusic(self.sfx, self.adaptive)   # 전설·환상 전용 파이팅 곡 (DESIGN.md 43)
+        from src.audio.boss_suno import BossRouter
+        self.boss = BossRouter(self.sfx, self.adaptive)   # 전설(SUNO 12곡, BOSS_BGM_SUNO.md) · 환상(합성) 전용 파이팅 곡 (DESIGN.md 43)
         from src.audio.zones import AudioZones
         self.zones = AudioZones(self)            # 소리 구역: 바깥 ↔ 실내 (DESIGN.md 39)
         bootlog.mark("음악 준비")

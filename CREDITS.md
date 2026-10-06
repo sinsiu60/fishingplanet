@@ -25,3 +25,10 @@
 | 게임 안 이름 | 파일 | 원본 제목 | 만든 사람 | 출처 URL | 라이선스 | 수정 내용 | 추가한 날 |
 |---|---|---|---|---|---|---|---|
 | 시작 화면 로고 글자 | assets/branding/siu_splash_text.png · siu_logo_horizontal*.png | 갈무리 (Galmuri14 · Galmuri7) 2.40.3 | 이민서 (quiple) | https://github.com/quiple/galmuri | SIL Open Font License 1.1 | 글자를 픽셀 그림으로 렌더링 | 2026-10-04 |
+
+## 전설 보스 곡 12종 (SUNO)
+전설 물고기 12종의 전용 파이팅 곡(`assets/music/boss/<곡ID>/`, 인트로 · 페이즈 반복 · 브리지 · 위기 타악 · 포획 타격)은 **SUNO AI (v6) 로 제작**해 마디 단위로 잘라 넣었다 (`BOSS_BGM_SUNO.md`, 구조 그림 `tools/audio/reference/boss_bgm/`). 환상 12곡은 그대로 코드 합성.
+
+| 게임 안 이름 | 파일 | 원본 제목 | 만든 사람 | 출처 URL | 라이선스 | 수정 내용 | 추가한 날 |
+|---|---|---|---|---|---|---|---|
+| 전설 보스 곡 12종 (여우비 · 산군 · 일렉트로 · 일섬 · 태고 · 등용 · 실바 · 프리시아 · 에어리스 · 이그니스 · 보레알리스 · 오르시엘) | assets/music/boss/*/ | — | SUNO AI (v6) 생성, 이 프로젝트가 프롬프트 · 편집 | — | SUNO 이용 약관(상업 이용 가능 플랜) | 마디 단위 자르기 · 위기 타악 분리 · 곡별 음량 배율(`data/music/boss_bgm_gain.json`) | 2026-10-06 |

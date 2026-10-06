@@ -5217,6 +5217,23 @@ PC(서버) 숫자는 폰보다 5~10배 빠르므로 비율로 본다. 폰과 같
   설정 → 화면 "화질" 줄(PC · 폰). 자동 저장은 `SaveGame.save(sync=False)` — 직렬화만 메인, 쓰기는 `_Writer` 스레드(경로별 최신 하나),
   종료 · 전환은 sync. `_set_spot` 끝에 `gcwatch.settle(collect=True)`. `travel.start_trip` 이 `Ambience.prefetch` 로 도착지 바탕을 미리.
   매 프레임 객체 생성은 PC 0.1~0.2ms 라 보류. 19장면 픽셀 동일.
+
+### 43-29. 전설 보스 곡 12종 SUNO 버전 (BOSS_BGM_SUNO.md, 2026-10-06)
+- 파일: `assets/music/boss/<곡ID>/` intro · phaseN_loop · bridge_NtoM · phaseN_loop_crisis_perc · ending_hit + `markers.json`(파일별 `bar_starts_sec`,
+  고정 BPM 금지). 전설 ↔ 곡: `data/music/boss_bgm_index.json` 의 `fish`(이름으로 매칭, prisia ↔ pricia). 오르시엘만 4페이즈.
+- 재생기 `src/audio/boss_suno.py SunoBoss`: 적응형 예약 채널 4개(주 A/B · 위기 A/B). 챔질 → intro → phase1_loop(같은 채널 queue 반복, 위기 층은
+  같은 프레임에 같이 시작해 음량 0으로 따라 돈다) / 페이즈 전환 = 지금 파일의 다음 4마디 경계(`_next_phrase`, 마디 격자: 분석 목록이 0초를 빼먹은
+  반복 구간엔 0 추가)에서 bridge → 다음 반복 / 위기 = 위기 층 0.5초 인(-3dB) · 1초 아웃 / 실패 = 즉시 정지 + sfx_boss_fail / 포획 = 다음 박
+  (`_next_beat`, 일섬은 즉시)에서 ending_hit. 파일 사이 0.15초 크로스페이드(`play(fade_ms)` + `fadeout`), 전환은 우리 시계로 프레임 안(±8ms).
+  반복 파일 양끝 2ms 페이드(`_declick` — 경계 파형 단차 최대 0.76×RMS). 다음 페이즈 파일이 아직이면 바로 맡기고 다음 프레임에(O5 방식),
+  시작도 기다리지 않음(늦으면 일반 파이팅 음악 다음 마디). 최근 2곡만 메모리, 낚시터 진입 때 `prepare_for_spot`.
+- 음량: `data/music/boss_bgm_gain.json`(tools/audio/boss_suno_gain.py: 통합 LUFS → -14 · 트루피크 → -1dBTP 중 작은 배율, 곡 안 모든 파일 같은 배율,
+  0.90~1.29) × 예전 보스 버스(GAIN 0.35 × state_gain boss 1.04 × 설정 × 구역) → 채널 ≤ 1.0.
+- 포획 연출: `fishing_scene._start_legend_show` SUNO 분기 — `boss.catch()` 가 타격까지 초를 돌려주면 `LegendShow.t = -(wait + delay + impact_sec)`
+  (0초 '쾅' = 타격), 카드 마커를 `card_sec` 에 맞춰 늘림(앞 마커는 비례, 뒤 마커는 평행이동). 전설의 노래는 틀지 않음(마지막 타격이 팡파르),
+  건너뛰면 타격 300ms 페이드. 등용 · 오르시엘은 연출 뒤 기존 엔딩 그대로.
+- `BossRouter`(game.boss): 물고기마다 SUNO(있으면) / 합성 BossMusic. 환상 12곡은 합성 그대로. 디버그 "테스트: 전설·환상 음악" 이 전설은 SUNO 곡으로
+  (재생 · 다음 페이즈 · 위기 · 실패 · 성공 = 타격 · 카드 시각 표시). ORSIEL_BGM.md 음표 합성은 '사용 안 함'(대체용으로 남김).
 - **v1.3.6** (갤럭시 탭 32비트: v1.3.5 첫 장면 `splash.draw` 의 blit 에서 `Fatal Python error: Bus error`, 안전 모드로도 같음):
   pygame 2.6.1 에 묶인 옛 sse2neon 의 `_mm_storel_epi64` 가 8바이트 대신 `*a` 16바이트를 읽고 되쓴다. 32비트 블리터는
   `STORE_M128_INTO_64`(픽셀 2개 = 8바이트, 주소 4바이트 정렬)로 이걸 쓰는데, ARM32 는 `__m128i` 정렬 힌트가 붙은 `vld1 [r:64]` 라

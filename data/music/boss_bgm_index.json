@@ -1,0 +1,259 @@
+{
+  "version": 1,
+  "rule": "곡별 폴더의 markers.json에 파일·마디 시각이 있음. 고정 BPM 계산 금지, bar_starts_sec 사용",
+  "legends": [
+    {
+      "id": "dungyong",
+      "name": "용문잉어 '등용'",
+      "continent": "샤르미온",
+      "location": "용문 폭포",
+      "phases": 3,
+      "bpm": "152 고정",
+      "key": "D단조",
+      "genre": "사물놀이 오케스트라 록",
+      "folder": "assets/music/boss/dungyong/",
+      "markers": "assets/music/boss/dungyong/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.1,
+        "card_sec": 6.05,
+        "ending_len_sec": 7.76,
+        "legend_song": false,
+        "after": "엔딩 연출"
+      },
+      "fish": "dragon_carp"
+    },
+    {
+      "id": "yeoubi",
+      "name": "황금잉어 '여우비'",
+      "continent": "샤르미온",
+      "location": "동네 저수지",
+      "phases": 3,
+      "bpm": "약 140→145",
+      "key": "G단조",
+      "genre": "가야금 + 일렉트로 스윙",
+      "folder": "assets/music/boss/yeoubi/",
+      "markers": "assets/music/boss/yeoubi/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 2.5,
+        "ending_len_sec": 3.49,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "golden_carp"
+    },
+    {
+      "id": "sangun",
+      "name": "산신쏘가리 '산군'",
+      "continent": "샤르미온",
+      "location": "계곡",
+      "phases": 3,
+      "bpm": "약 130",
+      "key": "C#단조",
+      "genre": "산신 의식 대서사",
+      "folder": "assets/music/boss/sangun/",
+      "markers": "assets/music/boss/sangun/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 2.6,
+        "ending_len_sec": 4.77,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "tiger_mandarin"
+    },
+    {
+      "id": "electro",
+      "name": "은빛 농어 '일렉트로'",
+      "continent": "샤르미온",
+      "location": "바다 방파제",
+      "phases": 3,
+      "bpm": "약 161",
+      "key": "Bb/Eb 계열",
+      "genre": "하드 록",
+      "folder": "assets/music/boss/electro/",
+      "markers": "assets/music/boss/electro/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 3.8,
+        "ending_len_sec": 7.75,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "silver_bass"
+    },
+    {
+      "id": "ilseom",
+      "name": "청새치 '일섬'",
+      "continent": "샤르미온",
+      "location": "먼바다 배낚시",
+      "phases": 3,
+      "bpm": "약 172",
+      "key": "E단조",
+      "genre": "국악 무협",
+      "folder": "assets/music/boss/ilseom/",
+      "markers": "assets/music/boss/ilseom/markers.json",
+      "catch": {
+        "start": "immediate",
+        "impact_sec": 0.1,
+        "card_sec": 3.9,
+        "ending_len_sec": 6.38,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "marlin"
+    },
+    {
+      "id": "taego",
+      "name": "실러캔스 '태고'",
+      "continent": "샤르미온",
+      "location": "심해",
+      "phases": 3,
+      "bpm": "100",
+      "key": "F단조",
+      "genre": "원시 심해 다크 트레일러",
+      "folder": "assets/music/boss/taego/",
+      "markers": "assets/music/boss/taego/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 3.6,
+        "ending_len_sec": 5.98,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "coelacanth"
+    },
+    {
+      "id": "silva",
+      "name": "갈대왕 실바",
+      "continent": "엘드라시온",
+      "location": "은빛 갈대 습지",
+      "phases": 3,
+      "bpm": "약 134→141",
+      "key": "D단조",
+      "genre": "켈틱 포크 배틀",
+      "folder": "assets/music/boss/silva/",
+      "markers": "assets/music/boss/silva/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 3.4,
+        "ending_len_sec": 6.33,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "silva"
+    },
+    {
+      "id": "pricia",
+      "name": "결정어왕 프리시아",
+      "continent": "엘드라시온",
+      "location": "수정 동굴 호수",
+      "phases": 3,
+      "bpm": "140",
+      "key": "D 계열",
+      "genre": "크리스탈 트랜스",
+      "folder": "assets/music/boss/pricia/",
+      "markers": "assets/music/boss/pricia/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 3.4,
+        "ending_len_sec": 4.94,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "prisia"
+    },
+    {
+      "id": "aeris",
+      "name": "천공어 에어리스",
+      "continent": "엘드라시온",
+      "location": "부유섬 폭포",
+      "phases": 3,
+      "bpm": "약 157",
+      "key": "E단조",
+      "genre": "바로크 질주",
+      "folder": "assets/music/boss/aeris/",
+      "markers": "assets/music/boss/aeris/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 3.95,
+        "ending_len_sec": 6.5,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "aeris"
+    },
+    {
+      "id": "ignis",
+      "name": "불꽃상어 이그니스",
+      "continent": "엘드라시온",
+      "location": "화산 열수 해역",
+      "phases": 3,
+      "bpm": "150",
+      "key": "E 계열",
+      "genre": "플라멩코 메탈",
+      "folder": "assets/music/boss/ignis/",
+      "markers": "assets/music/boss/ignis/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 3.95,
+        "ending_len_sec": 5.48,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "ignis"
+    },
+    {
+      "id": "borealis",
+      "name": "극광어 보레알리스",
+      "continent": "엘드라시온",
+      "location": "극광 빙해",
+      "phases": 3,
+      "bpm": "약 123→130",
+      "key": "G단조",
+      "genre": "노르딕 포크 서사",
+      "folder": "assets/music/boss/borealis/",
+      "markers": "assets/music/boss/borealis/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 3.7,
+        "ending_len_sec": 6.31,
+        "legend_song": false,
+        "after": "포획 결과"
+      },
+      "fish": "borealis"
+    },
+    {
+      "id": "orsiel",
+      "name": "천해왕 오르시엘",
+      "continent": "엘드라시온",
+      "location": "세계수 뿌리 샘",
+      "phases": 4,
+      "bpm": "약 138→146",
+      "key": "C단조→C장조",
+      "genre": "심해 대서사 (최종)",
+      "folder": "assets/music/boss/orsiel/",
+      "markers": "assets/music/boss/orsiel/markers.json",
+      "catch": {
+        "start": "next_beat",
+        "impact_sec": 0.0,
+        "card_sec": 2.6,
+        "ending_len_sec": 4.27,
+        "legend_song": false,
+        "after": "엔딩 연출"
+      },
+      "fish": "orsiel"
+    }
+  ],
+  "fish_rule": "fish = 게임 전설 id (data/fish.json, 이름으로 매칭 — prisia ↔ pricia 철자 주의)"
+}

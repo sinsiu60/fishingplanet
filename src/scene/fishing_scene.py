@@ -224,6 +224,7 @@ class FishingScene(Scene):
         self.game.sfx.set_space(spot_id)  # N5: 낚시터 잔향·먹먹함 (공간별로 미리 구운 소리)
         # 전설 등장 '드론' · 환상 파장 울림: 처음 울리는 순간 파일 읽느라 멈추지 않게 미리 (DESIGN.md 44)
         self.game.sfx.prefetch(("sfx_legend_appear", "sfx_phantom_hum"))
+        self.game.boss.prepare_for_spot(spot_id, self.all_fish)   # 이 낚시터 전설의 SUNO 곡을 미리 (BOSS_BGM_SUNO.md)
         from src.core import gcwatch
         gcwatch.settle(collect=True)   # 낚시터 준비 끝: 한 번 치우고 얼림 → 플레이 중 GC 가 이 객체들을 다시 훑지 않게 (O6)
 
@@ -777,11 +778,30 @@ class FishingScene(Scene):
         self.fight_audio.stop()
         self.signal_audio.stop()
         sid = self.game.boss.song_for(f.fish["id"])
-        self.game.boss.stop(fade_ms=150)   # 전용 곡의 마지막 화음 → 같은 조성 전설의 노래 첫 타격음 (DESIGN.md 43)
-        sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)
-        name = legend_song.preload(sfx, variant, cont, sid)
-        self.phantom_song_ch = sfx.play(name, 1.0) if name else None
-        self.phantom_loop_ch = None
+        boss = self.game.boss
+        if boss.is_suno(sid) and boss.suno.active:
+            # SUNO 곡 (BOSS_BGM_SUNO.md 포획 순간): 다음 박(일섬은 즉시)에서 ending_hit, impact_sec = 연출의 첫 '쾅',
+            # card_sec = 포획 카드 등장. 전설의 노래는 틀지 않는다 (마지막 타격이 팡파르).
+            info = boss.catch_info(sid)
+            wait = boss.catch()
+            sh = self.catch_show
+            sh.t = -(wait + delay + float(info.get("impact_sec", 0.0)))   # 0초('쾅') = 타격 파일의 impact_sec
+            card = float(info.get("card_sec", sh.m["card"]))
+            if card > 0.2 and card != sh.m["card"]:
+                m0 = dict(sh.m)
+                k = card / m0["card"]
+                sh.m = {name: (v * k if v <= m0["card"] else v + (card - m0["card"])) for name, v in m0.items()}
+            self.suno_catch = True
+            sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)
+            self.phantom_song_ch = None
+            self.phantom_loop_ch = None
+        else:
+            self.suno_catch = False
+            self.game.boss.stop(fade_ms=150)   # 전용 곡의 마지막 화음 → 같은 조성 전설의 노래 첫 타격음 (DESIGN.md 43)
+            sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)
+            name = legend_song.preload(sfx, variant, cont, sid)
+            self.phantom_song_ch = sfx.play(name, 1.0) if name else None
+            self.phantom_loop_ch = None
         self.game.haptics.vibrate("perfect", 1.0)  # 쾅: 강하게 1회
 
     def _update_catch_show(self, dt: float) -> None:
@@ -831,7 +851,9 @@ class FishingScene(Scene):
             elif ev in ("wait", "skip"):
                 if ev == "skip" and self.phantom_song_ch is not None:
                     self.phantom_song_ch.fadeout(300)
-                if self.phantom_loop_ch is None:
+                if ev == "skip" and getattr(self, "suno_catch", False):
+                    self.game.boss.stop(300)   # SUNO 타격을 건너뛰면 사라짐
+                if self.phantom_loop_ch is None and not getattr(self, "suno_catch", False):
                     from src.audio import legend_song
                     sid = self.game.boss.song_for(getattr(sh, "fish", {}).get("id")) if getattr(sh, "fish", None) else None
                     name = legend_song.preload(self.sfx, "loop", self.spot.get("continent", "sharmion"), sid)
@@ -1061,7 +1083,9 @@ class FishingScene(Scene):
             phantom_song.prefetch(self.sfx, cont)
         elif fish.get("rarity") == "legend":
             from src.audio import legend_song
-            legend_song.prefetch(self.sfx, cont, self.game.boss.song_for(fish["id"]))   # 전설마다 그 파이팅 곡 조성 (DESIGN.md 43)
+            sid_ = self.game.boss.song_for(fish["id"])
+            if not self.game.boss.is_suno(sid_):   # SUNO 곡은 전설의 노래를 쓰지 않는다 (BOSS_BGM_SUNO.md)
+                legend_song.prefetch(self.sfx, cont, sid_)   # 전설마다 그 파이팅 곡 조성 (DESIGN.md 43)
 
     def _end_fight(self) -> None:
         last = self.fight.result if self.fight is not None else None
@@ -1368,7 +1392,7 @@ class FishingScene(Scene):
             cont = self.spot.get("continent", "sharmion")
             if phantom.is_phantom(fish):
                 phantom_song.prefetch(self.sfx, cont)
-            else:
+            elif not b.is_suno(sid):   # SUNO 곡은 전설의 노래를 쓰지 않는다
                 legend_song.prefetch(self.sfx, cont, sid)
             theme_sfx.prefetch(self.sfx, fish.get("theme"))
             self.sfx.prefetch(("sfx_legend_fanfare", "sfx_chest_legend", "sfx_phantom_hum"))

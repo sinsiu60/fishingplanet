@@ -1,3 +1,6 @@
+> ⚠️ **사용 안 함 (2026-10-06)**: 오르시엘 파이팅 곡은 SUNO 곡(`assets/music/boss/orsiel/`, `BOSS_BGM_SUNO.md`) 으로 대체됐다.
+> 이 문서의 음표 데이터 합성(`data/music/orsiel_notes.json`, `src/audio/boss_notes.py`)은 SUNO 파일이 없을 때의 대체용으로만 남겨 둔다 (데이터는 지우지 않음).
+
 # 🌊 천해왕 오르시엘 전용 BGM (작곡 데이터 포함)
 
 ## 왜 지금은 "같은 음의 리믹스"처럼 들리나

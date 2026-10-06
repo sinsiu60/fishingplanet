@@ -1,0 +1,164 @@
+{
+  "title": "프리시아",
+  "beats_per_bar": 4,
+  "tempo_note": "약 140 BPM (마디 기준 138.5~140.6). 고정 BPM 대신 bar_starts_sec 사용",
+  "sample_rate": 48000,
+  "phases": 3,
+  "files": {
+    "intro": {
+      "file": "intro.ogg",
+      "source_start_sec": 56.708,
+      "source_end_sec": 72.141,
+      "type": "once",
+      "source_bars": [
+        33,
+        41
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.7148,
+        3.4256,
+        5.1381,
+        6.8565,
+        8.575,
+        10.2888,
+        12.0021,
+        13.7153,
+        15.4331
+      ]
+    },
+    "phase1_loop": {
+      "file": "phase1_loop.ogg",
+      "source_start_sec": 72.141,
+      "source_end_sec": 92.704,
+      "type": "loop",
+      "source_bars": [
+        42,
+        53
+      ],
+      "bar_starts_sec": [
+        1.7074,
+        3.4208,
+        5.1346,
+        6.8481,
+        8.5623,
+        10.2753,
+        11.991,
+        13.7076,
+        15.4226,
+        17.1369,
+        18.8496
+      ]
+    },
+    "bridge_1to2": {
+      "file": "bridge_1to2.ogg",
+      "source_start_sec": 97.849,
+      "source_end_sec": 111.565,
+      "type": "once",
+      "source_bars": [
+        57,
+        64
+      ],
+      "bar_starts_sec": [
+        1.7195,
+        3.436,
+        5.1507,
+        6.8651,
+        8.5806,
+        10.2917,
+        12.0052
+      ]
+    },
+    "phase2_loop": {
+      "file": "phase2_loop.ogg",
+      "source_start_sec": 111.565,
+      "source_end_sec": 138.99,
+      "type": "loop",
+      "source_bars": [
+        65,
+        80
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.7133,
+        3.4275,
+        5.1368,
+        6.8513,
+        8.564,
+        10.2795,
+        11.993,
+        13.7086,
+        15.4229,
+        17.1391,
+        18.8528,
+        20.5667,
+        22.28,
+        23.9959,
+        25.7099
+      ]
+    },
+    "bridge_2to3": {
+      "file": "bridge_2to3.ogg",
+      "source_start_sec": 138.99,
+      "source_end_sec": 150.978,
+      "type": "once",
+      "source_bars": [
+        81,
+        87
+      ],
+      "bar_starts_sec": [
+        0.0,
+        1.7136,
+        3.4225,
+        5.1358,
+        6.851,
+        8.5677,
+        10.2757,
+        11.9885
+      ]
+    },
+    "phase3_loop": {
+      "file": "phase3_loop.ogg",
+      "source_start_sec": 150.978,
+      "source_end_sec": 171.547,
+      "type": "loop",
+      "source_bars": [
+        88,
+        99
+      ],
+      "bar_starts_sec": [
+        1.7129,
+        3.4278,
+        5.1411,
+        6.8551,
+        8.5689,
+        10.2855,
+        12.0017,
+        13.7136,
+        15.4272,
+        17.1412,
+        18.8557
+      ]
+    },
+    "ending_hit": {
+      "file": "ending_hit.ogg",
+      "source_start_sec": 174.98,
+      "source_end_sec": 179.92,
+      "type": "once",
+      "source_bars": [
+        102,
+        "끝"
+      ],
+      "bar_starts_sec": [
+        -0.0,
+        1.7163,
+        3.426
+      ]
+    }
+  },
+  "crisis_layers": {
+    "phase1_loop": "phase1_loop_crisis_perc.ogg",
+    "phase2_loop": "phase2_loop_crisis_perc.ogg",
+    "phase3_loop": "phase3_loop_crisis_perc.ogg"
+  }
+}
