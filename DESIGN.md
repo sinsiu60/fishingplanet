@@ -5211,6 +5211,12 @@ PC(서버) 숫자는 폰보다 5~10배 빠르므로 비율로 본다. 폰과 같
   `sfx._variant/_muffled/slowed` 는 처음엔 원본을 내고 변형은 `_bg` 스레드에서(메인 numpy 합성 0); 전설 · 환상의 노래는 안 쓴 버전 즉시
   `loader.drop` + `keep_recent` 2곡. B4 멈칫 61 → 33ms, 최대 170 → 54ms. 층 3개 합치기는 음량 전환 설계와 충돌해 안 함. 근본(콜백 잠금)은
   MediaCodec 디코딩 또는 마디 단위 조각 파일 — 기기 확인 뒤.
+- **O6 (로직 · 저장 · 화질 설정)**: `src/core/quality.py` 높음/중간/낮음 = (fps 60/60/30, bg_fps 15/12/8, fx_level 2/1/0) 를 설정 `quality` 한 단계로.
+  `Game._quality_boot` 는 감지 전 폰을 중간 값으로, `_quality_watch` 는 낚시 장면 처음 10초 평균 fps 로 확정(폰 ≥52/≥28, PC ≥55/≥35),
+  그 뒤 목표(화면 fps 85%) 미달 30초(좋은 프레임은 절반 속도로 깎임) 누적이면 ConfirmScene 으로 한 단계 낮추기 1회 제안(`quality_hint`).
+  설정 → 화면 "화질" 줄(PC · 폰). 자동 저장은 `SaveGame.save(sync=False)` — 직렬화만 메인, 쓰기는 `_Writer` 스레드(경로별 최신 하나),
+  종료 · 전환은 sync. `_set_spot` 끝에 `gcwatch.settle(collect=True)`. `travel.start_trip` 이 `Ambience.prefetch` 로 도착지 바탕을 미리.
+  매 프레임 객체 생성은 PC 0.1~0.2ms 라 보류. 19장면 픽셀 동일.
 - **v1.3.6** (갤럭시 탭 32비트: v1.3.5 첫 장면 `splash.draw` 의 blit 에서 `Fatal Python error: Bus error`, 안전 모드로도 같음):
   pygame 2.6.1 에 묶인 옛 sse2neon 의 `_mm_storel_epi64` 가 8바이트 대신 `*a` 16바이트를 읽고 되쓴다. 32비트 블리터는
   `STORE_M128_INTO_64`(픽셀 2개 = 8바이트, 주소 4바이트 정렬)로 이걸 쓰는데, ARM32 는 `__m128i` 정렬 힌트가 붙은 `vld1 [r:64]` 라

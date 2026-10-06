@@ -43,6 +43,8 @@ def start_trip(game, fishing, spot_id: str, prev_cont: str) -> None:
         return
     first = spot_id not in visited and m == "full"
     kind = "first" if first else "revisit"
+    from src.audio.ambience import Ambience
+    Ambience.prefetch(game.sfx, spot_id)   # 컷신 동안 도착지 환경음 바탕을 읽어 둔다 (도착 순간 읽느라 멈추지 않게, O6)
     spot = next(s for s in load_json("spots.json")["spots"] if s["id"] == spot_id)
     cont = spot.get("continent", "sharmion")
     if cont != prev_cont:

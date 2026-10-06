@@ -33,6 +33,13 @@ class Ambience:
             out += load_json("seasons.json")["ambience"].get(season, [])
         return out
 
+    @staticmethod
+    def prefetch(sfx, spot: str) -> None:
+        """이 낚시터 바탕 + 날씨 바탕 · 천둥을 일꾼 스레드에 맡김 (이동 컷신 때 — src/audio/loader.py)."""
+        c = load_json("ambience.json")
+        names = [b[0] for b in [c["spots"].get(spot, {}).get("bed")] + [w.get("bed") for w in c["weather"].values()] if b]
+        sfx.prefetch(names + ["amb_thunder_near", "amb_thunder_far"])
+
     def stop(self) -> None:
         for name in set(self.beds) | set(self.cur):
             self.sfx.loop(name, False)

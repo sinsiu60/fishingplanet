@@ -59,12 +59,14 @@ class SettingsScene(Scene):
             return self._access_rows()
         if tab == "소리":
             return self._sound_rows()
+        quality = ("화질 (배경 갱신 · 이펙트 · fps)", "step", self._quality_label,
+                   (lambda: self._quality_step(-1), lambda: self._quality_step(1)))
         if not IS_MOBILE:
             scale = ("화면 배율", "step", lambda: f"{self.game.screen.scale}배 (최대 {self._max_scale()})",
                      (lambda: self._scale(-1), lambda: self._scale(1)))
-            return sound + [scale, guide, tutorial, captions, transfer]
+            return sound + [scale, quality, guide, tutorial, captions, transfer]
         if tab == "화면":
-            return sound + [captions, guide, tutorial]
+            return sound + [quality, captions, guide, tutorial]
         size = ("터치 버튼 크기", "step", lambda: ("작게", "보통", "크게")[s.get("touch_size")],
                 (lambda: self._step("touch_size", -1, 2), lambda: self._step("touch_size", 1, 2)))
         alpha = ("터치 버튼 진하기", "step", lambda: ("흐리게", "보통", "진하게")[s.get("touch_alpha")],
@@ -256,6 +258,17 @@ class SettingsScene(Scene):
     def s(self):
         return self.game.settings
 
+
+    def _quality_label(self) -> str:
+        from src.core import quality
+        q = quality.current(self.s)
+        return quality.NAMES[q] if q else "자동 (10초 뒤 결정)"
+
+    def _quality_step(self, d: int) -> None:
+        from src.core import quality
+        q = quality.current(self.s) or ("medium" if IS_MOBILE else "high")
+        i = max(0, min(len(quality.LEVELS) - 1, quality.LEVELS.index(q) + d))
+        quality.apply(self.s, quality.LEVELS[i])
 
     def _step(self, key: str, d: int, top: int) -> None:
         self.s.set(key, max(0, min(top, self.s.get(key) + d)))

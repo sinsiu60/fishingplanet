@@ -224,6 +224,8 @@ class FishingScene(Scene):
         self.game.sfx.set_space(spot_id)  # N5: 낚시터 잔향·먹먹함 (공간별로 미리 구운 소리)
         # 전설 등장 '드론' · 환상 파장 울림: 처음 울리는 순간 파일 읽느라 멈추지 않게 미리 (DESIGN.md 44)
         self.game.sfx.prefetch(("sfx_legend_appear", "sfx_phantom_hum"))
+        from src.core import gcwatch
+        gcwatch.settle(collect=True)   # 낚시터 준비 끝: 한 번 치우고 얼림 → 플레이 중 GC 가 이 객체들을 다시 훑지 않게 (O6)
 
     @property
     def weather(self) -> str:

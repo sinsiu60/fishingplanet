@@ -12,6 +12,8 @@ DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": N
             "bg_fps": 15,
             # 화질 단계 (O4 · O6): 2 높음(지금 그대로) · 1 중간 · 0 낮음 — 반투명 겹 · 파티클 · 화면 흔들림. O6 자동 감지가 정한다
             "fx_level": 2,
+            # 화질 단계 (O6 src/core/quality.py): high · medium · low · None = 아직 자동 감지 전. quality_hint = 낮추기 제안을 이미 했나
+            "quality": None, "quality_hint": False,
             # 접근성 (31장 C6): 예고 시간 배율 0=1.0 1=1.25 2=1.5, 첫 만남 카드, 신호 슬롯 크기 0~2, 색약 팔레트, 소리 신호
             "tele_mult": 0, "signal_cards": True, "slot_size": 1, "colorblind": False, "signal_sound": True,
             # 소리 (32장 S3): 버스 볼륨 0~1, 신호 강조, 오디오 지연 보정(ms, + = 소리가 늦게 들리는 기기)

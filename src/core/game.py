@@ -30,6 +30,7 @@ class Game:
         pygame.init()
         bootlog.mark(f"pygame {pygame.version.ver} init · mixer {pygame.mixer.get_init()}")
         self.settings = Settings()
+        self._quality_boot()   # 화질 단계 (O6): 아직 자동 감지 전인 폰은 '중간' 값으로 시작
         self.tick_rate = cfg["tick_rate"]
         self.tick_dt = 1.0 / self.tick_rate
         self.fps_cap = cfg.get("fps_cap", 144)
@@ -196,6 +197,45 @@ class Game:
             pass
         self.screen.present()
 
+    # ── 화질 단계 (OPTIMIZATION.md O6, src/core/quality.py) ──
+    def _quality_boot(self) -> None:
+        from src.core import quality
+        if quality.current(self.settings) is None and self.screen_mobile_hint():
+            for k, v in quality.PRESET["medium"].items():   # 감지 전 폰: 중간 값으로 (quality 는 아직 None → 10초 뒤 확정)
+                self.settings.data[k] = v
+        self._q_t = self._q_frames = 0.0
+        self._q_low = 0.0
+
+    def screen_mobile_hint(self) -> bool:
+        from src.platform.detect import IS_MOBILE
+        return IS_MOBILE
+
+    def _quality_watch(self, frame_time: float) -> None:
+        """처음 10초(낚시 장면) 평균 fps 로 단계를 고르고, 그 뒤 30초 동안 목표에 못 미치면 한 단계 낮추자고 한 번 묻는다."""
+        from src.scene.fishing_scene import FishingScene
+        sc = self.scenes.current
+        if not isinstance(sc, FishingScene) or self.perf.bench is not None or frame_time <= 0:
+            return
+        from src.core import quality
+        s = self.settings
+        if quality.current(s) is None:
+            self._q_t += frame_time
+            self._q_frames += 1
+            if self._q_t >= 10.0:
+                quality.apply(s, quality.pick_by_fps(self._q_frames / self._q_t, self.screen.mobile))
+            return
+        if s.get("quality_hint") or quality.lower(quality.current(s)) is None:
+            return
+        target = min(60, self.frame_cap()) * 0.85
+        fps = 1.0 / frame_time
+        self._q_low = self._q_low + frame_time if fps < target else max(0.0, self._q_low - frame_time * 0.5)
+        if self._q_low >= 30.0:
+            s.set("quality_hint", True)
+            low = quality.lower(quality.current(s))
+            from src.scene.confirm import ConfirmScene
+            self.scenes.push(ConfirmScene(self, f"화면이 버거워 보여요. 화질을 '{quality.NAMES[low]}'으로 낮출까요?",
+                                          lambda: quality.apply(s, low)))
+
     def frame_cap(self) -> int:
         """PC = 설정 파일 값 그대로. 모바일 = 설정 30/60, 메뉴 화면은 늘 30 (배터리). 로직은 언제나 초당 60틱."""
         if not self.screen.mobile:
@@ -248,14 +288,14 @@ class Game:
         x, y = self.screen.to_canvas(pos)
         return max(0, min(self.screen.width - 1, x)), max(0, min(self.screen.height - 1, y))
 
-    def save_now(self) -> None:
-        """현재 진행을 저장 (게임 씬의 상태를 먼저 기록)."""
+    def save_now(self, sync: bool = True) -> None:
+        """현재 진행을 저장 (게임 씬의 상태를 먼저 기록). sync=False = 자동 저장: 파일 쓰기는 일꾼 스레드 (O6)."""
         if self.save is None or self.no_save:
             return
         for scene in self.scenes.stack:
             if hasattr(scene, "write_save"):
                 scene.write_save()
-        self.save.save()
+        self.save.save(sync=sync)
         self.autosave_t = 0.0
         from src.platform.detect import IS_WEB
         if IS_WEB:   # 브라우저: 바로 localStorage 로 (탭을 닫아도 남게)
@@ -296,6 +336,7 @@ class Game:
 
     def _frame(self, frame_time: float) -> None:
         fxq.set_level(self.settings.get("fx_level"))   # 화질 단계 (O4) — 이펙트 코드가 보는 전역
+        self._quality_watch(frame_time)
         if self.screen.mobile:
             # 한 프레임 일한 시간(대기 제외) 평균: 20ms 넘으면 60fps 무리 → 30fps, 12ms 아래면 다시 60
             work = getattr(self, "_work_ms", 10.0) * 0.95 + self.clock.get_rawtime() * 0.05
@@ -313,7 +354,7 @@ class Game:
             self.save.data["playtime"] += frame_time
             self.autosave_t += frame_time
             if self.autosave_t >= AUTOSAVE_SEC:
-                self.save_now()
+                self.save_now(sync=False)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:

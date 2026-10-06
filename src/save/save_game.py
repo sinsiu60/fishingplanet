@@ -11,6 +11,7 @@ import copy
 import json
 import os
 import shutil
+import threading
 import time
 
 from src.core.config import load_json
@@ -238,6 +239,59 @@ def new_data() -> dict:
     }
 
 
+def _write_file(path, payload: str) -> bool:
+    tmp = path.with_suffix(".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(payload)
+        os.replace(tmp, path)  # 저장 중 꺼져도 기존 파일이 깨지지 않게
+        return True
+    except OSError:
+        return False
+
+
+class _Writer:
+    """자동 저장 파일 쓰기 일꾼 (경로별 최신 내용 하나만 — 같은 슬롯에 연속으로 오면 마지막 것만 쓴다)."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.pending: dict = {}
+        self.thread = None
+        self.wake = threading.Event()
+
+    def submit(self, path, payload: str) -> None:
+        with self.lock:
+            self.pending[path] = payload
+            if self.thread is None:
+                self.thread = threading.Thread(target=self._run, name="save-writer", daemon=True)
+                self.thread.start()
+        self.wake.set()
+
+    def _run(self) -> None:
+        while True:
+            self.wake.wait()
+            with self.lock:
+                self.wake.clear()
+                items = list(self.pending.items())
+                self.pending.clear()
+            for path, payload in items:
+                _write_file(path, payload)
+            with self.lock:
+                self.idle.set() if not self.pending else self.idle.clear()
+
+    def flush(self) -> None:
+        """기다리는 쓰기를 지금 끝낸다 (종료 · 동기 저장 전)."""
+        with self.lock:
+            items = list(self.pending.items())
+            self.pending.clear()
+        for path, payload in items:
+            _write_file(path, payload)
+
+
+_writer = _Writer()
+_writer.idle = threading.Event()
+
+
 class SaveGame:
     def __init__(self, slot: int, data: dict | None = None):
         self.slot = slot
@@ -273,17 +327,24 @@ class SaveGame:
                 best, best_t = s, info["updated"]
         return best
 
-    def save(self) -> bool:
+    def save(self, sync: bool = True) -> bool:
+        """sync=False (자동 저장, OPTIMIZATION.md O6): 직렬화(0.5ms)만 메인에서 하고 파일 쓰기는 일꾼 스레드에서 —
+        연속 요청은 마지막 것 하나로 합쳐진다. sync=True (종료 · 장면 전환) 는 앞선 백그라운드 쓰기를 끝낸 뒤 바로 쓴다."""
         self.data["updated"] = time.time()
         path = _slot_path(self.slot)
-        tmp = path.with_suffix(".tmp")
         try:
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(self.data, f, ensure_ascii=False, indent=1)
-            os.replace(tmp, path)  # 저장 중 꺼져도 기존 파일이 깨지지 않게
-            return True
-        except OSError:
+            payload = json.dumps(self.data, ensure_ascii=False, indent=1)
+        except (TypeError, ValueError):
             return False
+        if sync:
+            _writer.flush()
+            return _write_file(path, payload)
+        _writer.submit(path, payload)
+        return True
+
+    @staticmethod
+    def flush_pending() -> None:
+        _writer.flush()
 
     # ── 장비 ──
     @property
