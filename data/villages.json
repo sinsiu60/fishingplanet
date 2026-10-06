@@ -1,7 +1,7 @@
 {
  "_설명": "마을 (DESIGN.md 35-3, CONTENT_EXPANSION.md B-1·B-2). 파노라마 가로 width px, 장소·NPC x 위치는 파노라마 좌표. place.action: dock(지도) / shop / quests / gallery / talk(그 NPC와 대화) / season(계절 알림판). npc.lines = 기본 대사 (대사 시스템 data/dialogue.json 이 없을 때·조건 맞는 대사가 없을 때).",
  "sharmion": {
-  "name": "윤슬 마을", "subtitle": "햇빛에 반짝이는 물결이 보이는 작은 포구", "map_node": [100, 228], "width": 1110, "style": "wood",
+  "name": "윤슬 마을", "subtitle": "햇빛에 반짝이는 물결이 보이는 작은 포구", "map_node": [100, 228], "width": 1180, "style": "wood",
   "ambience": "village_sharmion",
   "places": [
    {"id": "home", "name": "{player}의 집", "x": 62, "w": 92, "action": "home", "kind": "house", "low": true, "wall": [232, 220, 196], "roof": [122, 90, 58], "door": [90, 61, 42]},
@@ -10,7 +10,8 @@
    {"id": "board", "name": "의뢰 게시판", "x": 485, "w": 70, "action": "quests", "kind": "board", "npc": "sora"},
    {"id": "gallery", "name": "어탁 갤러리", "x": 615, "w": 120, "action": "gallery", "kind": "house", "wall": [196, 180, 150], "roof": [70, 90, 120], "npc": "gull", "sign": "fish"},
    {"id": "season", "name": "계절 알림판", "x": 760, "w": 60, "action": "season", "kind": "notice"},
-   {"id": "hut", "name": "노인 어부의 오두막", "x": 950, "w": 120, "action": "talk", "kind": "hut", "wall": [110, 84, 60], "roof": [80, 70, 50], "npc": "baek"}
+   {"id": "hut", "name": "노인 어부의 오두막", "x": 950, "w": 120, "action": "talk", "kind": "hut", "wall": [110, 84, 60], "roof": [80, 70, 50], "npc": "baek"},
+   {"id": "siwoo", "name": "시우 공방", "x": 1122, "w": 62, "action": "siwoo", "kind": "workshop", "wall": [92, 64, 44], "roof": [58, 42, 34]}
   ],
   "npcs": {
    "haru": {"name": "하루 아저씨", "x": 400, "body": [230, 140, 60], "skin": [230, 180, 140], "hat": "cap", "hat_col": [60, 90, 150], "prop": "rod",

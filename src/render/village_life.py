@@ -309,6 +309,8 @@ def chimney_pos(p: dict, sx: float, ground: int) -> tuple[int, int] | None:
         return cx, roof_y - 8
     if kind == "arch":
         return x0 + 14, ground - 66 - 10 - 8
+    if kind == "workshop":   # 시우 공방 (로고처럼 굴뚝)
+        return x0 + int(w * 0.76), ground - 40 - 14
     return None
 
 

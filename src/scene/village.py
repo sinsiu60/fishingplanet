@@ -45,6 +45,7 @@ class VillageScene(Scene):
         self.hover = None
         self.bubble = None         # {"npc", "lines", "i", "t"}
         self.panel = None          # 계절 알림판 {"t"}
+        self.sign_panel = None     # 시우 공방 문 팻말 {"t"} (DT11)
         fishing.backdrop = self.draw_world
         fishing._tut_spot = None   # 마을에서 다시 낚시터로 가면 '낚시터 입장' (가이드 튜토리얼)
         fishing.bite.stop()
@@ -95,6 +96,19 @@ class VillageScene(Scene):
                 from src.scene import dialogue
                 self.bubble = {"npc": host, "lines": dialogue.pick(game, host, cont, prefer_season=True), "i": 0, "t": -1.0}
                 self.ox = max(0, self.cfg["npcs"][host]["x"] - game.screen.canvas.get_width() // 2)
+        # 날짜 인사 · 생일 (DT11): 그날 마을 첫 입장 — 해당 NPC 말풍선 (계절 대사가 있으면 그 뒤에 차례로)
+        from src.render import date_events
+        self.bubble_queue: list = []
+        self.snow = date_events.LightSnow(date_events.cfg()["scene"]["christmas"]["snow"])
+        gr = date_events.village_greetings(self.save, cont)
+        for npc, line in gr["lines"]:
+            if npc in self.cfg["npcs"]:
+                self.bubble_queue.append({"npc": npc, "lines": [line], "i": 0, "t": 0.0})
+        if self.bubble is None and self.bubble_queue:
+            self.bubble = self.bubble_queue.pop(0)
+            self.ox = max(0, self.cfg["npcs"][self.bubble["npc"]]["x"] - game.screen.canvas.get_width() // 2)
+        if gr["gift"]:
+            self.life_msg = (date_events.cfg()["birthday"]["gift_line"], 5.0, (255, 200, 220))
         game.guide.flags["season_changed"] = self.season_changed   # 아직 장면 스택에 올라가기 전이라 직접 알려 줌
         game.guide.event("village_enter")   # 가이드 TG-15 (계절이 바뀐 뒤 처음)
         if self.cat is not None and self.cat.greet > 0:   # 마중: 지금 보는 자리 가장자리에서 달려옴
@@ -155,6 +169,22 @@ class VillageScene(Scene):
             self._talk(place["npc"])
         elif a == "season":
             self.panel = {"t": 0.0}
+        elif a == "siwoo":   # 시우 공방 (DT11): 등용을 잡았으면 제작자 한마디 + 크레딧, 아니면 문에 걸린 팻말
+            if self._siwoo_open():
+                from src.scene.credits import CreditsScene
+                self.game.sfx.play("ui_door", 0.6)
+                self.game.scenes.push(CreditsScene(self.game))
+            else:
+                self.sign_panel = {"t": 0.0}
+
+    def _siwoo_open(self) -> bool:
+        from src.save.save_game import fish_by_id
+        from src.save import dexbook
+        fid = load_json("details/siwoo_workshop.json")["unlock_fish"]
+        try:
+            return dexbook.entry(self.save, fish_by_id(fid)) is not None
+        except (KeyError, StopIteration):
+            return False
 
     def _gallery_line(self, fish: dict) -> str:
         """갈매기 박사: 어탁마다 한마디."""
@@ -170,8 +200,9 @@ class VillageScene(Scene):
     # ── 입력 ──
     def handle_action(self, a) -> None:
         if a.name == "back":
-            if self.bubble or self.panel or self.cat_pop:
-                self.bubble = self.panel = self.cat_pop = None
+            if self.bubble or self.panel or self.cat_pop or self.sign_panel:
+                self.bubble = self.panel = self.cat_pop = self.sign_panel = None
+                self.bubble_queue = []
                 return
             from src.scene.pause import PauseScene
             self.game.scenes.push(PauseScene(self.game, self.fishing))
@@ -214,11 +245,14 @@ class VillageScene(Scene):
         if self.panel is not None:
             self.panel = None
             return
+        if self.sign_panel is not None:
+            self.sign_panel = None
+            return
         if self.bubble is not None:
             b = self.bubble
             b["i"] += 1
             if b["i"] >= len(b["lines"]):
-                self.bubble = None
+                self.bubble = self._next_bubble()
             return
         for b in self.btns:
             if b.click(pos):
@@ -244,6 +278,15 @@ class VillageScene(Scene):
             if r.collidepoint(pos):
                 self._act(kind, pid)
                 return
+
+    def _next_bubble(self):
+        """다음 차례 말풍선 (날짜 인사 · 생일, DT11) — 그 NPC 쪽으로 화면을 옮김."""
+        if not getattr(self, "bubble_queue", None):
+            return None
+        b = self.bubble_queue.pop(0)
+        w = self.game.screen.canvas.get_width()
+        self.ox = clamp(self.cfg["npcs"][b["npc"]]["x"] - w // 2, 0, max(0, self.width - w))
+        return b
 
     # ── 고양이 (DT9) ──
     def _cat_btn(self) -> pygame.Rect:
@@ -381,8 +424,15 @@ class VillageScene(Scene):
         night = vr._night(hour)
         style = self.cfg["style"]
         ox = self.ox
+        from src.render import date_events
+        ev = date_events.events()
+        vr.SKY.clear()
+        vr.SKY.update(date_events.sky_tweak(hour))   # 추석 보름달 (DT11)
         vr._sky(canvas, pal, w)
         sun_x = vr._celestial(canvas, pal, hour, ox, w, self.t)
+        sc = date_events.cfg()["scene"]
+        if "seollal" in ev and self.cont in sc["seollal"]["villages"]:   # 설날 연
+            date_events.draw_kites(canvas, ox, w, self.t, sc["seollal"]["kites"])
         self.efx.draw_sky(canvas, self._eid(), self.cont, vr.HORIZON, False)
         vr._far(canvas, pal, ox, w, style)
         vr._sea(canvas, pal, ox, w, self.t, sun_x, night)
@@ -402,6 +452,8 @@ class VillageScene(Scene):
             if -200 < sx < w + 200:
                 if "{player}" in p["name"]:
                     p = dict(p, label=p["name"].replace("{player}", player_name(self.save)))
+                if p["kind"] == "workshop":
+                    p = dict(p, open=self._siwoo_open())
                 r = vr.draw_place(canvas, p, sx, pal, night, self.t, style, self.season,
                                   self.hover == ("place", p["id"]))
                 hits.append(("place", p["id"], r))
@@ -411,6 +463,8 @@ class VillageScene(Scene):
                     vl.draw_smoke(canvas, top, self.t, sk, int(p["x"]), 0.3 + (0.6 if wet else 0.0))
         from src.render.season_fx import draw_village_decor
         draw_village_decor(canvas, self.cfg["places"], ox, self.season, night, self.t, vr.GROUND)   # 계절 장식
+        if "christmas" in ev:   # 크리스마스: 처마 전구 (DT11)
+            date_events.draw_bulbs(canvas, self.cfg["places"], ox, w, self.t, vr.GROUND, night)
         vr.draw_lamps(canvas, ox, w, style, night, self.t, self.width)
         for nid, n in self.cfg["npcs"].items():
             sx = n["x"] - ox
@@ -424,6 +478,8 @@ class VillageScene(Scene):
             vr.draw_motes(canvas, w, self.t, night)
         self._weather(canvas, w, h)
         self.particles.draw(canvas)
+        if "christmas" in ev:   # 가볍게 눈 내리는 풍경 (실제 날씨와 별개, 화면 효과만)
+            self.snow.draw(canvas, self.t)
         self.hits = hits
 
     def _weather(self, canvas, w, h) -> None:
@@ -508,6 +564,19 @@ class VillageScene(Scene):
             self._draw_bubble(canvas)
         if self.panel is not None:
             self._draw_season_panel(canvas)
+        if self.sign_panel is not None:   # 문에 걸린 나무 팻말 (가까이서)
+            msg = load_json("details/siwoo_workshop.json")["closed"]
+            from src.core.fonts import get_font
+            tw = get_font(16).size(msg)[0] + 28
+            r = pygame.Rect(0, 0, tw, 44)
+            r.center = (w // 2, h // 2 - 10)
+            pygame.draw.line(canvas, (80, 60, 40), (r.x + 20, r.y), (w // 2, r.y - 22), 2)
+            pygame.draw.line(canvas, (80, 60, 40), (r.right - 20, r.y), (w // 2, r.y - 22), 2)
+            canvas.fill((70, 50, 32), r.move(2, 3))
+            canvas.fill((226, 210, 176), r)
+            pygame.draw.rect(canvas, (120, 88, 56), r, 2)
+            text(canvas, msg, r.center, (70, 50, 30), 16, "center")
+            text(canvas, "누르면 닫기", (w // 2, r.bottom + 12), (230, 225, 210), 11, "center", shadow=True)
         draw_cursor(canvas, self.mouse)
 
     def _draw_story(self, canvas) -> None:

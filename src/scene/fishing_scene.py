@@ -658,6 +658,8 @@ class FishingScene(Scene):
                 return
             if not self.touch and f is not None and f.phase == "fight":
                 self.ctl.tap(self.t)  # PC: 파이팅 중 좌클릭 하나하나가 연타
+            if self._grandpa_click(a.pos):
+                return
             self._left_click()
         elif n == "secondary":
             self._right_click()
@@ -947,6 +949,27 @@ class FishingScene(Scene):
         if self.fight is None:  # 파이팅에서 놓친 건 결과 화면에 같은 문장
             self.toasts.show(phantom.LOST_LINE, phantom.COLOR_LIGHT, 3.2, 11)
         self.sfx.set_base_duck("fight" if self.fight is not None else None)
+
+    def _grandpa_click(self, pos) -> bool:
+        """할아버지의 흔적 (DT11): 던지기 전(대기) · 파이팅 아닐 때 'ㅎ' 새김을 누르면 찾음."""
+        if pos is None or self.fight is not None or self.cast.state != CastState.READY or self.training is not None:
+            return False
+        if self.catch_show is not None or self.board is not None or self.release_scene is not None:
+            return False
+        from src.render import grandpa_marks
+        if not grandpa_marks.hit(self.spot_id, pos, self.touch):
+            return False
+        res = grandpa_marks.find(self.save, self.spot_id, self.clock.day, self.season)
+        if res is None:
+            self.toasts.show(f"할아버지의 흔적 — {grandpa_marks.mark_at(self.spot_id)['where']}", (220, 200, 160), 2.0, 11)
+            return True
+        self.sfx.play("st_paper", 0.5)
+        self.toasts.show(f"해강의 흔적 {res['n']}/{res['total']} — {res['line']}", (240, 220, 170), 3.6, 11)
+        if res["title"]:
+            from src.save.quests import shop_item
+            self.toasts.show(f"칭호 「{shop_item(res['title'])['name']}」", (255, 214, 90), 3.0, 11)
+        self.game.save_now()
+        return True
 
     def _left_click(self) -> None:
         c, f = self.cast, self.fight
@@ -3092,6 +3115,9 @@ class FishingScene(Scene):
         self._run_rt_fx()   # 슬로우모션 중엔 update 가 드물게 불리므로 그리기에서도 (타격 시점 정확히)
         self._tick_cine()
         hour = self.clock.hour
+        from src.render import date_events
+        world.SKY.clear()
+        world.SKY.update(date_events.sky_tweak(hour))   # 새해 아침 해돋이 · 추석 보름달 (DT11)
         theme, weather = self.theme, self.weather
         pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash, self.legend_k)
         from src.render.season_fx import season_palette
@@ -3236,6 +3262,9 @@ class FishingScene(Scene):
         else:
             world.FOREGROUND[fg](canvas, pal, t)
         self.map_fx.draw_fg(canvas, pal)   # 물보라 · 반짝임 · 재 · 빛 입자 · 구름 조각 · 반딧불 (DT3)
+        if self.training is None:
+            from src.render import grandpa_marks
+            grandpa_marks.draw(canvas, self.spot_id, pal)   # 할아버지의 흔적 'ㅎ' (DT11)
         from src.render.rod import gear_look
         from src.save.quests import skin_colors
         rod_l = gear_look("rod", self.save.gear_tier("rod"))       # 티어별 외형 (gear_looks.json)
@@ -3788,7 +3817,7 @@ class FishingScene(Scene):
             from src.save.quests import equipped, shop_item
             it = shop_item(equipped(self.save)["float_skin"]) or {}
             if it.get("band"):   # 해강의 찌 (스토리 C4-05): 대나무색 띠 + 빨간 점
-                out = dict(out, bobber_band=tuple(it["band"]), bobber_dot=tuple(it["dot"]))
+                out = dict(out, bobber_band=tuple(it["band"]), bobber_dot=tuple(it["dot"]), bobber_star=bool(it.get("star")))
         if self.save.cosmetic_on("sparkle_float"):
             glint = 0.5 + 0.5 * math.sin(self.t * 6)
             out = dict(out, bobber=lerp_color((255, 196, 60), (255, 250, 200), glint * 0.5))

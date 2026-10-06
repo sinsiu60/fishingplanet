@@ -39,3 +39,28 @@ def user_dir() -> Path:
     if IS_ANDROID:
         return _android_dir() / "saves"
     return _documents_dir() / "FishingPlanet"
+
+
+def pictures_dir(game_name: str) -> Path:
+    """사진 모드 (DT11) 저장 폴더: PC = 내 사진/<게임 이름>, 안드로이드 = 앱 전용 외부 폴더/photos (USB · 공유로 꺼냄)."""
+    if IS_ANDROID:
+        from src.platform import android
+        base = android.shared_dir() or (_android_dir() / "files")
+        return base / "photos"
+    pics = None
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
+            # CSIDL_MYPICTURES = 39 (내 사진, OneDrive 로 옮겨진 경우 포함)
+            if ctypes.windll.shell32.SHGetFolderPathW(None, 39, None, 0, buf) == 0:
+                pics = Path(buf.value)
+        except Exception:
+            pics = None
+    if pics is None:
+        pics = Path.home() / "Pictures"
+        if not pics.is_dir():
+            pics = _documents_dir()
+    return pics / game_name

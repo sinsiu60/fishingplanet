@@ -206,7 +206,8 @@ def new_data() -> dict:
         # 디테일 업데이트 (DESIGN.md 45장): seen_hook_cinematic = 전체 버전 입질 연출을 본 종 (DT4)
         "details": {"seen_hook_cinematic": [], "rod_casts": {}, "release_count": 0, "release_points": 0,
                     "release_points_today": {"date": "", "n": 0},
-                    "cat_affection": 0, "cat_fed_date": "", "haru_night_day": 0},   # DT9 마을 고양이 · 하루 아저씨 밤 대사
+                    "cat_affection": 0, "cat_fed_date": "", "haru_night_day": 0,   # DT9 마을 고양이 · 하루 아저씨 밤 대사
+                    "birthday": None, "birthday_gift_year": 0, "grandpa_marks": [], "photos": []},   # DT11 생일 · 흔적 · 사진
         "dex": {},
         "stats": {"catches": 0, "s_ranks": 0, "perfects": 0, "lost": 0, "earned": 0,
                   "chests_opened": 0, "s_ranks_eldra": 0, "double_perfects": 0, "mutations_caught": 0,

@@ -34,6 +34,7 @@ def _add_glow(canvas, pos, r: int, col) -> None:
 
 
 # ───────────────────────── 배경 ─────────────────────────
+SKY: dict = {}     # 날짜 이벤트 (DT11): 추석 보름달 — 장면이 매 프레임 넣음
 _BAKED: dict = {}   # 정적 레이어 (O2): 하늘 · 바다 그라데이션 · 바닥 — 색(시간대)이 바뀔 때만 다시 굽는다
 _STARS: dict = {}
 _GLINTS: list = []
@@ -72,8 +73,15 @@ def _celestial(canvas, pal, hour, ox, w, t):
     u = hh / 12
     x = lerp(-40, w + 40, u) - ox * 0.08
     y = HORIZON - 70 * math.sin(math.pi * u) - 4
-    pygame.draw.circle(canvas, (230, 230, 245), (int(x), int(y)), 7)
-    pygame.draw.circle(canvas, pal["sky_top"], (int(x) + 3, int(y) - 2), 6)
+    if SKY.get("full_moon"):   # 추석 (DT11): 보름달 1.5배, 은은한 빛
+        r = int(round(7 * SKY.get("moon_scale", 1.0)))
+        _add_glow(canvas, (x, y), r + 10, (70, 70, 60))
+        pygame.draw.circle(canvas, (240, 236, 214), (int(x), int(y)), r)
+        pygame.draw.circle(canvas, (214, 210, 190), (int(x) - 3, int(y) - 2), 2)
+        pygame.draw.circle(canvas, (214, 210, 190), (int(x) + 3, int(y) + 3), 1)
+    else:
+        pygame.draw.circle(canvas, (230, 230, 245), (int(x), int(y)), 7)
+        pygame.draw.circle(canvas, pal["sky_top"], (int(x) + 3, int(y) - 2), 6)
     stars = _STARS.get(w)
     if stars is None:
         rnd = random.Random(4)
@@ -314,9 +322,54 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
         _sign(canvas, x0 + w // 2, SEA_BOTTOM - 30, p["name"], (60, 44, 30) if style == "wood" else (40, 46, 80), (250, 236, 200), night,
               (255, 190, 100) if style == "wood" else (90, 220, 230))
         hit = pygame.Rect(x0 - 40, SEA_BOTTOM - 40, w + 40, 60)
+    elif kind == "workshop":   # 시우 공방 (DT11): 작은 가게 + 로고(집 모양) 간판, 등용을 잡으면 문이 열림
+        hh = 40
+        canvas.fill(shade(wall, k), (x0, GROUND - hh, w, hh))
+        for yy in range(GROUND - hh, GROUND, 5):
+            canvas.fill(shade(lerp_color(wall, (0, 0, 0), 0.15), k), (x0, yy, w, 1))
+        pygame.draw.polygon(canvas, shade(roof, k), [(x0 - 6, GROUND - hh), (x0 + w // 2, GROUND - hh - 24), (x0 + w + 6, GROUND - hh)])
+        from src.render.village_life import chimney_pos, draw_chimney
+        draw_chimney(canvas, chimney_pos(p, sx, GROUND), shade(lerp_color(roof, (90, 80, 76), 0.5), k), night)
+        door = pygame.Rect(x0 + w // 2 - 8, GROUND - 24, 16, 24)
+        if p.get("open"):   # 열린 문: 안쪽 따뜻한 불빛
+            canvas.fill((40, 26, 18), door)
+            canvas.fill((255, 200, 120), door.inflate(-6, -6))
+            canvas.fill(shade((120, 84, 56), k), (door.x - 5, door.y, 5, door.h))   # 열린 문짝
+            _add_glow(canvas, door.center, 16, (110, 80, 40))
+        else:               # 닫힌 문 + 걸린 팻말
+            canvas.fill(shade((70, 48, 32), k), door)
+            canvas.fill((40, 30, 20), (door.right - 4, door.centery, 2, 2))
+            pygame.draw.line(canvas, (60, 50, 40), (door.centerx - 4, door.y + 4), (door.centerx, door.y + 1), 1)
+            pygame.draw.line(canvas, (60, 50, 40), (door.centerx + 4, door.y + 4), (door.centerx, door.y + 1), 1)
+            canvas.fill((226, 214, 186), (door.centerx - 6, door.y + 4, 12, 7))
+            canvas.fill((120, 90, 60), (door.centerx - 4, door.y + 7, 8, 1))
+        _window(canvas, x0 + 6, GROUND - hh + 10, 12, 10, night, shade(lerp_color(wall, (0, 0, 0), 0.5), k))
+        logo = _siu_logo()
+        sign = _sign(canvas, x0 + w // 2 + 6, GROUND - hh - 8, p["name"], (60, 44, 30), (250, 236, 200), night)
+        canvas.blit(logo, (sign.x - logo.get_width() - 1, sign.centery - logo.get_height() // 2))
+        hit = pygame.Rect(x0 - 6, GROUND - hh - 26, w + 12, hh + 30)
     if hover:
         pygame.draw.rect(canvas, (255, 236, 170), hit, 1)
     return hit
+
+
+_LOGO: list = []
+
+
+def _siu_logo() -> pygame.Surface:
+    """시우 공방 로고(집 모양, 32x32)를 14x14 로 — 간판 옆 작은 아이콘."""
+    if not _LOGO:
+        try:
+            from src.core.paths import asset_path
+            img = pygame.image.load(str(asset_path("branding", "siu_mark_32_base.png")))
+            try:
+                img = img.convert_alpha()
+            except pygame.error:
+                pass
+            _LOGO.append(pygame.transform.smoothscale(img, (14, 14)))
+        except (OSError, pygame.error, FileNotFoundError):
+            _LOGO.append(pygame.Surface((1, 1), pygame.SRCALPHA))
+    return _LOGO[0]
 
 
 # ───────────────────────── NPC ─────────────────────────

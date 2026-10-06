@@ -98,6 +98,29 @@ def share_text(text: str, title: str) -> bool:
         return False
 
 
+def share_image(path: str, title: str) -> bool:
+    """사진 공유 (DT11, 사진 모드): 안드로이드 공유 창으로 PNG 를 보냄. 파일 URI 를 허용하도록 VM 정책을 풀고 보냄."""
+    try:
+        from jnius import autoclass, cast
+        strict = autoclass("android.os.StrictMode")
+        builder = autoclass("android.os.StrictMode$VmPolicy$Builder")
+        strict.setVmPolicy(builder().build())
+        intent_cls = autoclass("android.content.Intent")
+        uri_cls = autoclass("android.net.Uri")
+        file_cls = autoclass("java.io.File")
+        jstr = autoclass("java.lang.String")
+        intent = intent_cls()
+        intent.setAction(intent_cls.ACTION_SEND)
+        intent.setType("image/png")
+        intent.putExtra(intent_cls.EXTRA_STREAM, cast("android.os.Parcelable", uri_cls.fromFile(file_cls(path))))
+        intent.addFlags(intent_cls.FLAG_GRANT_READ_URI_PERMISSION)
+        chooser = intent_cls.createChooser(intent, cast("java.lang.CharSequence", jstr(title)))
+        _activity().startActivity(chooser)
+        return True
+    except Exception:
+        return False
+
+
 def shared_dir():
     """다른 앱·PC(USB)에서 볼 수 있는 앱 전용 외부 폴더 (Android/data/<패키지>/files). 없으면 None."""
     try:

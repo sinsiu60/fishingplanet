@@ -117,6 +117,28 @@ class JournalScene(Scene):
     def _book(self, w, h) -> pygame.Rect:
         return pygame.Rect(w // 2 - 220, h // 2 - 118, 440, 236)
 
+    _PHOTOS: dict = {}
+
+    def _draw_photo(self, canvas, e: dict, x: int, y: int) -> None:
+        """사진 칸 (DT11 사진 모드): 흰 테두리 사진 + 찍은 날짜. 파일이 없으면 빈 칸."""
+        img = self._PHOTOS.get(e["photo"])
+        if img is None:
+            try:
+                img = pygame.image.load(e["photo"])
+            except (OSError, pygame.error, FileNotFoundError):
+                img = False
+            self._PHOTOS[e["photo"]] = img
+        r = pygame.Rect(x, y - 2, 66, 38)
+        canvas.fill((252, 250, 244), r.inflate(4, 4))
+        pygame.draw.rect(canvas, (190, 176, 150), r.inflate(4, 4), 1)
+        if img:
+            canvas.blit(pygame.transform.smoothscale(img, r.size), r)
+        else:
+            canvas.fill((200, 192, 176), r)
+            text(canvas, "사진 없음", r.center, (120, 110, 96), 11, "center")
+        if e.get("date"):
+            text(canvas, e["date"].replace("-", ". "), (r.right + 8, r.centery), (130, 100, 70), 11, "midleft")
+
     def draw(self, canvas) -> None:
         self.room.draw_room(canvas)
         w, h = canvas.get_size()
@@ -137,7 +159,11 @@ class JournalScene(Scene):
                 y = book.y + 30 + i * 48
                 icon = seasons.ICON.get(e.get("season"), "")
                 text(canvas, f"{e.get('day', 1)}일째 {icon}", (x0, y), (130, 100, 70), 11, "midleft")
-                for j, ln in enumerate(wrap_text(self.texts[e["id"]]["text"], book.w // 2 - 30)[:2]):
+                body = e.get("text") or self.texts.get(e["id"], {}).get("text", "")   # 흔적 · 사진(DT11)은 문장을 직접 가짐
+                if e.get("photo"):
+                    self._draw_photo(canvas, e, x0, y + 9)
+                    continue
+                for j, ln in enumerate(wrap_text(body, book.w // 2 - 30)[:2]):
                     text(canvas, ln, (x0, y + 15 + j * 13), PAGE_INK, 11, "midleft")
             text(canvas, str(pg + 1), (x0 + book.w // 4 - 14, book.bottom - 10), (150, 130, 100), 11, "center")
         if not ent:

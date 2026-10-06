@@ -103,6 +103,9 @@ class StarField:
             canvas.set_at((sx, int(y)), lerp_color(pal["sky_top"], STAR_COLOR, k))
 
 
+SKY: dict = {}   # 날짜 이벤트 (DT11): sun_scale · sun_color (새해 아침 해돋이) / moon_scale · full_moon (추석) — 장면이 매 프레임 넣음
+
+
 def draw_celestial(canvas, pal, cam, hour: float, t: float, visible: bool = True) -> None:
     if not visible:
         return
@@ -113,8 +116,10 @@ def draw_celestial(canvas, pal, cam, hour: float, t: float, visible: bool = True
         x, y = int(pos[0]), int(pos[1])
         if body["kind"] == "sun":
             color, radius = pal["sun"], 8
+            if SKY.get("sun_scale"):   # 새해 해돋이: 크고 붉게
+                color, radius = lerp_color(color, SKY["sun_color"], 0.75), int(round(8 * SKY["sun_scale"]))
         else:
-            color, radius = MOON_COLOR, 6
+            color, radius = MOON_COLOR, int(round(6 * SKY.get("moon_scale", 1.0)))
         sky_here = lerp_color(pal["sky_top"], pal["sky_bottom"], clamp(y / cam.horizon, 0, 1) ** 1.3)
         # 픽셀아트식 계단 후광
         for i, (r_add, k) in enumerate(((10, 0.18), (6, 0.32), (3, 0.5))):
@@ -122,8 +127,9 @@ def draw_celestial(canvas, pal, cam, hour: float, t: float, visible: bool = True
         pygame.draw.circle(canvas, color, (x, y), radius)
         if body["kind"] == "moon":
             crater = scale_color(MOON_COLOR, 0.86)
-            pygame.draw.circle(canvas, crater, (x - 2, y - 1), 2)
-            pygame.draw.circle(canvas, crater, (x + 2, y + 2), 1)
+            k = radius / 6
+            pygame.draw.circle(canvas, crater, (x - int(2 * k), y - int(1 * k)), max(1, int(2 * k)))
+            pygame.draw.circle(canvas, crater, (x + int(2 * k), y + int(2 * k)), max(1, int(1 * k)))
 
 
 class Clouds:

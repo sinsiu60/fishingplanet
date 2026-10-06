@@ -113,8 +113,8 @@ def draw_bobber(canvas, pal, x: float, y: float, size: float, floating: bool, di
         if pal.get("bobber_band"):   # 해강의 찌: 가운데 대나무색 띠 (외형만)
             canvas.fill(pal["bobber_band"], (x - w // 2, top + h // 5, w, max(1, h // 9)))
         pygame.draw.line(canvas, scale_color(red, 0.7), (x, top), (x, top - h // 3), 1)
-        if pal.get("bobber_dot"):    # 맨 위 작은 빨간 점
-            canvas.fill(pal["bobber_dot"], (x - 1, top - h // 3 - 1, 2, 2))
+        if pal.get("bobber_dot"):    # 맨 위 작은 빨간 점 (생일 축하 찌: 작은 별)
+            _dot(canvas, pal, x, top - h // 3 - 1)
         canvas.set_clip(clip)
         canvas.fill(hl, (x - w // 2 - 1, y, w + 2, 1))
     else:
@@ -124,7 +124,17 @@ def draw_bobber(canvas, pal, x: float, y: float, size: float, floating: bool, di
             canvas.fill(pal["bobber_band"], (x - w // 2, y - h // 4, w, max(1, h // 9)))
         pygame.draw.line(canvas, scale_color(red, 0.7), (x, y - h // 2), (x, y - h // 2 - h // 3), 1)
         if pal.get("bobber_dot"):
-            canvas.fill(pal["bobber_dot"], (x - 1, y - h // 2 - h // 3 - 1, 2, 2))
+            _dot(canvas, pal, x, y - h // 2 - h // 3 - 1)
+
+
+def _dot(canvas, pal, x: int, y: int) -> None:
+    if pal.get("bobber_star"):   # 생일 축하 찌 (DT11): 안테나 끝 작은 별 (+ 모양 5px)
+        c = pal["bobber_dot"]
+        canvas.fill(c, (x - 2, y, 5, 1))
+        canvas.fill(c, (x, y - 2, 1, 5))
+        canvas.fill(c, (x - 1, y - 1, 3, 3))
+    else:
+        canvas.fill(pal["bobber_dot"], (x - 1, y, 2, 2))
 
 
 def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:

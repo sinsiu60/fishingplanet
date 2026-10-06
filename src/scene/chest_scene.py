@@ -451,6 +451,17 @@ class ChestScene(Scene):
             canvas.fill((40, 34, 24), self.story_row)
             pygame.draw.rect(canvas, (200, 170, 110), self.story_row, 1)
             text(canvas, "이야기 · 해강의 마지막 장 (눌러서 읽기)", (24, self.story_row.centery), (240, 220, 170), 11, "midleft")
+        from src.render import grandpa_marks   # 할아버지의 흔적 (DT11): 이야기 칸에 "해강의 흔적 n/6"
+        gn = grandpa_marks.count(self.save)
+        if gn:
+            if self.story_row is not None:
+                text(canvas, f"해강의 흔적 {gn}/{grandpa_marks.total()}", (self.story_row.right - 8, self.story_row.centery),
+                     (240, 220, 170), 11, "midright")
+            else:
+                r = pygame.Rect(16, 222, 448, 16)
+                canvas.fill((40, 34, 24), r)
+                pygame.draw.rect(canvas, (200, 170, 110), r, 1)
+                text(canvas, f"이야기 · 해강의 흔적 {gn}/{grandpa_marks.total()}", (24, r.centery), (240, 220, 170), 11, "midleft")
         y = 52
         shown = [fid for fid in h["diary"] if fid in got]
         if not shown:
@@ -471,7 +482,7 @@ class ChestScene(Scene):
                 text(canvas, "— 윤해강", (446, y), (200, 180, 150), 11, "midright")
             y += 18
         if pages > 1:
-            text(canvas, f"{page + 1}/{pages}쪽 (클릭: 다음 쪽)", (20, 210 if self.story_row else 236), ui.DIM, 11, "midleft")
+            text(canvas, f"{page + 1}/{pages}쪽 (클릭: 다음 쪽)", (20, 210 if self.story_row or gn else 236), ui.DIM, 11, "midleft")
 
     # ── 개봉 연출 ──
     def _draw_anim(self, canvas) -> None:

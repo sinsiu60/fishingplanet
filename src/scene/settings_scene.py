@@ -28,10 +28,15 @@ class SettingsScene(Scene):
         self.msg_t = 0.0
         self.w = game.screen.ui_rect.w
         self.x0 = self.w // 2 - 140
+        bday = ["생일"] if game.save is not None else []   # 생일 (DT11, 선택 · 세이브마다)
         if IS_MOBILE:
-            self.tabs = ui.Tabs(self.w // 2 - 136, 56, ["화면", "소리", "터치·기기", "접근성"], width=66)
+            labels = ["화면", "소리", "터치·기기", "접근성"] + bday
+            wd = 66 if not bday else 53
+            self.tabs = ui.Tabs(self.w // 2 - 136, 56, labels, width=wd)
         else:
-            self.tabs = ui.Tabs(self.w // 2 - 110, 56, ["화면", "소리", "접근성"], width=72)
+            labels = ["화면", "소리", "접근성"] + bday
+            wd = 72 if not bday else 62
+            self.tabs = ui.Tabs(self.w // 2 - (len(labels) * (wd + 2)) // 2, 56, labels, width=wd)
         self._build()
 
     # ── 줄 정의: (이름, 종류, 값 글자 함수, 동작들) ──
@@ -61,6 +66,8 @@ class SettingsScene(Scene):
         tab = self.tabs.labels[self.tabs.index]
         if tab == "접근성":
             return self._access_rows()
+        if tab == "생일":
+            return self._birthday_rows()
         if tab == "소리":
             return self._sound_rows()
         quality = ("화질 (배경 갱신 · 이펙트 · fps)", "step", self._quality_label,
@@ -86,6 +93,44 @@ class SettingsScene(Scene):
         gpu = ("빠른 화면 출력 (GPU · 다시 켜면 적용)", "toggle", lambda: s.get("gpu_present"),
                lambda: s.set("gpu_present", not s.get("gpu_present")))
         return [size, alpha, left, vib, fps, gpu, perf, transfer]
+
+    # ── 생일 (DETAILS.md H-2, DT11): 월 · 일, 비워 두면 기능 없음 ──
+    def _bday(self):
+        b = self.game.save.data.setdefault("details", {}).get("birthday")
+        return (int(b[:2]), int(b[3:])) if b else None
+
+    def _set_bday(self, m: int | None, d: int | None) -> None:
+        det = self.game.save.data.setdefault("details", {})
+        if m is None:
+            det["birthday"] = None
+            return
+        import calendar
+        d = max(1, min(d or 1, calendar.monthrange(2024, m)[1]))   # 2024 = 윤년 (2월 29일 허용)
+        det["birthday"] = f"{m:02d}-{d:02d}"
+
+    def _bday_step(self, part: str, step: int) -> None:
+        cur = self._bday() or (1, 1)
+        import calendar
+        if self._bday() is None:
+            self._set_bday(1, 1)
+            return
+        m, d = cur
+        if part == "m":
+            m = (m - 1 + step) % 12 + 1
+        else:
+            n = calendar.monthrange(2024, m)[1]
+            d = (d - 1 + step) % n + 1
+        self._set_bday(m, d)
+
+    def _birthday_rows(self) -> list[tuple]:
+        b = self._bday
+        return [
+            ("생일 (월)", "step", lambda: f"{b()[0]}월" if b() else "없음",
+             (lambda: self._bday_step("m", -1), lambda: self._bday_step("m", 1))),
+            ("생일 (일)", "step", lambda: f"{b()[1]}일" if b() else "없음",
+             (lambda: self._bday_step("d", -1), lambda: self._bday_step("d", 1))),
+            ("생일 지우기 (기능 끄기)", "button", lambda: "지우기" if b() else "비어 있음", lambda: self._set_bday(None, None)),
+        ]
 
     def _access_rows(self) -> list[tuple]:
         """접근성 (31장 C6). 예고 배율은 랭크 판정에 영향 없음 — 결과 화면에 작게 표시."""
