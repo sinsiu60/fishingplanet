@@ -331,18 +331,18 @@
    "sound": "끓는 소리 + '푸슉'",
    "sfx": [
     [
-     "sig_nat_timing_boil",
+     "sfx_bubbles",
      0.8
+    ],
+    [
+     "amb_bubble",
+     0.6,
+     0.1
     ],
     [
      "sfx_splash",
      0.7,
      0.35
-    ],
-    [
-     "sfx_bubbles",
-     0.6,
-     0.0
     ]
    ]
   },
@@ -389,56 +389,239 @@
    16
   ],
   "unique_at": 1.2,
-  "unique_sec": 0.6
+  "unique_sec": 0.6,
+  "pre": {
+   "_설명": "0.3초: 물보라 없이 찌가 소리 없이 천천히 가라앉기 시작 + 보랏빛(#B48CF0) 파문이 거꾸로 오므라들며 찌로 (소리 없음 · 진동은 기존 'bite' 약하게)",
+   "sec": 0.3,
+   "sfx": [],
+   "haptic_only": [
+    "bite",
+    0.5
+   ],
+   "sink_px": 3,
+   "rings": 3,
+   "ring_radius": 34
+  },
+  "post": {
+   "_설명": "전체 1.8초 (B-5)",
+   "sec": 1.8,
+   "events": [
+    {
+     "at": 0.0,
+     "do": "slowmo",
+     "real_sec": 0.6,
+     "scale": 0.05
+    },
+    {
+     "at": 0.0,
+     "do": "silence",
+     "sec": 0.6
+    },
+    {
+     "at": 0.0,
+     "do": "fx",
+     "name": "frozen_drops",
+     "sec": 1.2
+    },
+    {
+     "at": 0.6,
+     "do": "sfx",
+     "name": "sfx_phantom_icon0",
+     "vol": 0.9
+    },
+    {
+     "at": 0.6,
+     "do": "fx",
+     "name": "violet_burst",
+     "sec": 0.6
+    },
+    {
+     "at": 0.6,
+     "do": "phantom_k"
+    },
+    {
+     "at": 0.62,
+     "do": "sfx",
+     "name": "sfx_phantom_hum",
+     "vol": 0.7
+    },
+    {
+     "at": 1.2,
+     "do": "unique"
+    }
+   ]
+  },
+  "post_short": {
+   "_설명": "재회 짧은 버전: 정지 부분 생략, 고유 연출만 0.6초 (보라는 60%로)",
+   "sec": 0.6,
+   "events": [
+    {
+     "at": 0.0,
+     "do": "phantom_k"
+    },
+    {
+     "at": 0.0,
+     "do": "unique"
+    }
+   ]
+  }
  },
  "phantom_unique": {
   "moon_shadow_carp": {
    "id": "moon_shatter",
-   "desc": "수면에 비친 달이 조각조각 부서졌다 다시 모임"
+   "desc": "수면에 비친 달이 조각조각 부서졌다 다시 모임",
+   "sfx": [
+    [
+     "sfx_phantom_icon2",
+     0.35
+    ]
+   ]
   },
   "mist_mandarin": {
    "id": "mist_inhale",
-   "desc": "보라 안개가 찌로 한꺼번에 빨려 들어감"
+   "desc": "보라 안개가 찌로 한꺼번에 빨려 들어감",
+   "sfx": [
+    [
+     "amb_gust",
+     0.25
+    ]
+   ]
   },
   "dusk_bass": {
    "id": "violet_dusk",
-   "desc": "하늘이 0.5초 동안 보라 노을로 물듦"
+   "desc": "하늘이 0.5초 동안 보라 노을로 물듦",
+   "sfx": [
+    [
+     "sfx_phantom_icon1",
+     0.3
+    ]
+   ]
   },
   "meteor_tuna": {
    "id": "meteor",
-   "desc": "하늘을 유성 하나가 가로지름"
+   "desc": "하늘을 유성 하나가 가로지름",
+   "sfx": [
+    [
+     "sfx_phantom_icon3",
+     0.3
+    ]
+   ]
   },
   "abyss_lantern": {
    "id": "deep_lantern",
-   "desc": "찌 아래 깊은 곳에서 등불 하나가 켜졌다 꺼짐"
+   "desc": "찌 아래 깊은 곳에서 등불 하나가 켜졌다 꺼짐",
+   "sfx": [
+    [
+     "sfx_phantom_icon0",
+     0.3
+    ]
+   ]
   },
   "echo_fish": {
    "id": "echo_bobbers",
-   "desc": "찌가 4개로 겹쳐 보였다가 하나로 합쳐짐"
+   "desc": "찌가 4개로 겹쳐 보였다가 하나로 합쳐짐",
+   "sfx": [
+    [
+     "sfx_phantom_icon1",
+     0.35
+    ],
+    [
+     "sfx_phantom_icon1",
+     0.2,
+     0.15
+    ],
+    [
+     "sfx_phantom_icon1",
+     0.1,
+     0.3
+    ]
+   ]
   },
   "violet_reed_carp": {
    "id": "violet_reeds",
-   "desc": "주변 갈대가 보랏빛으로 일렁임"
+   "desc": "주변 갈대가 보랏빛으로 일렁임",
+   "sfx": [
+    [
+     "amb_gust",
+     0.25
+    ]
+   ]
   },
   "amethyst_blindfish": {
    "id": "amethyst_bloom",
-   "desc": "찌 주변에 작은 자수정 결정이 반짝 생겼다 사라짐"
+   "desc": "찌 주변에 작은 자수정 결정이 반짝 생겼다 사라짐",
+   "sfx": [
+    [
+     "room_crystal_ting",
+     0.3
+    ]
+   ]
   },
   "sky_butterfly": {
    "id": "butterflies",
-   "desc": "수면에서 보랏빛 나비 떼가 날아오름"
+   "desc": "수면에서 보랏빛 나비 떼가 날아오름",
+   "sfx": [
+    [
+     "sfx_phantom_icon2",
+     0.25
+    ],
+    [
+     "sfx_phantom_icon3",
+     0.2,
+     0.18
+    ]
+   ]
   },
   "ember_moray": {
    "id": "violet_embers",
-   "desc": "보랏빛 불씨가 수면 위로 흩날림"
+   "desc": "보랏빛 불씨가 수면 위로 흩날림",
+   "sfx": [
+    [
+     "room_fire_pop0",
+     0.3
+    ],
+    [
+     "room_fire_pop1",
+     0.2,
+     0.2
+    ]
+   ]
   },
   "aurora_smelt": {
    "id": "aurora_ribbon",
-   "desc": "하늘에 오로라 한 줄기가 흐름 (환상 전용 표현)"
+   "desc": "하늘에 오로라 한 줄기가 흐름 (환상 전용 표현)",
+   "sfx": [
+    [
+     "sfx_phantom_icon0",
+     0.2
+    ],
+    [
+     "sfx_phantom_icon1",
+     0.2,
+     0.12
+    ],
+    [
+     "sfx_phantom_icon2",
+     0.2,
+     0.24
+    ],
+    [
+     "sfx_phantom_icon3",
+     0.2,
+     0.36
+    ]
+   ]
   },
   "dream_carp": {
    "id": "spirit_ring",
-   "desc": "작은 정령 빛들이 찌 주위를 한 바퀴 돌고 사라짐"
-  }
+   "desc": "작은 정령 빛들이 찌 주위를 한 바퀴 돌고 사라짐",
+   "sfx": [
+    [
+     "sfx_phantom_icon3",
+     0.3
+    ]
+   ]
+  },
+  "_설명": "sfx = [이름, 음량, 늦춤(초)] — 고유 소리는 작게 (B-6)"
  }
 }

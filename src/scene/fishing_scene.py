@@ -151,8 +151,11 @@ class FishingScene(Scene):
         from src.render.hook_cine import HookCine
         self.hook_cine = HookCine()   # 고등급 입질 연출 ① 예고 · ② 챔질 연출 (DETAILS B, DT4~DT6)
         self.cine_full = False        # 디버그 Shift+F3: 본 종이어도 늘 전체 버전
+        self.cine_clock = time.perf_counter   # 입질 연출 시계 (실제 시간, 시험에선 바꿔 끼움)
         from src.render.legend_hook_fx import LegendHookFx
         self.legend_fx = LegendHookFx()   # 전설 입질 연출 그림 (DT5)
+        from src.render.phantom_hook_fx import PhantomHookFx
+        self.phantom_hfx = PhantomHookFx()   # 환상 입질 연출 그림 (DT6)
         self.cine_ran = False             # 방금 ② 챔질 연출이 있었나 (파이팅 시작 '전설!' 소리 · 흔들림 생략)
         self.last_line_pts = None
         self.reel_drop_t = 0.0
@@ -1019,6 +1022,7 @@ class FishingScene(Scene):
     def _begin_fight(self) -> None:
         """챔질 성공 → (② 챔질 연출이 있으면 끝난 뒤) 파이팅 시작."""
         self.legend_fx.clear()   # 순간 연출 정리 (보레알리스 얼음 금은 파이팅 전에 사라짐) — 여우비 빗줄기만 남음
+        self.phantom_hfx.clear()
         self._start_fight()
         self.cine_ran = False
         if self.fight is not None:
@@ -1047,23 +1051,56 @@ class FishingScene(Scene):
                     self.droplets.burst(lerp(tip[0], p[0], u), lerp(tip[1], p[1], u) + 4 * math.sin(math.pi * u), 0.45,
                                         count=1)
 
+    def _tick_cine(self) -> None:
+        """입질 연출 시계 = 실제 시간, 매 프레임 그리기에서 (DT4~DT6).
+        게임 틱은 고정 간격이라 0.05배속이면 update 가 0.33초에 한 번만 불린다 → update 에서 돌리면 정지 연출이 초당 3장으로 끊김."""
+        now = self.cine_clock()
+        last = getattr(self, "_cine_last", None)
+        self._cine_last = now
+        if last is None or self.game.scenes.current is not self:
+            return   # 일시정지 · 다른 화면이 위에 있으면 멈춤
+        real = min(0.1, max(0.0, now - last))
+        if self.legend_fx.active:
+            self.legend_fx.update(real)
+        if self.phantom_hfx.active:
+            self.phantom_hfx.update(real)
+        if self.hook_cine.pre is not None or self.hook_cine.active:
+            if self.hook_cine.update(real, self._run_cine_event):
+                self._begin_fight()
+
     def _cine_ctx(self) -> dict:
         c = self.cast
         p = self.cam.project(c.bx, c.bz)
+        # 달 반영 자리 (환상 '달그림자 잉어'): 달이 화면에 있으면 그 아래 수면, 없으면 왼쪽 앞 수면
+        moon = None
+        for body in world.celestial_bodies(self.clock.hour):
+            if body["kind"] == "moon":
+                x = self.cam.angle_to_x(body["az"])
+                if x is not None and 0 <= x <= self.cam.width:
+                    moon = (x, self.cam.horizon + 16)
         return {"bobber": (p[0], p[1]) if p else (self.cam.cx, self.cam.horizon + 30), "w": self.cam.width,
-                "h": self.cam.height, "horizon": self.cam.horizon, "scene": self}
+                "h": self.cam.height, "horizon": self.cam.horizon, "scene": self,
+                "bobber_size": max(3.5, 0.36 * p[2]) if p else 6,
+                "moon": moon or (self.cam.width * 0.3, self.cam.horizon + 16)}
 
     def _run_cine_legend(self, ev: dict) -> bool:
         """② 전설 사건 (DT5): fx · unique · reel_zing · gold_splash. 처리했으면 True."""
         from src.render import hook_cine
         do = ev["do"]
+        rar = self.hook_cine.post["rarity"] if self.hook_cine.post else "legend"
+        target = self.phantom_hfx if rar == "phantom" else self.legend_fx   # 전설 (DT5) · 환상 (DT6) 그림
         if do == "fx":
-            self.legend_fx.start(ev["name"], self._cine_ctx(), ev.get("sec", 0.6))
+            target.start(ev["name"], self._cine_ctx(), ev.get("sec", 0.6))
+        elif do == "silence":
+            # 환상: 정적 (숨 멎음) — 환경음 · 음악 · 효과음을 잠시 거의 끔 (환상 전용 표현)
+            self.sfx.duck_levels({"amb": -40.0, "mus": -40.0, "sfx": -20.0}, hold=ev.get("sec", 0.6), release=0.3)
+        elif do == "phantom_k":
+            self.phantom_fx.to_fight()   # 보라 100% → 파이팅용 60% (0.8초)
         elif do == "unique":
             fish = self.hook_cine.post["fish"] if self.hook_cine.post else self.bite.fish
-            u = hook_cine.cfg()["legend_unique"].get(fish["id"]) if fish else None
+            u = hook_cine.cfg()[f"{rar}_unique"].get(fish["id"]) if fish else None
             if u:
-                self.legend_fx.start(u["id"], self._cine_ctx(), hook_cine.cfg()["legend"]["unique_sec"])
+                target.start(u["id"], self._cine_ctx(), hook_cine.cfg()[rar]["unique_sec"])
                 for snd in u.get("sfx", []):
                     name, vol, delay = snd[0], snd[1], (snd[2] if len(snd) > 2 else 0.0)
                     if name.startswith("theme:"):
@@ -1338,12 +1375,6 @@ class FishingScene(Scene):
         override = self.game.input.aim_override(self.fight is not None and self.fight.phase == "fight")
         if override is not None:
             aim = override  # 터치: 파이팅 중엔 릴 패드 노브가 방향
-        if self.legend_fx.active:
-            self.legend_fx.update(dt / max(0.05, self.game.time_scale))
-        if self.hook_cine.pre is not None or self.hook_cine.active:
-            real = dt / max(0.05, self.game.time_scale)   # 연출 시간은 실제 초 (슬로모션과 무관)
-            if self.hook_cine.update(real, self._run_cine_event):
-                self._begin_fight()
         self.cast.update(dt, aim)
         for ev in self.cast.events:
             if ev == "splash":
@@ -2251,14 +2282,17 @@ class FishingScene(Scene):
             pl = hook_cine.plan(self.save, self.bite.fish, self.cine_full) if self.training is None else {"pre": False}
             pre = hook_cine.cfg().get(pl.get("rarity") or "", {}).get("pre") if pl["pre"] else None
             if isinstance(pre, dict):
-                # ① 입질 예고 (희귀: 물속 파란 빛 + 묵직한 '쑥') — 그림 · 소리만, 챔질 창은 그대로
+                # ① 입질 예고 (희귀: 물속 파란 빛 + 묵직한 '쑥' / 전설: 수면 불룩 + 쿵 / 환상: 소리 없이) — 그림 · 소리만, 챔질 창은 그대로
                 self.hook_cine.start_pre(pl["rarity"], c.bx, c.bz, self.sfx)
+                if pre.get("haptic_only"):
+                    self.game.haptics.vibrate(*pre["haptic_only"])   # 환상: 소리는 없고 손에만 (기존 'bite')
             else:
                 self.sfx.play("sfx_bite_real", haptic="bite")
-            self.ripples.spawn(c.bx, c.bz, size=1.3, life=1.5, rings=3)
-            p = self.cam.project(c.bx, c.bz)
-            if p:
-                self.droplets.burst(p[0], p[1], max(0.6, p[2] / 20), count=10)
+            if pl.get("rarity") != "phantom" or not isinstance(pre, dict):   # 환상 ①: 물보라 없이
+                self.ripples.spawn(c.bx, c.bz, size=1.3, life=1.5, rings=3)
+                p = self.cam.project(c.bx, c.bz)
+                if p:
+                    self.droplets.burst(p[0], p[1], max(0.6, p[2] / 20), count=10)
         elif ev == "missed":
             self.sfx.play("sfx_flee", 0.6)
             if self.bite.phantom is not None:
@@ -2941,6 +2975,7 @@ class FishingScene(Scene):
             self.backdrop(canvas)   # 마을에 있는 동안: 상점·도감 같은 겹친 화면 뒤로 마을이 보이게
             return
         self._run_rt_fx()   # 슬로우모션 중엔 update 가 드물게 불리므로 그리기에서도 (타격 시점 정확히)
+        self._tick_cine()
         hour = self.clock.hour
         theme, weather = self.theme, self.weather
         pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash, self.legend_k)
@@ -3041,6 +3076,7 @@ class FishingScene(Scene):
         self.map_fx.apply_tilt(canvas, pal)   # 먼바다: 수평선 ±2도 (줄 · 찌 · 배 · 낚싯대는 기울지 않음)
         self.hook_cine.draw_pre(canvas, cam, pal)  # ① 입질 예고 (찌 · 줄보다 먼저 → 찌를 가리지 않음)
         self.legend_fx.draw_world(canvas, pal)      # ② 전설: 거대한 그림자 · 빨려 드는 물결 (찌보다 먼저)
+        self.phantom_hfx.draw_world(canvas, pal)    # ② 환상: 보라 터짐 · 깊은 등불 · 달 조각
 
         geo = self._rod_geo()
         tip = geo["tip"]
@@ -3069,6 +3105,10 @@ class FishingScene(Scene):
         if fg in ("reeds", "silver_reeds"):
             rpal = pal if fg == "reeds" else dict(pal, reed=lerp_color(pal["reed"], (215, 222, 235), 0.65))
             rk = self.legend_fx.reeds_k   # 실바: 갈대가 일제히 찌 쪽으로 고개를 숙임
+            vk = self.phantom_hfx.reeds_k   # 보랏빛 갈대잉어: 갈대가 보랏빛으로 일렁임
+            if vk > 0:
+                rpal = dict(rpal, reed=lerp_color(rpal["reed"], (180, 140, 240), 0.8 * vk))
+                rk = max(rk, 0.25 * vk)
             self.reeds.draw(canvas, rpal, t, wind=self.wind.reed_mult(weather) + 6.0 * rk, lean=1 if rk > 0 else self.wind.dir)
         else:
             world.FOREGROUND[fg](canvas, pal, t)
@@ -3112,6 +3152,7 @@ class FishingScene(Scene):
         self.screen_weather.draw_screen(canvas)   # 화면에 맺히는 날씨 (빗방울 · 김 서림 · 성에 · 날림 · 입김 · 빛 번짐, DT2)
         self.map_fx.draw_screen(canvas)           # 계곡: 위에서 떨어지는 물방울 (DT3)
         self.legend_fx.draw_screen(canvas, pal)   # ② 전설 고유 연출 (DT5)
+        self.phantom_hfx.draw_screen(canvas, pal)  # ② 환상 고유 연출 (DT6)
         if getattr(self, "scenic", False):
             return   # 이동 컷신의 도착 전경: 풍경·낚싯대까지만 (HUD·카드 없음)
         self._draw_event_banner(canvas)

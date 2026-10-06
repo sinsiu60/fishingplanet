@@ -132,8 +132,11 @@ class HookCine:
         return (int(round(toward[0] * k)), int(round(toward[1] * k)))
 
     def bobber_offset(self) -> tuple[float, float]:
-        """① 전설: 찌가 거칠게 끌려 들어감 (좌우 흔들 + 아래로)."""
+        """① 전설: 찌가 거칠게 끌려 들어감 (좌우 흔들 + 아래로) / 환상: 소리 없이 천천히 가라앉음 (흔들림 없음)."""
         pr = self.pre
+        if pr is not None and pr["rarity"] == "phantom":
+            k = min(1.0, pr["t"] / pr["sec"])
+            return (0.0, pr["c"].get("sink_px", 3) * k * k)
         if pr is None or pr["rarity"] != "legend":
             return (0.0, 0.0)
         k = min(1.0, pr["t"] / pr["sec"])
@@ -142,6 +145,14 @@ class HookCine:
 
     def draw_pre(self, canvas, cam, pal=None) -> None:
         pr0 = self.pre
+        if pr0 is not None and pr0["rarity"] == "phantom":
+            p = cam.project(pr0["x"], pr0["z"])
+            if p is not None:
+                from src.render.phantom_hook_fx import contract_rings
+                c = pr0["c"]
+                contract_rings(canvas, p[0], p[1] + 1, min(1.0, pr0["t"] / pr0["sec"]), c.get("rings", 3),
+                               c.get("ring_radius", 34) * max(0.6, p[2] / 20))
+            return
         if pr0 is not None and pr0["rarity"] == "legend" and pal is not None:
             p = cam.project(pr0["x"], pr0["z"])
             if p is not None:
