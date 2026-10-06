@@ -113,11 +113,15 @@ _DROP: dict = {}
 _SPRITES: dict = {}
 
 
-def drop_sprite(size: int) -> pygame.Surface:
-    """빗방울: 가운데 밝은 점 1px(흰 80%) + 테두리 어두운 1px(검정 25%) + 몸통 반투명 하늘색(#BFE6FF 35%). 아래가 조금 무거운 물방울꼴."""
-    s = _DROP.get(size)
+GOLD_DROP = {"rim": [255, 220, 120, 220], "body": [255, 236, 190, 96], "center": [255, 255, 255, 220]}
+
+
+def drop_sprite(size: int, style: str | None = None) -> pygame.Surface:
+    """빗방울: 가운데 밝은 점 1px(흰 80%) + 테두리 어두운 1px(검정 25%) + 몸통 반투명 하늘색(#BFE6FF 35%). 아래가 조금 무거운 물방울꼴.
+    style 'gold' = 전설 챔질 금빛(#FFDC78) 테두리 물보라 (DT5)."""
+    s = _DROP.get((size, style))
     if s is None:
-        c = cfg()["rain_drops"]
+        c = GOLD_DROP if style == "gold" else cfg()["rain_drops"]
         w, h = size, size + 1
         s = pygame.Surface((w, h), pygame.SRCALPHA)
         cx, cy = (w - 1) / 2, h * 0.58
@@ -134,7 +138,7 @@ def drop_sprite(size: int) -> pygame.Surface:
         hx, hy = int(cx), max(1, int(cy) - 1)
         if (hx, hy) in inside:
             s.set_at((hx, hy), tuple(c["center"]))
-        _DROP[size] = s
+        _DROP[(size, style)] = s
     return s
 
 
@@ -426,7 +430,7 @@ class ScreenWeather:
                 spread = gl["spread_px"] * (0.3 + dy / gl["depth_px"])
                 self.glints.append([self.sun_x + r.uniform(-spread, spread), hz + dy, r.uniform(*gl["blink_sec"]), 0.0])
 
-    def add_drops(self, n: int, region=None) -> int:
+    def add_drops(self, n: int, region=None, style: str | None = None, protect: bool = False, size=None) -> int:
         """행동 · 낚시터 연출이 화면에 물방울을 맺히게 함 (DT3: 뜰채 · 수면 몸부림 · 방파제 물보라). region = (x0, y0, x1, y1).
         빗방울과 같은 모양 · 흐름 · 자국, 화면 효과 줄이기면 절반, 파이팅 중 보호 영역엔 안 생김. 화면 전체 상한 = 높음 빗방울 상한."""
         rd = cfg()["rain_drops"]
@@ -437,11 +441,11 @@ class ScreenWeather:
         for _ in range(n):
             if len(self.drops) >= rd["cap"][0]:
                 break
-            sz = self.rnd.randint(*rd["size"])
+            sz = self.rnd.randint(*(size or rd["size"]))
             x, y = self.rnd.uniform(x0, max(x0, x1 - sz)), self.rnd.uniform(y0, max(y0, y1 - sz))
-            if self.fighting and self.protect.hit(pygame.Rect(int(x), int(y), sz, sz + 1)):
+            if (self.fighting or protect) and self.protect.hit(pygame.Rect(int(x) - 1, int(y) - 7, sz + 2, sz + 9)):
                 continue
-            self.drops.append([x, y, sz, self.rnd.uniform(*rd["stay_sec"]), self.rnd.uniform(*rd["slide_px_s"]), 0.0, []])
+            self.drops.append([x, y, sz, self.rnd.uniform(*rd["stay_sec"]), self.rnd.uniform(*rd["slide_px_s"]), 0.0, [], style])
             made += 1
         return made
 
@@ -538,7 +542,7 @@ class ScreenWeather:
                     canvas.fill((226, 242, 255), (int(tx), int(ty), 1, 1))
                 elif k > 0.2:
                     canvas.fill((176, 204, 228), (int(tx), int(ty), 1, 1))
-            spr = drop_sprite(sz)
+            spr = drop_sprite(sz, d[7] if len(d) > 7 else None)
             if fa < 1.0:
                 spr = spr.copy()
                 spr.set_alpha(int(255 * fa))

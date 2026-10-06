@@ -56,12 +56,17 @@ class HookCine:
         sec = min(c["sec"], cfg()["rules"]["pre_max_sec"])
         self.pre = {"rarity": rarity, "t": 0.0, "sec": sec, "x": x, "z": z, "c": c}
         if sfx is not None:
-            for name, vol in c.get("sfx", []):
-                sfx.play(name, vol, haptic="bite" if name == "sfx_bite_real" else None)
+            hap = c.get("haptic")
+            for i, (name, vol) in enumerate(c.get("sfx", [])):
+                if hap and i == 0:
+                    sfx.play(name, vol, haptic=hap[0])
+                else:
+                    sfx.play(name, vol, haptic="bite" if name == "sfx_bite_real" else None)
 
     # ── ② 챔질 연출 ──
     def start_post(self, rarity: str, fish: dict, mode: str) -> bool:
-        c = cfg().get(rarity, {}).get("post")
+        rc = cfg().get(rarity, {})
+        c = rc.get("post_short") if mode == "short" and rc.get("post_short") else rc.get("post")
         if not isinstance(c, dict) or mode is None:
             return False
         self.post = {"rarity": rarity, "fish": fish, "mode": mode, "t": 0.0, "sec": c["sec"],
@@ -126,7 +131,24 @@ class HookCine:
         k = math.sin(math.pi * u) * p["pull"]["px"]
         return (int(round(toward[0] * k)), int(round(toward[1] * k)))
 
-    def draw_pre(self, canvas, cam) -> None:
+    def bobber_offset(self) -> tuple[float, float]:
+        """① 전설: 찌가 거칠게 끌려 들어감 (좌우 흔들 + 아래로)."""
+        pr = self.pre
+        if pr is None or pr["rarity"] != "legend":
+            return (0.0, 0.0)
+        k = min(1.0, pr["t"] / pr["sec"])
+        d = pr["c"].get("drag_px", 3)
+        return (math.sin(pr["t"] * 70) * d * 0.6, d * k)
+
+    def draw_pre(self, canvas, cam, pal=None) -> None:
+        pr0 = self.pre
+        if pr0 is not None and pr0["rarity"] == "legend" and pal is not None:
+            p = cam.project(pr0["x"], pr0["z"])
+            if p is not None:
+                from src.render.legend_hook_fx import bulge
+                k = math.sin(math.pi * 0.5 * min(1.0, pr0["t"] / pr0["sec"]))
+                bulge(canvas, pal, p[0], p[1] + 1, k, int(pr0["c"].get("bulge_px", 14) * max(0.6, p[2] / 20)))
+            return
         """① 희귀: 찌가 들어가는 자리 물속 파란 빛 한 번 번쩍 — 찌 · 줄보다 먼저 그려서 찌를 가리지 않음."""
         pr = self.pre
         if pr is None or pr["rarity"] != "rare":
