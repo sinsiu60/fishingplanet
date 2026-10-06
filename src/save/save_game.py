@@ -93,6 +93,11 @@ def migrate(data: dict, slot: int | None = None) -> dict:
                     pass
         data.setdefault("visited", list(data.get("unlocked_spots", ["reservoir"])))
         data["version"] = 4
+    if "details" not in data:
+        # 디테일 업데이트 이전 세이브: 이미 잡은 종은 입질 연출을 '본 것'으로 (45-D 확정 9) — 나머지 칸은 기본값
+        seen = [fid for fid, e in data.get("dex", {}).items() if isinstance(e, dict) and e.get("count", 0) > 0]
+        seen += [fid for fid, e in data.get("phantom", {}).get("caught", {}).items() if isinstance(e, dict) and e.get("count", 0) > 0]
+        data["details"] = {"seen_hook_cinematic": seen}
     if "tutorial" not in data:
         from src.tutorial import legacy
         legacy.migrate(data)   # 가이드 튜토리얼 이전 세이브: 이미 쓴 시스템은 완료 처리 (DESIGN.md 40)
@@ -198,6 +203,8 @@ def new_data() -> dict:
         "gear": {k: eq[k][0]["id"] for k in GEAR_KINDS} | {"bait": "worm"},
         "owned": {k: [eq[k][0]["id"]] for k in GEAR_KINDS} | {"bait": ["worm"]},
         "keepnet": [],
+        # 디테일 업데이트 (DESIGN.md 45장): seen_hook_cinematic = 전체 버전 입질 연출을 본 종 (DT4)
+        "details": {"seen_hook_cinematic": []},
         "dex": {},
         "stats": {"catches": 0, "s_ranks": 0, "perfects": 0, "lost": 0, "earned": 0,
                   "chests_opened": 0, "s_ranks_eldra": 0, "double_perfects": 0, "mutations_caught": 0,

@@ -1,0 +1,76 @@
+{
+  "_설명": "DETAILS.md B (DESIGN.md 45장, DT4~DT6). ① 입질 예고 = 진짜 입질('쑥')이 시작되는 순간, 0.3초 이내, 찌를 가리지 않음, 챔질 판정 시간은 그대로. ② 챔질 연출 = 챔질 성공 직후, 이 동안 파이팅은 아직 시작 전(물고기가 당기지 않음) · 입력 무시, 끝나면 파이팅 시작. 시간은 실제 초(슬로모션과 무관). 첫 만남 = seen_hook_cinematic 에 없는 종 → 전체, 재회 = 전설 · 환상 짧은 버전 / 희귀 ① 만 (45-D 확정 9). 일반 · 고급은 연출 없음. ②는 skip_after_sec 이후 탭하면 건너뛰기.",
+  "rules": {
+    "pre_max_sec": 0.3,
+    "skip_after_sec": 0.5,
+    "full_for": ["rare", "legend", "phantom"],
+    "short_for": ["legend", "phantom"],
+    "short_unique_sec": 0.6
+  },
+  "rare": {
+    "pre": {
+      "_설명": "0.2초: 찌가 들어가는 자리 물속에서 파란 빛(#6FB7FF)이 한 번 번쩍 + 평소보다 묵직한 '쑥'",
+      "sec": 0.2,
+      "flash_color": [111, 183, 255],
+      "flash_radius": 14,
+      "sfx": [["sfx_bite_real", 1.0], ["sfx_impact", 0.3]]
+    },
+    "post": {
+      "_설명": "0.6초: 0.2초 동안 0.3배속 슬로모션 → 낚싯대가 크게 휨 → 줄에서 물방울이 튐 → 화면이 물 쪽으로 2px 끌려갔다 돌아옴 + 낚싯대 '끼익'",
+      "sec": 0.6,
+      "events": [
+        {"at": 0.0, "do": "slowmo", "real_sec": 0.2, "scale": 0.3},
+        {"at": 0.2, "do": "bend", "px": 12, "until": 0.6},
+        {"at": 0.2, "do": "sfx", "name": "legacy_creak", "vol": 0.6},
+        {"at": 0.2, "do": "haptic", "name": "tension", "strength": 0.7},
+        {"at": 0.3, "do": "line_drops", "count": 8},
+        {"at": 0.35, "do": "pull", "px": 2, "sec": 0.25}
+      ]
+    }
+  },
+  "legend": {
+    "_설명": "B-3 전설 공통 (DT5): ① 0.3초 찌 주변 수면 불룩 + 찌가 거칠게 끌려 들어감 + 낮은 '쿵' / ② 0~0.4초 0.25배속 · 화면보다 큰 검은 그림자 · '꿀렁', 0.4~1.0초 정상 속도 · 낚싯대 한계 휨 · 화면 3px 끌림 · 금빛(#FFDC78) 테두리 물보라 · 삐걱 + 릴 지이잉, 1.0~1.6초 전설별 고유 연출, 끝 = 파이팅 + 보스 곡 인트로",
+    "pre_sec": 0.3,
+    "post_sec": 1.6,
+    "gold": [255, 220, 120],
+    "unique_at": 1.0,
+    "unique_sec": 0.6
+  },
+  "legend_unique": {
+    "golden_carp": {"id": "sudden_rain", "desc": "맑은 하늘에서 갑자기 빗줄기 (실제 날씨는 그대로, 파이팅 내내 가는 빗줄기 유지 후 사라짐)", "sound": "빗소리 확"},
+    "tiger_mandarin": {"id": "tiger_roar", "desc": "계곡에 호랑이 포효가 메아리, 산안개가 화면 양옆에서 밀려옴", "sound": "포효 + 메아리"},
+    "silver_bass": {"id": "horizon_bolt", "desc": "수평선에 번개 한 줄기, 낚싯줄을 따라 하얀 전기가 찌직 (번쩍임 규칙)", "sound": "번개 + 전기 지직"},
+    "marlin": {"id": "white_slash", "desc": "하얀 선 하나가 왼쪽 아래에서 오른쪽 위로 가름 (0.15초), 선 자리에서 물보라", "sound": "칼 베는 '챙'"},
+    "coelacanth": {"id": "sonar_ping", "desc": "소나 '핑' 한 번, 화면 가장자리가 수압에 눌리듯 어두워졌다(30%) 돌아옴", "sound": "핑 + 낮은 압력음"},
+    "dragon_carp": {"id": "water_dragon", "desc": "폭포 소리가 커지며 물기둥이 용처럼 솟구쳤다 흩어짐", "sound": "폭포 굉음"},
+    "silva": {"id": "reeds_bow", "desc": "습지의 갈대가 일제히 찌 쪽으로 고개를 숙임", "sound": "바람 '쏴아'"},
+    "prisia": {"id": "crystal_resonance", "desc": "동굴 수정들이 동시에 빛나며 울림", "sound": "수정 공명"},
+    "aeris": {"id": "updraft", "desc": "아래에서 돌풍이 치솟고 화면 위 구름이 갈라짐", "sound": "돌풍"},
+    "ignis": {"id": "steam_burst", "desc": "찌 주변 물이 부글부글 끓다가 증기 폭발", "sound": "끓는 소리 + '푸슉'"},
+    "borealis": {"id": "ice_crack_corners", "desc": "화면 네 모서리부터 얼음이 쩍 갈라짐 (0.3초, 파이팅 시작 전에 사라짐)", "sound": "얼음 갈라짐"},
+    "orsiel": {"id": "great_bell", "desc": "거대한 종소리와 함께 수면 전체가 찌 쪽으로 빨려 드는 물결", "sound": "거대한 종"}
+  },
+  "phantom": {
+    "_설명": "B-5 환상 공통 (DT6): ① 0.3초 물보라 없이 찌가 천천히 가라앉기 시작 + 보랏빛(#B48CF0) 파문이 거꾸로 오므라듦 (소리 없음) / ② 0~0.6초 0.05배속 · 물방울 8~16개가 위로 떠오른 채 멈춤, 0.6초 맑은 종소리 한 음, 0.6~1.2초 보라가 한꺼번에 터지며 물방울이 쏟아짐 · 보라 100% → 60%, 1.2~1.8초 환상어별 고유 연출 (소리 작게), 끝 = 파이팅 + 환상 보스 곡",
+    "pre_sec": 0.3,
+    "post_sec": 1.8,
+    "violet": [180, 140, 240],
+    "drops": [8, 16],
+    "unique_at": 1.2,
+    "unique_sec": 0.6
+  },
+  "phantom_unique": {
+    "moon_shadow_carp": {"id": "moon_shatter", "desc": "수면에 비친 달이 조각조각 부서졌다 다시 모임"},
+    "mist_mandarin": {"id": "mist_inhale", "desc": "보라 안개가 찌로 한꺼번에 빨려 들어감"},
+    "dusk_bass": {"id": "violet_dusk", "desc": "하늘이 0.5초 동안 보라 노을로 물듦"},
+    "meteor_tuna": {"id": "meteor", "desc": "하늘을 유성 하나가 가로지름"},
+    "abyss_lantern": {"id": "deep_lantern", "desc": "찌 아래 깊은 곳에서 등불 하나가 켜졌다 꺼짐"},
+    "echo_fish": {"id": "echo_bobbers", "desc": "찌가 4개로 겹쳐 보였다가 하나로 합쳐짐"},
+    "violet_reed_carp": {"id": "violet_reeds", "desc": "주변 갈대가 보랏빛으로 일렁임"},
+    "amethyst_blindfish": {"id": "amethyst_bloom", "desc": "찌 주변에 작은 자수정 결정이 반짝 생겼다 사라짐"},
+    "sky_butterfly": {"id": "butterflies", "desc": "수면에서 보랏빛 나비 떼가 날아오름"},
+    "ember_moray": {"id": "violet_embers", "desc": "보랏빛 불씨가 수면 위로 흩날림"},
+    "aurora_smelt": {"id": "aurora_ribbon", "desc": "하늘에 오로라 한 줄기가 흐름 (환상 전용 표현)"},
+    "dream_carp": {"id": "spirit_ring", "desc": "작은 정령 빛들이 찌 주위를 한 바퀴 돌고 사라짐"}
+  }
+}

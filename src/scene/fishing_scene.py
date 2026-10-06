@@ -148,6 +148,9 @@ class FishingScene(Scene):
         from src.render.map_fx import MapFx
         self.map_fx = MapFx(canvas.get_width(), canvas.get_height())   # 낚시터별 · 행동 반응 · 반딧불 (A-3 · A-4 · A-5)
         self.cast_drops = [0, 0.0]   # 캐스팅 물방울 [남은 수, 다음까지]
+        from src.render.hook_cine import HookCine
+        self.hook_cine = HookCine()   # 고등급 입질 연출 ① 예고 · ② 챔질 연출 (DETAILS B, DT4~DT6)
+        self.cine_full = False        # 디버그 Shift+F3: 본 종이어도 늘 전체 버전
         self.reel_drop_t = 0.0
         self.thrash_t = 0.0
         from src.render.ilseom_fx import IlseomFX
@@ -574,6 +577,10 @@ class FishingScene(Scene):
                     nxt = next((m for m in marks if m > self.clock.hour + 0.01), marks[0])
                     self.clock.hour = nxt
                     self.toasts.show(f"[테스트] 시간: {self.clock.label()}", INFO, 1.5, 11)
+            elif a.value == "F3" and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    self.cine_full = not self.cine_full   # Shift+F3: 입질 연출 늘 전체 버전 (DT4 디버그)
+                    self.toasts.show(f"[테스트] 입질 연출 늘 전체 버전: {'켬' if self.cine_full else '끔'}", INFO, 1.5, 11)
             elif a.value in ("F3", "F4", "F5", "F6"):
                 if f is None and self.fish_cfg.get("debug_keys"):
                     self._cycle_debug(a.value)
@@ -926,6 +933,12 @@ class FishingScene(Scene):
 
     def _left_click(self) -> None:
         c, f = self.cast, self.fight
+        if self.hook_cine.active:
+            # ② 챔질 연출 중: 입력 무시, 0.5초 이후 탭하면 건너뛰기
+            if self.hook_cine.can_skip():
+                self.hook_cine.finish()
+                self._begin_fight()
+            return
         if self.catch_show is not None:
             sh = self.catch_show
             if sh.waiting():
@@ -962,9 +975,15 @@ class FishingScene(Scene):
             self.sfx.duck("hook")
             self.toasts.show("챔질 성공!", GOOD, 1.0)
             self._splash_at(c.bx, c.bz, big=0.6)
-            self._start_fight()
-            if self.fight is not None:
-                self.fight_audio.reel.hook(self.fight.size_cm)  # 챔질 임팩트 reel_burst_heavy (클수록 크게)
+            from src.render import hook_cine
+            pl = hook_cine.plan(self.save, self.bite.fish, self.cine_full) if self.training is None else {"post": None}
+            if pl.get("post") and self.hook_cine.start_post(pl["rarity"], self.bite.fish, pl["post"]):
+                # ② 챔질 연출: 끝날 때까지 파이팅을 만들지 않는다 (물고기가 당기지 않음) — update 에서 _begin_fight
+                seen = hook_cine.seen_list(self.save)
+                if pl["post"] == "full" and self.bite.fish["id"] not in seen:
+                    seen.append(self.bite.fish["id"])
+            else:
+                self._begin_fight()
         elif result == "scared":
             self.sfx.play("sfx_hook_success", 0.4)
             self.sfx.play("sfx_flee")
@@ -975,6 +994,8 @@ class FishingScene(Scene):
                 self.toasts.show("미끼가 없어요. 우클릭으로 회수", INFO, 2.0, 11)
 
     def _right_click(self) -> None:
+        if self.hook_cine.active:
+            return   # ② 챔질 연출 중 입력 무시
         if self.fight is not None:
             if self.fight.phase == "fight":
                 self.sfx.play("sfx_cast_swing", 0.35)
@@ -990,6 +1011,33 @@ class FishingScene(Scene):
         self.cast.cancel_or_retrieve()
 
     # ───────────────────────── 파이팅 시작·끝 ─────────────────────────
+    def _begin_fight(self) -> None:
+        """챔질 성공 → (② 챔질 연출이 있으면 끝난 뒤) 파이팅 시작."""
+        self._start_fight()
+        if self.fight is not None:
+            self.fight_audio.reel.hook(self.fight.size_cm)  # 챔질 임팩트 reel_burst_heavy (클수록 크게)
+
+    def _run_cine_event(self, ev: dict) -> None:
+        """② 챔질 연출 사건 실행 (hook_cinematics.json events)."""
+        reduce = bool(self.settings.get("reduce_fx"))
+        do = ev["do"]
+        if do == "slowmo":
+            if not reduce:   # 화면 효과 줄이기: 슬로모션 없음 (45장 📐)
+                self.game.slowmo(ev["real_sec"], ev["scale"])
+        elif do == "sfx":
+            self.sfx.play(ev["name"], ev.get("vol", 1.0))
+        elif do == "haptic":
+            self.game.haptics.vibrate(ev["name"], ev.get("strength", 1.0))
+        elif do == "line_drops":
+            c = self.cast
+            tip = self._rod_geo()["tip"]
+            p = self.cam.project(c.bx, c.bz)
+            if p is not None:
+                for i in range(ev["count"]):
+                    u = 0.15 + 0.6 * i / max(1, ev["count"] - 1)
+                    self.droplets.burst(lerp(tip[0], p[0], u), lerp(tip[1], p[1], u) + 4 * math.sin(math.pi * u), 0.45,
+                                        count=1)
+
     def _start_fight(self) -> None:
         self.succ_streak = 0  # 성공음 연속 단계 (같은 파이팅, 0~2 — 실패하면 0)
         from src.core import gcwatch
@@ -1245,6 +1293,10 @@ class FishingScene(Scene):
         override = self.game.input.aim_override(self.fight is not None and self.fight.phase == "fight")
         if override is not None:
             aim = override  # 터치: 파이팅 중엔 릴 패드 노브가 방향
+        if self.hook_cine.pre is not None or self.hook_cine.active:
+            real = dt / max(0.05, self.game.time_scale)   # 연출 시간은 실제 초 (슬로모션과 무관)
+            if self.hook_cine.update(real, self._run_cine_event):
+                self._begin_fight()
         self.cast.update(dt, aim)
         for ev in self.cast.events:
             if ev == "splash":
@@ -2031,6 +2083,16 @@ class FishingScene(Scene):
         if getattr(self, "thunder_shake", 0.0) > 0:
             self.thunder_shake -= dt
             amp = max(amp, 1.0)   # 천둥 1px
+        if self.hook_cine.active and self.shake_on and not self.settings.get("reduce_fx"):
+            # ② 화면이 물(찌) 쪽으로 끌려갔다 돌아옴
+            c = self.cast
+            p = self.cam.project(c.bx, c.bz)
+            vx, vy = ((p[0] - self.cam.cx), (p[1] - self.cam.height / 2)) if p else (0.0, 1.0)
+            ln = math.hypot(vx, vy) or 1.0
+            off = self.hook_cine.pull_offset((vx / ln, vy / ln))
+            if off != (0, 0):
+                self.game.screen.shake = off
+                return
         if not self.shake_on or amp < 0.3:
             self.game.screen.shake = (0, 0)
             return
@@ -2136,7 +2198,14 @@ class FishingScene(Scene):
             big = self.save.cosmetic_on("sparkle_float")  # 반짝이 찌: 입질 파문이 더 잘 보임
             self.ripples.spawn(c.bx, c.bz, size=0.5 if big else 0.35, life=1.0 if big else 0.8)
         elif ev == "bite":
-            self.sfx.play("sfx_bite_real", haptic="bite")
+            from src.render import hook_cine
+            pl = hook_cine.plan(self.save, self.bite.fish, self.cine_full) if self.training is None else {"pre": False}
+            pre = hook_cine.cfg().get(pl.get("rarity") or "", {}).get("pre") if pl["pre"] else None
+            if isinstance(pre, dict):
+                # ① 입질 예고 (희귀: 물속 파란 빛 + 묵직한 '쑥') — 그림 · 소리만, 챔질 창은 그대로
+                self.hook_cine.start_pre(pl["rarity"], c.bx, c.bz, self.sfx)
+            else:
+                self.sfx.play("sfx_bite_real", haptic="bite")
             self.ripples.spawn(c.bx, c.bz, size=1.3, life=1.5, rings=3)
             p = self.cam.project(c.bx, c.bz)
             if p:
@@ -2921,6 +2990,7 @@ class FishingScene(Scene):
         self.hazard_decor.draw(canvas, pal, cam, t, f.in_hazard if f is not None and f.phase == "fight" else None)
         self.ambient.draw(canvas, pal, self.clock.period()[0], weather, theme.get("sea", False), t)
         self.map_fx.apply_tilt(canvas, pal)   # 먼바다: 수평선 ±2도 (줄 · 찌 · 배 · 낚싯대는 기울지 않음)
+        self.hook_cine.draw_pre(canvas, cam)  # ① 입질 예고 (찌 · 줄보다 먼저 → 찌를 가리지 않음)
 
         geo = self._rod_geo()
         tip = geo["tip"]
@@ -3076,7 +3146,7 @@ class FishingScene(Scene):
     def _rod_geo(self) -> dict:
         c, f = self.cast, self.fight
         if f is None or f.phase in ("caught", "lost"):
-            return rod_geometry(c.aim, c.swing_deg + c.jerk_offset(), c.bend + self.bite.tip_pull,
+            return rod_geometry(c.aim, c.swing_deg + c.jerk_offset(), c.bend + self.bite.tip_pull + self.hook_cine.bend_extra(),
                                 c.rod_hand_offset())
         # 파이팅: 장력만큼 휘고, 끝이 물고기 쪽으로 끌려감. 우클릭이면 숙임.
         tension = f.tension
