@@ -792,7 +792,7 @@ class FishingScene(Scene):
                 k = card / m0["card"]
                 sh.m = {name: (v * k if v <= m0["card"] else v + (card - m0["card"])) for name, v in m0.items()}
             self.suno_catch = True
-            sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.5, release=0.15)
+            sfx.duck_levels({"amb": -40, "sfx": -18}, hold=0.5, release=0.15)   # 음악 버스는 덕킹하지 않음 — 타격이 음악 채널에서 난다
             self.phantom_song_ch = None
             self.phantom_loop_ch = None
         else:
@@ -861,7 +861,10 @@ class FishingScene(Scene):
                         self.phantom_loop_ch = self.sfx.play(name, 0.55)
                         if self.phantom_loop_ch is not None:
                             self.phantom_loop_ch.play(self.sfx.sounds[name], loops=-1, fade_ms=600)
-        self.sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.3, release=1.5)
+        if getattr(self, "suno_catch", False):
+            self.sfx.duck_levels({"amb": -40, "sfx": -18}, hold=0.3, release=1.5)   # SUNO 타격은 음악 버스 → 음악은 덕킹 안 함
+        else:
+            self.sfx.duck_levels({"mus": -60, "amb": -40, "sfx": -18}, hold=0.3, release=1.5)
 
     def _close_catch_show(self) -> None:
         """카드 닫기: 노래·여운 정리 → 1.5초에 걸쳐 원래 색·대기 음악 (덕킹 1.5초 복귀) → 튜토리얼(첫 포획)."""

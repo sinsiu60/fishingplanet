@@ -67,6 +67,9 @@ class Fight:
         self.heave_amp = heave_amp(fish, self.cfg, self.gear.get("rod_tier"))
         self.heave_phase = self.rnd.uniform(0, math.tau)
         self.stamina_max = float(fish.get("stamina", 100))
+        self.is_legend = fish.get("rarity") == "legend"
+        if self.is_legend:   # 전설은 최소 2분 싸우게 (fishing_config legend_stamina_mult, 줄 손상은 legend_line_damage_mult 로 보정)
+            self.stamina_max *= self.cfg.get("legend_stamina_mult", 1.0)
         self.stamina = self.stamina_max
         self.cast_distance = cast_distance
         self.distance = cast_distance
@@ -753,6 +756,8 @@ class Fight:
             if self.tension >= 100:
                 dmg *= cfg["line_damage_over100_mult"]
             dmg *= self.gear.get("line_red_mult", 1.0)  # 온기 장갑
+            if self.is_legend:
+                dmg *= cfg.get("legend_line_damage_mult", 1.0)   # 긴 전설 파이팅 동안 줄이 버티게
             self.line -= dmg
             self.line_damage += dmg
             if self.line_frac < 0.5:

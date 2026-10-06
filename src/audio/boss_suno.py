@@ -366,16 +366,13 @@ class SunoBoss:
         self._apply_volumes()
 
     # ── 안쪽 ──
+    SUNO_GAIN = 0.95   # 채널 기준 음량 (× 곡별 배율 × 음악 설정 × 전설 음량 설정 × 소리 구역). 합성 보스 곡(0.35 × 1.04 ≈ 0.36)보다 +8.4dB —
+                       # SUNO 파일은 이미 -14 LUFS 로 마스터링돼 있고 파이팅 동안은 음악이 주인공이라 거의 그대로 내보낸다
+
     def _bus(self) -> float:
-        """예전 보스 곡과 같은 버스 (GAIN 0.35 × state_gain boss × 음악 설정 × 전설 음량 설정 × 소리 구역) × 곡별 배율."""
-        from src.audio.adaptive_music import GAIN
-        boss = getattr(self, "_boss_gain", None)
-        if boss is None:
-            from src.core.config import load_json
-            boss = self._boss_gain = float(load_json("music_patterns.json").get("boss", {}).get("state_gain", {}).get("boss", 1.0))
         g = self.gains.get(self.song or "", {}).get("gain", 1.0)
         vb = self.sfx.settings_boss_vol if hasattr(self.sfx, "settings_boss_vol") else 1.0
-        return min(1.0, GAIN * boss * g * self.sfx.bus_gain("mus") * vb * self.am.zone_gain)
+        return min(1.0, self.SUNO_GAIN * g * self.sfx.bus_gain("mus") * vb * self.am.zone_gain)
 
     def _apply_volumes(self) -> None:
         bus = self._bus()
