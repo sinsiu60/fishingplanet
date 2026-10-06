@@ -3573,8 +3573,6 @@ class FishingScene(Scene):
             hud.text(canvas, cap, r.center, (200, 230, 255), anchor="center")
         if self.debug and f is None and c.state == CastState.LANDED:
             fight_hud.draw_debug_lines(canvas, ["루어 (대기 중)"] + self.ctl.debug_lines(self.t)[2:])
-        if self.p2 is not None and self.p2.blocking and f is not None:
-            self.p2.draw_top(canvas, self._fish_screen())   # 2페이즈 컷신: 물속 장면 · 도약 · 체력 게이지 (맨 앞)
         if self.training is not None:
             self.training.draw(canvas, self.mouse)
         if self.card is not None:
@@ -3586,6 +3584,9 @@ class FishingScene(Scene):
                 tut.draw_help(canvas, more=bool(self.save.data.get("patterns_seen")))
         if self.touch:
             self._draw_touch_controls(canvas)
+        if self.p2 is not None and self.p2.blocking and f is not None:
+            # 2페이즈 컷신: 물속 장면 · 도약 · 체력 게이지 (맨 앞 — 터치 조작도 덮음, 화면 어디를 눌러도 건너뛰기)
+            self.p2.draw_top(canvas, self._fish_screen())
         self._mark_targets(canvas)
         hud.draw_cursor(canvas, self.mouse)
 
