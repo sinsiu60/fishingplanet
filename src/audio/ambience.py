@@ -61,6 +61,7 @@ class Ambience:
     def update(self, dt: float, spot: str, period: str, weather: str, fighting: bool = False,
                legend: bool = False, season: str | None = None) -> None:
         c = self.cfg
+        self.played: list[str] = []   # 이번 프레임에 울린 조각 이름
         if getattr(self, "_pf_spot", None) != spot:   # 이 낚시터 바탕 + 모든 날씨 바탕 · 천둥을 미리 (날씨가 바뀌는 순간 끊김 없게)
             self._pf_spot = spot
             names = [b[0] for b in [c["spots"].get(spot, {}).get("bed")] + [w.get("bed") for w in c["weather"].values()] if b]
@@ -114,6 +115,7 @@ class Ambience:
                     if snd:
                         self.sfx.play(snd, vol * self.rnd.uniform(0.7, 1.0) * mult,
                                       pan=self.rnd.uniform(-c["pan"], c["pan"]))
+                        self.played.append(name)   # 화면 연출이 같은 순간에 맞춤 (방파제 파도 물보라, DETAILS A-3)
             self.timers[name] = t
         for th in self.thunder:
             th[0] -= dt

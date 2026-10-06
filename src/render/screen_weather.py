@@ -426,6 +426,25 @@ class ScreenWeather:
                 spread = gl["spread_px"] * (0.3 + dy / gl["depth_px"])
                 self.glints.append([self.sun_x + r.uniform(-spread, spread), hz + dy, r.uniform(*gl["blink_sec"]), 0.0])
 
+    def add_drops(self, n: int, region=None) -> int:
+        """행동 · 낚시터 연출이 화면에 물방울을 맺히게 함 (DT3: 뜰채 · 수면 몸부림 · 방파제 물보라). region = (x0, y0, x1, y1).
+        빗방울과 같은 모양 · 흐름 · 자국, 화면 효과 줄이기면 절반, 파이팅 중 보호 영역엔 안 생김. 화면 전체 상한 = 높음 빗방울 상한."""
+        rd = cfg()["rain_drops"]
+        if self.reduce:
+            n = max(1, n // 2)
+        x0, y0, x1, y1 = region or (4, 4, self.w - 4, self.h * 0.85)
+        made = 0
+        for _ in range(n):
+            if len(self.drops) >= rd["cap"][0]:
+                break
+            sz = self.rnd.randint(*rd["size"])
+            x, y = self.rnd.uniform(x0, max(x0, x1 - sz)), self.rnd.uniform(y0, max(y0, y1 - sz))
+            if self.fighting and self.protect.hit(pygame.Rect(int(x), int(y), sz, sz + 1)):
+                continue
+            self.drops.append([x, y, sz, self.rnd.uniform(*rd["stay_sec"]), self.rnd.uniform(*rd["slide_px_s"]), 0.0, []])
+            made += 1
+        return made
+
     # ── 그리기 ──
     def _alpha(self) -> float:
         return cfg()["common"]["fight_alpha"] if self.fighting else 1.0

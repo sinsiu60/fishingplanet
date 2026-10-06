@@ -145,6 +145,11 @@ class FishingScene(Scene):
         from src.render.screen_weather import ScreenWeather, Wind
         self.wind = Wind()   # 바람 (DETAILS A-2, DESIGN.md 45장): 줄 휨 · 빗줄기 각도 · 날림 · 갈대 방향
         self.screen_weather = ScreenWeather(canvas.get_width(), canvas.get_height())   # 화면에 맺히는 날씨 (A-1)
+        from src.render.map_fx import MapFx
+        self.map_fx = MapFx(canvas.get_width(), canvas.get_height())   # 낚시터별 · 행동 반응 · 반딧불 (A-3 · A-4 · A-5)
+        self.cast_drops = [0, 0.0]   # 캐스팅 물방울 [남은 수, 다음까지]
+        self.reel_drop_t = 0.0
+        self.thrash_t = 0.0
         from src.render.ilseom_fx import IlseomFX
         self.ilseom_fx = IlseomFX()   # 청새치 '일섬' 칼 연출 (ILSEOM.md, DESIGN.md 43-15)
         self.ambient = Ambient(canvas.get_width(), canvas.get_height(), self.cam.horizon)
@@ -1247,6 +1252,8 @@ class FishingScene(Scene):
                 self.recast_told = False
             elif ev == "launch":
                 self.sfx.play("sfx_cast_swing", 0.45 + 0.55 * self.cast.power)  # 휙 (파워만큼 크게)
+                lo, hi = load_json("details/map_details.json")["actions"]["cast_drops"]
+                self.cast_drops = [random.randint(lo, hi), 0.05]   # 날아가는 궤적을 따라 물방울 5~8개 (A-4)
         self.cast.events.clear()
         self._cast_audio()
 
@@ -1461,7 +1468,6 @@ class FishingScene(Scene):
                 # 천둥 소리와 함께 화면 1px 흔들림 0.2초 (DETAILS A-1, 45-D 확정 3: 번쩍임은 그대로)
                 self.thunder_shake = load_json("details/weather_screen.json")["lightning"]["shake_sec"]
         self.lightning.events.clear()
-        self._update_screen_weather(dt)
         self.ambient.update(dt, self.clock.period()[0], self.weather, self.theme.get("sea", False))
         f = self.fight
         self.ambience.update(dt, self.spot_id, self.clock.period()[0], self.weather,
@@ -1470,7 +1476,9 @@ class FishingScene(Scene):
                               self.clock.period()[0], self.weather, mobile=self.touch,
                               fighting=f is not None and f.phase in ("fight", "net"),
                               enabled=self.theme["terrain"] != "cave" and self.theme.get("dark", 0) < 0.5,
-                              wind=self.wind.x, protect=self.screen_weather.protect)
+                              wind=self.wind.x, protect=self.screen_weather.protect,
+                              fireflies=False)   # 낚시터 반딧불은 MapFx (여름 밤 3곳, 45-D 확정 6)
+        self._update_screen_weather(dt)   # 환경음 조각(파도 부서짐) 다음에 — 같은 순간 물보라
         self._tick_events(dt, f)
 
     def _update_screen_weather(self, dt: float) -> None:
@@ -1490,6 +1498,53 @@ class FishingScene(Scene):
             "wind": self.wind, "touch": self.touch, "left": bool(self.touch and self.settings.get("touch_left")),
             "horizon": cam.horizon, "sun": sun, "sun_x": sun_x, "enabled": open_sky,
             "cave": self.theme["terrain"] == "cave", "t": self.t})
+        c = self.cast
+        bob = None
+        if c.state == CastState.LANDED and f is None:
+            p = cam.project(c.bx, c.bz)
+            bob = (p[0], p[1]) if p else None
+        self.map_fx.update(dt, {
+            "spot": self.spot_id, "season": self.season, "period": self.clock.period()[0], "weather": self.weather,
+            "fighting": f is not None and f.phase in ("fight", "net"), "reduce": bool(self.settings.get("reduce_fx")),
+            "horizon": cam.horizon, "bobber": bob, "cam": cam, "ripples": self.ripples, "bubbles": self.bubbles,
+            "droplets": self.droplets, "sfx": self.sfx, "screen": self.screen_weather,
+            "played": getattr(self.ambience, "played", []), "wind": self.wind.x, "t": self.t})
+        self._update_action_drops(dt)
+
+    def _update_action_drops(self, dt: float) -> None:
+        """행동에 반응하는 물방울 (DETAILS A-4): 캐스팅 궤적 · 빠르게 감기 · 수면 몸부림. 뜰채는 _update_landing 'hit'."""
+        A = load_json("details/map_details.json")["actions"]
+        c, f, cam = self.cast, self.fight, self.cam
+        cd = self.cast_drops
+        if cd[0] > 0 and c.state == CastState.FLIGHT:
+            cd[1] -= dt
+            if cd[1] <= 0:
+                p = cam.project(c.bx, c.bz, c.bh)
+                if p is not None:
+                    k = smoothstep(c.flight_s / 0.3)
+                    tip = rod_tip_drop(self._rod_geo()["tip"], self.t)
+                    x, y = lerp(tip[0], p[0], k), lerp(tip[1], p[1], k)
+                    self.droplets.burst(x, y + 6, 0.5, count=1, lateral=random.uniform(-20, 20))
+                cd[0] -= 1
+                cd[1] = c.flight_dur / max(1, A["cast_drops"][1]) if getattr(c, "flight_dur", 0) else 0.08
+        elif c.state != CastState.FLIGHT:
+            cd[0] = 0
+        if f is None or f.phase != "fight":
+            return
+        # 빠르게 감기: 감는 속도가 최대의 70% 이상이면 낚싯대 끝 근처 줄에서 물방울 (초당 4개)
+        cfg = self.fish_cfg["fight"]
+        top = f.gear["reel_speed"] * (cfg["reel_speed_drag_min"] + cfg["reel_speed_drag_add"])
+        if top > 0 and f.reel_speed_now >= A["reel_fast_frac"] * top:
+            self.reel_drop_t -= dt
+            if self.reel_drop_t <= 0:
+                self.reel_drop_t = 1.0 / A["reel_drops_per_sec"]
+                tip = self._rod_geo()["tip"]
+                self.droplets.burst(tip[0] - random.uniform(4, 16), tip[1] + random.uniform(2, 10), 0.45, count=1)
+        # 수면 질주 · 점프 · 공중 몸부림: 화면에 물보라 (2초에 1번 이하, 보호 영역 제외)
+        self.thrash_t = max(0.0, self.thrash_t - dt)
+        if f.brain.state in A["thrash_states"] and self.thrash_t <= 0:
+            self.thrash_t = A["thrash_gap_sec"]
+            self.screen_weather.add_drops(random.randint(*A["thrash_drops"]))
 
     def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
@@ -1831,6 +1886,10 @@ class FishingScene(Scene):
                 continue
             if ev == "hit":
                 cls = self.landing.cls
+                # 뜰채로 건질 때: 화면 아래쪽 1/4 에 물방울 6~10개가 맺혔다가 흘러내림 (A-4)
+                W, H = self.cam.width, self.cam.height
+                self.screen_weather.add_drops(random.randint(*load_json("details/map_details.json")["actions"]["net_drops"]),
+                                              (6, H * 0.75, W - 6, H - 8))
                 # 뜰채 성공: 물보라 + 퍼덕임 + 짧은 승리음 (크기 등급만큼 크게·묵직하게)
                 self.sfx.play("sfx_net_success", {"small": 0.6, "mid": 0.8, "big": 0.95, "huge": 1.0}[cls])
                 if cls in ("big", "huge"):  # N3: 저음 '퍽'은 대형만
@@ -2787,6 +2846,7 @@ class FishingScene(Scene):
             from src.render.season_fx import draw_ice_edges
             draw_ice_edges(canvas, pal, cam.horizon, t)   # 겨울: 수면 가장자리 살얼음
         self.screen_weather.draw_water(canvas)   # 구름 그림자 · 윤슬 (DT2)
+        self.map_fx.draw_world(canvas, pal)      # 화산 아지랑이 · 계곡 물안개 (DT3)
         if pfx.active:
             m = pfx.mask(canvas.get_width(), canvas.get_height(), int(cam.horizon))
             if m is not None:
@@ -2808,6 +2868,7 @@ class FishingScene(Scene):
             return
         if self.landing is not None:
             self.landing.draw(canvas, pal)
+            self.screen_weather.draw_screen(canvas)   # 뜰채 물방울 · 날씨 (DT3)
             return
         if f is None:
             sh = self.bite.shadow if weather != "fog" else None  # 안개: 다가오는 그림자가 안 보인다
@@ -2859,6 +2920,7 @@ class FishingScene(Scene):
         self.bubbles.draw(canvas, pal)
         self.hazard_decor.draw(canvas, pal, cam, t, f.in_hazard if f is not None and f.phase == "fight" else None)
         self.ambient.draw(canvas, pal, self.clock.period()[0], weather, theme.get("sea", False), t)
+        self.map_fx.apply_tilt(canvas, pal)   # 먼바다: 수평선 ±2도 (줄 · 찌 · 배 · 낚싯대는 기울지 않음)
 
         geo = self._rod_geo()
         tip = geo["tip"]
@@ -2889,6 +2951,7 @@ class FishingScene(Scene):
             self.reeds.draw(canvas, rpal, t, wind=self.wind.reed_mult(weather), lean=self.wind.dir)   # 바람 방향 (A-2)
         else:
             world.FOREGROUND[fg](canvas, pal, t)
+        self.map_fx.draw_fg(canvas, pal)   # 물보라 · 반짝임 · 재 · 빛 입자 · 구름 조각 · 반딧불 (DT3)
         from src.render.rod import gear_look
         from src.save.quests import skin_colors
         rod_l = gear_look("rod", self.save.gear_tier("rod"))       # 티어별 외형 (gear_looks.json)
@@ -2926,6 +2989,7 @@ class FishingScene(Scene):
         self.screen_fx.apply_camera(canvas)
         self.ilseom_fx.draw(canvas, "screen")
         self.screen_weather.draw_screen(canvas)   # 화면에 맺히는 날씨 (빗방울 · 김 서림 · 성에 · 날림 · 입김 · 빛 번짐, DT2)
+        self.map_fx.draw_screen(canvas)           # 계곡: 위에서 떨어지는 물방울 (DT3)
         if getattr(self, "scenic", False):
             return   # 이동 컷신의 도착 전경: 풍경·낚싯대까지만 (HUD·카드 없음)
         self._draw_event_banner(canvas)
@@ -3172,6 +3236,7 @@ class FishingScene(Scene):
         if p is None:
             return
         sx, sy, s = p
+        sy += self.map_fx.tilt_dy(sx)
         b = f.brain
         size = max(3.5, 0.36 * s)
         still = b.state == "charge"
@@ -3754,6 +3819,7 @@ class FishingScene(Scene):
             self._draw_trail(canvas, "float_skin", (sx, sy), max(1, int(size * 0.4)))
             draw_bobber(canvas, pal, sx, sy, size, floating=False)
             return
+        sy += self.map_fx.tilt_dy(sx)   # 먼바다 기울기: 찌가 기운 수면에 붙어 있게
         bob = 0.0
         dip = self.bite.dip if c.state in (CastState.LANDED, CastState.HOOKED) else 0.0
         if c.state == CastState.LANDED:

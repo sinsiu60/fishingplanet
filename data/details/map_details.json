@@ -1,0 +1,61 @@
+{
+  "_설명": "DETAILS.md A-3 · A-4 · A-5 (DESIGN.md 45장, DT3). 낚시터별 효과는 표의 10곳 (동네 저수지 · 용문 폭포는 낚시터 전용 효과 없음, 45-D 확정 10). 화질 상한 [높음, 중간, 낮음]. 화면에 맺히는 효과는 신호 보호 영역 · 파이팅 중 60% 규칙을 따름. 전경(테트라포드 · 수정 · 뿌리 · 갈대)에 붙는 효과는 전경 그림과 같은 좌표(480×270 기준).",
+  "breakwater": {
+    "_설명": "8~15초마다 방파제에 파도가 부서짐 (흰 물보라 + 소리 amb_wave_crash, 환경음 조각과 같은 순간), 그중 10%는 물보라 몇 방울이 화면에 튐",
+    "every_sec": [8, 15],
+    "spray": 26,
+    "screen_chance": 0.1,
+    "screen_drops": [3, 5],
+    "origin": [[16, 92], [222, 240]]
+  },
+  "offshore": {
+    "_설명": "배가 출렁이며 수평선이 ±2도 천천히 기울어짐 (주기 6초), 가끔 뱃전에 부딪힌 물보라. 화면 효과 줄이기면 기울어짐 없음",
+    "tilt_deg": 2.0,
+    "period_sec": 6.0,
+    "spray_every_sec": [7, 14],
+    "spray": 14
+  },
+  "deep": {"_설명": "찌 주변에서 3~5초마다 작은 기포", "every_sec": [3, 5], "count": [2, 4]},
+  "valley": {
+    "_설명": "바위 사이 물안개가 낮게 흐름, 화면 위쪽에서 가끔 물방울이 떨어짐",
+    "mist": [3, 2, 0],
+    "mist_alpha": 42,
+    "drip_every_sec": [4, 9]
+  },
+  "marsh": {"_설명": "갈대 사이로 작은 은빛 반짝임", "count": [8, 5, 2]},
+  "crystal_cave": {
+    "_설명": "천장에서 물방울이 떨어져 수면에 동그란 파문 (소리 amb_drop), 수정이 가끔 반짝",
+    "drip_every_sec": [2.5, 6],
+    "sparkle_every_sec": [1.5, 4]
+  },
+  "sky_falls": {"_설명": "화면 옆을 구름 조각이 아래에서 위로 흘러감", "cap": [6, 3, 0], "every_sec": [1.5, 3.5], "speed_px_s": [14, 26]},
+  "volcano": {
+    "_설명": "수면 위쪽 1/3 아지랑이 (미리 계산한 가로줄 흔들림 표를 돌려 씀, 매 프레임 계산 안 함) + 하늘에서 재가 날림",
+    "haze_rows_frac": 0.3333,
+    "haze_amp_px": 2,
+    "haze_frames": 16,
+    "haze_fps": 10,
+    "haze": [true, true, false],
+    "ash_cap": [24, 14, 6],
+    "ash_rate": 6
+  },
+  "ice_sea": {"_설명": "10~20초마다 얼음 갈라지는 소리 (환경음 조각 amb_ice_crack 간격), 화면 모서리 서리 상시 8px", "frost_px": 8},
+  "world_tree": {"_설명": "뿌리 사이로 빛 입자가 천천히 떠오름", "cap": [12, 7, 3], "rate": 2.0},
+  "actions": {
+    "_설명": "A-4 행동 반응",
+    "cast_drops": [5, 8],
+    "reel_fast_frac": 0.7,
+    "reel_drops_per_sec": 4,
+    "thrash_states": ["surface", "jump"],
+    "thrash_gap_sec": 2.0,
+    "thrash_drops": [3, 5],
+    "net_drops": [6, 10]
+  },
+  "fireflies": {
+    "_설명": "A-5: 여름 밤, 동네 저수지 · 계곡 · 은빛 갈대 습지. 노란 점 6~12개가 천천히 떠다니며 깜빡임 (기존 반딧불 두 가지는 낚시터에서 이걸로 교체, 45-D 확정 6)",
+    "spots": ["reservoir", "valley", "marsh"],
+    "count": [6, 12],
+    "cap": [12, 6, 0],
+    "color": [255, 228, 96]
+  }
+}

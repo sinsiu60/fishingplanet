@@ -196,6 +196,7 @@ class Ambient:
                            random.uniform(0, 6.3)] for _ in range(14)]
         self.flock: list | None = None
         self.flock_t = random.uniform(3, 10)
+        self.fireflies_on = False   # 반딧불은 MapFx (여름 밤 · 저수지 · 계곡 · 습지, DETAILS A-5) 로 교체
         self.gulls = [[random.uniform(0, w), random.uniform(20, horizon - 30), random.choice((-1, 1)),
                        random.uniform(12, 22), random.uniform(0, 6)] for _ in range(3)]
 
@@ -260,7 +261,7 @@ class Ambient:
                 y = y0 + side * row * 5
                 flap = 2 if math.sin(t * 8 + i) > 0 else 0
                 pygame.draw.lines(canvas, col, False, [(x - 3, y - flap), (x, y), (x + 3, y - flap)], 1)
-        if period == "night" and dry and not sea:
+        if period == "night" and dry and not sea and self.fireflies_on:
             for x, y, ph, ph2 in self.fireflies:
                 glow = 0.5 + 0.5 * math.sin(t * 2.2 + ph2 * 3)
                 if glow < 0.25:

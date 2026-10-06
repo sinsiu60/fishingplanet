@@ -56,11 +56,11 @@ class SeasonParticles:
 
     def update(self, dt: float, season: str, cont: str, w: int, h: int, period: str, weather: str,
                mobile: bool = False, fighting: bool = False, enabled: bool = True, wind: float = 0.0,
-               protect=None) -> None:
+               protect=None, fireflies: bool = True) -> None:
         """wind = 바람(-1~1, 화면 날씨 Wind.x) — 꽃잎 · 낙엽 · 눈송이가 바람 쪽으로 흘러감 (DT2).
         protect = 신호 보호 영역 (파이팅 중 그 안의 파티클은 그리지 않음, DESIGN.md 45장 📐)."""
         kind, cols = PARTICLE.get((cont, season), (None, []))
-        if not enabled or kind is None or (kind == "firefly" and period not in ("evening", "night")):
+        if not enabled or kind is None or (kind == "firefly" and (period not in ("evening", "night") or not fireflies)):
             self.ps.clear()
             return
         self.key = (kind, cont)
