@@ -262,3 +262,180 @@ OPTIMIZATION.md 5번과 화질 설정 기준으로 Phase O6 진행해줘.
 - **O1 측정 결과가 가장 중요해요.** 체감상 파도가 원인 같아도, 실제로는 글자 다시 그리기나 실행 중 소리 합성이 더 클 수도 있어요
 - 구형 기기 로그는 **같은 벤치마크 장면**으로 수정 전후를 비교해야 의미가 있어요
 - 도트 게임은 배경 애니메이션을 12~15fps로 돌려도 원래 그런 맛이라 티가 거의 안 나요. 이게 가장 효과 큰 방법 중 하나예요
+
+---
+
+# 📋 O1 결과 (2026-10-06 · v1.3.5 코드 기준)
+
+## 측정 도구 (들어간 것)
+
+| 도구 | 어디 | 내용 |
+|------|------|------|
+| 성능 표시 | PC **F3** / 설정 → 접근성 → "성능 표시" | fps · 프레임 ms · 갱신(로직) · 소리 · 그리기 · 출력(창 복사 · flip) · 메모리 · GC · 파티클 수 · 채널 수 · 느린 함수 |
+| 성능 로그 | 설정 → 접근성 → "성능 로그 (1초마다 CSV)" | `src/core/perf.py` PerfMonitor. PC `내 문서/미니 피싱/perf_logs/perf_<시각>.csv`, 안드로이드 앱 저장소 + 공유 폴더 `perf_logs/` |
+| 로그 내보내기 | 설정 → 접근성 → "성능 로그 내보내기" | 안드로이드: 공유 시트로 CSV 전송 / PC: 폴더 경로 표시 |
+| 벤치마크 B1~B6 | 설정 → 접근성 → "테스트: 벤치마크 B1~B6 (3분)" | 각 30초 자동 재생 (`BenchRunner`) → 결과 화면 + `perf_logs/bench_<시각>.json` + 그동안의 CSV |
+| 프로파일 | `python tools/perf/run_bench.py [--mobile] [--secs 30] [--prof] [--out 결과.json]` | 같은 대본을 화면 없이 돌리고 cProfile 로 느린 함수 상위 20개 |
+| 로그 분석 | `python tools/perf/analyze_log.py perf_logs/perf_xxx.csv` | 벤치/장면별 표 + 가장 느린 1초 |
+
+CSV 열: `time, scene, bench, fps, frame_ms, frame_p95, frame_max, logic_ms, audio_ms, draw_ms, present_ms, blit_ms, flip_ms, ticks, particles, channels, rss_mb`.
+기기에서 돌린 로그는 `tools/perf/logs/` 에 올린다 (다음 Phase 의 기준).
+
+## "흔한 원인" 에 해당하는 곳 (파일 · 함수)
+
+실측(갤럭시 탭 32비트 · 안드로이드 8 · v1.3.4)에서 본 숫자와 함께. **굵은 글씨**가 폰에서 실제로 큰 것.
+
+### 1. 화면 그리기
+
+| 원인 | 어디 | 비고 |
+|------|------|------|
+| **반투명 전체 화면 blit 이 프레임마다 여러 장** | 파이팅: `src/render/screen_fx.py` `_blit_vignette`(장력·위기 비네트 **8장/프레임**), `src/scene/fishing_scene.py` `_draw_fight_overlay` 옆면 어둡게(**30ms**), 설정·메뉴 뒤 어둡게 `src/ui/widgets.py backdrop`(**33ms**, v1.3.5 부터 캐시), 튜토리얼 `src/tutorial/overlay.py dim`(PC 18ms — 매 프레임 fill + 구멍 fill) | 폰에서 **한 장에 27~33ms** = 32비트 pygame 에 NEON 블리터가 없어서 (v1.3.5 에서 켬). 장 수 자체도 줄여야 함 (O2/O4) |
+| 매 프레임 새 Surface | `src/render/world.py:273` 등대 빛(beam), `:610` 배 등불 전체 화면 glow, `src/render/eldra_world.py:69/94` 안개·후광, `src/render/effects.py:185` 선 글로우(전체 화면), `src/render/phantom_fx.py:208` 환상 마스크, `src/render/season_fx.py:114/125/174`, `src/render/phantom_show.py:236/242/279/366/369/408/517`, legend_show · landing · travel · dragon 다수 (총 28곳) | 대부분 크기가 고정이라 재사용 가능 |
+| 글자를 매 프레임 새로 그림 | `src/ui/hud.py text` 는 캐시됨(`_TXT` 600개). 캐시 안 거치는 곳: `src/ui/fight_hud.py:273` 결과 등급, `src/scene/fishing_scene.py:2859-2860` 환상 대사, `src/ui/shop_ui.py:31/36`, `src/render/legend_show.py:912~969`, `src/render/phantom_show.py:659~694`, `src/render/fish_print.py` | 벤치에서 `Font.render` 2~6회/프레임, **`Font.size` 9~21회/프레임** (글자 배치 계산 — 캐시 없음) |
+| 안 바뀌는 배경을 매 프레임 다시 그림 | 하늘·물 바탕은 캐시(`world.py _cached`), 산은 좌표 캐시(`_HEIGHTS`). **마을**은 아님: `src/render/village.py:40/91/103/107/116` 줄마다 `fill` (**B5 300회/프레임 + lerp_color 200회**), 건물·간판 매 프레임 | 마을은 정적 레이어로 굽기 (O2) |
+| 픽셀 하나씩 `set_at` | `src/render/world.py:101` 별 (밤마다 별 수만큼), `src/render/rod.py:107/170`, `src/render/effects.py:72/218` | 별은 캐시된 하늘에 함께 굽기 |
+| 매 프레임 `transform.scale` | 모바일 캔버스에서 1~3회/프레임 (`fight_hud.py:274` 등급, 포획 연출, 콜아웃) + 출력 1회 | 출력 1회는 정상(GPU 모드) |
+| 화면 밖 그리기 | 비·눈·반짝임은 화면 안만; 마을 건물은 `ox` 로 걸러짐 | 문제 없음 |
+
+### 2. 파도 · 물 · 환경 애니메이션
+
+| 원인 | 어디 | 비고 |
+|------|------|------|
+| **물결을 매 프레임 계산** | `src/render/world.py:370 _draw_waves` (numpy, 행별 사인파 → `_put` 로 픽셀 쓰기), `:430 _draw_reflection` | PC 0.6~0.8ms 로 그리기 1위, **폰 6.7ms** (v1.3.4 실측). 60fps 로 매 프레임 → 12~15fps 갱신 + 프레임 캐시로 (O3) |
+| 비를 한 줄씩 그림 | `src/render/weather_fx.py:93 Rain.draw` — **`draw.line` 430~460회/프레임** (B2 폭풍) | 빗줄기 레이어 2~3장 스크롤 (O3) |
+| 오로라 · 반짝임 | `src/render/eldra_world.py` 오로라는 `blit_array` 1회(캐시), `effects.py:25 draw`(윤슬 반짝임) `draw.ellipse` 40~76회/프레임 | 반짝임도 12fps 로 |
+| 배경 애니메이션 fps | 전부 화면 fps 와 같음 (갱신 제한 없음) | O3 핵심 |
+
+### 3. 파티클 · 이펙트
+
+| 원인 | 어디 | 비고 |
+|------|------|------|
+| 입자 상한 | 모바일 설정에 비·눈 상한 있음(`mobile_config.json`), 그 외(파장·포획 연출·계절 이펙트)는 없음 — B2 폭풍 **최대 430개**, B3 환상 230개 | 화질별 상한 (O4/O6) |
+| 글로우를 매번 계산 | `src/render/effects.py:185` 선 글로우(전체 화면 Surface + 여러 겹 선), `phantom_show.py:408` 원 글로우 | 미리 그린 글로우 스프라이트 |
+| 보랏빛 파장 | `src/render/phantom_fx.py:208` 마스크 Surface 매 프레임 + `phantom_palette` 로 팔레트 변환 | 보라 버전 굽기 + 원 마스크 (O4) |
+| 화면 흔들림 | `src/render/screen_fx.py apply_camera` — 흔들릴 때 캔버스 복사 1회 | 출력 때 위치만 옮기기 |
+
+### 4. 오디오
+
+| 원인 | 어디 | 비고 |
+|------|------|------|
+| 게임 중 소리 합성 | 효과음·음악은 전부 미리 구워진 OGG. 합성은 파일이 없을 때만 (`src/audio/sfx.py:113`, `adaptive_music.py:122` — PC 전용 대비책). **단, 효과음 변주 `src/audio/sfx.py:407 _resampled`(numpy interp) 는 재생 때 계산** — 착수 1회 8ms(PC), 안개 저음 통과 포함 | 변주를 구워 두거나 처음 1회만 계산 후 캐시 (O5) |
+| 전설·환상 음악 불러오기 | `src/audio/loader.py` 일꾼 스레드 + `boss_music.py` 한 파일씩 드립 로딩. 미리 불러오기: 낚시터 진입(`fishing_scene.py:1059-1062`), 전설 접근(`:1368-1372`), 환상 파장 시작(`phantom_song.prefetch`) | **남은 문제: OGG 를 푸는 동안 SDL 믹서가 잠겨** 그 순간 메인의 `Channel.play` 등이 기다림 → B3 최대 190~250ms, B4 멈칫 40~60ms (PC 기준, 폰은 더 큼) |
+| 곡을 전부 메모리에 | 보스 곡 층별 Sound (한 곡 20~40MB), 최근 곡 유지 수 제한 없음 → B4~B6 메모리 200→260MB | 최근 2곡만 유지 (O5) |
+| 믹서 설정 | `game.py:28 pre_init(44100, -16, 2, 버퍼)` 버퍼 PC/모바일/웹 따로, 채널 수 고정 | 문제 없음 |
+
+### 5. 로직 · 메모리 · 저장
+
+| 원인 | 어디 | 비고 |
+|------|------|------|
+| 로직과 화면 | 고정 20틱 로직 + 화면은 `clock.tick(fps)` (이미 분리) | 문제 없음 — 벤치 로직 0.0~0.6ms |
+| 자동 저장 | `src/save/save_game.py:282 json.dump` 메인 스레드 동기 | 백그라운드 쓰기 (O6) |
+| GC | `src/core/gcwatch.py` 시작 후 `gc.freeze()` 있음 | 파이팅 중 큰 객체 생성만 주의 |
+| 매 프레임 객체 생성 | `dict.get` 180~280회/프레임, `lerp_color` 40~200회/프레임, `camera.project` 30~40회 | 작음 (PC 0.1ms) — 폰에선 ×5~10 |
+| 이미지 캐시 | 물고기 그림 `fish_draw._surf` 캐시, 도감 목록 `_sf_cache` | 문제 없음 |
+
+### 찾다가 고친 버그
+
+- `src/fishing/mutation.py apply`: 함수 안에서 `load_json` 을 다시 import 해 **frenzy 변이 + tired_sec 없는 물고기면 UnboundLocalError** (B2 PC 실행에서 발견).
+- 벤치마크 대본: 파이팅 '감기' 를 장면이 매 틱 입력에서 읽어 덮어써서 자동 감기가 안 되던 것 → 입력(`input.held`) 을 대신하게.
+
+## 벤치마크 B1~B6 결과 (이 환경 · 각 30초 · 화면 없이)
+
+PC 는 폰보다 5~10배 빠르므로 비율로 본다. "PC" = pygame-ce 2.5.8 PC 캔버스 480x270, "2.6.1 폰 캔버스" = 폰과 같은 pygame 2.6.1 · 모바일 설정 · 600x270 캔버스 (출력은 창 확대 포함).
+
+| 벤치 | 환경 | 평균 fps | 프레임 평균 | 상위 5% | 최대 | 로직 | 그리기 | 출력 | 파티클 최대 | 메모리 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| B1 동네 저수지 낮 · 맑음 · 대기 (물결) | PC pygame-ce 480x270 | 206 | 4.8ms | 6.6ms | 38ms | 0.17 | 4.29 | 0.14 | 14 | 136MB |
+| B1  | 2.6.1 폰 캔버스 600x270 | 206 | 4.8ms | 6.6ms | 31ms | 0.16 | 3.77 | 0.62 | 14 | 152MB |
+| B2 바다 방파제 밤 · 폭풍 · 일반 파이팅 | PC pygame-ce 480x270 | 169 | 5.9ms | 8.2ms | 55ms | 0.43 | 5.05 | 0.13 | 424 | 142MB |
+| B2  | 2.6.1 폰 캔버스 600x270 | 134 | 7.5ms | 11.5ms | 56ms | 0.59 | 5.92 | 0.74 | 427 | 158MB |
+| B3 환상 등장: 파장 → 파이팅 → 포획 연출 | PC pygame-ce 480x270 | 194 | 5.2ms | 7.0ms | 214ms | 0.23 | 4.65 | 0.13 | 235 | 152MB |
+| B3  | 2.6.1 폰 캔버스 600x270 | 179 | 5.6ms | 8.7ms | 191ms | 0.26 | 4.68 | 0.67 | 230 | 168MB |
+| B4 전설 파이팅 시작 (음악 불러오기 멈칫함) | PC pygame-ce 480x270 | 155 | 6.5ms | 9.2ms | 52ms (멈칫 52ms) | 0.44 | 5.46 | 0.14 | 59 | 219MB |
+| B4  | 2.6.1 폰 캔버스 600x270 | 140 | 7.1ms | 11.1ms | 59ms (멈칫 53ms) | 0.46 | 5.46 | 0.73 | 24 | 206MB |
+| B5 윤슬 마을 좌우 이동 + 건물 출입 | PC pygame-ce 480x270 | 246 | 4.1ms | 5.4ms | 65ms | 0.07 | 3.64 | 0.25 | 0 | 243MB |
+| B5  | 2.6.1 폰 캔버스 600x270 | 289 | 3.5ms | 5.0ms | 55ms | 0.06 | 2.69 | 0.63 | 0 | 258MB |
+| B6 상점 · 도감 열고 스크롤 | PC pygame-ce 480x270 | 234 | 4.3ms | 7.1ms | 34ms | 0.01 | 4.35 | 0.25 | 0 | 246MB |
+| B6  | 2.6.1 폰 캔버스 600x270 | 285 | 3.5ms | 6.2ms | 29ms | 0.00 | 3.27 | 0.62 | 0 | 261MB |
+
+**B1** 느린 함수 (2.6.1 · 프레임당 자기 시간):
+
+- `0.69ms    1.0회 src/render/world.py:370 _draw_waves`
+- `0.45ms    1.0회 ~:0 <built-in method pygame.transform.scale>`
+- `0.41ms   21.0회 ~:0 <method 'blit' of 'pygame.surface.Surface' objects>`
+- `0.27ms   18.5회 ~:0 <method 'fill' of 'pygame.surface.Surface' objects>`
+- `0.18ms    1.0회 src/render/world.py:430 _draw_reflection`
+- `0.14ms    1.0회 src/scene/fishing_scene.py:2649 draw`
+- `0.13ms   11.0회 ~:0 <built-in method pygame.draw.polygon>`
+- `0.12ms    1.0회 src/render/world.py:517 draw`
+
+**B2** 느린 함수 (2.6.1 · 프레임당 자기 시간):
+
+- `1.19ms   35.0회 ~:0 <method 'blit' of 'pygame.surface.Surface' objects>`
+- `0.78ms    1.0회 src/render/world.py:370 _draw_waves`
+- `0.68ms    3.0회 ~:0 <built-in method pygame.transform.scale>`
+- `0.39ms   59.4회 ~:0 <method 'fill' of 'pygame.surface.Surface' objects>`
+- `0.37ms  460.4회 ~:0 <built-in method pygame.draw.line>`
+- `0.28ms    1.0회 src/render/weather_fx.py:93 draw`
+- `0.13ms  112.6회 src/core/mathutil.py:18 lerp_color`
+- `0.12ms    1.0회 src/scene/fishing_scene.py:2649 draw`
+
+**B3** 느린 함수 (2.6.1 · 프레임당 자기 시간):
+
+- `0.71ms    1.0회 src/render/world.py:370 _draw_waves`
+- `0.64ms   28.1회 ~:0 <method 'blit' of 'pygame.surface.Surface' objects>`
+- `0.51ms    1.4회 ~:0 <built-in method pygame.transform.scale>`
+- `0.32ms   35.7회 ~:0 <method 'fill' of 'pygame.surface.Surface' objects>`
+- `0.18ms    1.0회 src/render/world.py:430 _draw_reflection`
+- `0.14ms   13.2회 ~:0 <built-in method pygame.draw.polygon>`
+- `0.13ms    1.0회 src/render/world.py:517 draw`
+- `0.11ms    1.0회 src/scene/fishing_scene.py:2649 draw`
+
+**B4** 느린 함수 (2.6.1 · 프레임당 자기 시간):
+
+- `1.03ms   27.7회 ~:0 <method 'blit' of 'pygame.surface.Surface' objects>`
+- `0.78ms    1.0회 src/render/world.py:370 _draw_waves`
+- `0.63ms    2.2회 ~:0 <built-in method pygame.transform.scale>`
+- `0.34ms   51.3회 ~:0 <method 'fill' of 'pygame.surface.Surface' objects>`
+- `0.20ms    1.0회 src/render/world.py:430 _draw_reflection`
+- `0.16ms    0.3회 ~:0 <method 'set_volume' of 'pygame.mixer.Channel' objects>`
+- `0.15ms   15.9회 ~:0 <built-in method pygame.draw.polygon>`
+- `0.15ms    1.0회 src/scene/fishing_scene.py:2649 draw`
+
+**B5** 느린 함수 (2.6.1 · 프레임당 자기 시간):
+
+- `0.56ms  298.0회 ~:0 <method 'fill' of 'pygame.surface.Surface' objects>`
+- `0.44ms    1.0회 ~:0 <built-in method pygame.transform.scale>`
+- `0.24ms   25.1회 ~:0 <method 'blit' of 'pygame.surface.Surface' objects>`
+- `0.22ms  204.8회 src/core/mathutil.py:18 lerp_color`
+- `0.20ms    6.1회 ~:0 <method 'render' of 'pygame.font.Font' objects>`
+- `0.11ms    8.3회 ~:0 <method 'size' of 'pygame.font.Font' objects>`
+- `0.11ms    0.7회 src/render/village.py:88 _sea`
+- `0.08ms    3.7회 src/render/village.py:153 draw_place`
+
+**B6** 느린 함수 (2.6.1 · 프레임당 자기 시간):
+
+- `0.62ms   79.6회 ~:0 <method 'fill' of 'pygame.surface.Surface' objects>`
+- `0.43ms    1.0회 ~:0 <built-in method pygame.transform.scale>`
+- `0.43ms   54.6회 ~:0 <method 'blit' of 'pygame.surface.Surface' objects>`
+- `0.18ms   20.6회 ~:0 <method 'size' of 'pygame.font.Font' objects>`
+- `0.09ms    2.5회 src/render/fish_draw.py:101 draw_fish_side`
+- `0.08ms   25.4회 src/render/fish_draw.py:252 _surf`
+- `0.07ms    5.7회 ~:0 <method 'render' of 'pygame.font.Font' objects>`
+- `0.07ms   11.2회 src/render/fish_draw.py:91 _xf`
+
+
+## 고칠 순서 제안 (효과 큰 것부터)
+
+PC 에선 모든 벤치가 목표(60fps · 상위 5% 20ms) 를 5~10배 여유로 넘는다. 문제는 전부 **폰** 쪽이고, 폰 실측(v1.3.4) 의 프레임 38~60ms 는 아래 ①②③ 이 거의 전부다.
+
+1. **32비트 pygame NEON 블리터** (v1.3.5 빌드, 이미 진행) — 반투명 전체 화면 blit 27~33ms → 2~4ms 예상. 이것만으로 파이팅 FPS 8 → 20 대 기대. *기기 로그로 확인 필요.*
+2. **반투명 전체 화면 겹 수 줄이기** (O2 + O4): 파이팅 비네트 8장 → 1장으로 합쳐 굽기(장력 단계별 캐시), 옆면 어둡게·튜토리얼 dim 캐시, 등대·배 등불·선 글로우 Surface 재사용. 폰 ×5~10 이면 장당 2~4ms 라 장 수가 곧 프레임.
+3. **배경 애니메이션 12~15fps** (O3): 물결(`_draw_waves` 폰 6.7ms)·반사·윤슬 반짝임·오로라를 프레임 캐시에 두고 갱신만 느리게, 비는 레이어 스크롤(draw.line 460회 → blit 3회).
+4. **화질 설정 + 자동 감지** (O6): 파티클 상한 60%/30%, 글로우 끄기, 화면 fps 30 선택 — 위 ①~③ 뒤에도 30fps 가 안 나오는 기기용 안전망.
+5. **글자**: `Font.size` 9~21회/프레임 캐시(`hud.text` 와 같은 표), 결과·연출 화면의 직접 `render` 를 `hud.text` 로.
+6. **오디오** (O5): 효과음 변주 `_resampled` 를 처음 1회만 계산해 캐시(또는 변주도 굽기), 보스 곡 최근 2곡만 유지(메모리 260MB → 200MB 아래), OGG 풀기 중 믹서 잠김은 곡을 짧은 조각으로 나눠 드립 간격을 늘리거나 WAV(압축 없음) 로 굽는 것 비교.
+7. **마을 정적 레이어 굽기** (O2): 하늘·바다 줄 fill 300회 → 시간대 바뀔 때만 다시 굽기. B5 는 이미 빠르지만 폰 ×10 이면 3.5ms → 35ms.
+8. 자동 저장 백그라운드 쓰기, 매 프레임 Surface 생성 28곳 정리 (O6/O2 마무리).
+
+> 다음: 구형 기기에서 **설정 → 접근성 → 테스트: 벤치마크 B1~B6** 을 돌리고 (3분, 자동), 끝나면 "로그 내보내기" 로 CSV 와 `bench_*.json` 을 `tools/perf/logs/` 에 올려 주세요. 그 숫자를 기준으로 O2 부터 고칩니다.

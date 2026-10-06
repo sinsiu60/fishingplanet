@@ -3387,6 +3387,23 @@ class FishingScene(Scene):
 
     GAUGE_W = 170  # 파이팅 게이지 묶음 폭 (fight_hud.draw_gauges 가 왼쪽 0~170px에 그림, 물살 표시 포함)
 
+    _PARTICLE_LISTS = ("items", "drops", "dust", "sparks", "parts", "particles", "fireflies", "flakes", "ring_fish",
+                       "shockwaves", "rays", "speed_lines", "slashes", "bolts", "petals", "leaves", "snow", "motes")
+
+    def perf_particles(self) -> int:
+        """지금 살아 있는 파티클 수 (성능 로그 · 표시, OPTIMIZATION.md O1): 효과 객체들의 목록 길이 합."""
+        n = 0
+        for name in ("ripples", "splashes", "bubbles", "sparkles", "rain", "season_fx", "event_fx", "screen_fx", "landing",
+                     "catch_show", "phantom_fx", "lightning", "dragon_fx", "pattern_vfx", "rush_cue"):
+            obj = getattr(self, name, None)
+            if obj is None:
+                continue
+            for ln in self._PARTICLE_LISTS:
+                v = getattr(obj, ln, None)
+                if isinstance(v, list):
+                    n += len(v)
+        return n
+
     def _gauge_canvas(self, canvas):
         """왼손잡이 터치 모드면 게이지를 오른쪽 가장자리에 (왼쪽 아래는 릴 패드 자리)."""
         sx = self.game.screen.safe_x

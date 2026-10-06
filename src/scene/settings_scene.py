@@ -100,7 +100,11 @@ class SettingsScene(Scene):
         show = ("테스트: 포획 연출 (환상·전설)", "button", lambda: "열기", self._open_phantom_test)
         trv = ("테스트: 이동 컷신", "button", lambda: "열기", self._open_travel_test)
         bgm = ("테스트: 전설·환상 음악", "button", lambda: "열기", self._open_boss_music)
-        rows = [tele, cards, slot, cb, snd, test, show, trv, bgm]
+        pf = self.game.perf
+        plog = ("성능 로그 (1초마다 CSV)", "toggle", lambda: pf.logging, self._toggle_perf_log)
+        pexp = ("성능 로그 내보내기", "button", lambda: "공유" if IS_MOBILE else "폴더", self._export_perf)
+        bench = ("테스트: 벤치마크 B1~B6 (3분)", "button", lambda: "시작", self._start_bench)
+        rows = [tele, cards, slot, cb, snd, test, show, trv, bgm, plog, pexp, bench]
         if self.game.save is not None:
             rows.append(("테스트: NPC 대사", "button", lambda: "열기", self._open_dialogue_test))
             rows.append(("테스트: 날씨 이벤트", "button", self._event_label, self._cycle_event))
@@ -293,6 +297,23 @@ class SettingsScene(Scene):
             return
         from src.scene.tutorial_replay import TutorialReplayScene
         self.game.scenes.push(TutorialReplayScene(self.game))
+
+    def _toggle_perf_log(self) -> None:
+        pf = self.game.perf
+        if pf.logging:
+            pf.stop_log()
+            self.msg, self.msg_t = f"저장: {pf.last_path}", 3.0
+        else:
+            pf.start_log()
+
+    def _export_perf(self) -> None:
+        self.msg, self.msg_t = self.game.perf.export(), 4.0
+
+    def _start_bench(self) -> None:
+        """B1~B6 자동 재생 (OPTIMIZATION.md O1) — 설정을 닫고 낚시 화면에서 시작."""
+        err = self.game.perf.start_bench()
+        if err:
+            self.msg, self.msg_t = err, 2.0
 
     def _open_transfer(self) -> None:
         from src.scene.save_transfer import SaveTransferScene

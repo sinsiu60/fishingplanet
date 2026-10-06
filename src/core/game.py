@@ -83,6 +83,9 @@ class Game:
         self.scenes = SceneManager()
         from src.tutorial.guide import Guide
         self.guide = Guide(self)    # 가이드 튜토리얼 (DESIGN.md 40)
+        from src.core.perf import PerfMonitor
+        self.perf = PerfMonitor(self)   # 성능 로그 · 벤치마크 (OPTIMIZATION.md O1)
+        self.no_save = False            # 벤치마크를 타이틀에서 시작했을 때: 임시 세이브를 파일에 쓰지 않음
         # 슬로우모션용 (퍼펙트 0.3초 슬로우 등). 틱 간격은 그대로, 쌓이는 시간만 줄인다.
         self.time_scale = 1.0
         self.slow_timer = 0.0  # 실제 시간 기준 남은 슬로우모션
@@ -164,8 +167,11 @@ class Game:
                 self._gc_line = (f"GC {(gcwatch.total - g[1]) / span * 1000:5.1f}ms/초 {(gcwatch.count - g[2]) / span:4.1f}회/초 "
                                  f"최장 {gcwatch.take_longest() * 1000:4.1f}ms")
             self._gc_win = (now, gcwatch.total, gcwatch.count)
+        lr = self.perf.last_row or {}
         extra = [f"메모리 {self._rss_mb():5.0f}MB  객체 {getattr(self, '_perf_objs', 0)}  얼림 {gc.get_freeze_count()}  "
-                 f"{getattr(self, '_gc_line', 'GC -')}", self.screen.fmt_note]
+                 f"{getattr(self, '_gc_line', 'GC -')}",
+                 f"{self.screen.fmt_note}  파티클 {lr.get('particles', 0)}  채널 {lr.get('channels', 0)}"
+                 + (f"  로그 켜짐" if self.perf.logging else "") + (f"  벤치 {self.perf.bench.tag()}" if self.perf.bench else "")]
         lines = [line] + extra + list(getattr(self, "_prof_state", {}).get("lines", []))
         from src.core.fonts import get_font
         font = get_font(11)
@@ -243,7 +249,7 @@ class Game:
 
     def save_now(self) -> None:
         """현재 진행을 저장 (게임 씬의 상태를 먼저 기록)."""
-        if self.save is None:
+        if self.save is None or self.no_save:
             return
         for scene in self.scenes.stack:
             if hasattr(scene, "write_save"):
@@ -310,6 +316,8 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.quit()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_F3 and not self.screen.mobile:
+                self.settings.set("perf_overlay", not self.settings.get("perf_overlay"))   # PC: F3 = 성능 표시
             elif self.preview is not None and self.preview.handle_event(event):
                 pass
             elif self.lifecycle.handle_event(event):
@@ -319,7 +327,7 @@ class Game:
             elif self.scenes.current:
                 self.scenes.current.handle_event(event)
 
-        perf = self.settings.get("perf_overlay")
+        perf = self.perf.active()   # 성능 표시 · 성능 로그 · 벤치마크 중이면 단계별 시간을 잰다
         t0 = time.perf_counter() if perf else 0.0
         ticks = 0
         while self._acc >= self.tick_dt:
@@ -335,12 +343,14 @@ class Game:
         self.boss.update(frame_time)   # 전설·환상 전용 곡 (DESIGN.md 43)
         self.sfx.update(frame_time, slow=self.time_scale < 0.99)  # 믹서: 덕킹·리미터·버스 볼륨
         self.haptics.update(frame_time)  # 소리 어택에 맞춘 진동 (32장 S5)
+        if self.perf.bench is not None:
+            self.perf.bench.update(frame_time)   # 벤치마크 대본 (B1~B6)
         t2 = time.perf_counter() if perf else 0.0
 
         if self.scenes.current:
             from src.tutorial import targets
             targets.begin()
-            if perf:
+            if self.settings.get("perf_overlay"):
                 self._perf_profile_draw()
             else:
                 self.scenes.current.draw(self.screen.canvas)
@@ -352,11 +362,13 @@ class Game:
             self.screen.canvas.blit(veil, (0, 0))
         if perf:
             t3 = time.perf_counter()
-            self._perf_draw(frame_time, ticks, t1 - t0, t2 - t1, t3 - t2)
+            if self.settings.get("perf_overlay"):
+                self._perf_draw(frame_time, ticks, t1 - t0, t2 - t1, t3 - t2)
         self.screen.present()
         if perf:
-            self._perf_present = (self._perf_present * 0.9 + (time.perf_counter() - t3) * 100) \
-                if hasattr(self, "_perf_present") else 0.0
+            pres = time.perf_counter() - t3
+            self._perf_present = (self._perf_present * 0.9 + pres * 100) if hasattr(self, "_perf_present") else 0.0
+            self.perf.frame(frame_time, ticks, t1 - t0, t2 - t1, t3 - t2, pres, getattr(self.screen, "perf_parts", (0.0, 0.0)))
 
         self._frames += 1
         if self._frames in (1, 30):

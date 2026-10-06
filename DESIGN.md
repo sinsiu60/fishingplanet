@@ -5182,3 +5182,8 @@ PC(서버) 숫자는 폰보다 5~10배 빠르므로 비율로 본다. 폰과 같
   NEON 명령이 2개뿐: pygame 은 aarch64 에서만 sse2neon SIMD 블리터를 자동으로 켜고 armv7 은 `setup.py -enable-arm-neon`(라즈베리 파이용) 을
   줘야 한다 → 레시피 `build_compiled_components` 에서 armeabi-v7a 에 추가 (CFLAGS -mfpu=neon + PG_ENABLE_ARM_NEON), CI 가 surface.so 의
   NEON 명령 수(> 200)를 검사. 설정 화면 `under.draw + dim` → backdrop 재사용, 게이지 받침 표면 재사용. 성능 표시 출력 = (창 복사 · flip).
+  첫 빌드는 p4a 가 `setup_extra_args` 를 `pip install .` 에도 넘겨 실패(pip 가 `-e nable-arm-neon` 으로 읽음) → 옵션 대신 `get_recipe_env` 의 CFLAGS 로.
+- **O1 (OPTIMIZATION.md 측정 단계)**: `src/core/perf.py` PerfMonitor(1초마다 CSV 성능 로그 · 내보내기) + BenchRunner(B1~B6 각 30초 자동 대본,
+  파이팅 '감기' 는 `input.held` 를 대신해 넣음, 튜토리얼은 매 프레임 끔), `src/scene/bench_result.py` 결과 화면, 설정 → 접근성 3줄,
+  `tools/perf/run_bench.py`(cProfile 상위 20) · `analyze_log.py`. 결과표·병목 목록·고칠 순서는 OPTIMIZATION.md "O1 결과". 기기 로그는 `tools/perf/logs/`.
+  찾은 버그: `mutation.py apply` 의 함수 안 `load_json` 재import (frenzy + tired_sec 없음 → UnboundLocalError).
