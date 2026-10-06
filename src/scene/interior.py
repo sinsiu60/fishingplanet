@@ -98,10 +98,14 @@ class InteriorScene(Scene):
         self.shop = None                   # 열린 상점 패널 (ShopScene)
         self.react_line = None             # 상점 패널 옆 반응 대사 (표정, 문장, 시각)
         fishing.bite.stop()   # 문 소리·실내 소리는 소리 구역(game.zones)이 (DESIGN.md 39)
+        # 밤 하품 (DT9): 하루 아저씨 내부에서 밤이면 가끔 하품 · 그 게임 날 밤 처음 들어오면 대사 1개 추가
+        self.yawn_t = self.rnd.uniform(4, 8)
+        self.yawn_left = 0.0
         if script is not None:
             self.say(script)
         elif greet:
             self._greet()
+            self._night_line()
 
     # ── 대사 ──
     def _story_done(self, sc) -> None:
@@ -179,6 +183,22 @@ class InteriorScene(Scene):
         seq = dialogue.pick_seq(self.game, self.npc, self.cont, kind="greet_first") or \
             dialogue.pick_seq(self.game, self.npc, self.cont)
         self.say(seq)
+
+    def _is_night(self) -> bool:
+        return self.fishing.clock.period()[0] == "night"
+
+    def _night_line(self) -> None:
+        from src.render.village_life import cfg as vl_cfg
+        c = vl_cfg()["night"]
+        if self.npc != c["yawn_npc"] or self.replay or not self._is_night():
+            return
+        clock = self.fishing.clock
+        key = clock.day - 1 if clock.hour < 6 else clock.day   # 자정 넘긴 새벽도 같은 밤
+        det = self.save.data.setdefault("details", {})
+        if det.get("haru_night_day") == key:
+            return
+        det["haru_night_day"] = key
+        self.say([("surprised", c["first_night_line"])])
 
     def react(self, kind: str) -> None:
         """상점 패널에서 사기·팔기·강화 → 웃음 표정 + 짧은 반응 대사 (dialogue.json react_*)."""
@@ -307,6 +327,14 @@ class InteriorScene(Scene):
             self.blink_left = self.c["blink_sec"]
             self.blink_t = self.rnd.uniform(*self.c["blink_every"])
         self.blink_left = max(0.0, self.blink_left - dt)
+        self.yawn_left = max(0.0, self.yawn_left - dt)
+        if self.npc == "haru" and self.wait_menu and self.shop is None and self.leaving is None and self._is_night():
+            self.yawn_t -= dt
+            if self.yawn_t <= 0:
+                from src.render.village_life import cfg as vl_cfg
+                c = vl_cfg()["night"]
+                self.yawn_t = self.rnd.uniform(*c["yawn_every"])
+                self.yawn_left = c["yawn_sec"]
         # 한 글자씩 + 말소리
         if self.typing() and self.fade_in <= 0:
             v = self.nc["voice"]
@@ -358,6 +386,8 @@ class InteriorScene(Scene):
                 "flash": self.game.zones.window_flash if hasattr(self.game, "zones") else 0.0}   # 실내 천둥: 창밖 번쩍
 
     def _portrait_img(self) -> pygame.Surface:
+        if self.yawn_left > 0:   # 하품: 눈 감고 입 크게 (놀람 표정의 눈 감은 · 말하는 그림)
+            return portrait(self.npc, "surprised", True, True)
         talking = self.typing() and self.line[0] == self.npc and int(self.t / self.c["mouth_sec"]) % 2 == 0
         if self.shop is not None and self.react_line and self.t - self.react_line[2] < 0.6:
             talking = int(self.t / self.c["mouth_sec"]) % 2 == 0
@@ -396,6 +426,12 @@ class InteriorScene(Scene):
                 T.mark(f"interior.menu.{it}", rr)
         from src.tutorial import targets as T
         T.mark("interior.portrait", (g["cx"] - 56, g["top_h"] - 150, 112, 140))
+        if self.yawn_left > 0:   # 하품 글자: 초상화 옆에서 떠오르며 흐려짐
+            from src.render.village_life import cfg as vl_cfg
+            u = 1 - self.yawn_left / vl_cfg()["night"]["yawn_sec"]
+            a = min(1.0, (1 - u) / 0.3)
+            text(canvas, "하아암~", (g["cx"] + 58, g["top_h"] - 118 - int(u * 10)), tuple(int(v * a) for v in (255, 240, 210)), 11,
+                 "midleft", shadow=True)
         self._draw_fade(canvas)
         draw_cursor(canvas, self.mouse)
 

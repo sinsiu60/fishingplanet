@@ -149,6 +149,12 @@ class QuestBoardScene(Scene):
         self.close_btn.draw(canvas, self.mouse)
         if self.tabs.index == 0:
             self.note_btn.draw(canvas, self.mouse)
+            from src.render.village_life import notes_this_week
+            if notes_this_week(self.cont):   # 새 마을 쪽지 2장이 붙어 있음 (버튼 옆 작은 종이)
+                for i, col in enumerate(((242, 234, 210), (250, 242, 200))):
+                    x = 238 + i * 11
+                    canvas.fill(col, (x, 31 + i, 9, 12))
+                    canvas.fill((200, 60, 60), (x + 3, 31 + i, 2, 2))
         if self.notes_open:
             self._draw_notes(canvas)
         draw_cursor(canvas, self.mouse)
@@ -156,18 +162,29 @@ class QuestBoardScene(Scene):
     def _draw_notes(self, canvas) -> None:
         """누렇게 바랜 쪽지들 (분위기 문장만 — 도감·공략 정보 없음)."""
         from src.ui.hud import wrap_text
-        box = pygame.Rect(40, 44, 400, 200)
+        box = pygame.Rect(12, 34, 456, 230)
         canvas.fill((58, 50, 36), box)
         pygame.draw.rect(canvas, (150, 130, 90), box, 1)
         text(canvas, "게시판 구석에 붙은 낡은 쪽지들", (box.centerx, box.y + 12), (230, 214, 170), 11, "center")
         y = box.y + 30
+        from src.render.village_life import notes_this_week
+        village = notes_this_week(self.cont)
+        for i, line in enumerate(village):   # 마을 사람 쪽지 (DT9, 윤슬 마을: 매주 2장)
+            r = pygame.Rect(box.x + 10 + i * 222, y - 6, 214, 34)
+            canvas.fill((242, 234, 210) if i == 0 else (250, 242, 200), r)
+            canvas.fill((200, 60, 60), (r.centerx - 1, r.y + 1, 3, 3))
+            for j, ln in enumerate(wrap_text(line, r.w - 10)[:2]):
+                text(canvas, ln, (r.x + 5, r.y + 11 + j * 12), (70, 56, 40), 11, "midleft")
+        if village:
+            y += 38
         for name, line in self._notes():
-            for i, ln in enumerate(wrap_text(f"[{name}] {line}", box.w - 20)[:2]):
+            rows = wrap_text(f"[{name}] {line}", box.w - 20)[:2]
+            if y + 13 * len(rows) > box.bottom - 14:   # 넘치면 여기까지 (마을 쪽지가 위에 붙은 주)
+                break
+            for i, ln in enumerate(rows):
                 text(canvas, ln, (box.x + 10, y), (225, 212, 180) if i == 0 else (200, 188, 160), 11, "midleft")
                 y += 13
             y += 3
-            if y > box.bottom - 16:
-                break
         text(canvas, "(아무 데나 누르면 닫기)", (box.centerx, box.bottom - 8), (160, 146, 112), 11, "center")
 
     def _draw_quests(self, canvas) -> None:

@@ -33,6 +33,26 @@ class HomeScene(InteriorScene):
     def _portrait_img(self):
         return pygame.Surface((1, 1), pygame.SRCALPHA)   # 사람 없는 방
 
+    def draw_room(self, canvas, px: int | None = None) -> dict:
+        """사람 없는 방 + 친밀도 5면 마루에서 자는 고양이 나비 (DT9). 조명(밤 어둡기)은 고양이까지 덮는다."""
+        from src.render import interior as ir
+        from src.render import village_life as vl
+        if vl.affection(self.save) < vl.cfg()["cat"]["sleep_home_at"]:
+            return super().draw_room(canvas, px)
+        g = self._geom(canvas)
+        env = self.env(g["w"], g["top_h"])
+        canvas.fill((0, 0, 0))
+        ir.draw_back(canvas, self.nc["bg"], env)
+        ir.draw_counter(canvas, self.nc["bg"], env)
+        cx, by = g["cx"], g["top_h"] - 175
+        pygame.draw.ellipse(canvas, (150, 70, 60), (cx + 84, by + 156, 44, 12))   # 작은 방석
+        pygame.draw.ellipse(canvas, (180, 96, 80), (cx + 86, by + 157, 40, 9))
+        vl.draw_cat(canvas, cx + 106, by + 164, "sleep", -1, self.t)
+        z = (self.t * 0.6) % 1.0   # z z
+        text(canvas, "z", (cx + 96 - int(z * 6), by + 150 - int(z * 14)), tuple(int(v * (1 - z)) for v in (240, 236, 220)), 11, "center")
+        ir.draw_light(canvas, self.nc["bg"], env)
+        return g
+
     def _choose(self, item: str) -> None:
         self.game.sfx.play("ui_click")
         if item == "journal":

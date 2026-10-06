@@ -59,6 +59,15 @@ class VillageScene(Scene):
         self.ev_banner = None
         self.btns = []
         self.collect_open = False   # 위 '수집' 버튼 서랍
+        # 마을 생활감 (DT9): 고양이 나비 (윤슬 마을만) · 빗방울 파문 · 고양이 먹이 버튼 · 알림 한 줄
+        import random as _r
+        from src.render import village_life as vl
+        self.rnd = _r.Random()
+        w0 = game.screen.canvas.get_width()
+        self.cat = vl.VillageCat(self.save, self.width, self.ox + w0 / 2, self.rnd) if cont in vl.cfg()["cat"]["villages"] else None
+        self.cat_pop = None         # {"t"} [작은 물고기 주기] 버튼
+        self.ripples: list = []
+        self.life_msg = None        # (문장, 남은 시간, 색)
         # 스토리 (DESIGN.md 36): 휴대폰 알림 1개 · 아스테라 첫 도착(C4-01)
         from src.story import story
         self.phone = None           # {"id", "t", "after"(이어지는 자막 남은 시간)}
@@ -88,6 +97,8 @@ class VillageScene(Scene):
                 self.ox = max(0, self.cfg["npcs"][host]["x"] - game.screen.canvas.get_width() // 2)
         game.guide.flags["season_changed"] = self.season_changed   # 아직 장면 스택에 올라가기 전이라 직접 알려 줌
         game.guide.event("village_enter")   # 가이드 TG-15 (계절이 바뀐 뒤 처음)
+        if self.cat is not None and self.cat.greet > 0:   # 마중: 지금 보는 자리 가장자리에서 달려옴
+            self.cat.x = clamp(self.ox + game.screen.canvas.get_width() / 2 + 90, 20, self.width - 20)
 
     def tut_cond(self, name: str):
         if name == "season_changed":
@@ -159,8 +170,8 @@ class VillageScene(Scene):
     # ── 입력 ──
     def handle_action(self, a) -> None:
         if a.name == "back":
-            if self.bubble or self.panel:
-                self.bubble = self.panel = None
+            if self.bubble or self.panel or self.cat_pop:
+                self.bubble = self.panel = self.cat_pop = None
                 return
             from src.scene.pause import PauseScene
             self.game.scenes.push(PauseScene(self.game, self.fishing))
@@ -212,6 +223,12 @@ class VillageScene(Scene):
         for b in self.btns:
             if b.click(pos):
                 return
+        if self.cat_pop is not None:   # [작은 물고기 주기] (다른 곳을 누르면 닫힘)
+            hit = self._cat_btn().collidepoint(pos)
+            self.cat_pop = None
+            if hit:
+                self._feed_cat()
+                return
         w = self.game.screen.canvas.get_width()
         if pos[0] < 22:
             self.vx -= 700
@@ -219,10 +236,43 @@ class VillageScene(Scene):
         if pos[0] > w - 22:
             self.vx += 700
             return
+        if self.cat is not None and self.cat.rect(self.ox, vr.FEET + 8).collidepoint(pos):
+            self.game.sfx.play("sfx_cat_meow", 0.45)
+            self.cat_pop = {"t": 0.0}
+            return
         for kind, pid, r in reversed(self.hits):   # 앞(NPC)부터
             if r.collidepoint(pos):
                 self._act(kind, pid)
                 return
+
+    # ── 고양이 (DT9) ──
+    def _cat_btn(self) -> pygame.Rect:
+        sx = int(self.cat.x - self.ox)
+        w = self.game.screen.canvas.get_width()
+        r = pygame.Rect(0, 0, 112, 22 if self.game.input.kind == "touch" else 18)   # 터치: 손가락 크기
+        r.midbottom = (int(clamp(sx, 60, w - 60)), vr.FEET - 18)
+        return r
+
+    def _feed_cat(self) -> None:
+        from src.render import village_life as vl
+        c = vl.cfg()["cat"]
+        res = vl.feed_cat(self.save)
+        L = c["lines"]
+        if res["result"] == "fed":
+            self.cat.fed(self.game.sfx)
+            self._say(L["feed"].replace("{n}", str(res["n"])), (255, 220, 180))
+            if res["title"]:
+                self._say(L["title"], (255, 214, 90), after=True)
+            self.game.save_now()
+        else:
+            self.game.sfx.play("ui_click")
+            self._say(L[res["result"]], (220, 214, 200))
+
+    def _say(self, s: str, col, after: bool = False) -> None:
+        if after and self.life_msg is not None:
+            self.life_msg = (self.life_msg[0] + "  ·  " + s, 3.2, col)
+        else:
+            self.life_msg = (s, 2.6, col)
 
     # ── 시간 ──
     def _close_phone(self) -> None:
@@ -289,6 +339,18 @@ class VillageScene(Scene):
         self.ox = clamp(self.ox, 0, max(0, self.width - w))
         if self.bubble:
             self.bubble["t"] += dt
+        if self.cat is not None:
+            self.cat.update(dt, self.ox + w / 2, self.game.sfx)
+        if self.cat_pop is not None:
+            self.cat_pop["t"] += dt
+            if self.cat_pop["t"] > 4.0:
+                self.cat_pop = None
+        if self.life_msg is not None:
+            m, left, col = self.life_msg
+            self.life_msg = (m, left - dt, col) if left - dt > 0 else None
+        from src.render import village_life as vl
+        if self.cont in vl.cfg()["rain"]["puddle_villages"]:
+            self.ripples = vl.tick_ripples(self.ripples, dt, self.fishing.weather, self.rnd)
         self.season_banner = max(0.0, self.season_banner - dt)
         if self.panel:
             self.panel["t"] += dt
@@ -328,6 +390,11 @@ class VillageScene(Scene):
             vr.draw_gulls(canvas, w, self.t)
         self.efx.draw_low(canvas, self._eid(), self.cont, vr.HORIZON, False)
         vr._ground(canvas, pal, ox, w, h, style)
+        from src.render import village_life as vl
+        lc = vl.cfg()
+        wet = self.fishing.weather in ("rain", "storm")
+        if wet and self.cont in lc["rain"]["puddle_villages"]:   # 물웅덩이 (윤슬 마을)
+            vl.draw_puddles(canvas, pal, ox, w, self.t, self.fishing.weather, self.ripples)
         hits = []
         from src.story.story import player_name
         for p in self.cfg["places"]:
@@ -338,14 +405,21 @@ class VillageScene(Scene):
                 r = vr.draw_place(canvas, p, sx, pal, night, self.t, style, self.season,
                                   self.hover == ("place", p["id"]))
                 hits.append(("place", p["id"], r))
+                sk = vl.smoke_on(hour)
+                top = vl.chimney_pos(p, sx, vr.GROUND) if sk > 0 else None
+                if top is not None:   # 굴뚝 연기 17~19시
+                    vl.draw_smoke(canvas, top, self.t, sk, int(p["x"]), 0.3 + (0.6 if wet else 0.0))
         from src.render.season_fx import draw_village_decor
         draw_village_decor(canvas, self.cfg["places"], ox, self.season, night, self.t, vr.GROUND)   # 계절 장식
         vr.draw_lamps(canvas, ox, w, style, night, self.t, self.width)
         for nid, n in self.cfg["npcs"].items():
             sx = n["x"] - ox
             if -30 < sx < w + 30:
-                r = vr.draw_npc(canvas, sx, n, self.t, self.season, self.hover == ("npc", nid), night)
+                r = vr.draw_npc(canvas, sx, n, self.t, self.season, self.hover == ("npc", nid), night,
+                                rain=wet and self.cont in lc["rain"]["umbrella_villages"])
                 hits.append(("npc", nid, r))
+        if self.cat is not None:
+            self.cat.draw(canvas, ox, vr.FEET + 8, night)
         if style == "stone":
             vr.draw_motes(canvas, w, self.t, night)
         self._weather(canvas, w, h)
@@ -417,6 +491,19 @@ class VillageScene(Scene):
             band.fill((20, 16, 10, int(170 * a)))
             canvas.blit(band, (0, 30))
             text(canvas, f"계절이 바뀌었어요 — {sname}", (w // 2, 43), tuple(int(v * a) for v in (255, 230, 170)), 16, "center", shadow=True)
+        if self.cat_pop is not None:
+            r = self._cat_btn()
+            hov = r.collidepoint(self.mouse)
+            canvas.fill((250, 240, 220) if hov else (236, 226, 204), r)
+            pygame.draw.rect(canvas, (110, 80, 50), r, 1)
+            text(canvas, "작은 물고기 주기", r.center, (70, 50, 30), 11, "center")
+        if self.life_msg is not None:
+            m, left, col = self.life_msg
+            a = min(1.0, left / 0.4)
+            band = pygame.Surface((w, 18), pygame.SRCALPHA)
+            band.fill((10, 12, 24, int(150 * a)))
+            canvas.blit(band, (0, 24))   # 위쪽 (고양이 · 사람 발치를 가리지 않게)
+            text(canvas, m, (w // 2, 33), tuple(int(v * a) for v in col), 11, "center", shadow=True)
         if self.bubble is not None and self.bubble["t"] >= 0:
             self._draw_bubble(canvas)
         if self.panel is not None:

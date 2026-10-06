@@ -171,6 +171,8 @@ def _window(canvas, x, y, ww, hh, night, frame):
 
 
 _TXT: dict = {}
+_SIGN_GLOW: dict = {}
+_SIGN_FROM = 0.3   # 간판 불이 켜지기 시작하는 밤 정도 (data/details/village_life.json night.sign_from)
 
 
 def _txt(s: str, col) -> pygame.Surface:
@@ -184,12 +186,29 @@ def _txt(s: str, col) -> pygame.Surface:
     return img
 
 
-def _sign(canvas, cx, y, label, col_bg, col_fg):
+def _sign(canvas, cx, y, label, col_bg, col_fg, night: float = 0.0, lit=(255, 190, 100)):
+    """간판. 밤(DT9): 불이 켜져 바탕이 따뜻하게 밝아지고 둘레가 은은히 빛남."""
+    on = clamp((night - _SIGN_FROM) / (1 - _SIGN_FROM), 0, 1) if night > _SIGN_FROM else 0.0
+    if on > 0:
+        col_bg = lerp_color(col_bg, lit, 0.35 * on)
+        col_fg = lerp_color(col_fg, (255, 250, 230), on)
     img = _txt(label, col_fg)
     r = pygame.Rect(0, 0, img.get_width() + 8, 13)
     r.center = (cx, y)
+    if on > 0:   # 간판 둘레만 은은히: 작은 빛을 가로로 몇 개 (큰 원 하나는 이웃 건물까지 번짐) — 구워 둠
+        q = round(on, 1)
+        key = (r.w, tuple(lit), q)
+        glow = _SIGN_GLOW.get(key)
+        if glow is None:
+            if len(_SIGN_GLOW) > 120:
+                _SIGN_GLOW.clear()
+            glow = _SIGN_GLOW[key] = pygame.Surface((r.w + 20, r.h + 20))
+            g = tuple(int(v * 0.32 * q) for v in lit)
+            for gx in range(4, r.w - 3, 10):
+                _add_glow(glow, (gx + 10, r.h // 2 + 10), 9, g)
+        canvas.blit(glow, (r.x - 10, r.y - 10), special_flags=pygame.BLEND_RGB_ADD)
     canvas.fill(col_bg, r)
-    pygame.draw.rect(canvas, lerp_color(col_bg, (0, 0, 0), 0.4), r, 1)
+    pygame.draw.rect(canvas, lerp_color(lerp_color(col_bg, (0, 0, 0), 0.4), lit, 0.6 * on), r, 1)
     canvas.blit(img, img.get_rect(center=r.center))
     return r
 
@@ -208,6 +227,8 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
         for yy in range(GROUND - hh, GROUND, 6):   # 판자 결
             canvas.fill(shade(lerp_color(wall, (0, 0, 0), 0.15), k), (x0, yy, w, 1))
         pygame.draw.polygon(canvas, shade(roof, k), [(x0 - 8, GROUND - hh), (x0 + w // 2, GROUND - hh - 30), (x0 + w + 8, GROUND - hh)])
+        from src.render.village_life import chimney_pos, draw_chimney   # 굴뚝 (DT9: 17~19시 연기는 장면이)
+        draw_chimney(canvas, chimney_pos(p, sx, GROUND), shade(lerp_color(roof, (90, 80, 76), 0.5), k), night)
         door = tuple(p["door"]) if p.get("door") else lerp_color(wall, (0, 0, 0), 0.5)
         canvas.fill(shade(door, k), (x0 + w // 2 - 9, GROUND - 26, 18, 26))   # 문
         _window(canvas, x0 + 12, GROUND - hh + 14, 18, 14, night, shade(lerp_color(wall, (0, 0, 0), 0.5), k))
@@ -227,7 +248,7 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
             pygame.draw.polygon(canvas, (230, 220, 190), [(fx + 9, fy), (fx + 16, fy - 5), (fx + 16, fy + 5)])
             canvas.fill((40, 40, 40), (fx - 9, fy - 1, 2, 2))
         _sign(canvas, x0 + w // 2, GROUND - hh - 18 if p.get("sign") != "fish" else GROUND - hh + 4, p.get("label", p["name"]),
-              (60, 44, 30) if style == "wood" else (40, 46, 80), (250, 236, 200))
+              (60, 44, 30) if style == "wood" else (40, 46, 80), (250, 236, 200), night)
         if night > 0.2:
             _add_glow(canvas, (x0 + 21, GROUND - hh + 21), 14, tuple(int(v * night) for v in (255, 190, 100)))
             _add_glow(canvas, (x0 + w - 21, GROUND - hh + 21), 14, tuple(int(v * night) for v in (255, 190, 100)))
@@ -238,6 +259,8 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
             canvas.fill(shade(lerp_color(wall, (0, 0, 0), 0.2), k), (x0, yy, w, 1))
         pygame.draw.rect(canvas, shade(roof, k), (x0 - 6, GROUND - hh - 10, w + 12, 10))
         pygame.draw.polygon(canvas, shade(roof, k), [(x0 + w // 2 - 30, GROUND - hh - 10), (x0 + w // 2, GROUND - hh - 30), (x0 + w // 2 + 30, GROUND - hh - 10)])
+        from src.render.village_life import chimney_pos, draw_chimney
+        draw_chimney(canvas, chimney_pos(p, sx, GROUND), shade(lerp_color(wall, (60, 60, 80), 0.3), k), night)
         door = pygame.Rect(x0 + w // 2 - 13, GROUND - 34, 26, 34)
         canvas.fill(shade((30, 30, 50), k * 0.5), door)
         pygame.draw.ellipse(canvas, shade((30, 30, 50), k * 0.5), (door.x, door.y - 13, 26, 26))
@@ -250,7 +273,7 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
             fx, fy = x0 + w // 2, GROUND - hh - 18
             pygame.draw.ellipse(canvas, (200, 230, 240), (fx - 14, fy - 5, 24, 10))
             pygame.draw.polygon(canvas, (200, 230, 240), [(fx + 9, fy), (fx + 16, fy - 5), (fx + 16, fy + 5)])
-        _sign(canvas, x0 + w // 2, GROUND - hh + 8, p["name"], (36, 40, 76), (220, 240, 255))
+        _sign(canvas, x0 + w // 2, GROUND - hh + 8, p["name"], (36, 40, 76), (220, 240, 255), night, (90, 220, 230))
         hit = pygame.Rect(x0 - 6, GROUND - hh - 30, w + 12, hh + 34)
     elif kind in ("board", "notice"):
         bw = w - 10
@@ -270,7 +293,8 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
             pygame.draw.circle(canvas, col, (r.centerx, r.centery), 9)
             img = _txt(ICON[season], (40, 40, 40))
             canvas.blit(img, img.get_rect(center=r.center))
-        _sign(canvas, x0 + w // 2, GROUND - 64, p["name"], (60, 44, 30) if style == "wood" else (40, 46, 80), (250, 236, 200))
+        _sign(canvas, x0 + w // 2, GROUND - 64, p["name"], (60, 44, 30) if style == "wood" else (40, 46, 80), (250, 236, 200), night,
+              (255, 190, 100) if style == "wood" else (90, 220, 230))
         hit = pygame.Rect(x0 - 4, GROUND - 72, w + 8, 76)
     elif kind == "dock":
         canvas.fill(shade((110, 80, 54), k), (x0 - 40, SEA_BOTTOM - 12, w + 40, 12))
@@ -287,7 +311,8 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
             bx, by = x0 + 20 + math.sin(t * 1.3) * 1.5, SEA_BOTTOM - 6 + math.sin(t * 1.7) * 1.2
             pygame.draw.polygon(canvas, shade((170, 70, 50), k), [(bx - 26, by - 6), (bx + 30, by - 6), (bx + 22, by + 4), (bx - 18, by + 4)])
             canvas.fill(shade((240, 230, 210), k), (int(bx - 6), int(by - 14), 14, 8))
-        _sign(canvas, x0 + w // 2, SEA_BOTTOM - 30, p["name"], (60, 44, 30) if style == "wood" else (40, 46, 80), (250, 236, 200))
+        _sign(canvas, x0 + w // 2, SEA_BOTTOM - 30, p["name"], (60, 44, 30) if style == "wood" else (40, 46, 80), (250, 236, 200), night,
+              (255, 190, 100) if style == "wood" else (90, 220, 230))
         hit = pygame.Rect(x0 - 40, SEA_BOTTOM - 40, w + 40, 60)
     if hover:
         pygame.draw.rect(canvas, (255, 236, 170), hit, 1)
@@ -295,8 +320,8 @@ def draw_place(canvas, p: dict, sx: float, pal, night: float, t: float, style: s
 
 
 # ───────────────────────── NPC ─────────────────────────
-def draw_npc(canvas, sx: float, spec: dict, t: float, season: str, hover: bool, night: float) -> pygame.Rect:
-    """단순한 실루엣·도형 사람: 몸통 사다리꼴 + 머리 + 모자 + 소품, 계절 옷차림 (겨울 목도리 등)."""
+def draw_npc(canvas, sx: float, spec: dict, t: float, season: str, hover: bool, night: float, rain: bool = False) -> pygame.Rect:
+    """단순한 실루엣·도형 사람: 몸통 사다리꼴 + 머리 + 모자 + 소품, 계절 옷차림 (겨울 목도리 등). rain = 우산 (DT9)."""
     body, skin, hat_col = tuple(spec["body"]), tuple(spec["skin"]), tuple(spec.get("hat_col", (80, 80, 80)))
     sit = spec.get("sit", False)
     bob = math.sin(t * 2 + sx * 0.1) * 0.8
@@ -362,6 +387,11 @@ def draw_npc(canvas, sx: float, spec: dict, t: float, season: str, hover: bool, 
         _add_glow(canvas, (cx, cy), 8, (60, 160, 170))
     elif prop == "scroll":
         canvas.fill((220, 200, 150), (sx - 14, top + 7, 8, 4))
+    if rain:   # 비: 오른손으로 우산을 받쳐 듦 (팔을 올림)
+        from src.render.village_life import draw_umbrella, umbrella_color
+        hand = (int(sx + 9), int(top + 1))
+        canvas.fill(dim(lerp_color(arm, (0, 0, 0), 0.1)), (hand[0] - 1, hand[1], 3, 6))
+        draw_umbrella(canvas, head[0], head[1], umbrella_color(spec["name"]), dim, hand)
     hit = pygame.Rect(sx - 12, top - 18, 24, fy - top + 18)
     if hover:
         pygame.draw.rect(canvas, (255, 236, 170), hit, 1)
