@@ -127,11 +127,16 @@ def collect(fight, hide_tele: bool, inked: bool, dark: bool) -> list[dict]:
 
 # ───────────────────────── 그리기 ─────────────────────────
 
+_BOX_BACK: dict = {}
+
+
 def _box(canvas, pos, col, lit: bool, ok: bool, size: int) -> pygame.Rect:
     r = pygame.Rect(0, 0, size, size)
     r.center = pos
-    back = pygame.Surface((size, size), pygame.SRCALPHA)
-    pygame.draw.rect(back, (12, 16, 30, 175), back.get_rect(), border_radius=8)
+    back = _BOX_BACK.get(size)   # 크기별 한 번만 (O4)
+    if back is None:
+        back = _BOX_BACK[size] = pygame.Surface((size, size), pygame.SRCALPHA)
+        pygame.draw.rect(back, (12, 16, 30, 175), back.get_rect(), border_radius=8)
     canvas.blit(back, r.topleft)
     pygame.draw.rect(canvas, col if lit else tuple(int(c * 0.55) for c in col), r, 3 if OPTS["strong"] else 2,
                      border_radius=8)

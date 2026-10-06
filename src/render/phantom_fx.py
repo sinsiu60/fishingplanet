@@ -205,7 +205,9 @@ class PhantomFx:
         ft = self.mask_front()
         if ft is None:
             return None
-        m = pygame.Surface((w, h), pygame.SRCALPHA)
+        m = self.__dict__.get("_mask_surf")   # 재사용 (O4): 파장 동안 매 프레임 새 Surface 대신
+        if m is None or m.get_size() != (w, h):
+            m = self._mask_surf = pygame.Surface((w, h), pygame.SRCALPHA)
         m.fill((255, 255, 255, 0))
         fade = self.cfg["bloom"]["fade"]
         for i, a in enumerate((70, 130, 190, 255)):

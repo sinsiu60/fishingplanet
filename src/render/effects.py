@@ -4,6 +4,8 @@ import random
 
 import pygame
 
+from src.core import fxq
+
 from src.core.mathutil import clamp, lerp_color, scale_color
 
 
@@ -274,6 +276,8 @@ class Sparkles:
         self.rings: list[list[float]] = []
 
     def burst(self, x: float, y: float, count: int = 18, speed: float = 1.0, ring: bool = True) -> None:
+        if fxq.level() < 2:
+            count = max(2, round(count * fxq.particles()))   # 중간 · 낮음 (O4)
         for i in range(count):
             a = i / count * math.tau + random.uniform(-0.15, 0.15)
             sp = random.uniform(50, 110) * speed

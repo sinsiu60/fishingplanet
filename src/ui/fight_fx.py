@@ -169,18 +169,31 @@ class JudgePopups:
 JUDGE_WORDS = {v[0] for v in JudgePopups.STYLE.values()} | set(JudgePopups.SUB.values())
 
 
+_BIG: dict = {}
+
+
 def big_text(canvas, s: str, center, color, scale: float, outline: bool = False) -> None:
     """픽셀 느낌 그대로 키운 큰 글씨 (테두리 포함)."""
     from src.platform.hints import localize
     s = localize(s)
-    font = get_font(16 if scale >= 1.5 else 11)
-    img = font.render(s, False, color)
-    edge = font.render(s, False, (30, 18, 10) if outline else SHADOW)
+    fs = 16 if scale >= 1.5 else 11
     k = scale if scale < 1.5 else scale / 1.6
+    font = get_font(fs)
+    bkey = (s, tuple(color), outline, fs)
+    base = _BIG.get(bkey)   # 원본 글자 (O4: 판정 글자가 커지는 동안 매 프레임 render 2번 + scale 2번이었다)
+    if base is None:
+        if len(_BIG) > 600:
+            _BIG.clear()
+        base = _BIG[bkey] = (font.render(s, False, color), font.render(s, False, (30, 18, 10) if outline else SHADOW))
+    img, edge = base
     if abs(k - 1.0) > 0.05:
+        # 크기는 실제 그린 글자 폭으로 (font.size 와 1px 다를 수 있음 — pygame-ce) → 같은 최종 크기면 같은 그림
         size = (max(1, int(img.get_width() * k)), max(1, int(img.get_height() * k)))
-        img = pygame.transform.scale(img, size)
-        edge = pygame.transform.scale(edge, size)
+        skey = bkey + (size,)
+        hit = _BIG.get(skey)
+        if hit is None:
+            hit = _BIG[skey] = (pygame.transform.scale(img, size), pygame.transform.scale(edge, size))
+        img, edge = hit
     rect = img.get_rect(center=(int(center[0]), int(center[1])))
     offs = ((-1, 0), (1, 0), (0, -1), (0, 1), (1, 1)) if outline else ((1, 1),)
     for dx, dy in offs:

@@ -20,6 +20,7 @@ import pygame
 
 from src.render.screen import opaque as _opaque
 
+from src.core import fxq
 from src.core.mathutil import clamp, lerp
 
 BASE_FIGHT_ZOOM = 1.035  # 파이팅 중 기본 줌 (줌 아웃 연출의 여유)
@@ -243,6 +244,15 @@ class ScreenFX:
             self._map = None
             return
         w, h = self.w, self.h
+        if fxq.level() < 2:
+            # 중간 · 낮음 (O4): 확대 · 기울임 없이 화면을 옮기기만 (전체 화면 scale 복사가 폰에서 3~5ms). 펀치(z)는 흔들림 폭으로
+            dx = int(round(-pan - (z - 1.0) * w * 0.5 * (1 if int(self.t * 60) % 2 else -1)))
+            dx = max(-12, min(12, dx))
+            if dx:
+                canvas.scroll(dx, 0)
+                canvas.fill((0, 0, 0), (0, 0, dx, h) if dx > 0 else (w + dx, 0, -dx, h))
+            self._map = (-dx, 0, 1.0, 1.0, 0.0)
+            return
         z = max(z, 1.0 + abs(tilt) * 0.035)  # 기울일 때 빈 모서리가 안 보이게
         sw, sh = w / z, h / z
         z = max(z, 1.0 + abs(pan) / w * 2.2)
@@ -279,6 +289,7 @@ class ScreenFX:
     def draw_edges(self, canvas: pygame.Surface) -> None:
         t = self.t
         w, h = self.w, self.h
+        self._vig_req = []   # 중간 · 낮음: 비네트 요청을 모아 한 장으로 (높음은 예전처럼 차례로 섞음 — 픽셀 동일)
         if self.v_legend > 0.02:
             pulse = 0.55 + 0.45 * math.sin(t * 2.2)
             self._blit_vignette(canvas, self.legend_color, self.v_legend * 0.45 * pulse * getattr(self, "legend_alpha", 1.0))
@@ -302,6 +313,7 @@ class ScreenFX:
         if self.v_tired > 0.02:
             pulse = 0.55 + 0.45 * math.sin(t * 4)
             self._blit_vignette(canvas, COL_TIRED, self.v_tired * 0.55 * pulse)
+        self._flush_vignettes(canvas)
 
         busy = self.speed_lines or self.slashes or self.shockwaves or self.rays
         layer = self.layer
@@ -387,9 +399,40 @@ class ScreenFX:
             canvas.blit(v, r.topleft, r)
 
     def _blit_vignette(self, canvas, color, amount: float) -> None:
+        amount = clamp(amount, 0, 1)
+        if fxq.level() < 2 and getattr(self, "_vig_req", None) is not None:
+            self._vig_req.append((color, amount))   # 모았다가 _flush_vignettes 에서 한 장
+            return
         v = self._vignette(color)
-        v.set_alpha(int(255 * clamp(amount, 0, 1)))
+        v.set_alpha(int(255 * amount))
         for r in self._vig_strips():   # 가운데 완전히 투명한 칸은 건너뜀 (같은 그림, 섞는 넓이 ~20% 적게)
+            canvas.blit(v, r.topleft, r)
+
+    def _flush_vignettes(self, canvas) -> None:
+        """중간 · 낮음 (OPTIMIZATION.md O4): 비네트 여러 장(전설 · 빨강 · 돌진 · 점프 · 힘 모으기 · 지침, 최대 5장/프레임)을
+        가중 평균 색 한 장으로 — 반투명 전체 화면 섞기가 폰에선 장당 수 ms. 색은 8단계로 양자화해 표면 수를 제한."""
+        req = getattr(self, "_vig_req", None)
+        self._vig_req = None
+        if not req:
+            return
+        if len(req) == 1:
+            color, amount = req[0]
+        else:
+            tot = sum(a for _, a in req)
+            if tot <= 0:
+                return
+            color = tuple(int(sum(c[i] * a for c, a in req) / tot) for i in range(3))
+            amount = 1.0
+            for _, a in req:
+                amount *= 1.0 - a
+            amount = 1.0 - amount
+        color = tuple(min(255, (c // 32) * 32 + 16) for c in color)
+        v = self._vignette(color)
+        v.set_alpha(int(255 * amount))
+        strips = self._vig_strips()
+        if fxq.level() == 0:
+            strips = strips[:2]   # 낮음: 위 · 아래 띠만
+        for r in strips:
             canvas.blit(v, r.topleft, r)
 
     def _vig_strips(self) -> list:

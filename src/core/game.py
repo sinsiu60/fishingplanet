@@ -7,6 +7,7 @@ from src.render.screen import opaque as _opaque
 
 from src.audio.music import Music
 from src.audio.sfx import Sfx
+from src.core import fxq
 from src.core.config import game_config
 from src.platform.input import create_input
 from src.render.screen import PixelScreen
@@ -171,7 +172,7 @@ class Game:
         extra = [f"메모리 {self._rss_mb():5.0f}MB  객체 {getattr(self, '_perf_objs', 0)}  얼림 {gc.get_freeze_count()}  "
                  f"{getattr(self, '_gc_line', 'GC -')}",
                  f"{self.screen.fmt_note}  파티클 {lr.get('particles', 0)}  채널 {lr.get('channels', 0)}"
-                 + (f"  로그 켜짐" if self.perf.logging else "") + (f"  벤치 {self.perf.bench.tag()}" if self.perf.bench else "")]
+                 + ("  로그 켜짐" if self.perf.logging else "") + (f"  벤치 {self.perf.bench.tag()}" if self.perf.bench else "")]
         lines = [line] + extra + list(getattr(self, "_prof_state", {}).get("lines", []))
         from src.core.fonts import get_font
         font = get_font(11)
@@ -294,6 +295,7 @@ class Game:
         web.sync()
 
     def _frame(self, frame_time: float) -> None:
+        fxq.set_level(self.settings.get("fx_level"))   # 화질 단계 (O4) — 이펙트 코드가 보는 전역
         if self.screen.mobile:
             # 한 프레임 일한 시간(대기 제외) 평균: 20ms 넘으면 60fps 무리 → 30fps, 12ms 아래면 다시 60
             work = getattr(self, "_work_ms", 10.0) * 0.95 + self.clock.get_rawtime() * 0.05

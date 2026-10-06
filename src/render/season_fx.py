@@ -8,6 +8,7 @@ import random
 
 import pygame
 
+from src.core import fxq
 from src.core.mathutil import lerp_color
 
 # (팔레트 키들, 목표 색, 비율)
@@ -60,7 +61,7 @@ class SeasonParticles:
             self.ps.clear()
             return
         self.key = (kind, cont)
-        cap = (30 if mobile else 60) * (0.5 if weather in ("rain", "storm") else 1.0)
+        cap = (30 if mobile else 60) * (0.5 if weather in ("rain", "storm") else 1.0) * fxq.particles()
         rate = {"petal": 9, "leaf": 7, "snow": 16, "firefly": 4}[kind] * (0.5 if mobile else 1.0)
         r = self.rnd
         if len(self.ps) < cap and r.random() < rate * dt:

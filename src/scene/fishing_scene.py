@@ -2716,7 +2716,10 @@ class FishingScene(Scene):
             m = pfx.mask(canvas.get_width(), canvas.get_height(), int(cam.horizon))
             if m is not None:
                 # 파장이 지나간 자리만 환상 팔레트로 한 번 더 그려 합성 (지나간 자리는 0.3초에 걸쳐 보라로)
-                layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+                layer = getattr(self, "_bloom_layer", None)   # 재사용 (O4)
+                if layer is None or layer.get_size() != canvas.get_size():
+                    layer = self._bloom_layer = pygame.Surface(canvas.get_size(), pygame.SRCALPHA)
+                layer.fill((0, 0, 0, 0))
                 self._draw_world(layer, phantom_palette(base_pal, pfx.inner_k()))
                 layer.blit(m, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
                 canvas.blit(layer, (0, 0))

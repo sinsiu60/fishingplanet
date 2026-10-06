@@ -4,6 +4,7 @@ import random
 
 import pygame
 
+from src.core import fxq
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color
 
 KEEP = ("text", "bobber", "bobber_base")
@@ -70,6 +71,8 @@ class Rain:
     def update(self, dt: float, weather: str, ripples, cam) -> None:
         heavy = weather == "storm"
         rate = 0 if weather in ("clear", "fog") else (10 if heavy else 4)
+        if fxq.level() < 2:
+            rate = max(1, round(rate * fxq.particles()))   # 중간 · 낮음: 빗줄기 수 (O4)
         wind = 0.35 if heavy else 0.12
         for _ in range(rate):
             sp = random.uniform(300, 430)

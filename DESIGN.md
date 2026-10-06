@@ -5198,6 +5198,12 @@ PC(서버) 숫자는 폰보다 5~10배 빠르므로 비율로 본다. 폰과 같
   형식(`Surface(size, flags, canvas)`), `_draw_waves` 색 캐시 열쇠에 `get_masks()`. 물결 16프레임 굽기는 안 함(주기 없는 사인곱 · 팔레트마다 다시
   구워야 함), 비 레이어 스크롤도 안 함(비는 B2 의 6%, 전체 화면 반투명 blit 이 폰에선 더 비쌈). `BG_FPS=0` 19장면 픽셀 동일, 15fps 는 위상만 늦음.
   PC B1 그리기 −33% · 2.6.1 −44%, B3 −17%/−40%. `tools/perf/run_bench.py` 는 `BG_FPS` 환경변수로 A/B.
+- **O4 (파티클 · 이펙트)**: `src/core/fxq.py` 화질 단계(설정 `fx_level` 2 높음 · 1 중간 · 0 낮음, 게임 루프가 프레임마다 옮김). 높음은 픽셀 동일.
+  중간 이하: `screen_fx.draw_edges` 가 비네트 요청을 모아 `_flush_vignettes` 에서 가중 평균 색 한 장(색 8단계 양자화 — 표면 수 제한, 낮음은 위 ·
+  아래 띠만), `apply_camera` 는 `canvas.scroll` 로 옮기기만(±12px, `_map` 은 평행이동), 비 생성률 · 퍼펙트 반짝임 · 계절 파티클 상한 ×0.6/×0.3.
+  높음에서도: `fight_fx.big_text` 원본 + 최종 크기별 캐시(크기는 실제 그린 폭 — `font.size` 와 1px 달라 pygame-ce 에서 어긋났음),
+  `fish_cues.countdown` · `_rush_badge` · `hint_chip` · `signal_slots._box` 의 SRCALPHA 받침 캐시, 환상 파장 마스크 · 레이어 재사용.
+  19장면 픽셀 동일(fx 2 · bg 0). `FX_LEVEL` 환경변수로 run_bench A/B. 높음 비네트 합치기 · 글로우 스프라이트 · 풀은 안 함(이유는 OPTIMIZATION.md).
 - **v1.3.6** (갤럭시 탭 32비트: v1.3.5 첫 장면 `splash.draw` 의 blit 에서 `Fatal Python error: Bus error`, 안전 모드로도 같음):
   pygame 2.6.1 에 묶인 옛 sse2neon 의 `_mm_storel_epi64` 가 8바이트 대신 `*a` 16바이트를 읽고 되쓴다. 32비트 블리터는
   `STORE_M128_INTO_64`(픽셀 2개 = 8바이트, 주소 4바이트 정렬)로 이걸 쓰는데, ARM32 는 `__m128i` 정렬 힌트가 붙은 `vld1 [r:64]` 라

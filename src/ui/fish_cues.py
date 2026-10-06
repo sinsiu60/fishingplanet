@@ -60,6 +60,22 @@ def state_label(canvas, x, y, s: str, col, age: float, t: float, heavy: bool = F
     big_text(canvas, s, (x + sx, y), col, 1.5 * scale * max(0.7, pop), outline=True)
 
 
+_RING: dict = {}
+_PILL: dict = {}
+
+
+def _pill(size, rgba, radius: int) -> pygame.Surface:
+    """둥근 반투명 받침 (크기별 한 번만, O4)."""
+    key = (tuple(size), tuple(rgba), radius)
+    s = _PILL.get(key)
+    if s is None:
+        if len(_PILL) > 64:
+            _PILL.clear()
+        s = _PILL[key] = pygame.Surface(size, pygame.SRCALPHA)
+        pygame.draw.rect(s, rgba, s.get_rect(), border_radius=radius)
+    return s
+
+
 def hint_chip(canvas, x, y, s: str, col, t: float, urgent: bool = False) -> None:
     """할 일 칩: 어두운 알약 + 글자. 급하면 테두리 맥동."""
     if not s:
@@ -68,9 +84,7 @@ def hint_chip(canvas, x, y, s: str, col, t: float, urgent: bool = False) -> None
     w = get_font(11).size(s)[0] + 12
     r = pygame.Rect(0, 0, w, 15)
     r.center = (int(x), int(y))
-    back = pygame.Surface(r.size, pygame.SRCALPHA)
-    pygame.draw.rect(back, (12, 16, 30, 200), back.get_rect(), border_radius=7)
-    canvas.blit(back, r.topleft)
+    canvas.blit(_pill(r.size, (12, 16, 30, 200), 7), r.topleft)
     on = not urgent or int(t * 8) % 2 == 0
     pygame.draw.rect(canvas, col if on else (90, 96, 120), r, 2 if urgent else 1, border_radius=7)
     from src.ui.signal_slots import white_edge
@@ -91,11 +105,17 @@ def countdown(canvas, x, y, left: float, col, r: int = 14, spread: int = 34) -> 
     """예고 남은 시간: 바깥 접근 원이 줄어들어 배지에 닿는 순간 = 행동 시작 (+ 남은 시간 원호)."""
     left = clamp(left, 0.0, 1.0)
     ra = r + 2 + spread * left
-    surf = pygame.Surface((int(ra * 2 + 8), int(ra * 2 + 8)), pygame.SRCALPHA)
-    o = surf.get_width() // 2
     a = int(clamp(255 * (1.3 - left), 110, 255))
-    pygame.draw.circle(surf, (*SHADOW, a // 2), (o + 1, o + 1), int(ra), 2)
-    pygame.draw.circle(surf, (*col, a), (o, o), int(ra), 2)
+    key = ("cd", int(ra * 2 + 8), int(ra), tuple(col), a)
+    surf = _RING.get(key)   # 같은 반지름 · 색 · 알파면 같은 그림 (O4: 예고 동안 매 프레임 새 Surface)
+    if surf is None:
+        if len(_RING) > 300:
+            _RING.clear()
+        surf = _RING[key] = pygame.Surface((key[1], key[1]), pygame.SRCALPHA)
+        o = key[1] // 2
+        pygame.draw.circle(surf, (*SHADOW, a // 2), (o + 1, o + 1), int(ra), 2)
+        pygame.draw.circle(surf, (*col, a), (o, o), int(ra), 2)
+    o = surf.get_width() // 2
     canvas.blit(surf, (x - o, y - o))
     rect = pygame.Rect(0, 0, (r + 4) * 2, (r + 4) * 2)
     rect.center = (x, y)
@@ -207,10 +227,15 @@ def _rush_badge(canvas, f, x, y, fam, col, t, R) -> None:
     pygame.draw.circle(canvas, SHADOW, (x + 1, y + 1), R + 1)
     pygame.draw.circle(canvas, (16, 20, 36), (x, y), R)
     if fill > 0:
-        surf = pygame.Surface((R * 2 + 2, R * 2 + 2), pygame.SRCALPHA)
-        pygame.draw.circle(surf, (*col, 150), (R + 1, R + 1), R)
         cut = int((R * 2 + 2) * (1 - fill))
-        surf.fill((0, 0, 0, 0), (0, 0, R * 2 + 2, cut))
+        key = ("rush", R, tuple(col), cut)
+        surf = _RING.get(key)
+        if surf is None:
+            if len(_RING) > 300:
+                _RING.clear()
+            surf = _RING[key] = pygame.Surface((R * 2 + 2, R * 2 + 2), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (*col, 150), (R + 1, R + 1), R)
+            surf.fill((0, 0, 0, 0), (0, 0, R * 2 + 2, cut))
         canvas.blit(surf, (x - R - 1, y - R - 1))
     pygame.draw.circle(canvas, col, (x, y), R, 2)
     ss.family_icon(canvas, fam, x, y, WHITE if fill > 0.5 else col, t)
