@@ -5204,6 +5204,13 @@ PC(서버) 숫자는 폰보다 5~10배 빠르므로 비율로 본다. 폰과 같
   높음에서도: `fight_fx.big_text` 원본 + 최종 크기별 캐시(크기는 실제 그린 폭 — `font.size` 와 1px 달라 pygame-ce 에서 어긋났음),
   `fish_cues.countdown` · `_rush_badge` · `hint_chip` · `signal_slots._box` 의 SRCALPHA 받침 캐시, 환상 파장 마스크 · 레이어 재사용.
   19장면 픽셀 동일(fx 2 · bg 0). `FX_LEVEL` 환경변수로 run_bench A/B. 높음 비네트 합치기 · 글로우 스프라이트 · 풀은 안 함(이유는 OPTIMIZATION.md).
+- **O5 (오디오)**: 실험으로 확인 — 일꾼이 OGG 를 푸는 동안(585KB 165ms PC) 메인의 play/set_volume 이 평균 47ms · 최악 136ms 기다림
+  = SDL_mixer 오디오 장치 잠금(콜백도 멈춤 → 그 길이만큼 소리 끊김). GIL 은 놓는다. 대응: `BossMusic.start` 는 인트로 · 1페이즈 층이 아직이면
+  기다리지 않고 False(장면이 매 프레임 다시 부름) → 다 읽히면 적응형 파이팅 음악의 다음 마디 경계(`am._next_boundary("bar")`)에서 전용 곡으로,
+  필요한 파일은 `_rush` 로 바로 맡김; 페이즈 전환도 `_ready` 아니면 한 마디 미룸; `loader.busy()` 면 보스 · 적응형 음량 갱신 건너뜀;
+  `sfx._variant/_muffled/slowed` 는 처음엔 원본을 내고 변형은 `_bg` 스레드에서(메인 numpy 합성 0); 전설 · 환상의 노래는 안 쓴 버전 즉시
+  `loader.drop` + `keep_recent` 2곡. B4 멈칫 61 → 33ms, 최대 170 → 54ms. 층 3개 합치기는 음량 전환 설계와 충돌해 안 함. 근본(콜백 잠금)은
+  MediaCodec 디코딩 또는 마디 단위 조각 파일 — 기기 확인 뒤.
 - **v1.3.6** (갤럭시 탭 32비트: v1.3.5 첫 장면 `splash.draw` 의 blit 에서 `Fatal Python error: Bus error`, 안전 모드로도 같음):
   pygame 2.6.1 에 묶인 옛 sse2neon 의 `_mm_storel_epi64` 가 8바이트 대신 `*a` 16바이트를 읽고 되쓴다. 32비트 블리터는
   `STORE_M128_INTO_64`(픽셀 2개 = 8바이트, 주소 4바이트 정렬)로 이걸 쓰는데, ARM32 는 `__m128i` 정렬 힌트가 붙은 `vld1 [r:64]` 라

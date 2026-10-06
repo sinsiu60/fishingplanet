@@ -81,6 +81,13 @@ def drop(path) -> None:
             _drop.add(path)
 
 
+def busy() -> bool:
+    """일꾼이 지금 파일을 푸는 중(또는 줄 서 있음)인가. OGG 를 푸는 동안 SDL 믹서가 잠겨 메인의 play · set_volume 이
+    그만큼(PC 50~140ms, 실험 tools/perf — OPTIMIZATION.md O5) 기다리므로, 급하지 않은 음량 갱신은 이때 건너뛴다."""
+    with _lock:
+        return bool(_wait)
+
+
 def ready(path) -> bool:
     with _lock:
         return str(path) in _done

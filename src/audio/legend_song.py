@@ -49,4 +49,10 @@ def preload(sfx, variant: str, cont: str, sid: str | None = None) -> str | None:
     if snd is None:
         return None
     sfx.sounds[name] = snd
+    for v in ('full', 'short', 'loop'):   # 같이 맡겨 둔 다른 버전은 이번엔 안 쓴다 → 바로 놓아 줌 (O5: 파이팅마다 10MB 씩 남던 것)
+        if v != variant:
+            q = path_of(v, cont, sid)
+            if q is not None:
+                loader.drop(q)
+    sfx.keep_recent("legend_song_", name)
     return name

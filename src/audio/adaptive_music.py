@@ -320,6 +320,8 @@ class AdaptiveMusic:
                 for i in (2, 3):  # 페이즈마다 보스 층 하나씩
                     if ph < i - 1:
                         self.goal[f"boss{i}"] = 0.0
+        if loader.busy():   # 일꾼이 OGG 를 푸는 동안은 믹서가 잠김 → 음량 갱신은 다음 프레임에 (O5)
+            return
         # 연속 값: 장력 → 추가 타악, 낮 밝기 → 반짝임
         night = self.cfg["night_shimmer"]
         mult = {"perc_hi": self.intensity, "shimmer": night + (1 - night) * self.daylight}

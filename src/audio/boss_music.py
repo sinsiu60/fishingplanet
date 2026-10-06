@@ -120,6 +120,7 @@ class BossMusic:
         for p in (self._steps or {}).values():   # 다른 곡을 읽던 중이면 그만 읽음
             loader.drop(p)
         self.snd = {}
+        self._late = False
         self.loaded_for = sid
         n = len(self.spec(sid)["phases"])
         names = [f"{sid}_intro"] + [f"{sid}_1_{l}" for l in LAYERS] + [f"{sid}_fail", f"{sid}_1_riser"] + \
@@ -163,6 +164,33 @@ class BossMusic:
             self._drip_next()
         return False
 
+    def _names_of(self, sid: str, phase: int) -> list:
+        """phase 0 = 인트로 + 1페이즈 층, phase ≥ 1 = 그 페이즈의 라이저 + 층."""
+        if phase == 0:
+            return [f"{sid}_intro"] + [f"{sid}_1_{lay}" for lay in LAYERS]
+        return [f"{sid}_{phase + 1}_riser"] + [f"{sid}_{phase + 1}_{lay}" for lay in LAYERS]
+
+    def _ready(self, names) -> bool:
+        """전부 메모리에 있거나 다 읽혔나 (없는 파일은 '없는 층'으로 침)."""
+        for n in names:
+            if n in self.snd:
+                continue
+            p = (self._steps or {}).get(n)
+            if p is None:
+                if find(n) is None:
+                    continue
+                return False
+            if not loader.ready(p):
+                return False
+        return True
+
+    def _rush(self, names) -> None:
+        """이 파일들을 드립 간격을 기다리지 않고 바로 맡긴다 (쓸 차례가 됐는데 아직인 것)."""
+        for n in names:
+            p = (self._steps or {}).get(n)
+            if p is not None and not loader.ready(p):
+                loader.request(p)
+
     def _get(self, name: str):
         if name not in self.snd and self.loaded_for is not None:
             p = (self._steps or {}).pop(name, None) or find(name)
@@ -185,7 +213,19 @@ class BossMusic:
         if not self.available(sid):
             return False
         self.prepare(sid)
-        self.load_step()   # 다 된 것만 — 나머지는 쓸 때 _get 이 그 파일만 기다리거나, update 가 계속 가져옴
+        self.load_step()   # 다 된 것만 — 나머지는 update 가 계속 가져옴
+        need = self._names_of(sid, 0)
+        if not self._ready(need):
+            # 아직 안 읽힘 (OPTIMIZATION.md O5): 기다리며 멈추지 않는다 — 일반 파이팅 음악으로 시작하고, 장면이 프레임마다
+            # 다시 start() 를 불러 다 읽힌 뒤 다음 마디 경계에서 넘어온다. 필요한 파일은 드립 간격 없이 바로 맡김
+            self._rush(need)
+            self._late = True
+            return False
+        if getattr(self, "_late", False):
+            am = self.am
+            if am.enabled and not am.suspended and am.ctx is not None and am.clock + 1 / 30 < am._next_boundary("bar"):
+                return False   # 일반 파이팅 음악의 마디가 끝날 때 넘어간다
+            self._late = False
         self.am.suspend(True)
         self.sfx.boss_mode = True   # 덕킹 −2dB · 릴 −2dB (환경음 −6dB 는 장면이 set_base_duck("boss_fight"))
         self.song = sid
@@ -300,6 +340,11 @@ class BossMusic:
         if self.want_phase > self.phase and self.next_at is None and self.t >= self.loop_t0:
             self.next_at = self.t if sync else self._next_bar()
         if self.next_at is not None and self.switch_at is None and self.t >= self.next_at:
+            need = self._names_of(sid, self.phase + 1)
+            if not self._ready(need):   # 다음 페이즈 파일이 아직이면 한 마디 미룸 (메인에서 기다리며 멈추지 않게, O5)
+                self._rush(need)
+                self.next_at = self._next_bar()
+                return
             riser = self._get(f"{sid}_{self.phase + 1}_riser")
             rl = riser.get_length() if riser is not None else 0.0   # 라이저 파일이 없으면 (음표 데이터 곡) 마디 경계에서 바로
             new = 1 - self.slot
@@ -351,7 +396,9 @@ class BossMusic:
             snd = self.cur_snd.get(lay)
             if snd is not None and ch.get_busy() and ch.get_queue() is None:
                 ch.queue(snd)
-        # 음량
+        # 음량 (일꾼이 OGG 를 푸는 중이면 믹서가 잠겨 set_volume 이 수십 ms 기다림 → 이번 프레임은 건너뜀, O5)
+        if loader.busy():
+            return
         bus = self._bus()
         for (s, lay), goal in self.goal.items():
             cur = self.level.get((s, lay), 0.0)

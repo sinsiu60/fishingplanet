@@ -4,6 +4,8 @@
 예전 실행 중 합성 내장음(약 80종)은 S8에서 모두 새 이름 레시피로 옮기고 지웠다 → 시작이 빠르고 모바일 캐시도 필요 없다.
 오디오 장치가 없으면 조용히 무음으로 동작한다.
 """
+import threading
+
 import numpy as np
 import pygame
 
@@ -386,22 +388,53 @@ class Sfx:
         if name.startswith(AS_IS):   # 오디오 최종 팩: 속도·피치·필터 변경 없이 그대로
             return snd
         if self.slow and self.bus_of(name) in ("sfx", "reward", "amb"):
-            if key not in self.slowed:
-                self.slowed[key] = self._resampled(snd, self.cfg["slowmo"]["pitch"], self.cfg["slowmo"]["lowpass"])
+            if key not in self.slowed:   # 처음 한 번은 원본으로 내보내고 변형은 뒤에서 만든다 (O5: numpy 리샘플이 메인에서 수 ms)
+                self._bg(self.slowed, key, lambda: self._resampled(snd, self.cfg["slowmo"]["pitch"], self.cfg["slowmo"]["lowpass"]))
+                return snd
             return self.slowed[key]
         if self.muffle and self.bus_of(name) in ("sfx", "reward", "amb"):
             return self._muffled(name)
         if name not in self.cfg["variation"]["names"]:
             return snd
         if key not in self.variants:
-            self.variants[key] = [snd] + [self._resampled(snd, 1 + p / 100) for p in self.cfg["variation"]["pitch_pct"]]
+            self._bg(self.variants, key, lambda: [snd] + [self._resampled(snd, 1 + p / 100) for p in self.cfg["variation"]["pitch_pct"]])
+            return snd
         import random
         return random.choice(self.variants[key])
+
+    def _bg(self, store: dict, key, fn) -> None:
+        """변형 소리를 일꾼 스레드에서 만들어 store[key] 에 넣는다 (같은 키는 한 번만). numpy 는 GIL 을 놓고,
+        make_sound 는 디코딩이 없어 믹서를 잠그지 않는다 — 게임 실행 중 '합성' 은 이 리샘플뿐이고 메인 스레드에선 0."""
+        pend = self.__dict__.setdefault("_bg_pending", set())
+        if key in pend:
+            return
+        pend.add(key)
+
+        def run():
+            try:
+                store[key] = fn()
+            except Exception as e:   # 못 만들면 원본 그대로 쓴다
+                print("sfx variant:", key, e)
+            finally:
+                pend.discard(key)
+        threading.Thread(target=run, name="sfx-variant", daemon=True).start()
+
+    def keep_recent(self, prefix: str, name: str, n: int = 2) -> None:
+        """큰 소리(전설 · 환상의 노래 10~20MB)는 최근 n개만 메모리에 (O5)."""
+        order = self.__dict__.setdefault("_recent", {}).setdefault(prefix, [])
+        if name in order:
+            order.remove(name)
+        order.append(name)
+        while len(order) > n:
+            old = order.pop(0)
+            if old in self.sounds and old not in self.loops:
+                dict.pop(self.sounds, old, None)
 
     def _muffled(self, name: str) -> pygame.mixer.Sound:
         snd, key = self._base(name)
         if key not in self.muffled:
-            self.muffled[key] = self._resampled(snd, 1.0, self.cfg["fog_lowpass"])
+            self._bg(self.muffled, key, lambda: self._resampled(snd, 1.0, self.cfg["fog_lowpass"]))
+            return snd
         return self.muffled[key]
 
     def _resampled(self, snd: pygame.mixer.Sound, ratio: float, lowpass: int = 0) -> pygame.mixer.Sound:
