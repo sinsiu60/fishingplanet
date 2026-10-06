@@ -325,8 +325,9 @@ class SettingsScene(Scene):
     def draw(self, canvas) -> None:
         under = self.scene_below()
         if under is not None:
-            under.draw(canvas)
-        ui.dim(canvas, 170)
+            ui.backdrop(canvas, under, 170, "settings")   # 아래 화면은 멈춰 있음 → 한 번 그린 것 재사용 (DESIGN.md 44)
+        else:
+            ui.dim(canvas, 170)
         canvas = self.ui_canvas(canvas)
         w = canvas.get_width()
         ui.panel(canvas, (self.x0 - 10, 30, 300, 218))

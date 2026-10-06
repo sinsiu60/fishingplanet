@@ -165,6 +165,8 @@ class PixelScreen:
         return self.to_canvas((nx * ww, ny * wh))
 
     def present(self) -> None:
+        import time
+        t0 = time.perf_counter()
         if self.gpu:
             # 캔버스 크기 그대로 창 표면에 → flip 때 SDL 렌더러가 GPU 로 기기 해상도까지 확대
             if self.shake == (0, 0):
@@ -172,7 +174,9 @@ class PixelScreen:
             else:
                 self.window.fill((0, 0, 0))
                 self.window.blit(self.canvas, self.shake)
+            t1 = time.perf_counter()
             pygame.display.flip()
+            self.perf_parts = (t1 - t0, time.perf_counter() - t1)   # (창 복사, flip) — 성능 표시용
             return
         if self.mobile:
             # 폰은 창이 기기 해상도(예: 2400x1080)라 프레임마다 전체를 칠하고 새로 확대해 붙이면 무겁다 (v0.8.7):
@@ -196,4 +200,6 @@ class PixelScreen:
             self.window.blit(scaled, (self.shake[0] * self.scale, self.shake[1] * self.scale))
         if self.overlay is not None:
             self.overlay(self.window)
+        t1 = time.perf_counter()
         pygame.display.flip()
+        self.perf_parts = (t1 - t0, time.perf_counter() - t1)

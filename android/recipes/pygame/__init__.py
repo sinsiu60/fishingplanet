@@ -75,6 +75,13 @@ class Pygame2Recipe(CompiledComponentsPythonRecipe):
             )
             open("Setup", "w").write(setup_file)
 
+    def build_compiled_components(self, arch):
+        # 32비트(armeabi-v7a)도 NEON SIMD 블리터를 켠다 (DESIGN.md 44 v1.3.5): setup.py 의 '-enable-arm-neon'(라즈베리 파이용 옵션) =
+        # CFLAGS 에 -mfpu=neon + PG_ENABLE_ARM_NEON → sse2neon 으로 SSE2 블리터를 컴파일. 64비트는 자동(simd_blitters.h __aarch64__).
+        # 없으면 반투명 섞기가 일반 C 경로라 폰에서 화면 한 번에 27~33ms (갤럭시 탭 32비트 실측).
+        self.setup_extra_args = ['-enable-arm-neon'] if arch.arch == 'armeabi-v7a' else []
+        super().build_compiled_components(arch)
+
     def get_recipe_env(self, arch):
         env = super().get_recipe_env(arch)
         env['USE_SDL2'] = '1'

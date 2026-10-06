@@ -22,6 +22,9 @@ def _vbar(canvas, x, y, w, h, frac, color, bg=(36, 40, 56)):
     canvas.fill(color, (x, y + h - fh, w, fh))
 
 
+_GAUGE_BACK: dict = {}
+
+
 def draw_gauges(canvas, pal, fight, t: float) -> None:
     x, y, w, h = 8, 44, 12, 140
 
@@ -29,8 +32,10 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
         return y + h - clamp(v, 0, 100) / 100 * h
 
     # 장력·줄·바늘을 한 묶음으로 (31장 C6): 옅은 받침 하나 — 걸림·기믹 게이지는 그 오른쪽에 따로
-    back = pygame.Surface((72, h + 30), pygame.SRCALPHA)
-    pygame.draw.rect(back, (10, 14, 28, 90), back.get_rect(), border_radius=6)
+    back = _GAUGE_BACK.get(h)
+    if back is None:   # 매 프레임 새 반투명 표면을 만들지 않게 (폰, DESIGN.md 44)
+        back = _GAUGE_BACK[h] = pygame.Surface((72, h + 30), pygame.SRCALPHA)
+        pygame.draw.rect(back, (10, 14, 28, 90), back.get_rect(), border_radius=6)
     canvas.blit(back, (x - 6, y - 6))
 
     gl, gh = fight.green_low, fight.green_high

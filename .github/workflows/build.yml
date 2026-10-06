@@ -145,8 +145,16 @@ jobs:
           cnt=$(find "$T/pb" -path '*site-packages/pygame/*.so' | wc -l)
           echo "pygame 모듈 ${cnt}개 검사"
           [ "$cnt" -gt 10 ] || { echo "::error::APK 에서 pygame 모듈을 못 찾음 (${cnt}개)"; exit 1; }
-          # 아래 최적화 검사는 AArch64 명령 비율 기준이라 64비트만 (32비트도 같은 레시피 -O2)
-          [ "$A" = "arm64-v8a" ] || exit $bad
+          if [ "$A" = "armeabi-v7a" ]; then
+            # 32비트: NEON SIMD 블리터가 들어갔는지 (레시피 -enable-arm-neon — 없으면 반투명 섞기가 폰에서 20배 느림, DESIGN.md 44)
+            OBJDUMP=$(find ~/.buildozer -path '*toolchains/llvm/prebuilt/*' -name 'llvm-objdump' 2>/dev/null | head -1)
+            [ -n "$OBJDUMP" ] || OBJDUMP=$(command -v llvm-objdump || true)
+            SURF=$(find "$T/pb" -path '*site-packages/pygame/surface*.so' | head -1)
+            neon=$("$OBJDUMP" -d --triple=thumbv7-linux-gnueabihf "$SURF" | grep -cE '\bv(ld1|st1|mull|shr|add|sub|and|orr|mov)' || true)
+            echo "surface 모듈 NEON 명령 ${neon}개 (NEON 없던 v1.3.4: 2개)"
+            [ "$neon" -gt 200 ] || { echo "::error::32비트 pygame 에 NEON 블리터가 없음 (${neon}개)"; bad=1; }
+            exit $bad
+          fi
           # 최적화 확인: -O0 이면 반투명 blit 함수가 거의 스택 ldr/str 뿐이라 폰에서 수십 배 느리다 (v0.8.11 파이팅 렉)
           # NDK 의 llvm-objdump 우선 (러너 기본 것은 AArch64 를 못 읽을 수 있음)
           OBJDUMP=$(find ~/.buildozer -path '*toolchains/llvm/prebuilt/*' -name 'llvm-objdump' 2>/dev/null | head -1)

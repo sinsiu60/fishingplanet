@@ -148,8 +148,9 @@ class Game:
         fps, u, a, d, tk = self._perf
         from src.ui.hud import text
         c = self.screen.canvas
+        pp = getattr(self.screen, "perf_parts", (0.0, 0.0))
         line = (f"FPS {fps:4.1f}  갱신 {u:4.1f}(×{tk:.1f})  소리 {a:4.1f}  그리기 {d:4.1f}  "
-                f"출력 {getattr(self, '_perf_present', 0.0):4.1f}ms  일 {getattr(self, '_work_ms', 0):4.1f}")
+                f"출력 {getattr(self, '_perf_present', 0.0):4.1f}ms(창 {pp[0] * 1000:.1f}·flip {pp[1] * 1000:.1f})  일 {getattr(self, '_work_ms', 0):4.1f}")
         import gc
         self._perf_tick = getattr(self, "_perf_tick", 0) + 1
         if self._perf_tick % 60 == 1:

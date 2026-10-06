@@ -5177,3 +5177,8 @@ PC(서버) 숫자는 폰보다 5~10배 빠르므로 비율로 본다. 폰과 같
   산 2.3ms(높이 조회 405번), `lerp_color` 128번. → `hud.text` 글자 그림 기억(글자 · 색 · 크기), 물결 줄 고정값(y · 진폭 · 색 값)을 팔레트별로 기억 +
   정렬 없이 차례로 쓰기(같은 결과 — 검사), 반사광은 겹침이 없어 바로 쓰기, 산 윤곽 점 목록 기억, 수초 색 프레임당 한 번. PC 기준 물결 2.1 → 0.9ms.
   성능 표시 셋째 줄에 'GPU 확대 / CPU 확대 / CPU 확대 (안전 모드)' — 캡처의 출력 32ms 가 어느 방식이었는지 확인용 (꺼진 직후 첫 실행은 안전 모드).
+- **v1.3.5** (갤럭시 탭 32비트 캡처 3장: 파이팅 FPS 8 — 비네트 8번 53ms · 방향 테두리 30ms / 설정 메뉴 어둡게 33ms / 출력 21ms 'GPU 확대'):
+  **화면 전체 반투명 섞기 한 번에 27~33ms** = 170~200ns/px. 32비트 APK 를 받아 분석 — 컴파일은 -O2 (Thumb-2, 스필 없음) 이지만 surface.so 에
+  NEON 명령이 2개뿐: pygame 은 aarch64 에서만 sse2neon SIMD 블리터를 자동으로 켜고 armv7 은 `setup.py -enable-arm-neon`(라즈베리 파이용) 을
+  줘야 한다 → 레시피 `build_compiled_components` 에서 armeabi-v7a 에 추가 (CFLAGS -mfpu=neon + PG_ENABLE_ARM_NEON), CI 가 surface.so 의
+  NEON 명령 수(> 200)를 검사. 설정 화면 `under.draw + dim` → backdrop 재사용, 게이지 받침 표면 재사용. 성능 표시 출력 = (창 복사 · flip).
