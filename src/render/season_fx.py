@@ -55,7 +55,10 @@ class SeasonParticles:
         self.key = None
 
     def update(self, dt: float, season: str, cont: str, w: int, h: int, period: str, weather: str,
-               mobile: bool = False, fighting: bool = False, enabled: bool = True) -> None:
+               mobile: bool = False, fighting: bool = False, enabled: bool = True, wind: float = 0.0,
+               protect=None) -> None:
+        """wind = 바람(-1~1, 화면 날씨 Wind.x) — 꽃잎 · 낙엽 · 눈송이가 바람 쪽으로 흘러감 (DT2).
+        protect = 신호 보호 영역 (파이팅 중 그 안의 파티클은 그리지 않음, DESIGN.md 45장 📐)."""
         kind, cols = PARTICLE.get((cont, season), (None, []))
         if not enabled or kind is None or (kind == "firefly" and period not in ("evening", "night")):
             self.ps.clear()
@@ -82,11 +85,14 @@ class SeasonParticles:
             else:
                 p[0] += math.sin(p[4]) * (14 if kind != "snow" else 6) * dt
             p[0] += p[2] * dt
+            if kind != "firefly":
+                p[0] += wind * 24 * dt   # 바람 쪽으로
             p[1] += p[3] * dt
         self.ps = [p for p in self.ps if -30 < p[0] < w + 30 and p[1] < h + 10]
         self.cols = cols
         self.kind = kind
         self.fighting = fighting
+        self.protect = protect
 
     def draw(self, canvas) -> None:
         if not self.ps:
@@ -96,6 +102,8 @@ class SeasonParticles:
         for i, p in enumerate(self.ps):
             if fight and (i % 3 or p[1] > h * 0.35):
                 continue   # 파이팅 중: 위쪽에 1/3만 (신호 슬롯·물고기 주변 비움)
+            if fight and self.protect is not None and self.protect.hit_pt(p[0], p[1], 4):
+                continue   # 신호 보호 영역 (가운데 40%×50% · 슬롯 주변)
             x, y, s = int(p[0]), int(p[1]), p[5]
             col = self.cols[p[6] % len(self.cols)]
             k = self.kind

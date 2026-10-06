@@ -67,16 +67,17 @@ class Rain:
         self.w, self.h = w, h
         self.drops: list[list[float]] = []
         self.ripple_t = 0.0
+        self.dir = 1   # 바람 방향 (DT2: 빗줄기가 바람 쪽으로 기움)
 
     def update(self, dt: float, weather: str, ripples, cam) -> None:
         heavy = weather == "storm"
         rate = 0 if weather in ("clear", "fog") else (10 if heavy else 4)
         if fxq.level() < 2:
             rate = max(1, round(rate * fxq.particles()))   # 중간 · 낮음: 빗줄기 수 (O4)
-        wind = 0.35 if heavy else 0.12
+        wind = (0.35 if heavy else 0.12) * self.dir
         for _ in range(rate):
             sp = random.uniform(300, 430)
-            self.drops.append([random.uniform(-40, self.w + 10), random.uniform(-20, 0), sp, wind,
+            self.drops.append([random.uniform(-40, self.w + 10) if wind >= 0 else random.uniform(-10, self.w + 40), random.uniform(-20, 0), sp, wind,
                                random.uniform(5, 10) * (1.3 if heavy else 1.0),
                                random.uniform(cam.horizon + 4, self.h + 10)])
         for d in self.drops:
@@ -138,9 +139,12 @@ class Lightning:
         self.bolt_t = 0.0
         self.thunder_in = -1.0
         self.events: list[str] = []
+        self.since = 99.0      # 마지막 번쩍임 뒤 시간 — 강한 번쩍임은 3초에 1번 이하 (DETAILS 📐 깜빡임 안전)
+        self.reduce = False    # 화면 효과 줄이기: 번쩍임 없음 (번개 줄기 · 천둥 소리는 그대로)
 
     def update(self, dt: float, weather: str, horizon: int, width: int) -> None:
         self.flash = max(0.0, self.flash - dt * 4)
+        self.since += dt
         self.bolt_t = max(0.0, self.bolt_t - dt)
         if self.thunder_in > 0:
             self.thunder_in -= dt
@@ -159,7 +163,9 @@ class Lightning:
         self._strike(horizon, width)
 
     def _strike(self, horizon: int, width: int) -> None:
-        self.flash = 1.0
+        if not self.reduce and self.since >= 3.0:
+            self.flash = 1.0
+            self.since = 0.0
         self.bolt_t = 0.18
         x = random.uniform(40, width - 40)
         pts = [(x, 0)]

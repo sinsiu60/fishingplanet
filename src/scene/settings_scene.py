@@ -39,7 +39,7 @@ class SettingsScene(Scene):
         sound = [
             ("화면 연출 (흔들림·줌)", "toggle", lambda: s.get("screen_shake"), self._toggle_fx),
             ("찌 확대 창 (말풍선)", "toggle", lambda: s.get("bobber_zoom"), lambda: s.set("bobber_zoom", not s.get("bobber_zoom"))),
-            ("화면 효과 줄이기 (파장 → 페이드)", "toggle", lambda: s.get("reduce_fx"), lambda: s.set("reduce_fx", not s.get("reduce_fx"))),
+            ("화면 효과 줄이기 (번쩍임·맺힘 줄임)", "toggle", lambda: s.get("reduce_fx"), lambda: s.set("reduce_fx", not s.get("reduce_fx"))),
             ("이동 컷신", "step", lambda: {"full": "전체", "short": "짧게", "off": "끄기"}[s.get("travel_cutscene") or "full"],
              (lambda: self._cycle("travel_cutscene", ("full", "short", "off"), -1),
               lambda: self._cycle("travel_cutscene", ("full", "short", "off"), 1))),

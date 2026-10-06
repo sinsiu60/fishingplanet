@@ -481,12 +481,13 @@ class Reeds:
                 "head": rnd.random() < 0.55,
             })
 
-    def draw(self, canvas, pal, t: float, wind: float = 1.0) -> None:
+    def draw(self, canvas, pal, t: float, wind: float = 1.0, lean: int = 1) -> None:
+        """lean = 바람 방향 (+1 오른쪽 / -1 왼쪽, DETAILS A-2 — 흔들림 세기는 그대로, 기우는 쪽만 바람을 따름)."""
         base_y = self.cam.height + 2
         color = pal["reed"]
         head = scale_color(color, 0.7)
         for s in self.stems:
-            sway = math.sin(t * 1.3 * wind + s["phase"]) * 3 * wind + (wind - 1) * 4
+            sway = math.sin(t * 1.3 * wind + s["phase"]) * 3 * wind + (wind - 1) * 4 * lean
             tip = (s["x"] + s["lean"] + sway, base_y - s["h"])
             mid = (s["x"] + (s["lean"] + sway) * 0.35, base_y - s["h"] * 0.5)
             pygame.draw.lines(canvas, color, False, [(s["x"], base_y), mid, tip], 2)

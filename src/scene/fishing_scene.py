@@ -142,6 +142,9 @@ class FishingScene(Scene):
         self.rain = Rain(canvas.get_width(), canvas.get_height())
         self.fog = Fog(canvas.get_width(), canvas.get_height())
         self.lightning = Lightning()
+        from src.render.screen_weather import ScreenWeather, Wind
+        self.wind = Wind()   # 바람 (DETAILS A-2, DESIGN.md 45장): 줄 휨 · 빗줄기 각도 · 날림 · 갈대 방향
+        self.screen_weather = ScreenWeather(canvas.get_width(), canvas.get_height())   # 화면에 맺히는 날씨 (A-1)
         from src.render.ilseom_fx import IlseomFX
         self.ilseom_fx = IlseomFX()   # 청새치 '일섬' 칼 연출 (ILSEOM.md, DESIGN.md 43-15)
         self.ambient = Ambient(canvas.get_width(), canvas.get_height(), self.cam.horizon)
@@ -559,7 +562,14 @@ class FishingScene(Scene):
             elif self.can_open_menus():
                 self.open_menu(a.value)
         elif n == "debug":
-            if a.value in ("F3", "F4", "F5", "F6"):
+            if a.value == "F5" and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    # Shift+F5: 시간대 강제 (새벽 5시 → 아침 7시 → 낮 13시 → 저녁 18시 → 밤 22시, DT2 디버그)
+                    marks = (5.0, 7.0, 13.0, 18.0, 22.0)
+                    nxt = next((m for m in marks if m > self.clock.hour + 0.01), marks[0])
+                    self.clock.hour = nxt
+                    self.toasts.show(f"[테스트] 시간: {self.clock.label()}", INFO, 1.5, 11)
+            elif a.value in ("F3", "F4", "F5", "F6"):
                 if f is None and self.fish_cfg.get("debug_keys"):
                     self._cycle_debug(a.value)
             elif a.value == "F11":
@@ -582,8 +592,14 @@ class FishingScene(Scene):
                     self.show_pity = not self.show_pity
             elif a.value == "F12":
                 if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
-                    from src.core import season as seasons
-                    self.toasts.show(f"[테스트] 계절: {seasons.cycle_forced()}", INFO, 1.5, 11)
+                    if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                        # Shift+F12: 신호 보호 영역 표시 (DT2 디버그)
+                        sw = self.screen_weather
+                        sw.show_protect = not sw.show_protect
+                        self.toasts.show(f"[테스트] 신호 보호 영역 표시: {'켬' if sw.show_protect else '끔'}", INFO, 1.5, 11)
+                    else:
+                        from src.core import season as seasons
+                        self.toasts.show(f"[테스트] 계절: {seasons.cycle_forced()}", INFO, 1.5, 11)
             elif a.value == "F1":
                 self.debug = not self.debug
             elif a.value == "F2":
@@ -1430,15 +1446,22 @@ class FishingScene(Scene):
         w.events.clear()
         self._update_signs(dt)
         self.lure_hop = max(0.0, getattr(self, "lure_hop", 0.0) - dt)
+        self.wind.update(dt, self.weather)
+        self.rain.dir = 1 if self.wind.x >= 0 else -1   # 빗줄기 기울기 = 바람 방향
         self.rain.update(dt, self.weather, self.ripples, self.cam)
         self.fog.update(dt, self.weather)
+        reduce = bool(self.settings.get("reduce_fx"))
+        self.lightning.reduce = reduce   # 화면 효과 줄이기: 번쩍임 없음 (45장 📐)
         self.lightning.update(dt, self.weather, self.cam.horizon, self.cam.width)
         self.ilseom_fx.update(dt)
         for ev in self.lightning.events:
             if ev == "strike":
                 self.ambience.strike()  # 천둥은 번개 뒤 거리만큼 늦게 (가까우면 쩍, 멀면 우르릉)
-                self.shake_kick = max(self.shake_kick, 1.0)
+            elif ev == "thunder" and not reduce:
+                # 천둥 소리와 함께 화면 1px 흔들림 0.2초 (DETAILS A-1, 45-D 확정 3: 번쩍임은 그대로)
+                self.thunder_shake = load_json("details/weather_screen.json")["lightning"]["shake_sec"]
         self.lightning.events.clear()
+        self._update_screen_weather(dt)
         self.ambient.update(dt, self.clock.period()[0], self.weather, self.theme.get("sea", False))
         f = self.fight
         self.ambience.update(dt, self.spot_id, self.clock.period()[0], self.weather,
@@ -1446,8 +1469,27 @@ class FishingScene(Scene):
         self.season_fx.update(dt, self.season, self.spot.get("continent", "sharmion"), self.cam.width, self.cam.height,
                               self.clock.period()[0], self.weather, mobile=self.touch,
                               fighting=f is not None and f.phase in ("fight", "net"),
-                              enabled=self.theme["terrain"] != "cave" and self.theme.get("dark", 0) < 0.5)
+                              enabled=self.theme["terrain"] != "cave" and self.theme.get("dark", 0) < 0.5,
+                              wind=self.wind.x, protect=self.screen_weather.protect)
         self._tick_events(dt, f)
+
+    def _update_screen_weather(self, dt: float) -> None:
+        """화면에 맺히는 날씨 · 수면 구름 그림자 · 윤슬 (DT2)."""
+        cam, f = self.cam, self.fight
+        sun = sun_x = None
+        for body in world.celestial_bodies(self.clock.hour):
+            if body["kind"] == "sun":
+                sun = world.body_screen_pos(cam, body)
+                if sun is not None and body["elev"] > math.radians(-1.0):
+                    sun_x = sun[0]
+        open_sky = self.theme["terrain"] != "cave" and self.theme.get("dark", 0) < 0.5
+        self.screen_weather.update(dt, {
+            "weather": self.weather, "season": self.season, "cont": self.spot.get("continent", "sharmion"),
+            "period": self.clock.period()[0], "spot": self.spot_id, "sea": self.theme.get("sea", False),
+            "fighting": f is not None and f.phase in ("fight", "net"), "reduce": bool(self.settings.get("reduce_fx")),
+            "wind": self.wind, "touch": self.touch, "left": bool(self.touch and self.settings.get("touch_left")),
+            "horizon": cam.horizon, "sun": sun, "sun_x": sun_x, "enabled": open_sky,
+            "cave": self.theme["terrain"] == "cave", "t": self.t})
 
     def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
@@ -1927,6 +1969,9 @@ class FishingScene(Scene):
         fc = self.fish_cfg["fight"]
         if f is not None and f.phase == "fight" and f.tension > fc["shake_start_tension"]:
             amp += (f.tension - fc["shake_start_tension"]) / 30 * fc["shake_max_px"]
+        if getattr(self, "thunder_shake", 0.0) > 0:
+            self.thunder_shake -= dt
+            amp = max(amp, 1.0)   # 천둥 1px
         if not self.shake_on or amp < 0.3:
             self.game.screen.shake = (0, 0)
             return
@@ -2741,6 +2786,7 @@ class FishingScene(Scene):
                 and theme["terrain"] != "cave":
             from src.render.season_fx import draw_ice_edges
             draw_ice_edges(canvas, pal, cam.horizon, t)   # 겨울: 수면 가장자리 살얼음
+        self.screen_weather.draw_water(canvas)   # 구름 그림자 · 윤슬 (DT2)
         if pfx.active:
             m = pfx.mask(canvas.get_width(), canvas.get_height(), int(cam.horizon))
             if m is not None:
@@ -2840,7 +2886,7 @@ class FishingScene(Scene):
         fg = theme["foreground"]
         if fg in ("reeds", "silver_reeds"):
             rpal = pal if fg == "reeds" else dict(pal, reed=lerp_color(pal["reed"], (215, 222, 235), 0.65))
-            self.reeds.draw(canvas, rpal, t, wind={"clear": 1.0, "rain": 1.4, "storm": 2.2, "fog": 0.6}[weather])
+            self.reeds.draw(canvas, rpal, t, wind=self.wind.reed_mult(weather), lean=self.wind.dir)   # 바람 방향 (A-2)
         else:
             world.FOREGROUND[fg](canvas, pal, t)
         from src.render.rod import gear_look
@@ -2879,6 +2925,7 @@ class FishingScene(Scene):
         # 가짜 FOV (줌·패닝·기울기)
         self.screen_fx.apply_camera(canvas)
         self.ilseom_fx.draw(canvas, "screen")
+        self.screen_weather.draw_screen(canvas)   # 화면에 맺히는 날씨 (빗방울 · 김 서림 · 성에 · 날림 · 입김 · 빛 번짐, DT2)
         if getattr(self, "scenic", False):
             return   # 이동 컷신의 도착 전경: 풍경·낚싯대까지만 (HUD·카드 없음)
         self._draw_event_banner(canvas)
@@ -3149,6 +3196,7 @@ class FishingScene(Scene):
         rph = self._rush_ph()
         lph = rush_cue.light_phase(f) if self._rush_ph_ok() else None  # 점프·방향 전환: 가벼운 줄 펄스
         sag = max(0.5, sag + rush_cue.line_sag(rph) + rush_cue.light_sag(lph))  # 웅크림: 느슨 / 돌진 순간: 팽팽
+        dx += self._wind_bend()   # 바람 쪽으로 휨 (A-2)
         pts = draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.25), sag, bias=0.6, dx=dx, color=color,
                         cracks=cracks, t=self.t)
         rush_cue.draw_pulse(canvas, pts, rph, self.t)   # 빛 펄스: 물고기 → 손
@@ -3683,6 +3731,11 @@ class FishingScene(Scene):
             hud.text(canvas, f"예고 ×{m:g}", (canvas.get_width() - 8 - inset, canvas.get_height() - 8), (150, 158, 180),
                      11, "bottomright")
 
+    def _wind_bend(self) -> float:
+        """낚싯줄 휨: 줄 가운데가 바람 쪽으로 바람 세기에 비례해 최대 6px (DETAILS A-2)."""
+        mx = load_json("details/weather_screen.json")["line_bend"]["max_px"]
+        return clamp(self.wind.x, -1.0, 1.0) * mx
+
     def _draw_line_and_bobber(self, canvas, pal, tip) -> None:
         c, cam = self.cast, self.cam
         p = cam.project(c.bx, c.bz, c.bh)
@@ -3714,7 +3767,7 @@ class FishingScene(Scene):
             sag = 3  # 팽팽
         else:
             sag = 10 + abs(tip[0] - sx) * 0.04
-        draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5 * (1 - dip)), sag, bias=0.6)
+        draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.5 * (1 - dip)), sag, bias=0.6, dx=self._wind_bend())
         self._draw_trail(canvas, "float_skin", (sx, sy + bob), max(1, int(size * 0.3)))
         draw_bobber(canvas, self._bobber_pal(pal), sx, sy + bob, size, floating=True, dip=dip)
         self._draw_float_mark(canvas, sx, sy + bob, size, dip)
