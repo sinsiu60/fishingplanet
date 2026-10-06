@@ -8,6 +8,8 @@ DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": N
             "touch_size": 1, "touch_alpha": 1, "touch_left": False,
             # 모바일: 진동 0=끔 1=약 2=중 3=강, 화면 갱신 30/60 (메뉴 화면은 늘 30)
             "vibration": 2, "fps": 60,
+            # 배경 애니메이션(하늘 · 별 · 구름 · 물결 · 반사광) 갱신 fps (OPTIMIZATION.md O3) — 0 이면 매 프레임. 화질 설정(O6)이 바꾼다
+            "bg_fps": 15,
             # 접근성 (31장 C6): 예고 시간 배율 0=1.0 1=1.25 2=1.5, 첫 만남 카드, 신호 슬롯 크기 0~2, 색약 팔레트, 소리 신호
             "tele_mult": 0, "signal_cards": True, "slot_size": 1, "colorblind": False, "signal_sound": True,
             # 소리 (32장 S3): 버스 볼륨 0~1, 신호 강조, 오디오 지연 보정(ms, + = 소리가 늦게 들리는 기기)

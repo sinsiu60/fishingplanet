@@ -2623,26 +2623,65 @@ class FishingScene(Scene):
             self.shake_kick = 4.0 if ev == "lost:snap" else 0.0
 
     # ───────────────────────── 그리기 ─────────────────────────
+    WATER_MARGIN = 6   # 물결 마루가 수평선 위로 올라올 수 있는 최대 픽셀 (진폭 2 × 폭풍 1.9 × 바다 1.3)
+
+    def _bg_band(self, canvas, pal, name: str, key, paint):
+        """배경 띠 캐시 (OPTIMIZATION.md O3): 팔레트 · 시점이 같으면 1/bg_fps 초마다만 다시 그리고 그 사이엔 붙여 쓴다.
+        도트 게임의 배경 애니메이션은 원래 12~15fps 라 티가 안 나고, 폰에서 물결 · 반사광 · 별 계산이 프레임마다 수 ms 였다.
+        key 가 바뀌면(둘러보기 · 번개 · 전설 색 · 환상 팔레트) 바로 다시 그린다. bg_fps 0 = 매 프레임 (예전과 픽셀 동일)."""
+        slots = self.__dict__.setdefault("_bands", {})
+        skey = (name, canvas.get_flags() & pygame.SRCALPHA, canvas.get_size())
+        slot = slots.get(skey)
+        fps = self.settings.get("bg_fps") or 0
+        if slot is None:
+            if len(slots) > 6:
+                slots.clear()
+            slot = slots[skey] = {"surf": pygame.Surface(canvas.get_size(), canvas.get_flags() & pygame.SRCALPHA, canvas),
+                                  "key": None, "t": -1.0}
+        if slot["key"] != key or fps <= 0 or self.t - slot["t"] >= 1.0 / fps or self.t < slot["t"]:
+            paint(slot["surf"])
+            slot["key"], slot["t"] = key, self.t
+        return slot["surf"]
+
+    @staticmethod
+    def _pal_key(pal: dict) -> tuple:
+        # 색(정수 튜플)만 — 별 · 반사 세기 같은 실수값은 시각과 함께 매 프레임 조금씩 변해 열쇠로 쓰면 캐시가 전혀 안 맞는다 (갱신 때 반영됨)
+        return tuple(sorted((k, v) for k, v in pal.items() if isinstance(v, tuple)))
+
     def _draw_world(self, canvas, pal: dict) -> None:
-        """하늘·별·해달·구름·산·물 (환상 파장은 이걸 두 번 그려 마스크로 합성)."""
+        """하늘·별·해달·구름·산·물 (환상 파장은 이걸 두 번 그려 마스크로 합성).
+        하늘~구름 과 물은 띠 캐시(_bg_band, 15fps); 이벤트 하늘(유성) · 번개 · 산 · 배 등불은 매 프레임."""
         cam, t, hour, theme, weather = self.cam, self.t, self.clock.hour, self.theme, self.weather
-        world.draw_sky(canvas, pal, cam)
-        self.stars.draw(canvas, pal, cam, t)
-        world.draw_celestial(canvas, pal, cam, hour, t, visible=weather == "clear" and theme["terrain"] != "cave"
-                             and self._event_id() != "red_moon")   # 붉은 달 이벤트: 달은 붉은 달 하나만
-        if theme.get("aurora"):
-            from src.render.eldra_world import draw_aurora
-            draw_aurora(canvas, pal, cam, t)
-        self.clouds.draw(canvas, pal, cam)
+        W, H, hz = cam.width, cam.height, cam.horizon
+        pk = self._pal_key(pal)
+        eid = self._event_id()
+        sky_vis = weather == "clear" and theme["terrain"] != "cave" and eid != "red_moon"   # 붉은 달 이벤트: 달은 붉은 달 하나만
+
+        def paint_sky(s):
+            world.draw_sky(s, pal, cam)
+            self.stars.draw(s, pal, cam, t)
+            world.draw_celestial(s, pal, cam, hour, t, visible=sky_vis)
+            if theme.get("aurora"):
+                from src.render.eldra_world import draw_aurora
+                draw_aurora(s, pal, cam, t)
+            self.clouds.draw(s, pal, cam)
+        sky = self._bg_band(canvas, pal, "sky", (pk, round(cam.yaw, 5), sky_vis, bool(theme.get("aurora"))), paint_sky)
+        canvas.blit(sky, (0, 0), (0, 0, W, hz))
         if theme["terrain"] != "cave":   # 날씨 이벤트 하늘 (유성·쌍무지개·붉은 달) — 산보다 먼저
-            self.event_fx.draw_sky(canvas, self._event_id(), self.spot.get("continent", "sharmion"), cam.horizon,
+            self.event_fx.draw_sky(canvas, eid, self.spot.get("continent", "sharmion"), cam.horizon,
                                    self.fight is not None)
         self.lightning.draw(canvas)
         world.draw_mountains(canvas, pal, cam, theme["terrain"], t)
         amp = {"clear": 1.0, "rain": 1.25, "storm": 1.9, "fog": 0.8}[weather] * (1.3 if theme.get("sea") else 1.0)
         amp *= 1.0 - 0.8 * self.phantom_fx.calm()  # 환상: 물결이 숨을 죽인다
-        self.water.draw(canvas, pal, t, hour, amp_mult=amp,
-                        show_reflection=weather == "clear" and theme["terrain"] != "cave")
+        refl = weather == "clear" and theme["terrain"] != "cave"
+        top = max(0, hz - self.WATER_MARGIN)
+
+        def paint_water(s):
+            s.blit(canvas, (0, top), (0, top, W, hz - top))   # 수평선 바로 위 몇 줄 (산): 마루가 올라와도 밑그림이 맞게
+            self.water.draw(s, pal, t, hour, amp_mult=amp, show_reflection=refl)
+        water = self._bg_band(canvas, pal, "water", (pk, round(cam.yaw, 5), round(amp, 5), refl), paint_water)
+        canvas.blit(water, (0, top), (0, top, W, H - top))
         if theme.get("lamp"):
             world.draw_ship_lamp(canvas, pal, cam)
 

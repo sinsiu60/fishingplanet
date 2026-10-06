@@ -374,7 +374,7 @@ class Water:
         cam = self.cam
         hz, H, W = cam.horizon, cam.height, cam.width
         light, dark = pal["wave_light"], pal["wave_dark"]
-        rkey = (tuple(top), tuple(bottom), tuple(light), tuple(dark), hz, H, cam.f, cam.cam_h)
+        rkey = (tuple(top), tuple(bottom), tuple(light), tuple(dark), hz, H, cam.f, cam.cam_h, canvas.get_masks())
         cache = self.__dict__.setdefault("_rows_cache", {})
         st = cache.get(rkey)
         if st is None:   # 줄마다 고정값 (번호 · 거리 · 배율 · y · 진폭 · 색) — 팔레트 · 화면이 같으면 그대로 (DESIGN.md 44)

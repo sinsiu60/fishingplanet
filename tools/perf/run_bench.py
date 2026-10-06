@@ -2,6 +2,7 @@
 
 사용: python tools/perf/run_bench.py [--mobile] [--secs 30] [--prof] [--out 결과.json]
   --mobile  폰 캔버스(600x270) · 모바일 설정
+  BG_FPS=0  배경 띠 갱신을 매 프레임으로 (수정 전과 같은 조건, O3 비교용)
   --prof    장면마다 cProfile 로 느린 함수 상위 20개 (자기 시간 기준)
 PC 숫자는 폰보다 5~10배 빠르므로 비율로 본다.
 """
@@ -33,6 +34,8 @@ def main() -> int:
     from src.scene.menu import TitleScene
     g = Game(start_scene=TitleScene)
     g._acc, g._frames = 0.0, 0
+    if os.environ.get("BG_FPS"):   # 배경 갱신 fps 를 바꿔 A/B (O3): BG_FPS=0 이면 매 프레임
+        g.settings.data["bg_fps"] = int(os.environ["BG_FPS"])
     err = g.perf.start_bench(secs)
     if err:
         print("시작 실패:", err)
