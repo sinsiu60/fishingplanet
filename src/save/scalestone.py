@@ -5,6 +5,7 @@
 아이템: {"uid", "grade", "level", "opts": [{"id", "v"}], "locked", "spent": {"gold", "mat"}, "got": 획득 순번, "src": 출처}
 
 S2: 데이터 · 아이템 구조 · 첫 부옵션 뽑기 · 획득(포획 · 의뢰 · 상자 · 첫 포획 · 첫 의뢰) · 보관 150개(가득 차면 자동 분해) · 디버그.
+S3: 강화 +1~+4 (단계마다 새 부옵션, 실패 없음) · 비용 · 잠금 · 분해 · 일괄 분해.
 소재 = 대륙 소재 2종(sharmion · eldrasion)을 하나처럼 — 많은 쪽부터 쓰고, 분해로 받는 소재는 지금 있는 대륙 쪽 (46-2 답 1).
 """
 import math
@@ -138,6 +139,107 @@ def salvage_yield(stone: dict) -> int:
     """분해 소재 = 등급 기본 + 강화에 쓴 소재의 50%."""
     base = grade_info(stone["grade"])["salvage"]
     return base + int(math.floor(stone.get("spent", {}).get("mat", 0) * enhance_cfg()["salvage_spent_frac"]))
+
+
+# ───────────────────────── 강화 (S3) ─────────────────────────
+
+def enhance_cost(stone: dict) -> dict | None:
+    """다음 단계 비용 {gold, mat} = 단계 비용(희귀 기준) × 등급 배율 — 골드 10원 단위 반올림, 소재 올림. 최대(+4)면 None."""
+    cfg = enhance_cfg()
+    lvl = stone["level"]
+    if lvl >= cfg["max_level"]:
+        return None
+    k = grade_info(stone["grade"])["cost"]
+    return {"gold": int(round(cfg["gold"][lvl] * k / 10.0)) * 10, "mat": int(math.ceil(cfg["materials"][lvl] * k - 1e-9))}
+
+
+def enhance_block(save, stone: dict) -> str | None:
+    """강화할 수 없으면 이유 글자, 되면 None."""
+    cost = enhance_cost(stone)
+    if cost is None:
+        return "최대 강화예요"
+    if save.data.get("money", 0) < cost["gold"]:
+        return "골드가 부족해요"
+    if materials_total(save) < cost["mat"]:
+        return "소재가 부족해요"
+    return None
+
+
+def enhance(save, uid, rnd=random) -> dict | None:
+    """+1 강화: 비용을 내고 새 부옵션 1개 (이미 붙은 옵션 제외, 비중대로). 실패 없음.
+    돌려주는 값: {"stone", "opt", "index" (새 옵션 칸 0~4), "level", "done" (+4 완성), "cost"} — 못 하면 None."""
+    stone = by_uid(save, uid)
+    if stone is None or enhance_block(save, stone):
+        return None
+    cost = enhance_cost(stone)
+    opt = roll_option(stone["grade"], exclude=[o["id"] for o in stone["opts"]], rnd=rnd)
+    if opt is None:
+        return None
+    save.data["money"] -= cost["gold"]
+    spend_materials(save, cost["mat"])
+    sp = stone.setdefault("spent", {"gold": 0, "mat": 0})
+    sp["gold"] = sp.get("gold", 0) + cost["gold"]
+    sp["mat"] = sp.get("mat", 0) + cost["mat"]
+    stone["opts"].append(opt)
+    stone["level"] += 1
+    return {"stone": stone, "opt": opt, "index": len(stone["opts"]) - 1, "level": stone["level"],
+            "done": stone["level"] >= enhance_cfg()["max_level"], "cost": cost}
+
+
+# ───────────────────────── 잠금 · 분해 (S3) ─────────────────────────
+
+def set_locked(save, uid, locked: bool) -> bool:
+    stone = by_uid(save, uid)
+    if stone is None:
+        return False
+    stone["locked"] = bool(locked)
+    return True
+
+
+def salvage_block(save, stone: dict) -> str | None:
+    """분해할 수 없으면 이유 (잠김 · 장착 중), 되면 None."""
+    if stone.get("locked"):
+        return "잠긴 비늘석이에요"
+    if equipped_slot(save, stone["uid"]):
+        return "장착 중인 비늘석이에요"
+    return None
+
+
+def salvage(save, uid, cont: str) -> int | None:
+    """분해 → 소재 (기본 + 강화에 쓴 소재 50%, 지금 있는 대륙 소재로). 못 하면 None."""
+    st = state(save)
+    stone = by_uid(save, uid)
+    if stone is None or salvage_block(save, stone):
+        return None
+    n = salvage_yield(stone)
+    st["items"].remove(stone)
+    add_materials(save, n, cont)
+    return n
+
+
+def batch_candidates(save, grades_in=None, max_level: int | None = None) -> list[dict]:
+    """일괄 분해 대상: 고른 등급 · 강화 단계 이하, 잠김 · 장착 중 제외."""
+    out = []
+    for s in state(save)["items"]:
+        if grades_in is not None and s["grade"] not in grades_in:
+            continue
+        if max_level is not None and s["level"] > max_level:
+            continue
+        if salvage_block(save, s):
+            continue
+        out.append(s)
+    return out
+
+
+def batch_salvage(save, uids, cont: str) -> dict:
+    """확인 창에서 [분해] → {"count", "mat"} (그 사이 잠기거나 장착된 것은 건너뜀)."""
+    count = mat = 0
+    for uid in list(uids):
+        n = salvage(save, uid, cont)
+        if n is not None:
+            count += 1
+            mat += n
+    return {"count": count, "mat": mat}
 
 
 # ───────────────────────── 획득 ─────────────────────────
