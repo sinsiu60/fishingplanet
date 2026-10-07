@@ -13,7 +13,7 @@ import random
 import pygame
 
 from src.core.config import game_config, load_json
-from src.core.mathutil import clamp
+from src.core.mathutil import clamp, lerp_color
 from src.core.weather import WEATHER_KO
 from src.render import camp_fpv
 from src.render.palette import Palette
@@ -99,6 +99,8 @@ class CampfireScene(Scene):
         self.camp = camp_fpv.CampFPV(w, h, fishing.season, snowy=fishing.spot_id == "ice_sea")
         self.hand_pal = Palette().sample(13.0)   # 손 기본색 (밤 어둠 · 불빛은 조명이 입힘)
         self.hand_look = fishing._hand_look()
+        self.snowy = fishing.season == "winter" or fishing.spot_id == "ice_sea"
+        self.height_k = 1.0
         for _ in range(90):   # 처음부터 불티 · 연기가 올라가 있게 (1.5초 미리)
             self.camp.update(1 / 60, fishing.wind.x, self.low)
         self.amb_t = 0.8   # 숲 공기 (낮 새 · 밤 귀뚜라미)
@@ -119,15 +121,17 @@ class CampfireScene(Scene):
         game.sfx.loop("room_fire", True, 0.5)
 
     # ── 진행 ──
+    REDUCE_SEC = 1.5   # 화면 효과 줄이기: 타임랩스 대신 가운데에서 한 번 어두워졌다 밝아지며 시계가 넘어감
+
     def _progress(self) -> float:
-        """0..1 시계 진행 (easeInOut). 줄이기 = 0.3초 어두워진 뒤 한 번에."""
+        """0..1 시계 진행 (easeInOut). 줄이기 = 가운데(0.75초) 페이드 바닥에서 한 번에."""
         if self.reduce:
-            return 1.0 if self.t >= DIM_IN else 0.0
+            return 1.0 if self.t >= self.REDUCE_SEC / 2 else 0.0
         span = DIM_OUT_AT - DIM_IN
         return ease((self.t - DIM_IN) / span)
 
     def _end_time(self) -> float:
-        return (2 * DIM_IN + 0.0) if self.reduce else self.total
+        return self.REDUCE_SEC if self.reduce else self.total
 
     def handle_action(self, a) -> None:
         if a.name in ("primary", "confirm", "back") or getattr(a, "any_press", False):
@@ -161,7 +165,11 @@ class CampfireScene(Scene):
         f.weather_sys.events.clear()
         self._visuals(dt)
         self.real_t = getattr(self, "real_t", 0.0) + real_dt
-        self.camp.update(real_dt, f.wind.x, self.low)
+        rain = f.weather in ("rain", "storm")
+        self.height_k = 0.85 if rain else 1.0   # 비: 불꽃 높이 −15%
+        self.camp.update(real_dt, f.wind.x, self.low, self.height_k)
+        roof = 2.0 if (self.event is not None and self.event["id"] == "rain_roof" and self.ev_started) else 1.0
+        self.camp.update_weather(real_dt, f.weather, self.snowy, f.season == "autumn", f.wind.x, roof)
         self._ambience(real_dt)
         self.pop_t -= dt
         if self.pop_t <= 0 and self.t < self._end_time() - 0.3:
@@ -173,13 +181,11 @@ class CampfireScene(Scene):
             snd = self.event.get("sound")
             if snd:
                 self.game.sfx.play(snd[0], snd[1])
-            if self.event["id"] == "meteor":
-                w = self.game.screen.canvas.get_width()
-                self.ev_data = {"x": self.rnd.uniform(w * 0.3, w * 0.8), "y": self.rnd.uniform(14, 40)}
-            elif self.event["id"] in ("fireflies", "snow"):
-                n = self.rnd.randint(5, 8)
-                self.ev_data = {"pts": [[self.rnd.uniform(-34, 34), self.rnd.uniform(-30, -4), self.rnd.uniform(0, 6.28)]
-                                        for _ in range(n)]}
+            r = self.rnd
+            if self.event["id"] == "fireflies":   # 텐트 앞 · 나무 줄기 사이 6~10점
+                pts = [[r.uniform(118, 206), r.uniform(150, 214), r.uniform(0, 6.28)] for _ in range(r.randint(3, 5))]
+                pts += [[r.uniform(332, 440), r.uniform(140, 200), r.uniform(0, 6.28)] for _ in range(r.randint(3, 5))]
+                self.ev_data = {"pts": pts}
         if self.ev_started:
             self.ev_t += dt
         if self.t >= self._end_time() and not self.done:
@@ -194,7 +200,7 @@ class CampfireScene(Scene):
         f = self.fishing
         h = f.clock.hour % 24
         if 6 <= h < 18 and f.weather == "clear" and self.rnd.random() < 0.35:
-            self.game.sfx.play("amb_bird", 0.25)
+            self.game.sfx.play(f"amb_bird#{self.rnd.randrange(3)}", 0.25)   # 단계 = 다른 새 (amb_bird#0~2)
         elif (h >= 20 or h < 5) and f.season in ("summer", "autumn") and f.weather != "storm":
             self.game.sfx.play("amb_cricket", 0.22)
 
@@ -248,6 +254,8 @@ class CampfireScene(Scene):
         if self.t > end - DIM_IN:
             u = self.t - (end - DIM_IN)
             return (u < half, u / half if u < half else 1 - (u - half) / half)
+        if self.reduce:   # 가운데 페이드 (0.2초 어두워짐 → 시계 → 0.2초 밝아짐)
+            return True, clamp(1 - abs(self.t - end / 2) / 0.2, 0.0, 1.0)
         return True, 0.0
 
     def draw(self, canvas) -> None:
@@ -260,59 +268,108 @@ class CampfireScene(Scene):
             hour, t = f.clock.hour, getattr(self, "real_t", self.t)
             pal = f.scene_palette()
             ls = cam.light_state(hour, f.weather, t)
-            cam.draw_world(canvas, pal, hour, t, ls, cloud_shift=self.applied * 18, sun=f.weather == "clear")
-            f.rain.draw(canvas, pal)
-            f.fog.draw(canvas, pal, camp_fpv.HORIZON, t)
-            f.season_fx.draw(canvas)
+            cam.draw_world(canvas, pal, hour, t, ls, cloud_shift=self.applied * 18, sun=f.weather == "clear",
+                           weather=f.weather, wind=f.wind.x)
+            f.rain.draw(canvas, pal)   # 빗줄기 (낚시 화면 날씨 효과 그대로)
+            self._draw_event_under(canvas, cam, ls)
             cam.draw_light(canvas, ls, t)
-            cam.draw_top(canvas, ls, t, haze=not self.low)
-            cx, by = cam.X(camp_fpv.FIRE[0]), camp_fpv.FIRE[1]
-            self._draw_event_back(canvas, cx, by, 1.0)
-            self._draw_event_front(canvas, cx, by, 1.0)
-            # 두 손: 0.3초에 올라오고 끝나기 0.3초 전에 내려감 · 1.6초 주기 1px 숨쉬기 · 가끔 손가락 오므림
+            cam.draw_top(canvas, ls, t, self.height_k, haze=not self.low)
+            cam.draw_weather_top(canvas, f.weather, ls["nk"], self.reduce)
+            self._draw_event_over(canvas, cam, ls)
+            # 두 손: 0.3초에 올라오고 끝나기 직전 내려감 · 1.6초 주기 1px 숨쉬기 · 가끔 손가락 오므림
             end = self._end_time()
             k_in = ease((self.t - DIM_IN / 2) / 0.3) * ease((end - DIM_IN / 2 - self.t) / 0.15)
             dy = int(round((1 - k_in) * 48)) + (1 if math.sin(t * math.tau / 1.6) > 0 else 0)
             curl = (t % 2.3) < 0.2
             cam.draw_hands(canvas, self.hand_pal, self.hand_look, dy, curl, light=1 - 0.55 * ls["nk"],
                            glow=max(ls["nk"], ls["glow"] / 40))
+            if f.weather in ("rain", "storm"):
+                self._draw_wet(canvas, cam, dy, t)
+            self._draw_event_palm(canvas, cam, dy)
             text(canvas, f"{f.clock.label()} · {WEATHER_KO[f.weather]}", (8, 6), (240, 236, 220), 11, "topleft")
         if black > 0:
             veil = pygame.Surface(canvas.get_size())
             veil.set_alpha(int(255 * clamp(black, 0.0, 1.0)))
             canvas.blit(veil, (0, 0))
 
-    def _draw_event_back(self, canvas, cx: int, by: int, k: float) -> None:
-        ev = self.event
-        if ev is None or not self.ev_started:
-            return
-        if ev["id"] == "meteor" and self.ev_t < 0.6:
-            u = min(1.0, self.ev_t / 0.4)
-            x0, y0 = self.ev_data["x"], self.ev_data["y"]
-            x1, y1 = x0 - 46 * u, y0 + 22 * u
-            pygame.draw.line(canvas, (240, 245, 255), (int(x0 - 46 * max(0.0, u - 0.5)), int(y0 + 22 * max(0.0, u - 0.5))),
-                             (int(x1), int(y1)), 1)
-            if u >= 1.0:
-                canvas.set_at((int(x1), int(y1)), (255, 255, 255))
+    # ── 모닥불의 작은 일 (CAMPFIRE_FPV 🅳 위치 · 모습, 확률 · 문구는 TIME_REST 🅳) ──
+    def _ev(self, eid: str) -> bool:
+        return self.event is not None and self.ev_started and self.event["id"] == eid
 
-    def _draw_event_front(self, canvas, cx: int, by: int, k: float) -> None:
-        ev = self.event
-        if ev is None or not self.ev_started:
-            return
-        eid = ev["id"]
-        if eid == "cat":
+    def _draw_event_under(self, canvas, cam, ls) -> None:
+        """덮개 아래 (불빛 · 어둠을 받음): 나비."""
+        if self._ev("cat"):
             from src.render import village_life as vl
-            walk = min(1.0, self.ev_t / 0.8)
-            x = cx + 96 - 60 * walk   # 오른쪽 풀밭에서 걸어와 불 앞에서 잠
-            vl.draw_cat(canvas, x, by + 14, "walk" if walk < 1.0 else "sleep", -1, self.t, step=self.ev_t * 6)
-        elif eid == "fireflies":
+            walk = min(1.0, self.ev_t / 0.9)
+            x = cam.X(392 - 72 * walk)   # 오른쪽 풀밭에서 걸어와 불 오른쪽 돌 옆 (320, 238) 에 동그랗게
+            vl.draw_cat(canvas, x, 242, "walk" if walk < 1.0 else "sleep", -1, self.t, step=self.ev_t * 6)
+            self._cat_x = x
+
+    def _draw_event_over(self, canvas, cam, ls) -> None:
+        """덮개 위: 나비 등의 불빛 · 별똥별 · 반딧불 · 올빼미."""
+        nk = ls["nk"]
+        if self._ev("cat") and nk > 0.05 and self.ev_t >= 0.9:
+            x = getattr(self, "_cat_x", cam.X(320))
+            col = lerp_color((60, 40, 30), (255, 160, 90), min(1.0, nk))
+            canvas.fill(col, (x - 4, 235, 7, 1))   # 불빛 받은 등 (불 쪽)
+        if self._ev("meteor") and self.ev_t < 0.7:
+            u = min(1.0, self.ev_t / 0.4)   # 하늘 트인 구간 안, 오른쪽 위 → 왼쪽 아래 0.4초
+            x0, y0 = cam.X(312), 18
+            x1, y1 = cam.X(312 - 120 * u), 18 + 52 * u
+            tail = max(0.0, u - 0.35)
+            pygame.draw.line(canvas, (240, 245, 255), (int(x0 - 120 * tail), int(y0 + 52 * tail)), (int(x1), int(y1)), 1)
+            if u >= 1.0 and self.ev_t < 0.55:
+                canvas.set_at((int(x1), int(y1)), (255, 255, 255))
+                canvas.set_at((int(x1) + 1, int(y1)), (200, 210, 240))
+        if self._ev("fireflies"):
             from src.render.map_fx import cfg as map_cfg
             col = tuple(map_cfg()["fireflies"]["color"])   # 반딧불 (DETAILS A-5) 색 그대로
-            for p in self.ev_data["pts"]:
-                if math.sin(self.t * 3 + p[2]) > -0.2:
-                    canvas.fill(col, (int(cx + p[0] * 1.8 + math.sin(self.t + p[2]) * 4), int(by + p[1] * 1.6 - 6), 2, 2))
-        elif eid == "snow":
-            for p in self.ev_data["pts"]:
-                y = by - 90 + ((self.ev_t * 30 + p[2] * 13) % 70)
-                if y < by - 26:   # 불 위에서 녹음
-                    canvas.fill((250, 252, 255), (int(cx + p[0] * 0.8), int(y), 2, 2))
+            for p in self.ev_data.get("pts", []):
+                k = math.sin(self.real_t * 2.4 + p[2])
+                if k > -0.3:
+                    x = cam.X(p[0]) + int(math.sin(self.real_t * 0.9 + p[2]) * 5)
+                    y = int(p[1] + math.sin(self.real_t * 1.3 + p[2] * 2) * 3)
+                    if k > 0.2:   # 밝을 때 둘레 번짐
+                        halo = lerp_color((40, 50, 30), col, 0.45)
+                        canvas.fill(halo, (x - 1, y, 4, 2))
+                        canvas.fill(halo, (x, y - 1, 2, 4))
+                    canvas.fill(col if k > 0.2 else lerp_color(col, (60, 60, 30), 0.5), (x, y, 2, 2))
+        if self._ev("owl"):
+            # 오른쪽 가까운 나뭇가지 위 실루엣 (8×10, 눈 2px 노랑) 이 고개를 한 번 돌림
+            bx, by = cam.X(356), 132
+            rim = lerp_color((30, 26, 32), (120, 132, 170), 0.6)   # 달빛 받은 테두리 (어둠 속 실루엣이 보이게)
+            pygame.draw.line(canvas, (40, 30, 24), (bx - 18, by + 1), (bx + 14, by - 1), 2)   # 가지
+            body = (30, 26, 32)
+            pygame.draw.ellipse(canvas, rim, (bx - 5, by - 11, 10, 12))
+            pygame.draw.ellipse(canvas, body, (bx - 4, by - 10, 8, 10))
+            canvas.fill(rim, (bx - 5, by - 13, 2, 2))   # 귀깃
+            canvas.fill(rim, (bx + 3, by - 13, 2, 2))
+            canvas.fill(body, (bx - 4, by - 12, 2, 2))
+            canvas.fill(body, (bx + 2, by - 12, 2, 2))
+            turn = 0 if self.ev_t < 0.5 else (1 if self.ev_t < 1.1 else 0)
+            ex = bx - 3 + turn * 2
+            canvas.fill((255, 214, 90), (ex, by - 8, 2, 2))
+            if turn == 0:
+                canvas.fill((255, 214, 90), (ex + 4, by - 8, 2, 2))   # 정면: 두 눈 / 옆으로: 한 눈
+
+    def _draw_event_palm(self, canvas, cam, dy) -> None:
+        """눈: 손바닥 위에 눈송이 하나가 내려앉아 녹음."""
+        if not self._ev("snow"):
+            return
+        palm_x, palm_y = cam.X(172), 270 + dy - 21
+        u = self.ev_t
+        if u < 0.9:
+            y = 120 + (palm_y - 120) * (u / 0.9)
+            x = palm_x + math.sin(u * 6) * 4
+            canvas.fill((250, 252, 255), (int(x), int(y), 2, 2))
+        elif u < 1.6:
+            k = 1 - (u - 0.9) / 0.7
+            canvas.fill(lerp_color((200, 220, 240), (250, 252, 255), k), (palm_x, palm_y, 2 if k > 0.5 else 1, 1))
+
+    def _draw_wet(self, canvas, cam, dy, t) -> None:
+        """비: 손 위 물기 점 3~5개 (DETAILS '젖은 손', 번갈아 반짝)."""
+        pts = ((166, -18), (178, -24), (184, -14), (318, -22), (330, -16))
+        n = 3 + int(t * 0.2) % 3
+        for i, (x, y) in enumerate(pts[:n]):
+            on = int(t * 3 + i * 1.7) % 3 != 0
+            canvas.fill((235, 248, 255) if on else (170, 200, 225), (cam.X(x), 270 + dy + y, 1, 1))

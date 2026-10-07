@@ -105,6 +105,16 @@ class CampFPV:
         self._dayshadow = pygame.Surface((w, h - 124), pygame.SRCALPHA)   # 땅 (y 124~) 만
         self._smoke_imgs = {}
         self._hand_cache: dict = {}
+        # 날씨 · 계절 (CF3, 🅳)
+        self.snow: list[list] = []      # [x, y, vy, phase]
+        self.leaves: list[list] = []    # [x, y, phase, col, age]
+        self.sizzle: list[list] = []    # [x, y, age]
+        self.splash: list[list] = []    # [x, y, age]
+        self.sizzle_t = 0.3
+        self.leaf_t = 1.0
+        self.bolt_t = random.Random(seed + 3).uniform(0.7, 1.6)   # 쉬기 한 번(2.5초) 안에 한 번은 치게
+        self.flash = 0.0
+        self.splash_acc = 0.0
         # 하늘 별 (트인 구간 안, 40~60개)
         r = random.Random(seed + 1)
         self.stars = [(r.uniform(SKY_OPEN[0] + 4, SKY_OPEN[1] - 4), r.uniform(4, 96), r.uniform(0.5, 2.0), r.random())
@@ -356,8 +366,9 @@ class CampFPV:
                 for _ in range(3):
                     s.fill(NEEDLE_TIP if self.season != "spring" else (150, 210, 96),
                            (r.x + rnd.randint(2, max(3, rw - 3)), r.bottom - rnd.randint(1, 3), 1, 1))
-                if self.snowy:
-                    s.fill(SNOW, (r.x + 3, r.y + 1, max(2, rw - 8), 1))
+                if self.snowy:   # 가지 윗면 눈 (짧게 두세 조각)
+                    for k in range(rnd.randint(1, 2)):
+                        s.fill(SNOW, (r.x + 3 + k * (rw // 2), r.y + 1 + k, rnd.randint(2, 4), 1))
 
     def _tent(self, s) -> None:
         """텐트 (왼쪽, 꼭대기 x 112 · y 96, 아래 x −30~190 · y 232). 입구가 불 쪽(오른쪽)을 향해 열림."""
@@ -957,6 +968,145 @@ class CampFPV:
             self.rim.set_alpha(int(255 * k))
             canvas.blit(self.rim, self.rim_at)
 
+    # ───────────────── 날씨 · 계절 (CF3, 🅳) ─────────────────
+    PUDDLES = ((108, 252, 22, 5), (414, 240, 18, 4))   # 땅의 작은 물웅덩이 (비)
+
+    def _roof_point(self, r: random.Random) -> tuple[float, float]:
+        """텐트 천 윗면 (꼭대기 줄 · 앞면 오른쪽 선) 위 한 점."""
+        X = self.X
+        if r.random() < 0.55:
+            u = r.random()
+            return X(112 - 182 * u), 96 + 12 * u + 4 * math.sin(math.pi * u) - 1
+        u = r.uniform(0.05, 0.85)
+        return X(112) + (X(190) - X(112)) * u - 4 * math.sin(math.pi * u) + 1, 96 + 136 * u - 1
+
+    def update_weather(self, dt: float, weather: str, snowy: bool, autumn: bool, wind: float, roof_mult: float = 1.0) -> None:
+        r = self.prand
+        rain = weather in ("rain", "storm")
+        fx, top = self.X(FIRE[0]), self.flame_top(0.85 if rain else 1.0)
+        if rain:
+            # 텐트 천 위 빗방울 튀는 점 (빗소리 일이면 두 배)
+            self.splash_acc += dt * (40 if weather == "rain" else 70) * roof_mult
+            while self.splash_acc >= 1:
+                self.splash_acc -= 1
+                x, y = self._roof_point(r)
+                self.splash.append([x, y, 0.0])
+            # 불 위에서 치익: 꼭대기에 흰 김 점 2~4개 (0.3초)
+            self.sizzle_t -= dt
+            if self.sizzle_t <= 0:
+                self.sizzle_t = r.uniform(0.25, 0.5)
+                for _ in range(r.randint(2, 4)):
+                    self.sizzle.append([fx + r.uniform(-12, 12), top + r.uniform(0, 8), 0.0])
+        for p in self.splash:
+            p[2] += dt
+        self.splash = [p for p in self.splash if p[2] < 0.12]
+        for p in self.sizzle:
+            p[2] += dt
+            p[1] -= 22 * dt
+        self.sizzle = [p for p in self.sizzle if p[2] < 0.3]
+        # 폭풍: 3~5초에 한 번 번개 (깜빡임 안전: 3초에 1번 이하)
+        self.flash = max(0.0, self.flash - dt)
+        if weather == "storm":
+            self.bolt_t -= dt
+            if self.bolt_t <= 0:
+                self.bolt_t = r.uniform(3.0, 5.0)
+                self.flash = 0.08
+        # 눈: 천천히, 불 위 40px 안에 들어오면 녹아 사라짐
+        if snowy and weather != "storm":
+            while len(self.snow) < 46:
+                self.snow.append([r.uniform(0, self.w), r.uniform(-20, 0) if self.snow else r.uniform(0, self.h),
+                                  r.uniform(9, 17), r.uniform(0, 6.28)])
+        for f in self.snow:
+            f[1] += f[2] * dt
+            f[0] += (math.sin(f[1] * 0.08 + f[3]) * 8 + wind * 10) * dt
+        self.snow = [f for f in self.snow if f[1] < self.h + 2 and not (abs(f[0] - fx) < 24 and top - 40 < f[1] < top + 12)]
+        # 가을: 낙엽이 가끔 한 장씩
+        if autumn:
+            self.leaf_t -= dt
+            if self.leaf_t <= 0:
+                self.leaf_t = r.uniform(1.0, 2.2)
+                side = r.choice((r.uniform(-self.ox, 150), r.uniform(330, BASE_W + self.ox)))
+                self.leaves.append([self.X(side), r.uniform(20, 70), r.uniform(0, 6.28),
+                                    r.choice(((196, 92, 48), (222, 170, 64), (176, 74, 40))), 0.0])
+        for lf in self.leaves:
+            lf[4] += dt
+            lf[1] += 16 * dt
+            lf[0] += (math.sin(lf[4] * 2.4 + lf[2]) * 14 + wind * 8) * dt
+        self.leaves = [lf for lf in self.leaves if lf[1] < 236]
+
+    def draw_weather_back(self, canvas, weather: str, t: float) -> None:
+        """덮개 아래: 비 웅덩이 (불빛 반사는 위에서)."""
+        if weather not in ("rain", "storm"):
+            return
+        for x, y, w, h in self.PUDDLES:
+            r = pygame.Rect(0, 0, w, h)
+            r.center = (self.X(x), y)
+            pygame.draw.ellipse(canvas, (52, 62, 74), r)
+            pygame.draw.ellipse(canvas, (96, 110, 126), r, 1)
+            k = (t * 1.7 + x) % 1.0   # 빗방울 동그라미
+            rr = pygame.Rect(0, 0, int(2 + 8 * k), max(1, int(1 + 2 * k)))
+            rr.center = (r.centerx + (x % 5) - 2, r.centery)
+            if k < 0.8:
+                pygame.draw.ellipse(canvas, (130, 146, 160), rr, 1)
+
+    def draw_weather_top(self, canvas, weather: str, nk: float, reduce: bool = False) -> None:
+        """덮개 위: 웅덩이 불빛 반사 · 텐트 빗방울 · 치익 김 · 눈 · 낙엽 · 번개."""
+        if weather in ("rain", "storm"):
+            for x, y, w, h in self.PUDDLES:
+                col = lerp_color((150, 168, 190), (255, 170, 96), min(1.0, nk * 1.2))
+                canvas.fill(col, (self.X(x) - w // 4, y, w // 2, 1))
+        for x, y, age in self.splash:
+            canvas.set_at((int(x), int(y)), (210, 226, 240))
+            if age < 0.06:
+                canvas.set_at((int(x) - 1, int(y) - 1), (180, 200, 220))
+                canvas.set_at((int(x) + 1, int(y) - 1), (180, 200, 220))
+        for x, y, age in self.sizzle:
+            canvas.fill((240, 242, 246) if age < 0.2 else (190, 194, 200), (int(x), int(y), 2 if age < 0.15 else 1, 1))
+        for x, y, vy, ph in self.snow:
+            canvas.fill((246, 248, 255), (int(x), int(y), 2 if vy > 13 else 1, 2 if vy > 13 else 1))
+        for x, y, ph, col, age in self.leaves:
+            if int(age * 6 + ph) % 2:
+                canvas.fill(col, (int(x), int(y), 2, 1))
+            else:
+                canvas.fill(col, (int(x), int(y), 1, 2))
+        if self.flash > 0 and not reduce:
+            fl = self._cached(("flash",), lambda: self._white())
+            fl.set_alpha(64)   # 화면 전체 흰색 25% 0.08초
+            canvas.blit(fl, (0, 0))
+
+    def _white(self) -> pygame.Surface:
+        s = pygame.Surface((self.w, self.h))
+        s.fill((255, 255, 255))
+        return s
+
+    def draw_fog(self, canvas, t: float) -> None:
+        """안개: 산등성이 · 중간 숲을 흰색 40% 로 흐리게 (먼 층 위)."""
+        f = self._cached(("fog",), lambda: self._fog_band())
+        canvas.blit(f, (0, 58))
+
+    def _fog_band(self) -> pygame.Surface:
+        s = pygame.Surface((self.w, 92), pygame.SRCALPHA)
+        for y in range(92):
+            a = int(102 * min(1.0, y / 24) * min(1.0, (92 - y) / 12))
+            s.fill((228, 232, 238, a), (0, y, self.w, 1))
+        return s
+
+    def draw_trunk_fog(self, canvas, t: float) -> None:
+        """안개: 가까운 나무 줄기 아래쪽 안개 띠."""
+        band = self._cached(("tfog",), lambda: self._tfog())
+        dx = int(math.sin(t * 0.6) * 3)
+        canvas.blit(band, (dx, 186))
+
+    def _tfog(self) -> pygame.Surface:
+        s = pygame.Surface((self.w, 40), pygame.SRCALPHA)
+        r = random.Random(3)
+        for _ in range(14):
+            w = r.randint(40, 90)
+            x = r.uniform(-20, self.w)
+            for k in range(3):
+                pygame.draw.ellipse(s, (226, 230, 236, 30), (x + k * 4, 10 + r.uniform(-4, 6) + k * 3, w - k * 10, 10))
+        return s
+
     def draw_hands(self, canvas, pal_hand: dict, look: dict | None = None, dy: int = 0, curl: bool = False,
                    light: float = 1.0, glow: float = 0.0) -> None:
         """두 손이 불 쪽으로 손바닥을 펼침 (왼손 x 150~200, 오른손 x 300~350, y 236~270). 같은 모양은 캐시."""
@@ -1036,20 +1186,32 @@ class CampFPV:
         self.draw_hands(canvas, hand_pal, hand_look, hand_dy, light=1 - 0.55 * ls["nk"], glow=ls["nk"])
 
     def draw_world(self, canvas, pal: dict, hour: float, t: float, ls: dict, cloud_shift: float = 0.0,
-                   sun: bool = True) -> None:
+                   sun: bool = True, weather: str = "clear", wind: float = 0.0) -> None:
         """덮개 아래: 하늘 → 먼 산 (+석양 테두리) → 땅 → 그림자 → 가까운 것 → 장작 · 걸이 → 앞 돌 → 연기."""
         self.draw_sky(canvas, pal, hour, t, cloud_shift, visible=sun)
         canvas.blit(self.back_top, (0, 0))   # 먼 산 + 중간 숲
+        if weather == "fog":
+            self.draw_fog(canvas, t)
         canvas.blit(self.back_bot, (0, 124))   # 땅 (불투명)
         if sun:
             self.draw_rim(canvas, hour)
         self.draw_shadows(canvas, ls, hour, sun)
-        canvas.blit(self.mid, (0, 0))    # 나무 · 텐트 · 소품 · 돌 · 장작 · 걸이 · 앞 돌 · 머그컵
+        if weather == "storm":   # 폭풍: 가지가 바람 방향으로 크게 흔들림 (위쪽 ±2px, 줄기 쪽은 덜)
+            sway = math.sin(t * 2.6) * 0.6 + (1 if wind >= 0 else -1) * 0.8
+            dx1, dx2 = int(round(2 * sway)), int(round(1 * sway))
+            canvas.blit(self.mid, (dx1, 0), (0, 0, self.w, 70))
+            canvas.blit(self.mid, (dx2, 70), (0, 70, self.w, 50))
+            canvas.blit(self.mid, (0, 120), (0, 120, self.w, self.h - 120))
+        else:
+            canvas.blit(self.mid, (0, 0))    # 나무 · 텐트 · 소품 · 돌 · 장작 · 걸이 · 앞 돌 · 머그컵
+        if weather == "fog":
+            self.draw_trunk_fog(canvas, t)
         nk = ls["nk"]
         if nk > 0.05:   # 밤: 주전자 아랫면 불빛
             pot = self.pot_rect
             canvas.fill(lerp_color((30, 30, 36), (232, 120, 60), 0.6 * min(1.0, nk)), (pot.x + 2, pot.bottom - 2, pot.w - 4, 2))
         self.draw_smoke(canvas, nk)
+        self.draw_weather_back(canvas, weather, t)
 
     def draw_top(self, canvas, ls: dict, t: float, height_k: float = 1.0, haze: bool = True) -> None:
         """덮개 위: 숯 · 불꽃 · 불티 · 아지랑이 · 김."""
