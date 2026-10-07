@@ -49,6 +49,10 @@ class Fight:
         self.cfg = root["fight"]
         self.fcfg = root["flick"]
         self.gear = gear or root["default_gear"]
+        pm = self.gear.get("perfect_mult", 1.0)
+        if pm != 1.0:   # 비늘석 퍼펙트 판정 구간 +% (46장 S4) — 좋음 구간을 넘지 않게
+            self.cfg = dict(self.cfg)
+            self.cfg["perfect_window_sec"] = min(self.cfg["perfect_window_sec"] * pm, self.cfg["good_window_sec"] * 0.95)
         self.rnd = rnd or random.Random()
         self.fish = fish
         self.size_cm = size_cm
@@ -97,6 +101,7 @@ class Fight:
         self.aim_rate = 0.0         # 낚싯대 방향이 바뀌는 빠르기 (머리 흔들기 판정)
         self.last_pattern_fail: tuple[str, float] | None = None
         self.brain.telegraph_lead = touch_lead  # 모바일: 신규 패턴 예고 +0.1초
+        self.brain.warn_add = self.gear.get("warn_add", 0.0)  # 비늘석 예고 여유 +초 (모든 예고, 늘리기만)
         self.pcfg = self.brain.pcfg
         self.double_perfects = 0
         self.thrash_first = None
@@ -775,6 +780,7 @@ class Fight:
                 rate *= cfg["hook_slack_mult_calm"]  # 몸부림이 없으니 바늘이 덜 빠짐
             # 힘이 약한 물고기는 바늘을 덜 턴다
             rate *= clamp(self.fish.get("power", 1.0), cfg["hook_slack_power_min"], 1.0)
+            rate *= self.gear.get("hook_fill_mult", 1.0)  # 비늘석 바늘 빠짐 저항
             self.hook += rate * self.fish.get("hook_mult", 1.0) * dt  # 황금 변이: 바늘이 더 잘 빠짐
         else:
             self.hook -= cfg["hook_recover_rate"] * dt

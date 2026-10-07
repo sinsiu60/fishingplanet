@@ -6019,7 +6019,7 @@ DT2 화면 날씨 + 바람 · 계절 → DT3 낚시터별 · 행동 반응 · �
 | 항목 | 지금 구조 |
 |---|---|
 | 장비 강화 | 대상 rod · reel · line · net (`equipment.json _rules.enhance_kinds`), +1~+3. 능력치 = 단계당 '다음 티어와의 차이 × gap_frac 0.3' (초록 폭 · 감기 속도 · 내구도 · 뜰채 창 · 실패 거리). 비용 = 장비 가격 × [0.15, 0.3, 0.5] (가격 0 이면 100/250/500원) + 그 장비 **대륙 소재** [5, 12, 20] + 희귀 소재 [0, 0, 3]. 세이브 `data["enhance"]` (장비 id → 단계). 코드: `save_game.py _stat · enhance_gain · enhanced · SaveGame.enhance_level · effective · fight_gear · enhance_cost · enhance`, 화면: `scene/shop.py` '강화' 탭 (+ `inventory.py` · `chest_scene.py` · `interior.py` 표시), 튜토리얼 TG-12 (`tutorials.json` · `tutorial/legacy.py`), 소리 `ui_enhance` |
-| ⚠ 특급 배송 | `save/delivery.py`: 일괄 판매 횟수가 **장비 강화할 때마다 +1번** (최대 5번, 강화 탭 맨 아래) — 강화가 없어지면 이 규칙의 대상이 사라짐 (질문 3) |
+| ⚠ 특급 배송 | `save/delivery.py`: 일괄 판매 횟수 = 특급 배송 **자체 단계** (구매 5,000원 → 단계 강화 10,000/20,000/40,000/80,000원, 최대 5번), 강화 탭 맨 아래 한 줄. ※ S1 보고 때 "장비 강화할 때마다 +1번"이라고 잘못 읽었음 — S4 에서 바로잡음 (46-5) |
 | 물고기 소재 | `data["materials"]` = `{"sharmion": n, "eldrasion": n, "rare": n}` — **3종** (대륙 소재 2 + 희귀 소재). 분해 `SaveGame.disassemble_yield / disassemble`: 일반 1 · 고급 2 · 희귀 4 (+ 희귀 소재 1), 물고기가 잡힌 대륙 소재 |
 | 부옵션 연결 위치 | tension_limit → 낚싯대 초록 구간 위쪽 끝(`rod_green[1]` → `Fight.green_high`, 그 위가 빨강) / line_durability → `line_max` / line_wear → 빨강 손상 `line_red_mult` (`fight.py` 754~758) / reel_speed → `reel_speed` / perfect_window → `fishing_config fight.perfect_window_sec` (`fight.py` 270 · 291 · 360) / hook_hold → 바늘 게이지(`Fight.hook` · 느슨함으로 차는 속도) / twist_resist → `patterns.TwistGauge` 차는 속도 / warning_lead → `brain.cur_telegraph` (지금 `access_mult` 와 같은 자리, 초 단위 더하기) / hook_window → `bite.py` 챔질 창 `timer` (481) / trophy_chance → `bite.roll_size` (상위 10% 구간) / rare_chance → `bite.pick_fish` 가중치 (희귀만) / sell_price → `rank.sell_price` 를 쓰는 판매 · 특급 배송 / material_gain → `disassemble_yield` |
 | 획득 처리 위치 | 포획 결과: `SaveGame.record_catch` → `fishing_scene` catch_news(포획 카드 · 결과 화면) / 일일 · 주간 의뢰 보상: `save/quests.complete` / 상자 개봉: `save/treasure.open_chest` (+ `scene/chest_scene.py`) / 전설 첫 포획: catch_news `new` (전설 연출 카드) / 환상 첫 포획: `phantom.on_catch` (`phantom_new`) / 첫 의뢰 완료: `quests.py` 완료 처리 |
@@ -6071,4 +6071,22 @@ DT2 화면 날씨 + 바람 · 계절 → DT3 낚시터별 · 행동 반응 · �
 **확인**: 희귀 +0→+4 = 9,200원 · 소재 75 정확히 차감, `spent` 기록, +5 시도 = 막힘 · 2,000개를 +4까지 강화 → 모든 돌 부옵션 5개 · 중복 0 ·
 골드 · 소재 부족 이유 · 잠긴 전설 분해 거부 · 장착 중 분해 거부 · +4 희귀 분해 = 8 + 37 = 45개 · 일괄 분해(일반 · 고급 +0 이하, 잠김 1 · 장착 1 빠짐) ·
 연출 타임라인(+1 1.25초 · +4 2.07초, 확정음 0.8 · 도장 1.6, 똑딱 9번 간격 0.033→0.15초 · 0.3초 이후 탭 즉시 결과 · 0.3초 전 탭 무시 · 줄이기 0.3초) · 프레임 그림 확인.
+
+### 46-5. S4 구현: 장착 · 효과 적용 · 장비 강화 제거
+
+| 부분 | 내용 |
+|---|---|
+| 장착 | `scalestone.equip(save, uid, 칸, fighting)` · `unequip`: 칸 4개(rod · reel · line · net), 어떤 비늘석이든 어떤 칸에든, 하나는 한 칸에만 (다른 칸에 있으면 새 칸으로 이동 · 원래 칸은 빔, 그 칸에 있던 것은 보관함으로). 칸에 붙어 있어서 장비를 바꿔도 그대로 (`fight_gear` 가 장착 장비와 상관없이 칸 합계를 씀). 파이팅 중 변경 불가 (`fighting=True` 면 거부 — 화면은 S5에서 마을 상점에서만) |
+| 합계 | `totals(save)` = 장착 4개의 같은 옵션 합 → `{sum, cap, eff (상한 적용), over (초과분)}` (S5 합계 효과 표가 그대로 씀) · `effect(save, id)` / `frac(save, id)` |
+| 연결 (13종) | 장력 한계 → 낚싯대 초록 위쪽 끝 × (1+%) (`fight_gear rod_green[1]`, 빨강이 늦게 시작) · 줄 내구도 → `line_max` × (1+%) · 줄 마모 감소 → `line_red_mult` × (1−%) (온기 장갑과 곱) · 감기 속도 → `reel_speed` × (1+%) · 퍼펙트 판정 구간 → `Fight.cfg perfect_window_sec` × (1+%) (좋음 구간의 95%를 넘지 않게, 점프 · 몸털기 링 그림도 같은 값) · 바늘 빠짐 저항 → 느슨할 때 바늘 게이지가 차는 속도 × (1−%) · 꼬임 저항 → 꼬임 게이지가 차는 속도 × (1−%) (`patterns.Twist`) · 예고 여유 → `brain.warn_add` 초를 모든 예고 끝에 더함 (숙련도 · 접근성 배율 뒤, 펌핑 박자 · 0초 예고는 그대로 — **늘리기만**) · 챔질 여유 → `BiteController.window_add` 초 (늘리기만) · 대물 확률 → `roll_size(trophy=)`: 상위 10%(u ≥ 0.9)가 나올 확률 × (1+%) (원래 확률 = 베타(2, 2.4) 꼬리 적분, 원투 보정 포함 → 아닌 경우를 그 비율만큼 상위 10% 안으로 다시 뽑음) · 희귀 확률 → `pick_fish(rare_pp=)`: '희귀' 등급 몫만 +%p (전설 · 환상 · 변이 · 한정 물고기는 그대로) · 판매가 → 포획 순간 가격 × (1+%) (황금 뜰채 뒤, 상한 10%) · 소재 획득량 → 물고기 분해 대륙 소재 × (1+%) (소수는 확률로 1개 = 기대값 그대로, 희귀 소재는 그대로) |
+| 장비 강화 제거 | `save_game`: `_stat` · `enhance_gain` · `enhanced` · `enhance_level` · `effective` · `enhance_cost` · `enhance` · `data["enhance"]` 삭제. `equipment.json _rules` 강화 항목 삭제 (분해 규칙만 남김). 상점 '강화' 탭 → **'비늘석' 탭** (`scalestone`, 내부 메뉴 '강화' → '비늘석', `interiors.json`), 장비 이름 뒤 `+n` 표시 삭제(상점 · 가방). 구매 탭 능력치 비교 = **장비 자체 능력치** (비늘석 효과 빼고). `balance_sim` 의 `enhanced` 가져오기 삭제 |
+| 특급 배송 | **바로잡음**: 특급 배송의 '강화'는 장비 강화가 아니라 특급 배송 자체 단계(돈 내고 Lv 올림)였음 (46-1 표 고침). 그래서 규칙은 **그대로** 두고(구매 5,000원 · 단계 강화 10,000~80,000원 · 최대 5번), 자리만 '강화' 탭 맨 아래 → '비늘석' 탭 맨 아래로 옮김. 46-2 답 3('비늘석 강화마다 +1번')은 적용하지 않음 — 확인 필요 |
+| TG-12 | 옛 'TG-12 강화'는 강조 대상(강화 탭)이 없어져서 S5 'TG-12 비늘석'으로 바뀔 때까지 시작 조건 `scalestone_tg12` = 항상 거짓 (쉼). 옛 세이브 소급 완료 판정은 비늘석 보유 여부 |
+| 옛 세이브 | `migrate → _refund_enhance` (세이브에 `enhance` 가 있으면 = 비늘석 이전 세이브 전부, 한 번만): 강화 단계 → +0, 쓴 골드 · 소재 **100% 환급** — 옛 비용표 `_OLD_ENHANCE` (장비 가격 × 0.15/0.3/0.5, 가격 0 이면 100/250/500원 · 장비 대륙 소재 5/12/20 · 희귀 소재 0/0/3) · 환영 선물 **희귀 비늘석 1개** · 첫 의뢰를 이미 완료했으면 `first_quest_bonus` 지급 완료 · 전설 · 환상 첫 포획 비늘석은 소급 없음. `scalestone.welcome = {pending, gold, mat, gift}` → 불러온 직후(마을 위) `ScalestoneNoticeScene` 한 번: "장비 강화가 비늘석으로 바뀌었어요!" / "강화에 쓴 골드와 소재는 모두 돌려드렸어요." + 돌려받은 금액 · 환영 선물(그림 · 등급 · 첫 옵션) + [확인] |
+
+**확인**: 장착 이동 · 교체 · 파이팅 중 거부 · 합계(장력 한계 18.2 → 상한 12, 초과 6.2) · 장비를 바꿔도 칸 효과 유지(유리 낚싯대 64 → 71.68) ·
+퍼펙트 0.08 → 0.0836초 · 돌진 예고 0.9 → 1.02초(+0.12) · 희귀 확률 +2.5%p → 저수지 14.4 → 17.0% · 방파제 6.27 → 8.79% (고급 · 일반만 줄어듦) ·
+대물 +12% → 상위 10% 1.32 → 1.49% (×1.125) · 원투 6.40 → 7.15% · 소재 획득 +14.7% → 일반 분해 평균 1.147개 ·
+옛 세이브(유리 +3 · 카본 +2 · 대나무 +1 · 수정 +1) 환급 9,263원(계산 9,263원) · 샤르미온 +59 · 엘드라시온 +5 · 희귀 +3 · 희귀 비늘석 1개 · 첫 의뢰 보너스 처리 ·
+두 번 불러도 한 번만 · 안내 창 그림 확인 · 닫으면 다시 안 뜸. compat_smoke · sound_audit --strict · tutorial_check · story_check · fight_text_check · bake --check · balance_sim 통과.
 

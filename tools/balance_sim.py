@@ -26,7 +26,7 @@ from src.fishing.bite import bait_tier_mult, pick_fish  # noqa: E402
 from src.fishing.fight import Fight  # noqa: E402
 from src.fishing.patterns import PATTERN_IDS, PatternInput  # noqa: E402
 from src.fishing.rank import sell_price  # noqa: E402
-from src.save.save_game import SaveGame, all_fish, enhanced, equipment  # noqa: E402
+from src.save.save_game import SaveGame, all_fish, equipment  # noqa: E402
 
 OUT = os.path.join(ROOT, "build")
 DT = 1 / 60

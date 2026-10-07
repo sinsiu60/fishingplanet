@@ -6,6 +6,7 @@
 
 S2: 데이터 · 아이템 구조 · 첫 부옵션 뽑기 · 획득(포획 · 의뢰 · 상자 · 첫 포획 · 첫 의뢰) · 보관 150개(가득 차면 자동 분해) · 디버그.
 S3: 강화 +1~+4 (단계마다 새 부옵션, 실패 없음) · 비용 · 잠금 · 분해 · 일괄 분해.
+S4: 장착(칸 4개, 하나는 한 칸에만, 칸에 붙어서 장비를 바꿔도 유지) · 장착 4개 합계 + 상한 → effect(save, id).
 소재 = 대륙 소재 2종(sharmion · eldrasion)을 하나처럼 — 많은 쪽부터 쓰고, 분해로 받는 소재는 지금 있는 대륙 쪽 (46-2 답 1).
 """
 import math
@@ -105,6 +106,71 @@ def by_uid(save, uid) -> dict | None:
 def equipped_slot(save, uid) -> str | None:
     eq = state(save)["equipped"]
     return next((s for s in SLOTS if eq.get(s) == uid), None)
+
+
+# ───────────────────────── 장착 · 합계 효과 (S4) ─────────────────────────
+
+def equip(save, uid, slot: str, fighting: bool = False) -> bool:
+    """칸에 장착. 원래 그 칸에 있던 비늘석은 보관함으로(장착만 풀림), 다른 칸에 있던 이 비늘석은 새 칸으로 이동 (원래 칸은 빔).
+    파이팅 중에는 바꿀 수 없음."""
+    if fighting or slot not in SLOTS or by_uid(save, uid) is None:
+        return False
+    eq = state(save)["equipped"]
+    for s in SLOTS:
+        if eq.get(s) == uid:
+            eq[s] = None
+    eq[slot] = uid
+    return True
+
+
+def unequip(save, slot: str, fighting: bool = False) -> bool:
+    if fighting or slot not in SLOTS:
+        return False
+    state(save)["equipped"][slot] = None
+    return True
+
+
+def equipped_stones(save) -> dict:
+    """{칸: 비늘석 | None} (없어진 uid 는 None 으로 정리)."""
+    eq = state(save)["equipped"]
+    out = {}
+    for s in SLOTS:
+        st = by_uid(save, eq.get(s)) if eq.get(s) is not None else None
+        if st is None:
+            eq[s] = None
+        out[s] = st
+    return out
+
+
+def totals(save) -> dict:
+    """장착한 4개의 같은 옵션 합산 → {옵션 id: {"sum", "cap", "eff" (상한 적용), "over" (초과분)}} (붙은 옵션만)."""
+    o = options()["options"]
+    raw: dict = {}
+    for st in equipped_stones(save).values():
+        if st is None:
+            continue
+        for opt in st["opts"]:
+            raw[opt["id"]] = raw.get(opt["id"], 0.0) + opt["v"]
+    out = {}
+    for oid, v in raw.items():
+        cap = o[oid]["cap"]
+        v = _round(o[oid]["unit"], v)
+        eff = min(v, cap)
+        out[oid] = {"sum": v, "cap": cap, "eff": eff, "over": _round(o[oid]["unit"], max(0.0, v - cap))}
+    return out
+
+
+def effect(save, oid: str) -> float:
+    """옵션 합계(상한 적용) — pct/pp 는 % 숫자 그대로(3.2 = 3.2%), sec 는 초. 장착 없으면 0."""
+    if save is None or not isinstance(getattr(save, "data", None), dict) or "scalestone" not in save.data:
+        return 0.0
+    t = totals(save).get(oid)
+    return t["eff"] if t else 0.0
+
+
+def frac(save, oid: str) -> float:
+    """% 옵션을 비율로 (3.2% → 0.032)."""
+    return effect(save, oid) / 100.0
 
 
 # ───────────────────────── 소재 (대륙 소재 2종을 하나처럼) ─────────────────────────

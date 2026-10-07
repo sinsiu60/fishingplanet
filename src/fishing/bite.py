@@ -52,7 +52,8 @@ def limited_here(f: dict, spot: str, level: float | None = None) -> dict:
 
 def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir",
               bait: dict | None = None, rare_bonus: float = 0.0, pref: str | None = None,
-              mods: dict | None = None, season: str | None = None, extra: list | None = None) -> dict | None:
+              mods: dict | None = None, season: str | None = None, extra: list | None = None,
+              rare_pp: float = 0.0) -> dict | None:
     """pref = 지금 루어 리듬(그 리듬을 좋아하는 물고기 ×1.5), mods = 수면 징후 보정.
     season = 지금 계절 (종별 잘 나옴 ×1.5 / 안 나옴 ×0.5, data/seasons.json), extra = [(물고기, 가중치)] 계절·날씨 이벤트 한정 물고기
     (그 낚시터 기준 시간·날씨 조건 없이 추가, 낚이면 spot = 지금 낚시터)."""
@@ -115,6 +116,15 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
         if 0 < rare and share < target:
             k = target * (total - rare) / ((1 - target) * rare)
             weights = [w * k if f["rarity"] in ("rare", "legend") else w for f, w in zip(candidates, weights)]
+    if rare_pp > 0:
+        # 비늘석 희귀 확률: '희귀' 등급만의 몫을 +rare_pp %p (전설 · 한정 · 다른 등급 비율은 그대로 줄어든 만큼 나눔)
+        total = sum(weights)
+        rare = sum(w for f, w in zip(candidates, weights) if f["rarity"] == "rare")
+        if 0 < rare < total:
+            share = rare / total
+            target = min(0.95, share + rare_pp / 100.0)
+            k = target * (total - rare) / ((1 - target) * rare)
+            weights = [w * k if f["rarity"] == "rare" else w for f, w in zip(candidates, weights)]
     return rnd.choices(candidates, weights)[0]
 
 
@@ -131,12 +141,33 @@ def legend_candidate(spot: str, period: str, weather: str, cast_distance: float,
     return None
 
 
-def roll_size(fish: dict, cast_distance: float, rnd=random) -> float:
+_TOP10: dict = {}
+
+
+def _top10_chance(far: bool) -> float:
+    """크기 상위 10% (u ≥ 0.9) 가 나올 원래 확률 — 베타(2, 2.4) (+ 원투면 절반 확률로 max(u, 균등))."""
+    if far not in _TOP10:
+        n = 4000   # 베타(2, 2.4) 꼬리를 수치 적분 (한 번만)
+        from math import gamma
+        c = gamma(4.4) / (gamma(2.0) * gamma(2.4))
+        p = sum(c * x * (1 - x) ** 1.4 for x in (0.9 + (i + 0.5) * 0.1 / n for i in range(n))) * 0.1 / n
+        _TOP10[False] = p
+        _TOP10[True] = 0.5 * p + 0.5 * (1 - (1 - p) * 0.9)
+    return _TOP10[far]
+
+
+def roll_size(fish: dict, cast_distance: float, rnd=random, trophy: float = 0.0) -> float:
+    """trophy = 비늘석 대물 확률 (0.12 = +12%): 상위 10%가 나올 확률에 (1 + trophy)를 곱함 (46장 S4)."""
     lo, hi = fish["size_cm"]
     u = rnd.betavariate(2.0, 2.4)
     # 멀리 던지면 큰 개체 확률 ↑ (DESIGN.md 1장)
-    if cast_distance >= load_json("fishing_config.json")["bite"]["far_cast_distance"] and rnd.random() < 0.5:
+    far = cast_distance >= load_json("fishing_config.json")["bite"]["far_cast_distance"]
+    if far and rnd.random() < 0.5:
         u = max(u, rnd.random())
+    if trophy > 0 and u < 0.9:
+        p0 = _top10_chance(far)
+        if rnd.random() < p0 * trophy / (1 - p0):
+            u = rnd.uniform(0.9, 1.0)
     return round(lo + (hi - lo) * u, 1)
 
 
@@ -166,6 +197,8 @@ class BiteController:
         self.bait: dict | None = None        # 장착한 미끼
         self.rare_bonus = 0.0                # 행운의 떡밥 (+%p)
         self.window_extra = 1.0              # 바람개비 찌: 0.95
+        self.window_add = 0.0                # 비늘석 챔질 여유 +초 (46장 S4)
+        self.rare_pp = 0.0                   # 비늘석 희귀 확률 +%p — 희귀 등급만 (전설 · 환상 · 변이 영향 없음)
         self.legend = False                  # 이번 입질이 전설인지
         self.phantom: dict | None = None     # 환상어 (33장): 착수 순간 판정 → 연출 동안 대기 → 가짜 입질 없이 진짜 입질
         # 루어 (U7)
@@ -264,7 +297,8 @@ class BiteController:
     def _pick(self, pref: str | None = None) -> dict | None:
         return pick_fish(self.period, self.weather, self.cast_distance, self.rnd, self.spot, self.bait,
                          rare_bonus=self.rare_bonus, pref=pref, mods=self.sign_mods or None,
-                         season=getattr(self, "season", None), extra=getattr(self, "extra_pool", None))
+                         season=getattr(self, "season", None), extra=getattr(self, "extra_pool", None),
+                         rare_pp=getattr(self, "rare_pp", 0.0))
 
     def _update_lure(self, dt: float) -> None:
         """WAIT 중 루어: 리듬 점수 → 후보 물고기 관심도 → 대기 시계·그림자."""
@@ -479,7 +513,7 @@ class BiteController:
                     bait_mult = (self.bait.get("window_mult", 1.0) if self.bait else 1.0) \
                         * bait_tier_mult(self.bait, "bait_tier_window_bonus")
                     self.timer = cfg["bite_window_sec"] * self.fish.get("bite_window_mult", 1.0) * bait_mult \
-                        * self.window_extra
+                        * self.window_extra + self.window_add
                     self.bite_t = 0.0
                     self.tip_pull = 12.0
                     self.events.append("bite")

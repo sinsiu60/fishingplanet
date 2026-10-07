@@ -45,11 +45,56 @@ def _deep_merge(base: dict, data: dict) -> dict:
     """data 값을 우선하되, base에만 있는 키(새 버전에서 생긴 필드)는 중첩 dict 안까지 채운다."""
     out = dict(base)
     for k, v in data.items():
-        if isinstance(v, dict) and isinstance(base.get(k), dict) and k not in ("dex", "enhance", "treasure_dex"):
+        if isinstance(v, dict) and isinstance(base.get(k), dict) and k not in ("dex", "treasure_dex"):
             out[k] = _deep_merge(base[k], v)
         else:
             out[k] = v
     return out
+
+
+# 장비 강화 (46장 S4 에서 제거) — 옛 세이브 환급용 옛 비용표 (equipment.json _rules 에 있던 값 그대로)
+_OLD_ENHANCE = {"gold_frac": [0.15, 0.3, 0.5], "gold_free": [100, 250, 500], "materials": [5, 12, 20], "rare_materials": [0, 0, 3]}
+
+
+def _refund_enhance(data: dict) -> None:
+    """강화된 장비 → +0, 강화에 쓴 골드 · 소재 100% 환급 (옛 비용표 기준) + 처음 불러올 때 안내 1번 · 환영 선물 희귀 비늘석 1개.
+    이미 첫 의뢰를 완료했으면 first_quest_bonus 지급 완료 (환영 선물로 대신). 전설 · 환상 첫 포획 비늘석은 소급하지 않음."""
+    enh = data.pop("enhance", {}) or {}
+    items = {}
+    for kind, lst in equipment().items():
+        if kind.startswith("_") or not isinstance(lst, list):
+            continue
+        for g in lst:
+            items[g["id"]] = g
+    gold = 0
+    mats: dict = {}
+    for gid, lvl in enh.items():
+        g = items.get(gid)
+        if g is None or not isinstance(lvl, int):
+            continue
+        cont = g.get("continent", "sharmion")
+        for i in range(min(lvl, 3)):
+            gold += round(g["price"] * _OLD_ENHANCE["gold_frac"][i]) if g["price"] > 0 else _OLD_ENHANCE["gold_free"][i]
+            mats[cont] = mats.get(cont, 0) + _OLD_ENHANCE["materials"][i]
+            mats["rare"] = mats.get("rare", 0) + _OLD_ENHANCE["rare_materials"][i]
+    data["money"] = data.get("money", 0) + gold
+    m = data.setdefault("materials", {})
+    for k, v in mats.items():
+        m[k] = m.get(k, 0) + v
+    st = data.setdefault("scalestone", {})
+    st.setdefault("items", [])
+    st.setdefault("equipped", {k: None for k in ("rod", "reel", "line", "net")})
+    st.setdefault("next_id", 1)
+    st["first_quest_bonus"] = st.get("first_quest_bonus") or data.get("stats", {}).get("quests_done", 0) > 0
+    from src.save import scalestone
+
+    class _D:   # scalestone.grant 는 save.data 만 씀
+        pass
+    holder = _D()
+    holder.data = data
+    gift = scalestone.grant(holder, "rare", "welcome", "sharmion")
+    st["welcome"] = {"pending": True, "gold": gold, "mat": sum(mats.values()),
+                     "gift": gift["stone"]["uid"] if gift["stone"] else None}
 
 
 def migrate(data: dict, slot: int | None = None) -> dict:
@@ -106,6 +151,8 @@ def migrate(data: dict, slot: int | None = None) -> dict:
         done = data.get("stats", {}).get("quests_done", 0) > 0
         data["scalestone"] = {"items": [], "equipped": {k: None for k in ("rod", "reel", "line", "net")},
                               "first_quest_bonus": done, "next_id": 1}
+    if "enhance" in data:
+        _refund_enhance(data)
     if "legend_sales" not in data:
         # 전설 감가(A+D) 이전에 잡아 둔 살림망 전설은 제값으로 (규칙이 생기기 전에 잡은 것)
         legends = {f["id"] for f in load_json("fish.json")["fish"] if f["rarity"] == "legend"}
@@ -154,50 +201,6 @@ def spot_continent(spot_id: str) -> str:
     return "sharmion"
 
 
-def _stat(kind: str, g: dict) -> dict:
-    """강화 대상 능력치 (모두 '클수록 좋음'으로 맞춤: 실패 거리는 역수)."""
-    if kind == "rod":
-        return {"green": g["green"][1] - g["green"][0]}
-    if kind == "reel":
-        return {"speed": g["speed"]}
-    if kind == "line":
-        return {"durability": g["durability"]}
-    return {"window": g["window"], "fail_distance": 1.0 / g["fail_distance"]}
-
-
-def enhance_gain(kind: str, item: dict, level: int) -> dict:
-    """능력치별 배율. 단계당 '다음 티어와의 차이 × gap_frac' → +3이어도 다음 티어 기본 성능보다 조금 낮다.
-    최고 티어는 바로 아래 티어와의 차이를 쓴다. 티어를 모르는 장비는 단계당 per_level 고정."""
-    r = rules()
-    shop = {g["tier"]: g for g in equipment().get(kind, [])}
-    tier = item.get("tier")
-    if tier in shop and (tier + 1 in shop or tier - 1 in shop):
-        lo, hi = (shop[tier], shop[tier + 1]) if tier + 1 in shop else (shop[tier - 1], shop[tier])
-        a, b = _stat(kind, lo), _stat(kind, hi)
-        return {k: 1.0 + (b[k] / a[k] - 1.0) * r["gap_frac"] * level for k in a}
-    return {k: 1.0 + r["per_level"] * level for k in _stat(kind, item)}
-
-
-def enhanced(kind: str, item: dict, level: int) -> dict:
-    """강화 단계만큼 능력치를 좋은 방향으로 올린 사본."""
-    if level <= 0:
-        return item
-    k = enhance_gain(kind, item, level)
-    g = copy.deepcopy(item)
-    if kind == "rod":
-        lo, hi = g["green"]
-        c, w = (lo + hi) / 2, (hi - lo) * k["green"]
-        g["green"] = [round(c - w / 2, 1), round(c + w / 2, 1)]
-    elif kind == "reel":
-        g["speed"] = round(g["speed"] * k["speed"], 3)
-    elif kind == "line":
-        g["durability"] = round(g["durability"] * k["durability"])
-    elif kind == "net":
-        g["window"] = round(g["window"] * k["window"], 3)
-        g["fail_distance"] = round(g["fail_distance"] / k["fail_distance"], 2)
-    return g
-
-
 def new_data() -> dict:
     eq = equipment()
     now = time.time()
@@ -220,7 +223,6 @@ def new_data() -> dict:
         # ── 확장 (v2) ──
         "continent": "sharmion",
         "unlocked_continents": ["sharmion"],
-        "enhance": {},                                   # 장비 id → 강화 단계
         # 비늘석 (46장): 보관함 · 장착 칸 4개 · 첫 의뢰 보너스 지급 여부 · 다음 고유 번호
         "scalestone": {"items": [], "equipped": {"rod": None, "reel": None, "line": None, "net": None},
                        "first_quest_bonus": False, "next_id": 1},
@@ -553,61 +555,34 @@ class SaveGame:
             ls["day"], ls["counts"] = _today(), {}
         ls["counts"][item["id"]] = ls["counts"].get(item["id"], 0) + 1
 
-    def enhance_level(self, item_id: str) -> int:
-        return self.data["enhance"].get(item_id, 0)
-
-    def effective(self, kind: str, item: dict) -> dict:
-        """강화가 반영된 장비 수치 (원본은 건드리지 않음)."""
-        lvl = self.enhance_level(item["id"]) if self.owns(kind, item["id"]) else 0
-        return enhanced(kind, item, lvl)
-
     def fight_gear(self, period: str = "day") -> dict:
-        """Fight에 넘길 장비 수치 (강화 + 상자 아이템 효과 반영)."""
-        rod, reel, line, net = (self.effective(k, self.equipped(k)) for k in GEAR_KINDS)
+        """Fight에 넘길 장비 수치 (상자 아이템 효과 + 장착한 비늘석 합계 효과, DESIGN 46장 S4).
+        장비 강화는 없어짐 — 비늘석은 칸에 붙어서 장비를 바꿔도 그대로 적용."""
+        from src.save import scalestone as ss
+        rod, reel, line, net = (self.equipped(k) for k in GEAR_KINDS)
         green = list(rod["green"])
         if rod["id"] == "moon_rod" and period in ("night", "day"):
             # 달빛 낚싯대: 밤 +10%, 낮 -5%
             k = 1.10 if period == "night" else 0.95
             c, w = (green[0] + green[1]) / 2, (green[1] - green[0]) * k
             green = [c - w / 2, c + w / 2]
-        return {"rod_green": green, "rod_tier": rod.get("tier", 1), "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
-                "drag_cushion": reel.get("drag_cushion", 0.0), "line_max": line["durability"], "net_window_sec": net["window"],
-                "net_fail_distance": net["fail_distance"],
-                "line_red_mult": 0.9 if self.charm_on("warm_gloves") else 1.0,
+        green[1] = round(green[1] * (1 + ss.frac(self, "tension_limit")), 2)   # 장력 한계: 초록 위쪽 끝 +% (빨강이 늦게 시작)
+        return {"rod_green": green, "rod_tier": rod.get("tier", 1),
+                "reel_speed": reel["speed"] * (1 + ss.frac(self, "reel_speed")), "drag_steps": reel["drag_steps"],
+                "drag_cushion": reel.get("drag_cushion", 0.0),
+                "line_max": round(line["durability"] * (1 + ss.frac(self, "line_durability"))),
+                "net_window_sec": net["window"], "net_fail_distance": net["fail_distance"],
+                "line_red_mult": (0.9 if self.charm_on("warm_gloves") else 1.0) * (1 - ss.frac(self, "line_wear")),
                 "perfect_heal": 0.10 if rod["id"] == "dragon_scale_rod" else 0.0,
-                "auto_drag": reel["id"] == "ancient_reel"}
+                "auto_drag": reel["id"] == "ancient_reel",
+                "perfect_mult": 1 + ss.frac(self, "perfect_window"),
+                "hook_fill_mult": 1 - ss.frac(self, "hook_hold"),
+                "twist_mult": 1 - ss.frac(self, "twist_resist"),
+                "warn_add": ss.effect(self, "warning_lead")}
 
     def gear_tier(self, kind: str) -> int:
         """장착한 장비 티어 (전설 미끼처럼 티어 없는 미끼는 0)."""
         return self.equipped(kind).get("tier", 0)
-
-    # ── 강화 ──
-    def enhance_cost(self, kind: str, item: dict) -> dict | None:
-        """다음 강화 비용 {gold, materials, rare, continent}. 최대 단계면 None."""
-        r = rules()
-        lvl = self.enhance_level(item["id"])
-        if kind not in r["enhance_kinds"] or lvl >= r["max_level"]:
-            return None
-        gold = round(item["price"] * r["gold_frac"][lvl]) if item["price"] > 0 else r["gold_free"][lvl]
-        return {"gold": gold, "materials": r["materials"][lvl], "rare": r["rare_materials"][lvl],
-                "continent": item.get("continent", "sharmion")}
-
-    def enhance(self, kind: str, item: dict) -> str:
-        if not self.owns(kind, item["id"]):
-            return "not_owned"
-        cost = self.enhance_cost(kind, item)
-        if cost is None:
-            return "max"
-        mats = self.data["materials"]
-        if self.data["money"] < cost["gold"]:
-            return "money"
-        if mats.get(cost["continent"], 0) < cost["materials"] or mats.get("rare", 0) < cost["rare"]:
-            return "materials"
-        self.data["money"] -= cost["gold"]
-        mats[cost["continent"]] -= cost["materials"]
-        mats["rare"] -= cost["rare"]
-        self.data["enhance"][item["id"]] = self.enhance_level(item["id"]) + 1
-        return "ok"
 
     def bait_locked_reason(self, bait: dict) -> str | None:
         """판매 조건을 못 채웠으면 이유, 아니면 None."""
@@ -790,6 +765,14 @@ class SaveGame:
             from src.fishing.mutation import cfg as mcfg
             k = mcfg()["kinds"]["cunning"]["material_mult"]  # 교활 변이: 분해 소재 ×2
             out = {key: v * k for key, v in out.items()}
+        from src.save import scalestone as ss
+        mg = ss.frac(self, "material_gain")
+        if mg > 0:   # 비늘석 소재 획득량 +% (대륙 소재만, 소수는 확률로 1개 — 기대값 그대로)
+            import random as _r
+            for key in list(out):
+                if key != "rare":
+                    v = out[key] * (1 + mg)
+                    out[key] = int(v) + (1 if _r.random() < v - int(v) else 0)
         return out
 
     def disassemble(self, index: int) -> dict | None:

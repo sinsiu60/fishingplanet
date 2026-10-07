@@ -164,7 +164,7 @@ OTHER = {
     "TG-11": {"title": "의뢰 게시판", "who": "haru", "start": "event:quests_open",
               "steps": [("info", "quests.daily", "tap"), ("info", "quests.cond", "tap"), ("info", "quests.reward", "tap"),
                         ("info", "quests.refresh", "tap"), ("info", "quests.weekly", "tap")]},
-    "TG-12": {"title": "강화", "who": "haru", "start": "event:interior_ready:haru", "need_cond": "has_materials",
+    "TG-12": {"title": "강화", "who": "haru", "start": "event:interior_ready:haru", "need_cond": "scalestone_tg12",
               "after": ["TG-07"],
               "steps": [("spotlight", "interior.menu.enhance", "cond:shop_enhance"), ("spotlight", "shop.list", "cond:shop_sel_any"),
                         ("info", "shop.enhance.cost", "tap"), ("info", "shop.enhance.stars", "tap")]},

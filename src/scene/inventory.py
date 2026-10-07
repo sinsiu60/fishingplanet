@@ -107,9 +107,6 @@ class InventoryScene(Scene):
         it = e.get("item")
         if e["type"] == "mat":
             return e["name"]
-        if e["type"] == "gear" and e["kind"] in GEAR_KINDS:
-            lv = self.save.enhance_level(it["id"])
-            return it["name"] + (f" +{lv}" if lv else "")
         return it["name"]
 
     def _equipped(self, e: dict) -> bool:
@@ -190,9 +187,7 @@ class InventoryScene(Scene):
         s, d = self.save, self.save.data
         out = []
         for k in GEAR_KINDS:
-            g = s.equipped(k)
-            lv = s.enhance_level(g["id"])
-            out.append(("gear", KIND_KO[k], g["name"] + (f" +{lv}" if lv else "")))
+            out.append(("gear", KIND_KO[k], s.equipped(k)["name"]))
         out.append(("bait", "미끼", s.equipped("bait")["name"]))
         fid = d["float"]["equipped"]
         fname = next((f["name"] for f in load_json("floats.json")["floats"] if f["id"] == fid), None)

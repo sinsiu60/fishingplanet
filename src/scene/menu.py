@@ -71,6 +71,9 @@ def start_game(game, save: SaveGame) -> None:
         # 게임 시작 = 마을에서 (35-3): 부두 → 지도 → 낚시터
         from src.scene.village import VillageScene, village_for
         game.scenes.push(VillageScene(game, fishing, village_for(save)))
+    from src.scene import scalestone_notice
+    if scalestone_notice.pending(game.save):   # 장비 강화 → 비늘석 안내 + 환영 선물 (46장 S4, 옛 세이브 처음 한 번)
+        game.scenes.push(scalestone_notice.ScalestoneNoticeScene(game))
     game.fade_in(0.7)
 
 

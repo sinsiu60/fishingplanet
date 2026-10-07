@@ -222,7 +222,7 @@ class InteriorScene(Scene):
     def _choose(self, item: str) -> None:
         self.game.sfx.play("ui_click")
         from src.scene import dialogue
-        if item in ("buy", "sell", "enhance"):
+        if item in ("buy", "sell", "scalestone"):
             self._open_shop(item)
         elif item == "talk":
             self.say(dialogue.pick_seq(self.game, self.npc, self.cont))
@@ -238,7 +238,7 @@ class InteriorScene(Scene):
         g = self.game.guide
         if mode == "buy" and g.run is not None and g.run["id"] == "TG-18" and "sell" not in tabs:
             tabs = ["sell"] + list(tabs)   # 특수 찌 튜토리얼: 돈이 모자라면 같은 창에서 팔 수 있게
-        title = {"buy": "사기", "sell": "팔기", "enhance": "강화"}[mode]
+        title = {"buy": "사기", "sell": "팔기", "scalestone": "비늘석"}[mode]
         self.shop = ShopScene(self.game, self.fishing, tab=tab or tabs[0], frame=(130, 6, 342, 258), host=self, tabs=tabs,
                               title=f"{self.nc['sign']} · {title}")
         self.react_line = None

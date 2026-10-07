@@ -27,6 +27,7 @@ from src.render.phantom_fx import PhantomFx, phantom_palette
 from src.fishing import phantom
 from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
+from src.save.scalestone import frac as _ss_frac
 from src.audio import theme_sfx
 from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
 from src.scene.base import Scene
@@ -1204,7 +1205,8 @@ class FishingScene(Scene):
         gcwatch.settle()  # 낚시터 장면 객체를 얼려 파이팅 중 GC 부담을 줄인다 (v0.8.10)
         c = self.cast
         fish = self.bite.fish
-        size = roll_size(fish, self.bite.cast_distance)
+        from src.save import scalestone as _ss
+        size = roll_size(fish, self.bite.cast_distance, trophy=_ss.frac(self.save, "trophy_chance"))
         # 변이 (U5): 챔질 순간 굴림 (테스트: F10 강제 지정)
         from src.fishing import mutation, weather_events
         force = getattr(self, "force_mut", None)
@@ -2401,6 +2403,9 @@ class FishingScene(Scene):
         if buffs.get("lucky_casts", 0) > 0:
             buffs["lucky_casts"] -= 1
         self.bite.window_extra = 0.95 if self.save.charm_on("pinwheel_float") else 1.0
+        from src.save import scalestone as _ss
+        self.bite.window_add = _ss.effect(self.save, "hook_window")   # 비늘석 챔질 여유 (늘리기만)
+        self.bite.rare_pp = _ss.effect(self.save, "rare_chance")      # 비늘석 희귀 확률 (희귀 등급만)
         ph = None
         from src.tutorial import scripts
         self.bite.script = scripts.plan(self.game, "bite") if self.training is None else None   # TG-01 대본 입질
@@ -3156,6 +3161,9 @@ class FishingScene(Scene):
                 # 황금 뜰채: 크기 +3% (판매가도 그만큼)
                 f.result["size"] = round(f.result["size"] * 1.03, 1)
                 f.result["price"] = int(round(f.result["price"] * 1.03))
+            sp = _ss_frac(self.save, "sell_price")
+            if sp > 0:   # 비늘석 판매가 +% (합계 상한 10%, 46장 S4)
+                f.result["price"] = int(round(f.result["price"] * (1 + sp)))
             muts = f.result.get("mutations") or []
             from src.fishing import mutation
             mk = mutation.cfg()["kinds"]
@@ -4307,7 +4315,7 @@ class FishingScene(Scene):
 
         fish_cues.draw(canvas, {"fight": f, "sigs": sigs, "anchor": mp(self._fish_screen()), "apex": apex,
                                 "touch": self.touch, "t": self.t, "flick_cfg": self.flick_cfg,
-                                "fight_cfg": self.fish_cfg["fight"],
+                                "fight_cfg": f.cfg,
                                 "judge_busy": any(it["t"] < 0.8 for it in self.popups.items)})
 
     def _layer(self, canvas, area=None) -> pygame.Surface:

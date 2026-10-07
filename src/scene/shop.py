@@ -10,7 +10,7 @@ from src.core.config import load_json
 from src.render import gear_icon
 from src.render.fish_draw import RANK_COLORS, draw_fish_fit
 from src.fishing.bite import bait_tier_mult
-from src.save.save_game import baits, enhanced, equipment, rules
+from src.save.save_game import baits, equipment
 from src.fishing.mutation import label as mut_label
 from src.platform.detect import IS_MOBILE
 from src.scene.base import Scene
@@ -19,8 +19,8 @@ from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
 
 TABS = [("sell", "판매"), ("rod", "낚싯대"), ("reel", "릴"), ("line", "줄"), ("net", "뜰채"), ("bait", "미끼"),
-        ("float", "특수 찌"), ("enhance", "강화")]
-GROUP = {"sell": 0, "rod": 1, "reel": 1, "line": 1, "net": 1, "bait": 1, "float": 1, "enhance": 2}   # 탭 구분선
+        ("float", "특수 찌"), ("scalestone", "비늘석")]
+GROUP = {"sell": 0, "rod": 1, "reel": 1, "line": 1, "net": 1, "bait": 1, "float": 1, "scalestone": 2}   # 탭 구분선
 KIND_KO = {"rod": "낚싯대", "reel": "릴", "line": "줄", "net": "뜰채", "bait": "미끼"}
 MAT_KO = {"sharmion": "샤르미온 소재", "eldrasion": "엘드라시온 소재", "rare": "희귀 소재"}
 ROW_H = 19          # 구매·강화 목록 한 줄
@@ -179,14 +179,9 @@ class ShopScene(Scene):
             return sorted(lst, key=lambda b: (b.get("tier") is None, b.get("tier") or 0, b["price"]))  # 전설 미끼는 맨 뒤
         if self.kind == "float":
             return load_json("floats.json")["floats"]
-        if self.kind == "enhance":
-            out = []
-            for k in rules()["enhance_kinds"]:
-                for g in sorted(equipment()[k], key=lambda g: g["tier"]):
-                    if self.save.owns(k, g["id"]):
-                        out.append((k, g))
-            out.append(("delivery", {"id": "delivery", "name": "특급 배송 시스템", "tier": 0}))   # 야외 일괄 판매 (하루 n번)
-            return out
+        if self.kind == "scalestone":
+            # 비늘석 탭 (46장): 장비 강화 탭 자리. 비늘석 목록 · 장착 칸은 S5 — 특급 배송 시스템은 그대로 이 탭 맨 아래
+            return [("delivery", {"id": "delivery", "name": "특급 배송 시스템", "tier": 0})]   # 야외 일괄 판매 (하루 n번)
         return sorted(equipment()[self.kind], key=lambda g: g["tier"])
 
     def _extra(self) -> dict | None:
@@ -345,7 +340,7 @@ class ShopScene(Scene):
             if msg:
                 self._say(*msg)
             return
-        if self.kind == "enhance":
+        if self.kind == "scalestone":
             kind, gear = item
             if kind == "delivery":
                 from src.save import delivery
@@ -358,15 +353,6 @@ class ShopScene(Scene):
                 elif res == "money":
                     self._say("돈이 부족해요", ui.BAD)
                 return
-            res = self.save.enhance(kind, gear)
-            if res == "ok":
-                self.game.sfx.play("ui_enhance")
-                self._react("enhance")
-                self._say(f"{gear['name']} +{self.save.enhance_level(gear['id'])} 강화 성공!", ui.GOOD)
-            elif res == "money":
-                self._say("돈이 부족해요", ui.BAD)
-            elif res == "materials":
-                self._say("소재가 부족해요 (판매 탭에서 물고기 분해)", ui.BAD)
             return
         if self.save.owns(self.kind, item["id"]):
             if self.save.data["gear"][self.kind] == item["id"]:
@@ -614,8 +600,8 @@ class ShopScene(Scene):
         self.sel = max(0, min(self.sel, len(rows) - 1)) if rows else 0
         if self.kind == "sell":
             self._draw_sell(canvas, rows)
-        elif self.kind == "enhance":
-            self._draw_enhance(canvas, rows)
+        elif self.kind == "scalestone":
+            self._draw_scalestone(canvas, rows)
         else:
             self._draw_buy(canvas, rows)
         self._draw_bottom(canvas)
@@ -651,8 +637,6 @@ class ShopScene(Scene):
             return self.kind == "float" and self.tut_picked and cur == "paralysis_float"
         if name == "shop_sel_any":
             return self.tut_picked
-        if name == "shop_enhance":
-            return self.kind == "enhance"
         return None
 
     def _mark_targets(self, rows) -> None:
@@ -678,7 +662,7 @@ class ShopScene(Scene):
             T.mark_ui(self, f"shop.row.{rid}", r)
             if self.kind == "sell" and rid == first:
                 T.mark_ui(self, "shop.row.first", r)
-            if self.kind not in ("sell", "enhance"):
+            if self.kind not in ("sell", "scalestone"):
                 tiers.append(pygame.Rect(r.x + 4, r.y + 1, 24, (r.h - 2) if self.wide else 14))
         if tiers:
             T.mark_ui(self, "shop.list.tier", tiers[0].unionall(tiers))
@@ -692,7 +676,7 @@ class ShopScene(Scene):
             T.mark_ui(self, "shop.btn.bulk", self.sell_all_btn.rect)
         elif rows:
             T.mark_ui(self, "shop.btn.action", self.action_btn.rect)
-            if self.kind != "enhance":
+            if self.kind != "scalestone":
                 T.mark_ui(self, "shop.detail.compare", self._info_area())
                 T.mark_ui(self, "shop.detail.price", (D.x + 4, D.bottom - 35, D.w - 8, 18))
 
@@ -720,7 +704,7 @@ class ShopScene(Scene):
         if self.msg_t > 0:
             text(canvas, su.fit(self.msg, self.close_btn.rect.x - fr.x - 16), (fr.x + 8, y), self.msg_col, 11, "midleft")
         elif not IS_MOBILE:
-            verb = "강화" if self.kind == "enhance" else "구매"
+            verb = "선택" if self.kind == "scalestone" else "구매"
             text(canvas, f"↑↓ 선택   Enter {verb}   {'Esc' if self.host else 'B'} 닫기", (fr.x + 8, y), su.SUB, 11,
                  "midleft")
 
@@ -814,14 +798,9 @@ class ShopScene(Scene):
                 text(canvas, lab, (right, sy), su.GRAY, 11, "midright")
             else:
                 sx = su.price(canvas, it["price"], (right, sy), su.WHITE if st == "buy" else su.RED).x
-            lvl = self.save.enhance_level(it["id"]) if st in ("owned", "equipped") and kind != "float" else 0
             nx = r.x + 46 if self.wide else r.x + 30
             nw = (sx - nx - 2) if self.wide else (r.right - 4 - nx)
             name = it["name"]
-            if lvl and self.wide:   # 강화 단계: 넓으면 이름 뒤 (자리가 모자라면 붙여서)
-                name = f"{name} +{lvl}" if su.width(f"{name} +{lvl}") <= nw else f"{name}+{lvl}"
-            elif lvl:               # 좁은 패널: 아래 단 그림 옆
-                su.btext(canvas, f"+{lvl}", (r.x + 47, sy), su.YELLOW, 11, "midleft")
             text(canvas, su.fit(name, nw), (nx, ny), su.GRAY if locked else su.WHITE, 11, "midleft")
             if ex is not None and i == 0:
                 canvas.fill(su.BORDER, (L.x + 6, r.bottom, L.w - 12, 1))
@@ -860,8 +839,7 @@ class ShopScene(Scene):
         # 이름 + 티어 배지
         tier = "★" if is_extra else self._tier_label(it)
         br = su.badge(canvas, tier, (D.right - 6, D.y + 88), su.YELLOW, bold=True)
-        lvl = self.save.enhance_level(it["id"]) if st in ("owned", "equipped") and kind != "float" else 0
-        name = it["name"] + (f" +{lvl}" if lvl else "")
+        name = it["name"]
         ncol = tuple(it["color"]) if kind == "float" and st != "locked" else su.YELLOW
         su.btext(canvas, su.fit(name, br.x - x - 6), (x, D.y + 88), ncol, 11, "midleft")
         # 설명 한 줄 (주의할 것이 있으면 그 자리에: 잠김 이유 · 비늘)
@@ -941,12 +919,11 @@ class ShopScene(Scene):
         kind = self.kind
         x = area.x
         cur = self.save.equipped(kind)
-        mine = self.save.effective(kind, it)
-        now = self.save.effective(kind, cur)
+        mine, now = it, cur   # 장비 자체 능력치 (비늘석 효과는 빼고 비교, 46장)
         same = it["id"] == cur["id"]
         allv: dict = {}
         for g in equipment()[kind] + [cur, it]:
-            for label, v, _, _ in stat_rows(kind, self.save.effective(kind, g)):
+            for label, v, _, _ in stat_rows(kind, g):
                 allv[label] = max(allv.get(label, 0), abs(v))
         pairs = list(zip(stat_rows(kind, mine), stat_rows(kind, now)))[:3]
         per = max(1, area.h // 34)
@@ -1263,97 +1240,28 @@ class ShopScene(Scene):
         su.button(canvas, cancel, "취소", "outline", self.mouse)
 
     # ── 강화 탭 ──
-    def _draw_enhance(self, canvas, rows) -> None:
+    def _draw_scalestone(self, canvas, rows) -> None:
+        """비늘석 탭 (46장 S4: 장비 강화 탭 자리). 지금은 특급 배송 시스템 한 줄 — 비늘석 목록 · 장착 칸 · 상세는 S5."""
         L = self.LIST
         mats = self.save.data["materials"]
-        short = {"sharmion": "샤르미온", "eldrasion": "엘드라시온", "rare": "희귀"}
-        mline = "소재 " + " · ".join(f"{short[k]} {mats.get(k, 0)}" for k in ("sharmion", "eldrasion", "rare"))
-        if su.width(mline) > L.w - 12:
-            mline = " · ".join(f"{s} {mats.get(k, 0)}" for k, s in (("sharmion", "샤르미온"), ("eldrasion", "엘드라"),
-                                                                      ("rare", "희귀")))
+        mline = f"소재 {mats.get('sharmion', 0) + mats.get('eldrasion', 0)}개"
         text(canvas, su.fit(mline, L.w - 12), (L.x + 6, L.bottom - 8), su.SUB, 11, "midleft")
-        if not rows:
-            text(canvas, "강화할 장비가 없어요", L.center, ui.DIM, 11, "center")
-            self.action_btn.enabled = False
-            return
         for i, (kind, g) in enumerate(rows):
             r = self._row_rect(i)
             if r is None:
                 continue
             su.row_bg(canvas, r, i == self.sel, r.collidepoint(self.mouse))
             ny, sy = (r.centery, r.centery) if self.wide else (r.y + 8, r.y + 19)
-            if kind == "delivery":
-                from src.save import delivery
-                dl = delivery.level(self.save)
-                gear_icon.draw(canvas, kind, g, (r.x + 30, sy - 7, 14, 14))
-                st = f"Lv{dl}" if dl else "미보유"
-                sr = text(canvas, st, (r.right - 4, sy), su.YELLOW if dl else su.SUB, 11, "midright")
-                nx = r.x + 48 if self.wide else r.x + 9
-                text(canvas, su.fit(g["name"], (sr.x - nx - 4) if self.wide else (r.right - 4 - nx)), (nx, ny), su.WHITE,
-                     11, "midleft")
-                continue
-            lvl = self.save.enhance_level(g["id"])
-            su.btext(canvas, f"T{g['tier']}", (r.x + 9, ny), su.YELLOW, 11, "midleft")
+            from src.save import delivery
+            dl = delivery.level(self.save)
             gear_icon.draw(canvas, kind, g, (r.x + 30, sy - 7, 14, 14))
-            right = r.right - 4
-            if lvl:
-                right = su.btext(canvas, f"+{lvl}", (right, sy), su.YELLOW, 11, "midright").x - 4
-            kr = text(canvas, KIND_KO[kind], (right, sy), su.SUB, 11, "midright")
-            nx = r.x + 48 if self.wide else r.x + 30
-            nw = (kr.x - nx - 4) if self.wide else (r.right - 4 - nx)
-            text(canvas, su.fit(g["name"], nw), (nx, ny), su.WHITE, 11, "midleft")
-        n = len(rows)
-        if n > self._visible():
-            self._scrollbar(canvas, n, self._visible(), L.y + 2, L.bottom - 16)
-        D = self.DETAIL
-        kind, g = rows[self.sel]
-        if kind == "delivery":
-            self._draw_delivery_detail(canvas, g)
-            return
-        lvl = self.save.enhance_level(g["id"])
-        x = D.x + 6
-        box = pygame.Rect(D.x + 6, D.y + 6, D.w - 12, 70)
-        su.pic_box(canvas, box)
-        gear_icon.draw(canvas, kind, g, (box.centerx - 32, box.centery - 32, 64, 64))
-        stars = "★" * lvl + "☆" * (rules()["max_level"] - lvl)
-        text(canvas, stars, (box.right - 4, box.y + 8), su.YELLOW, 11, "midright")
-        from src.tutorial import targets as T   # TG-12 강화: 단계 별
-        T.mark_ui(self, "shop.enhance.stars", (box.right - 6 - su.width(stars), box.y + 1, su.width(stars) + 4, 14))
-        su.btext(canvas, su.fit(f"{g['name']} +{lvl}", D.w - 12), (x, D.y + 88), su.YELLOW, 11, "midleft")
-        cost = self.save.enhance_cost(kind, g)
-        yy = D.y + 106
-        now = enhanced(kind, g, lvl)
-        nxt = enhanced(kind, g, lvl + 1) if cost else now
-        for (label, v0, fmt, up), (_, v1, _, _) in zip(stat_rows(kind, now), stat_rows(kind, nxt)):
-            text(canvas, label, (x, yy), su.WHITE, 11, "midleft")
-            s = f"{fmt.format(v0)}" + (f" → {fmt.format(v1)}" if cost else "")
-            (su.btext if cost and v1 != v0 else text)(canvas, s, (D.right - 6, yy), su.GREEN if cost and v1 != v0 else su.WHITE,
-                                                     11, "midright")
-            yy += 13
-        yy += 4
-        b = self.action_btn
-        if cost is None:
-            text(canvas, "최대 강화 (+3)", (x, yy), su.GREEN, 11, "midleft")
-            b.label, b.enabled, style = "최대 강화", False, "dim"
-        else:
-            from src.tutorial import targets as T   # TG-12 강화: 재료 칸
-            T.mark_ui(self, "shop.enhance.cost", (x - 2, yy - 7, D.w - 10, 40 if cost["rare"] else 27))
-            have_gold = self.save.money >= cost["gold"]
-            have_mat = mats.get(cost["continent"], 0) >= cost["materials"]
-            have_rare = mats.get("rare", 0) >= cost["rare"]
-            su.price(canvas, cost["gold"], (x, yy), su.WHITE if have_gold else su.RED, anchor="midleft", bold=True)
-            yy += 13
-            text(canvas, f"{MAT_KO[cost['continent']]} {mats.get(cost['continent'], 0)}/{cost['materials']}",
-                 (x, yy), su.WHITE if have_mat else su.RED, 11, "midleft")
-            yy += 13
-            if cost["rare"]:
-                text(canvas, f"희귀 소재 {mats.get('rare', 0)}/{cost['rare']}", (x, yy),
-                     su.WHITE if have_rare else su.RED, 11, "midleft")
-            text(canvas, "강화는 실패하지 않아요", (x, D.bottom - 31), su.SUB, 11, "midleft")
-            b.label = f"+{lvl + 1} 강화"
-            b.enabled = have_gold and have_mat and have_rare
-            style = "fill" if b.enabled else "dim"
-        su.button(canvas, b.rect, b.label, style, self.mouse)
+            st = f"Lv{dl}" if dl else "미보유"
+            sr = text(canvas, st, (r.right - 4, sy), su.YELLOW if dl else su.SUB, 11, "midright")
+            nx = r.x + 48 if self.wide else r.x + 9
+            text(canvas, su.fit(g["name"], (sr.x - nx - 4) if self.wide else (r.right - 4 - nx)), (nx, ny), su.WHITE,
+                 11, "midleft")
+        if rows:
+            self._draw_delivery_detail(canvas, rows[self.sel][1])
 
     def _draw_delivery_detail(self, canvas, g: dict) -> None:
         """특급 배송 시스템: 야외에서 일괄 판매 하루 n번 (단계 = 횟수, 최대 5)."""

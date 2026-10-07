@@ -215,7 +215,7 @@ def draw(canvas, fight, signals: list[dict], touch: bool, left_handed: bool, t: 
     spread = cfg()["slots"]["ring_spread"]
     k = OPTS["scale"]
     ks = int(size * k)
-    fc = load_json("fishing_config.json")["fight"]
+    fc = getattr(fight, "cfg", None) or load_json("fishing_config.json")["fight"]   # 비늘석 퍼펙트 판정 구간이 반영된 값 (46장 S4)
     used = {"L": 0, "R": 0}
     for s in signals:
         base = L if s["hand"] == "L" else R

@@ -27,7 +27,7 @@ def done_from(data: dict) -> list[str]:
         "TG-09": catches >= 5,
         "TG-10": st.get("chests_opened", 0) > 0,
         "TG-11": data.get("quests", {}).get("done", 0) > 0 or bool(data.get("quests", {}).get("boards")),
-        "TG-12": bool(data.get("enhance")),
+        "TG-12": bool(data.get("scalestone", {}).get("items")),
         "TG-13": catches >= 2,
         "TG-14": bool(seen_story),
         "TG-15": data.get("season_seen") is not None,

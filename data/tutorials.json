@@ -1338,7 +1338,7 @@
    "title": "강화",
    "who": "haru",
    "start": "event:interior_ready:haru",
-   "need_cond": "has_materials",
+   "need_cond": "scalestone_tg12",
    "after": [
     "TG-07"
    ],

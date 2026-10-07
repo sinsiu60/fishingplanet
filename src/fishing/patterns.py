@@ -235,7 +235,7 @@ class Twist(Judge):
 
     def during(self, dt, inp, ok):
         tg = self.fight.twist
-        tg.value += self.c["rise"] * dt
+        tg.value += self.c["rise"] * self.fight.gear.get("twist_mult", 1.0) * dt   # 비늘석 꼬임 저항
         if tg.check_snap():
             self.snapped = True
 

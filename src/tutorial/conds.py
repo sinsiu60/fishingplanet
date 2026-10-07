@@ -54,6 +54,8 @@ def check(game, name: str, run) -> bool:
         return any(t.startswith("TG-P") for t in d.get("tutorial", {}).get("done", []))
     if name == "has_fish":
         return bool(d["keepnet"])
+    if name == "scalestone_tg12":
+        return False   # 장비 강화 제거 (46장 S4) — TG-12 는 S5 에서 'TG-12 비늘석'으로 교체될 때까지 쉼
     if name == "has_materials":
         return sum(d.get("materials", {}).values()) > 0
     if name == "second_fishing":
