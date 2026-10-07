@@ -27,7 +27,7 @@ from src.core.config import load_json  # noqa: E402
 from src.fishing import fight as fight_mod  # noqa: E402
 from src.save.save_game import all_fish  # noqa: E402
 
-OUT = os.path.join(ROOT, "build", "rank_exam_records.json")
+OUT = os.path.join(ROOT, "build", os.environ.get("RANK_REC", "rank_exam_records.json"))
 TARGET = {"average": {"S": (0.10, 0.15), "A": (0.35, 0.45), "B": (0.30, 0.40), "C": (0.05, 0.15)},
           "skilled": {"S": (0.30, 0.40), "A": (0.40, 0.50), "B": (0.0, 1.0), "C": (0.0, 0.03)}}
 NEW = {"line_max": 30, "time_max": 20, "signal_max": 50, "signal_none": 35, "good_credit": 0.6, "per_miss": 6,
@@ -79,8 +79,10 @@ def _spot_pool(spot_id: str) -> list:
 
 
 def _job(args):
-    spot_id, skill, n, seed = args
-    _instrument()
+    spot_id, skill, n, seed = args[:4]
+    live = hasattr(fight_mod.Fight(all_fish()[0], 30, 20, 0, 0), "opp")   # EX2 뒤: 게임이 직접 센 값을 씀
+    if not live:
+        _instrument()
     rnd = random.Random(seed)
     spot = next(s for s in load_json("spots.json")["spots"] if s["id"] == spot_id)
     pool = _spot_pool(spot_id)
@@ -98,12 +100,15 @@ def _job(args):
             fish = rnd.choices([p[0] for p in pool], [p[1] for p in pool])[0]
             r = bs.bot_fight(fish, spot, gear, bs.SKILLS[skill], rnd)
             f = holder["f"]
-            ex = f.__dict__.get("_ex", {"P": 0, "G": 0, "M": 0})
-            flick_p = sum(1 for e in f.events if e == "flick_perfect")
-            flick_g = sum(1 for e in f.events if e == "flick_good")
-            flick_m = sum(1 for e in f.events if e == "flick_miss")
-            P = ex["P"] - getattr(f, "double_perfects", 0) + flick_p   # 더블 퍼펙트 보너스는 기회가 아님
-            G, M = ex["G"] + flick_g, ex["M"] + flick_m
+            if live:
+                P, G, M = f.opp["P"], f.opp["G"], f.opp["M"]
+            else:
+                ex = f.__dict__.get("_ex", {"P": 0, "G": 0, "M": 0})
+                flick_p = sum(1 for e in f.events if e == "flick_perfect")
+                flick_g = sum(1 for e in f.events if e == "flick_good")
+                flick_m = sum(1 for e in f.events if e == "flick_miss")
+                P = ex["P"] - getattr(f, "double_perfects", 0) + flick_p   # 더블 퍼펙트 보너스는 기회가 아님
+                G, M = ex["G"] + flick_g, ex["M"] + flick_m
             lo, hi = fish["size_cm"]
             row = {"fish": fish["id"], "rarity": fish["rarity"], "ok": r["ok"], "P": P, "G": G, "M": M,
                    "misses": f.misses, "elapsed": round(f.elapsed, 2), "par": round(f.par, 2),
@@ -111,8 +116,9 @@ def _job(args):
             if f.result:
                 sc = f.result["score"]
                 row.update(rank=f.result["rank"], dmg=round(f.result["line_damage"], 4), old_perfects=f.perfects,
-                           old=dict(perfect=sc["perfect_pts"], line=sc["line_pts"], time=sc["time_pts"], miss=sc["miss_pts"],
-                                    score=sc["score"]))
+                           price=f.result["price"], base=f.fish["base_price"],
+                           old=dict(perfect=sc.get("perfect_pts", 0), line=sc["line_pts"], time=sc["time_pts"],
+                                    miss=sc["miss_pts"], score=sc["score"], signal=sc.get("signal_pts", 0)))
             rows.append(row)
     finally:
         fight_mod.Fight.__init__ = orig_init
@@ -337,10 +343,66 @@ def qualify(runs: int = 200, dex_r: float = 0.8, star_r: float = 0.3, s_rate: fl
     return res
 
 
+def live_report() -> None:
+    """EX2 뒤 실제 게임 랭크 (record 를 RANK_REC=rank_exam_live.json 으로 다시 돌린 뒤)."""
+    data = json.load(open(OUT, encoding="utf-8"))
+    pm = load_json("fishing_config.json")["rank"]["price_mult"]
+    allr = {"average": [], "skilled": []}
+    print("| 낚시터 | 보통 S/A/B/C | 잘함 S/A/B/C | 보통 평균 배율 |")
+    print("|---|---|---|---|")
+    for sp, by in data.items():
+        for sk in allr:
+            allr[sk] += by[sk]
+        da, ds = dist(by["average"]), dist(by["skilled"])
+        print(f"| {sp} | {fmt(da)} | {fmt(ds)} | {avg_mult(da, pm):.3f} |")
+    for sk, rows in allr.items():
+        d = dist(rows)
+        ok = [r for r in rows if r["ok"]]
+        print(f"- {sk}: {fmt(d)} · 평균 판매 배율 {avg_mult(d, pm):.3f} · 성공 {len(ok) / len(rows) * 100:.1f}% · "
+              f"S 인데 퍼펙트 모자라 A: {sum(1 for r in ok if r['rank'] == 'A' and r['P'] < 3 and r['old']['score'] >= 96) / len(ok) * 100:.1f}%")
+
+
+def gold() -> None:
+    """낚시터별 시간당 판매 골드: 개편 전(EX1 기록 · 옛 식 · 옛 배율) vs 개편 뒤(실제 게임 기록 · 새 식 · 새 배율).
+    한 마리 값 = 기본가 × 크기/평균 × 랭크 배율 (S 크기 +10%), 시간당 = 성공률 × 50 × 평균."""
+    old = json.load(open(os.path.join(ROOT, "build", "rank_exam_records.json"), encoding="utf-8"))
+    new = json.load(open(os.path.join(ROOT, "build", "rank_exam_live.json"), encoding="utf-8"))
+    rc = load_json("fishing_config.json")["rank"]
+    fish = {f["id"]: f for f in all_fish()}
+    OLD_PM = {"S": 2.0, "A": 1.3, "B": 1.0, "C": 0.8}
+
+    def val(r, pm):
+        f = fish[r["fish"]]
+        lo, hi = f["size_cm"]
+        size = (lo + r["u"] * (hi - lo)) * (1 + rc["s_size_bonus"] if r["rank"] == "S" else 1)
+        return f["base_price"] * size / ((lo + hi) / 2) * pm[r["rank"]]
+
+    def per_h(rows, pm):
+        ok = [r for r in rows if r["ok"]]
+        return len(ok) / len(rows) * 50 * statistics.mean(val(r, pm) for r in ok)
+    print("| 낚시터 | 보통 개편 전 | 보통 개편 뒤 | 차이 | 잘함 개편 전 | 잘함 개편 뒤 | 차이 |")
+    print("|---|---|---|---|---|---|---|")
+    tot = {"average": [0, 0], "skilled": [0, 0]}
+    for sp in old:
+        cells = []
+        for sk in ("average", "skilled"):
+            a, b = per_h(old[sp][sk], OLD_PM), per_h(new[sp][sk], rc["price_mult"])
+            tot[sk][0] += a
+            tot[sk][1] += b
+            cells += [f"{a:,.0f}", f"{b:,.0f}", f"{(b / a - 1) * 100:+.1f}%"]
+        print(f"| {sp} | " + " | ".join(cells) + " |")
+    for sk, (a, b) in tot.items():
+        print(f"- {sk} 전체 합: {a:,.0f} → {b:,.0f} ({(b / a - 1) * 100:+.1f}%)")
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "report"
     if cmd == "record":
         record(int(sys.argv[2]) if len(sys.argv) > 2 else 300)
+    elif cmd == "gold":
+        gold()
+    elif cmd == "live":
+        live_report()
     elif cmd == "qualify":
         kw = dict(a.split("=") for a in sys.argv[2:])
         qualify(int(kw.get("runs", 200)), float(kw.get("dex", 0.8)), float(kw.get("star", 0.3)), float(kw.get("s", 0.125)))

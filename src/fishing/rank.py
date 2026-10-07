@@ -9,17 +9,23 @@ def par_time(cast_distance: float, stamina: float, power: float = 1.0) -> float:
     return f["par_base_sec"] + (f["par_per_meter"] * cast_distance + f["par_per_stamina"] * stamina) * power_k
 
 
-def compute_score(perfects: int, misses: int, line_damage: float, elapsed: float, par: float) -> dict:
+def compute_score(opp: dict, misses: int, line_damage: float, elapsed: float, par: float, legend: bool = False) -> dict:
+    """새 랭크 (BAEK_EXAM 🅰-2, DESIGN.md 49-2): 줄 관리 + 시간 + 신호 대응 − 실수, 기본 점수 없음.
+    opp = 응답 기회의 {"P": 퍼펙트, "G": 좋음, "M": 놓침}. 신호 대응 = (퍼펙트 + 좋음 × good_credit) / 기회 × signal_max,
+    기회가 0번이면 signal_none. S 는 점수 + 퍼펙트 S_min_perfects 번 이상. 전설 · 환상은 좋음을 legend_good_credit 으로 (길게 싸우는 만큼)."""
     r = load_json("fishing_config.json")["rank"]
-    perfect_pts = min(r["perfect_max"], perfects * r["per_perfect"])
-    line_pts = (1.0 - max(0.0, min(1.0, line_damage))) * r["line_weight"]
+    line_pts = (1.0 - max(0.0, min(1.0, line_damage))) * r["line_max"]
     if elapsed <= par:
-        time_pts = r["time_weight"]
+        time_pts = r["time_max"]
     else:
-        time_pts = max(0.0, r["time_weight"] * (1.0 - (elapsed - par) / par))
+        time_pts = max(0.0, r["time_max"] * (1.0 - (elapsed - par) / par))
+    P, G, M = opp.get("P", 0), opp.get("G", 0), opp.get("M", 0)
+    n = P + G + M
+    gc = r["legend_good_credit"] if legend else r["good_credit"]
+    signal_pts = r["signal_none"] if n == 0 else r["signal_max"] * min(1.0, (P + gc * G) / n)
     miss_pts = -misses * r["per_miss"]
-    score = r["base"] + perfect_pts + line_pts + time_pts + miss_pts
-    if score >= r["S"]:
+    score = line_pts + time_pts + signal_pts + miss_pts
+    if score >= r["S"] and P >= r["S_min_perfects"]:
         rank = "S"
     elif score >= r["A"]:
         rank = "A"
@@ -27,8 +33,9 @@ def compute_score(perfects: int, misses: int, line_damage: float, elapsed: float
         rank = "B"
     else:
         rank = "C"
-    return {"score": score, "rank": rank, "perfect_pts": perfect_pts, "line_pts": line_pts,
-            "time_pts": time_pts, "miss_pts": miss_pts}
+    return {"score": score, "rank": rank, "line_pts": line_pts, "time_pts": time_pts, "signal_pts": signal_pts,
+            "miss_pts": miss_pts, "opps": n, "perfects": P,
+            "s_blocked": score >= r["S"] and P < r["S_min_perfects"]}   # 점수는 S 인데 퍼펙트가 모자라 A
 
 
 def final_size(size_cm: float, rank: str) -> float:

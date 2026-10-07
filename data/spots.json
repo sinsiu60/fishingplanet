@@ -203,7 +203,7 @@
     "dex_pct": 65,
     "all_gear_tier": 4,
     "legend": "marlin",
-    "s_total": 15,
+    "s_total": 5,
     "cost": 15000
    },
    "theme": {
@@ -609,7 +609,7 @@
      "borealis"
     ],
     "legend_s": 1,
-    "s_eldra": 30
+    "s_eldra": 10
    },
    "float_req": 5,
    "theme": {

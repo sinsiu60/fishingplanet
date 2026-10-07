@@ -42,8 +42,9 @@ SPOT_TIER = {s["id"]: s.get("gear_tier", 1) for s in load_json("spots.json")["sp
 DEFICIT_SUCCESS = {"common": [1.0, 1.0, 0.9], "uncommon": [1.0, 0.95, 0.5], "rare": [1.0, 0.85, 0.1], "legend": [1.0, 0.05, 0.0]}
 PERIODS = [(6.0, "morning"), (10.0, "day"), (17.0, "evening"), (20.0, "night")]
 # 봇은 장력 수치를 정확히 보고 반응하므로 사람보다 잘한다 → 진행 시뮬에선 사람 기준으로 보정
-HUMAN = {"skilled": {"success": 0.92, "ranks": {"S": 0.35, "A": 0.40, "B": 0.20, "C": 0.05}},
-         "average": {"success": 0.80, "ranks": {"S": 0.15, "A": 0.40, "B": 0.35, "C": 0.10}}}
+# 랭크 비율은 새 랭크 식(DESIGN 49-2) 봇 실측 분포
+HUMAN = {"skilled": {"success": 0.92, "ranks": {"S": 0.37, "A": 0.57, "B": 0.05, "C": 0.01}},
+         "average": {"success": 0.80, "ranks": {"S": 0.10, "A": 0.64, "B": 0.20, "C": 0.06}}}
 
 
 def gear_for_tier(tier: int) -> dict:

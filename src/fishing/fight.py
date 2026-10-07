@@ -54,6 +54,14 @@ class Fight:
             self.cfg = dict(self.cfg)
             self.cfg["perfect_window_sec"] = min(self.cfg["perfect_window_sec"] * pm, self.cfg["good_window_sec"] * 0.95)
         self.rnd = rnd or random.Random()
+        # 크기 → 파이팅 난이도 (BAEK_EXAM 🅰-7): 일반 · 고급 · 희귀만, 같은 종이면 큰 놈이 더 세고 오래 버팀 (랭크 점수엔 안 넣음)
+        self.size_k = 1.0
+        if fish.get("rarity") in ("common", "uncommon", "rare") and not fish.get("exam"):
+            lo, hi = fish.get("size_cm", (size_cm, size_cm))
+            u = clamp((size_cm - lo) / max(1e-6, hi - lo), 0.0, 1.0)   # 변이 '거대'는 1로 자름
+            sp, st = root["fight"].get("size_power", [1.0, 1.0]), root["fight"].get("size_stamina", [1.0, 1.0])
+            fish = dict(fish, power=fish.get("power", 1.0) * lerp(sp[0], sp[1], u))
+            self.size_k = lerp(st[0], st[1], u)
         self.fish = fish
         self.size_cm = size_cm
         self.brain = FishBrain(fish, self.rnd)
@@ -70,7 +78,7 @@ class Fight:
         # 힘센 물고기의 울렁임 (장력이 천천히 크게 오르내림) — 좋은 낚싯대(넓은 초록)일수록 버티기 쉽다
         self.heave_amp = heave_amp(fish, self.cfg, self.gear.get("rod_tier"))
         self.heave_phase = self.rnd.uniform(0, math.tau)
-        self.stamina_max = float(fish.get("stamina", 100))
+        self.stamina_max = float(fish.get("stamina", 100)) * self.size_k
         self.is_legend = fish.get("rarity") == "legend"
         if self.is_legend:   # 전설은 최소 2분 싸우게 (fishing_config legend_stamina_mult, 줄 손상은 legend_line_damage_mult 로 보정)
             self.stamina_max *= self.cfg.get("legend_stamina_mult", 1.0)
@@ -106,6 +114,8 @@ class Fight:
         self.double_perfects = 0
         self.thrash_first = None
         self.perfects = self.goods = self.misses = 0
+        # 신호 대응 (새 랭크, BAEK_EXAM 🅰-2): 판정이 있던 기회마다 퍼펙트 / 좋음 / 놓침 (패턴 성공은 등급으로, 더블 퍼펙트 보너스는 빼고)
+        self.opp = {"P": 0, "G": 0, "M": 0}
         self.perfect_streak = 0
         self.elapsed = 0.0
         self.par = rank_mod.par_time(cast_distance, self.stamina_max, fish.get("power", 1.0))
@@ -308,7 +318,7 @@ class Fight:
         else:
             b.jump_judged = True
             if kind == "perfect" and self.thrash_first == "perfect":
-                self._perfect()  # 더블 퍼펙트: 퍼펙트 보상 ×2
+                self._perfect(bonus=True)  # 더블 퍼펙트: 퍼펙트 보상 ×2 (응답 기회는 아님)
                 self.double_perfects += 1
                 self.events.append("double_perfect")
 
@@ -321,6 +331,7 @@ class Fight:
             return
         b.jump_judged = True
         self.misses += 1
+        self.opp["M"] += 1
         self.perfect_streak = 0
         if self.combo:
             self.combo.fail()
@@ -382,6 +393,7 @@ class Fight:
                 self.brain.lose_burst(0.1)
                 self.perfects += 1
                 self.perfect_streak += 1
+            self.opp["P" if perfect else "G"] += 1
             self.events.append("flick_perfect" if perfect else "flick_good")
 
     def _update_turn_flick(self) -> None:
@@ -406,6 +418,7 @@ class Fight:
             if self.combo:
                 self.combo.fail()
             self.misses += 1
+            self.opp["M"] += 1
             self.perfect_streak = 0
             self.last_judge = "flick_miss"
             self.events.append("flick_miss")
@@ -455,7 +468,9 @@ class Fight:
             self.drag = self.auto_drag_prev
             self.auto_drag_prev = None
 
-    def _perfect(self) -> None:
+    def _perfect(self, bonus: bool = False) -> None:
+        if not bonus:
+            self.opp["P"] += 1
         heal = self.gear.get("perfect_heal", 0.0)
         if heal:
             self.line = min(float(self.line_max), self.line + self.line_max * heal)  # 용린 낚싯대
@@ -468,6 +483,7 @@ class Fight:
         self.events.append("perfect")
 
     def _good(self) -> None:
+        self.opp["G"] += 1
         self.goods += 1
         self.perfect_streak = 0
         self.stamina -= self.cfg["good_stamina"]
@@ -492,9 +508,11 @@ class Fight:
         j = self._judge(pid)
         # 연출 등급 (PERFECT / GREAT): 판정·랭크엔 영향 없음
         self.last_grade = "perfect" if result == "ok" and j is not None and j.perfect() else "good"
+        self.opp["M" if result == "fail" else "P" if self.last_grade == "perfect" else "G"] += 1
         self.events.append(f"pattern_{result}:{pid}")
 
     def _miss(self, kind: str) -> None:
+        self.opp["M"] += 1
         if self.combo:
             self.combo.fail()
         self.misses += 1
@@ -893,7 +911,8 @@ class Fight:
     def _caught(self) -> None:
         self.phase = "caught"
         damage = clamp(self.line_damage / self.line_max, 0, 1)
-        score = rank_mod.compute_score(self.perfects, self.misses, damage, self.elapsed, self.par)
+        score = rank_mod.compute_score(self.opp, self.misses, damage, self.elapsed, self.par,
+                                       legend=self.fish.get("rarity") in ("legend", "phantom"))
         size = rank_mod.final_size(self.size_cm, score["rank"])
         price = rank_mod.sell_price(self.fish, size, score["rank"])
         if self.mutations:
@@ -905,7 +924,7 @@ class Fight:
         self.result = {
             "fish": self.fish, "size": size, "rank": score["rank"], "score": score,
             "price": price, "mutations": list(self.mutations), "twin": self.twin_brains is not None,
-            "perfects": self.perfects, "misses": self.misses, "line_damage": damage,
+            "perfects": self.perfects, "misses": self.misses, "line_damage": damage, "opp": dict(self.opp),
             "elapsed": self.elapsed, "par": self.par,
         }
         self.events.append("caught")

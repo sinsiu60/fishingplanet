@@ -20,6 +20,8 @@ ROOT = X.ROOT
 DATA = os.path.join(ROOT, "data", "story")
 NAMES = ("scenes", "journal", "phone", "goals", "letters", "chapters")
 BASE = sys.argv[1] if len(sys.argv) > 1 else "add4f6e"
+# 기준 커밋 뒤 사용자가 승인한 해금 조건 변경 (낚시터, 키): (전, 후)
+APPROVED_UNLOCK = {("deep", "s_total"): (15, 5), ("world_tree", "s_eldra"): (30, 10)}   # 랭크 개편 (DESIGN 49-2)
 errors: list[str] = []
 
 
@@ -122,8 +124,11 @@ def check_unchanged() -> None:
 
     old, new = js("data/spots.json")
     if old is not None:
-        o = {s["id"]: s.get("unlock") for s in old["spots"]}
+        o = {s["id"]: dict(s.get("unlock") or {}) for s in old["spots"]}
         n = {s["id"]: s.get("unlock") for s in new["spots"]}
+        for (sid, key), (before, after) in APPROVED_UNLOCK.items():   # 승인된 변경은 기준에 반영
+            if o.get(sid, {}).get(key) == before:
+                o[sid][key] = after
         if o != n:
             errors.append("[안 바뀜] 낚시터 해금 조건이 바뀌었다 (data/spots.json)")
 

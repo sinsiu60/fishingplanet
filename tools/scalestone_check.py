@@ -38,7 +38,7 @@ SPOTS = {s["id"]: s for s in load_json("spots.json")["spots"]}
 STAGE = {"reservoir": "샤르미온 초반", "valley": "샤르미온 초반", "breakwater": "샤르미온 중반", "offshore": "샤르미온 후반",
          "deep": "샤르미온 후반", "secret": "샤르미온 후반"}
 FISH_PER_H = 50
-RANKS = {"S": 0.35, "A": 0.40, "B": 0.20, "C": 0.05}   # balance_sim HUMAN 숙련
+RANKS = {"S": 0.37, "A": 0.57, "B": 0.05, "C": 0.01}   # 새 랭크 (DESIGN 49-2): 봇 잘함 실측 분포
 FIGHT_OPTS = ["tension_limit", "line_durability", "line_wear", "reel_speed", "perfect_window", "hook_hold", "twist_resist",
               "warning_lead"]
 

@@ -3,6 +3,7 @@ import math
 
 import pygame
 
+from src.core.config import load_json
 from src.core.fonts import get_font
 from src.core.mathutil import clamp, lerp, lerp_color
 from src.render.fish_draw import RANK_COLORS
@@ -304,6 +305,59 @@ def _badge(canvas, label: str, col, pos, age: float) -> None:
         pygame.draw.line(canvas, c, (cx, cy - ln), (cx, cy + ln), 1)
 
 
+# 랭크 막대 아이콘 5×5 (줄 · 시간 · 신호 · 실수)
+_BAR_ICONS = {
+    "line": ["....#", "...#.", "..#..", ".#...", "#...."],
+    "time": [".###.", "#.#.#", "#.##.", "#...#", ".###."],
+    "signal": ["..#..", "..#..", "..#..", ".....", "..#.."],
+    "miss": ["#...#", ".#.#.", "..#..", ".#.#.", "#...#"],
+}
+BAR_KEYS = ("line", "time", "signal", "miss")
+
+
+def rank_ratios(result: dict) -> dict:
+    """결과 카드 막대 4개의 채움 비율 (BAEK_EXAM 🅰-6): 줄 · 시간 · 신호 = 항목 점수 / 최대, 실수 = 1 − 깎인 점수 / 24."""
+    r = load_json("fishing_config.json")["rank"]
+    sc = result.get("score") or {}
+    return {"line": clamp(sc.get("line_pts", 0) / r["line_max"], 0, 1),
+            "time": clamp(sc.get("time_pts", 0) / r["time_max"], 0, 1),
+            "signal": clamp(sc.get("signal_pts", 0) / r["signal_max"], 0, 1),
+            "miss": clamp(1 + sc.get("miss_pts", 0) / 24, 0, 1)}
+
+
+def rank_bars_rect(rx: int, y: int) -> pygame.Rect:
+    return pygame.Rect(rx - 32, y - 1, 64, 4 * 8 + 1)
+
+
+def draw_rank_bars(canvas, result: dict, rx: int, y: int, t: float) -> None:
+    """랭크 도장 아래 작은 막대 4개 (숫자 없음). S 가 아니면 가장 모자란 막대가 깜빡, 점수는 S 인데 퍼펙트가 모자라면 한 줄."""
+    if "signal_pts" not in (result.get("score") or {}):
+        return   # 옛 결과 (훈련 수조 등 점수 없는 판)
+    ratios = rank_ratios(result)
+    weakest = min(BAR_KEYS, key=lambda k: ratios[k]) if result["rank"] != "S" else None
+    if weakest is not None and ratios[weakest] >= 0.999:
+        weakest = None   # 다 찼는데 S 가 아님 = 퍼펙트가 모자란 것 (아래 한 줄로 알림)
+    blink_off = weakest is not None and t > 0.4 and int(t * 4) % 2 == 1
+    for i, k in enumerate(BAR_KEYS):
+        yy = y + i * 8
+        col = (210, 216, 236)
+        for dy_, row in enumerate(_BAR_ICONS[k]):
+            for dx_, ch in enumerate(row):
+                if ch == "#":
+                    canvas.set_at((rx - 30 + dx_, yy + dy_), col)
+        bar = pygame.Rect(rx - 22, yy, 52, 5)
+        canvas.fill((24, 28, 44), bar)
+        fill = int(round((bar.w - 2) * ratios[k] * clamp(t / 0.35, 0, 1)))
+        good = lerp_color((230, 90, 80), (110, 220, 130), ratios[k])
+        if not (k == weakest and blink_off):
+            canvas.fill(good, (bar.x + 1, bar.y + 1, fill, bar.h - 2))
+        pygame.draw.rect(canvas, (255, 214, 90) if k == weakest and not blink_off else (70, 76, 100), bar, 1)
+    sc = result["score"]
+    if sc.get("s_blocked") and t > 0.4:
+        need = load_json("fishing_config.json")["rank"]["S_min_perfects"]
+        text(canvas, f"퍼펙트 {need}번", (rx, y + 4 * 8 + 6), RANK_COLORS["S"], 11, "center")
+
+
 def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) -> None:
     """획득 컷 정보: 이름·크기 → 랭크 도장 쾅 → 기록 → 가치 숫자 올라감 (순서대로)."""
     w = canvas.get_width()
@@ -317,7 +371,11 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
             text(canvas, "환상의 물고기,", (w // 2, 12 + dy), (225, 180, 255), 11, "center")
         text(canvas, fish["name"], (w // 2, 26 + dy) if fish["rarity"] == "phantom" else (w // 2, 24 + dy),
              RARITY_COLOR.get(fish["rarity"], (255, 255, 255)), 16, "center")
-        text(canvas, f"{result['size']:.1f}cm", (w // 2, 44 + dy), (255, 255, 255), 16, "center")
+        sr = text(canvas, f"{result['size']:.1f}cm", (w // 2, 44 + dy), (255, 255, 255), 16, "center")
+        if fish.get("rarity") in ("common", "uncommon", "rare") and "size_cm" in fish:
+            lo, hi = fish["size_cm"]
+            if result["size"] >= lo + 0.9 * (hi - lo):   # 대물 (크기 범위 상위 10%, 도감 ★3 와 같은 기준)
+                text(canvas, "대물", (sr.right + 4, sr.centery + 1), (255, 214, 90), 11, "midleft")
         # 희귀 이상: 희귀도 리본
         if fish["rarity"] in ("rare", "legend", "phantom"):
             label = {"rare": "희귀", "legend": "★ 전설 ★", "phantom": "◆ 환상 ◆"}[fish["rarity"]]
@@ -353,6 +411,7 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
             if ring < 1:
                 pygame.draw.rect(canvas, rc, box.inflate(int(ring * 40), int(ring * 40)), 1)
             text(canvas, "랭크", (rx, ry + 26), (200, 205, 220), 11, "center")
+            draw_rank_bars(canvas, result, rx, ry + 36, t - STAMP_T)
     y = 192
     if t > 0.85:
         stats = (f"퍼펙트 {result['perfects']}   실수 {result['misses']}   줄 손상 {result['line_damage'] * 100:.0f}%   "
@@ -363,7 +422,9 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
         shown = int(result["price"] * (1 - (1 - k) ** 2))
         text(canvas, f"가치 {shown}원", (w // 2, y + 16), (255, 230, 140), 11, "center")
     if result["rank"] == "S" and t > 1.5:
-        text(canvas, "S랭크 보너스: 크기 +10%, 판매가 ×2", (w // 2, y + 32), RANK_COLORS["S"], 11, "center")
+        rc_ = load_json("fishing_config.json")["rank"]
+        text(canvas, f"S랭크 보너스: 크기 +{rc_['s_size_bonus'] * 100:.0f}%, 판매가 ×{rc_['price_mult']['S']:g}",
+             (w // 2, y + 32), RANK_COLORS["S"], 11, "center")
     # 새 기록 배지 (왼쪽 위에 차례로)
     if news and t > 1.0:
         badges = catch_badges(news)
