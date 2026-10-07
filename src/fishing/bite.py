@@ -4,9 +4,8 @@ WAIT ─(대기)→ APPROACH(그림자 접근) → NIBBLE(톡톡, 가짜 입질 
   - BITE 중 좌클릭 → HOOKED
   - BITE 창 지나면 → MISSED (미끼만 먹고 도망, 다시 던져야 함)
   - APPROACH/NIBBLE 중 좌클릭 → SCARED (놀라 도망, 일정 시간 입질 없음)
-루어 (U7, fishing/lure.py): WAIT 중 저킹·리트리브·멈춤 → 후보 물고기 관심도 → 대기 시계가 빨라지고(최대 ×1/0.6) 그 물고기가 온다.
-  관심도는 그림자 연출로만 (방향 틀기 → 다가옴 → 맴돎). 아무것도 안 하면 지금과 같고, 대기는 원래 최대를 넘지 않는다.
-수면 징후 보정(sign_mods): 대기 ×, 멈춤형 ×, 고급 이상 ×, 변이 × (확률만).
+루어 액션(저킹 · 리트리브)은 삭제됨 (사용자 요청, DESIGN 47장) — 대기는 기다리기만.
+수면 징후 보정(sign_mods): 대기 ×, 바닥형(물거품) ×, 고급 이상 ×, 변이 × (확률만).
 """
 import math
 import random
@@ -51,17 +50,16 @@ def limited_here(f: dict, spot: str, level: float | None = None) -> dict:
 
 
 def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir",
-              bait: dict | None = None, rare_bonus: float = 0.0, pref: str | None = None,
+              bait: dict | None = None, rare_bonus: float = 0.0,
               mods: dict | None = None, season: str | None = None, extra: list | None = None,
               rare_pp: float = 0.0) -> dict | None:
-    """pref = 지금 루어 리듬(그 리듬을 좋아하는 물고기 ×1.5), mods = 수면 징후 보정.
+    """mods = 수면 징후 보정.
     season = 지금 계절 (종별 잘 나옴 ×1.5 / 안 나옴 ×0.5, data/seasons.json), extra = [(물고기, 가중치)] 계절·날씨 이벤트 한정 물고기
     (그 낚시터 기준 시간·날씨 조건 없이 추가, 낚이면 spot = 지금 낚시터)."""
     cfg = load_json("fishing_config.json")["bite"]
     sw = load_json("seasons.json") if season else None
-    if pref or mods:
-        from src.fishing.lure import cfg as lure_cfg, profile_of
-        pref_mult = lure_cfg()["pref_weight_mult"]
+    if mods:
+        from src.fishing.lure import profile_of
     candidates, weights = [], []
     pool = [(f, None) for f in load_json("fish.json")["fish"]] + [(dict(f, spot=spot, _limited=True), w0) for f, w0 in (extra or [])]
     for f, w0 in pool:
@@ -78,8 +76,6 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
             w *= bait.get("boost", {}).get(f["id"], 1.0) * bait.get("spot_boost", {}).get(spot, 1.0)
             if f["rarity"] in ("rare", "legend"):
                 w *= bait_tier_mult(bait, "bait_tier_rare_bonus")
-        if pref and profile_of(f) == pref:
-            w *= pref_mult  # 루어 리듬에 맞는 물고기
         if mods:
             if profile_of(f) == "pause":
                 w *= mods.get("pause_mult", 1.0)  # 물거품: 바닥형
@@ -201,21 +197,8 @@ class BiteController:
         self.rare_pp = 0.0                   # 비늘석 희귀 확률 +%p — 희귀 등급만 (전설 · 환상 · 변이 영향 없음)
         self.legend = False                  # 이번 입질이 전설인지
         self.phantom: dict | None = None     # 환상어 (33장): 착수 순간 판정 → 연출 동안 대기 → 가짜 입질 없이 진짜 입질
-        # 루어 (U7)
-        from src.fishing.lure import LureRhythm, cfg as lure_cfg
-        self.lcfg = lure_cfg()
-        self.lure = LureRhythm()
-        self.lure_in = (False, False)        # (이번 틱 저킹, 리트리브 중) — 낚시 씬이 넣어 줌
-        self.lure_t = 0.0
-        self.candidate: dict | None = None   # 관심을 보이는 근처 물고기
-        self.cand_cooldown = 0.0
-        self.cand_count = 0
         self.wait_elapsed = 0.0
-        self.wait_cap = 0.0
-        self.lure_bite = False               # 이번 입질이 루어로 꾄 것인지 (의뢰 '저킹만으로')
-        self.lure_used: set = set()
         self.sign_mods: dict = {}            # 수면 징후 보정 (낚시 씬이 매 틱)
-        self.lurk_phase = 0.0
 
     def _rand(self, pair) -> float:
         return self.rnd.uniform(pair[0], pair[1])
@@ -273,115 +256,23 @@ class BiteController:
         self.timer = wait + self.cooldown
         if self.script:
             self.timer = self.script["wait"]
-        self.wait_cap = self.cfg["wait_sec"][1] / wmult + self.cooldown  # 루어를 잘못 써도 이 이상 안 기다린다
         self.wait_elapsed = 0.0
         self.cooldown = 0.0
         self.fish = None
         self.shadow = None
-        from src.fishing.lure import LureRhythm
-        self.lure = LureRhythm()
-        self.lure_t = 0.0
-        self.candidate = None
-        self.cand_cooldown = 0.0
-        self.cand_count = 0
-        self.lure_bite = False
-        self.lure_used = set()
 
-    def interest(self) -> float:
-        """후보 물고기의 관심도 -1~1 (루어를 안 썼으면 0)."""
-        if self.candidate is None or not self.lure.engaged:
-            return 0.0
-        from src.fishing.lure import profile_of
-        return self.lure.score[profile_of(self.candidate)]
-
-    def _pick(self, pref: str | None = None) -> dict | None:
+    def _pick(self) -> dict | None:
         return pick_fish(self.period, self.weather, self.cast_distance, self.rnd, self.spot, self.bait,
-                         rare_bonus=self.rare_bonus, pref=pref, mods=self.sign_mods or None,
+                         rare_bonus=self.rare_bonus, mods=self.sign_mods or None,
                          season=getattr(self, "season", None), extra=getattr(self, "extra_pool", None),
                          rare_pp=getattr(self, "rare_pp", 0.0))
 
-    def _update_lure(self, dt: float) -> None:
-        """WAIT 중 루어: 리듬 점수 → 후보 물고기 관심도 → 대기 시계·그림자."""
-        lc = self.lcfg
-        jerk, retrieving = self.lure_in
-        self.lure_in = (False, False)
-        self.lure_t += dt
-        self.lure.update(dt, self.lure_t, jerk, retrieving)
-        self.lure.events.clear()
+    def _update_wait(self, dt: float) -> None:
+        """WAIT 중 대기 시계: 새 떼 징후(wait_mult) 만큼 빨리 간다 (루어 액션은 삭제됨)."""
         self.wait_elapsed += dt
-        bx, bz = self.bobber
-        if self.lure.engaged and self.candidate is None and self.force_fish is None:
-            self.cand_cooldown -= dt
-            if self.cand_cooldown <= 0 and self.cand_count <= lc["max_swaps"]:
-                self.cand_count += 1
-                self.candidate = self._pick(self.lure.current())
-                if self.candidate is not None:
-                    ang = self.rnd.uniform(0, math.tau)
-                    d = lc["lurk_distance"]
-                    self.shadow = {"x": bx + math.sin(ang) * d, "z": bz + math.cos(ang) * d, "x0": 0.0, "z0": 0.0,
-                                   "heading": ang + math.pi / 2, "alpha": 0.0, "len": self.candidate["shadow_len_m"],
-                                   "vx": 0.0, "vz": 0.0, "scale": 1.0, "ang": ang, "lurk": True}
-        k = self.interest()
-        # 대기 시계: 관심도만큼 빨리 (최대 ×1/0.6), 싫어하면 조금 느리게 — 단 원래 최대 대기는 넘지 않음
-        if k >= 0:
-            rate = 1 + (1 / lc["wait_mult_best"] - 1) * k
-        else:
-            rate = max(lc["wait_rate_min"], 1 + k * 0.25)
-        rate /= self.sign_mods.get("wait_mult", 1.0) if self.sign_mods else 1.0  # 새 떼
-        self.timer -= dt * (rate - 1)
-        if k >= lc["bite_at"]:
-            self.timer = min(self.timer, lc["bite_soon_sec"])  # 맴돌다가 곧 문다
-        if self.wait_elapsed >= self.wait_cap:
-            self.timer = min(self.timer, 0.0)
-        sh = self.shadow
-        if sh is not None and sh.get("lurk"):
-            self._move_lurker(sh, k, dt)
-        from src.fishing.lure import profile_of
-        cur = self.lure.current()
-        mismatch = cur is not None and k <= 0 and self.candidate is not None and profile_of(self.candidate) != cur
-        if self.candidate is not None and (k <= lc["leave_at"] or mismatch):
-            # 싫어서 떠난다: 그림자가 돌아서 멀어지고, 잠시 뒤 다른 물고기
-            if sh is not None:
-                away = math.atan2(sh["x"] - bx, sh["z"] - bz)
-                sh.update(vx=math.sin(away) * 3, vz=math.cos(away) * 3, lurk=False, leaving=True)
-            self.candidate = None
-            self.cand_cooldown = lc["swap_cooldown_sec"]
-            for p in self.lure.score:
-                self.lure.score[p] = max(self.lure.score[p], -0.2)  # 새 물고기는 처음부터 다시
-            self.events.append("lure_leave")
-        if sh is not None and sh.get("leaving"):
-            sh["x"] += sh["vx"] * dt
-            sh["z"] += sh["vz"] * dt
-            sh["alpha"] = max(0.0, sh["alpha"] - dt * 1.2)
-            if sh["alpha"] <= 0:
-                self.shadow = None
-
-    def _move_lurker(self, sh: dict, k: float, dt: float) -> None:
-        """관심도 연출: 멀리서 어슬렁 → 찌 쪽으로 돌기 → 다가오기 → 찌 주변 맴돌기 / 싫으면 돌아섬."""
-        lc = self.lcfg
-        bx, bz = self.bobber
-        self.lurk_phase += dt
-        near = lc["near_distance"] + (lc["lurk_distance"] - lc["near_distance"]) * (1 - max(0.0, min(1.0,
-                                                                                                     (k - lc["turn_at"]) / (lc["circle_at"] - lc["turn_at"]))))
-        if k >= lc["circle_at"]:
-            sh["ang"] += dt * 0.9  # 맴돌기
-        else:
-            sh["ang"] += dt * 0.15 * math.sin(self.lurk_phase * 0.7)
-        tx, tz = bx + math.sin(sh["ang"]) * near, bz + math.cos(sh["ang"]) * near
-        sh["x"] += (tx - sh["x"]) * min(1.0, dt * 1.2)
-        sh["z"] += (tz - sh["z"]) * min(1.0, dt * 1.2)
-        to_bob = math.atan2(bx - sh["x"], bz - sh["z"])
-        if k >= lc["circle_at"]:
-            want = sh["ang"] + math.pi / 2  # 둘레를 따라 돈다
-        elif k >= lc["turn_at"]:
-            want = to_bob  # 찌 쪽을 본다
-        elif k < 0:
-            want = to_bob + math.pi  # 돌아선다
-        else:
-            want = to_bob + math.pi / 2  # 관심 없음: 옆으로 지나감
-        d = (want - sh["heading"] + math.pi) % math.tau - math.pi
-        sh["heading"] += d * min(1.0, dt * 3)
-        sh["alpha"] = min(1.0 if k >= 0 else 0.6, sh["alpha"] + dt * 1.5)
+        mult = self.sign_mods.get("wait_mult", 1.0) if self.sign_mods else 1.0
+        if mult < 1.0:
+            self.timer -= dt * (1 / mult - 1)
 
     def _scare(self) -> None:
         self.state = BiteState.SCARED
@@ -417,11 +308,10 @@ class BiteController:
                 self.events.append("phantom_approach")
         elif self.state == BiteState.WAIT:
             self.dip = lerp(self.dip, 0.0, 0.2)
-            self._update_lure(dt)
+            self._update_wait(dt)
             if self.timer <= 0:
                 self.legend = False
                 legend = legend_candidate(self.spot, self.period, self.weather, self.cast_distance, self.bait)
-                lurker = self.shadow if self.shadow and self.shadow.get("lurk") else None
                 if self.script:
                     from src.save.save_game import fish_by_id
                     self.fish = fish_by_id(self.script["fish"])
@@ -430,16 +320,8 @@ class BiteController:
                     self.fish = self.force_fish
                 elif legend and self.rnd.random() < load_json("fishing_config.json")["legend"]["chance"]:
                     self.fish = legend
-                elif self.candidate is not None and self.interest() >= self.lcfg["commit_interest"]:
-                    self.fish = self.candidate  # 루어로 꾄 물고기
-                    self.lure_bite = True
-                    self.lure_used = set(self.lure.used)
-                    from src.fishing.lure import profile_of
-                    self.lure_profile = profile_of(self.candidate)
                 else:
                     self.fish = self._pick()
-                if self.fish is not self.candidate:
-                    lurker = None  # 다른 물고기가 왔다: 어슬렁대던 그림자는 그대로 사라짐
                 self.legend = self.fish is not None and self.fish["rarity"] == "legend"
                 if self.fish is None:
                     self.timer = 3.0
@@ -462,11 +344,6 @@ class BiteController:
                     "len": self.fish["shadow_len_m"], "vx": 0.0, "vz": 0.0,
                     "scale": load_json("fishing_config.json")["legend"]["shadow_scale"] if self.legend else 1.0,
                 }
-                if lurker is not None:
-                    # 맴돌던 그 자리에서 마지막 접근 (보이던 그림자 그대로)
-                    self.shadow.update(x0=lurker["x"], z0=lurker["z"], x=lurker["x"], z=lurker["z"],
-                                       alpha=lurker["alpha"], heading=lurker["heading"])
-                self.candidate = None
 
         elif self.state == BiteState.APPROACH:
             s = smoothstep(1.0 - self.timer / self.approach_dur)

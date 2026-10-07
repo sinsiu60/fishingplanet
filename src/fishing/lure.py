@@ -1,8 +1,7 @@
-"""루어 액션 + 수면 징후 (DESIGN.md 27-6, Phase U7). 수치는 data/lure.json.
+"""수면 징후 (DESIGN.md 27-6, Phase U7). 수치는 data/lure.json.
 
-LureRhythm  플레이어의 대기 중 조작(저킹 / 리트리브 / 멈춤)을 선호 프로필 5종 각각의 점수(-1~1)로 매긴다.
-            입질 후보 물고기의 관심도 = 그 물고기 프로필의 점수. (숫자는 안 보이고 그림자 움직임으로만 보인다)
-            아무것도 안 했으면(engaged = False) 점수는 그대로 0 → 지금과 같은 대기.
+루어 액션(저킹 · 리트리브 · 멈춤 리듬)은 사용자 요청으로 삭제 (DESIGN 47장). 남은 것:
+profile_of   물고기 습성 분류 — 물거품 징후가 '멈춤(바닥)형' 물고기 가중치를 올릴 때만 씀.
 SurfaceSigns 대기 중 가끔 나타나는 수면 징후 4종. 찌와 가까울수록(정확도) 확률을 조금 보정한다.
 """
 import math
@@ -18,7 +17,7 @@ def cfg() -> dict:
 
 
 def profile_of(fish: dict) -> str:
-    """물고기 선호 리듬: 개별 지정 > 이름 > 행동 습성."""
+    """물고기 습성 분류 (jerk_fast · jerk_slow · retrieve · pause · mixed): 개별 지정 > 이름 > 행동 습성. 물거품 징후(pause_mult)만 씀."""
     c = cfg()
     if fish.get("lure"):
         return fish["lure"]
@@ -40,95 +39,6 @@ def profile_of(fish: dict) -> str:
     if a.get("rush", 0) / total >= 0.45:
         return "retrieve"
     return "jerk_slow" if a.get("turn", 0) / total >= 0.4 else "mixed"
-
-
-class LureRhythm:
-    """대기 한 번(착수~입질) 동안의 리듬 점수."""
-
-    def __init__(self):
-        self.c = cfg()["profiles"]
-        self.score = {p: 0.0 for p in PROFILES}
-        self.engaged = False     # 한 번이라도 움직였나 (안 움직였으면 지금과 똑같다)
-        self.used: set = set()   # 쓴 액션 ("jerk", "retrieve", "pause") — 의뢰 '저킹만으로'
-        self.jerks: list[float] = []
-        self.last_action = -99.0
-        self.retrieve_acc = 0.0
-        self.idle_beats = 0
-        self.pair_t: float | None = None
-        self.events: list[str] = []  # "good" / "bad" (그림자 반응)
-
-    def _add(self, prof: str, d: float) -> None:
-        self.score[prof] = max(-1.0, min(1.0, self.score[prof] + d))
-
-    def update(self, dt: float, t: float, jerk: bool, retrieving: bool) -> None:
-        c = self.c
-        before = dict(self.score)
-        if jerk:
-            self._on_jerk(t)
-        if retrieving:
-            self.engaged = True
-            self.used.add("retrieve")
-            self.last_action = t
-            self.idle_beats = 0
-            self.retrieve_acc += dt
-            if self.retrieve_acc >= c["retrieve"]["beat_sec"]:
-                self.retrieve_acc -= c["retrieve"]["beat_sec"]
-                self._add("retrieve", c["retrieve"]["gain"])
-                for p in ("jerk_fast", "jerk_slow"):
-                    self._add(p, -c[p]["loss"] * 0.5)
-                self._add("pause", -c["pause"]["loss"])
-                self._add("mixed", -c["mixed"]["loss"])
-                self.pair_t = None
-        else:
-            self.retrieve_acc = 0.0
-        if self.engaged and not jerk and not retrieving:
-            idle = t - self.last_action
-            pc = c["pause"]
-            need = pc["first_sec"] + self.idle_beats * pc["beat_sec"]
-            if idle >= need:
-                self._add("pause", pc["gain"] if self.idle_beats == 0 else pc["gain_more"])
-                self.idle_beats += 1
-                self.used.add("pause")
-            mc = c["mixed"]
-            if self.pair_t is not None and idle >= mc["rest_sec"]:
-                self._add("mixed", mc["gain"])
-                self.pair_t = None
-        for p in PROFILES:
-            if self.score[p] > before[p] + 1e-9:
-                self.events.append(f"good:{p}")
-            elif self.score[p] < before[p] - 1e-9:
-                self.events.append(f"bad:{p}")
-
-    def _on_jerk(self, t: float) -> None:
-        c = self.c
-        self.engaged = True
-        self.used.add("jerk")
-        self.idle_beats = 0
-        prev = self.jerks[-1] if self.jerks else None
-        self.jerks = (self.jerks + [t])[-6:]
-        self.last_action = t
-        if prev is not None:
-            gap = t - prev
-            for p in ("jerk_fast", "jerk_slow"):
-                lo, hi = c[p]["interval"]
-                if lo <= gap <= hi:
-                    self._add(p, c[p]["gain"])
-                elif gap < 4.0:
-                    self._add(p, -c[p]["loss"])
-            mc = c["mixed"]
-            if self.pair_t is not None:
-                self._add("mixed", -mc["loss"] * 0.5)  # 세 번째 저킹: 짝이 깨짐
-                self.pair_t = None
-            elif gap <= mc["pair_sec"]:
-                self.pair_t = t
-        self._add("retrieve", -c["retrieve"]["loss"])
-        if prev is not None and t - prev < self.c["pause"]["first_sec"]:
-            self._add("pause", -self.c["pause"]["loss"])
-
-    def current(self) -> str | None:
-        """지금 플레이어 리듬에 가장 맞는 프로필 (뚜렷하지 않으면 None)."""
-        best = max(PROFILES, key=lambda p: self.score[p])
-        return best if self.score[best] >= 0.2 else None
 
 
 # ───────────────────────── 수면 징후 ─────────────────────────

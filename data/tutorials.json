@@ -313,10 +313,10 @@
     {
      "kind": "info",
      "target": "dex.detail.unlocks",
-     "text": "더 잡으면 **예고 힌트**랑 **좋아하는 리듬**도 알게 돼. 싸울 때 큰 도움이 되지!",
+     "text": "더 잡으면 **예고 힌트**도 알게 돼. 싸울 때 큰 도움이 되지!",
      "expr": "happy",
      "until": "tap",
-     "src_text": "더 잡으면 **예고 힌트**와 **좋아하는 리듬**을 알 수 있어요. 싸울 때 큰 도움이 돼요!"
+     "src_text": "더 잡으면 **예고 힌트**를 알 수 있어요. 싸울 때 큰 도움이 돼요!"
     },
     {
      "kind": "info",
@@ -1257,38 +1257,6 @@
      "text": "좋아! 양손 다 해냈구먼!",
      "until": "auto:1.5",
      "src_text": "좋아요! 양손 다 해냈어요!"
-    }
-   ]
-  },
-  "TG-08": {
-   "title": "루어 액션",
-   "who": "haru",
-   "start": "event:lure_idle",
-   "need_cond": "second_fishing",
-   "steps": [
-    {
-     "kind": "freeze",
-     "target": "fish.bobber",
-     "text": "기다리기만 해도 되지만, 찌를 움직이면 더 빨리 온다고.",
-     "expr": null,
-     "until": "tap",
-     "src_text": "기다리기만 해도 되지만, 찌를 움직이면 더 빨리 와요."
-    },
-    {
-     "kind": "freeze",
-     "target": "fight.reel",
-     "text": "살짝 움직여 볼까? {저킹}",
-     "expr": null,
-     "until": "input:jerk",
-     "src_text": "살짝 움직여 볼까요? {저킹}"
-    },
-    {
-     "kind": "wait",
-     "target": "fish.shadow",
-     "text": "그림자가 다가오면 관심 있다는 뜻이야!",
-     "expr": null,
-     "until": "event:bite",
-     "src_text": "그림자가 다가오면 관심 있다는 뜻이에요!"
     }
    ]
   },

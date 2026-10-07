@@ -281,9 +281,6 @@
     "tap_window_sec": 1.0,
     "circle_min_px": 20,
     "circle_center_sec": 0.5,
-    "circle_idle_reset_sec": 0.6,
-    "lure_jerk_max_sec": 0.25,
-    "lure_retrieve_hold_sec": 0.3,
-    "lure_pause_sec": 1.5
+    "circle_idle_reset_sec": 0.6
   }
 }

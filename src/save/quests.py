@@ -15,7 +15,6 @@ from src.core.config import load_json
 
 RARITY_KO = {"common": "일반", "uncommon": "고급", "rare": "희귀", "phantom": "환상", "legend": "전설"}
 WEATHER_KO = {"clear": "맑은 날", "rain": "비 오는 날", "storm": "폭풍 치는 날"}
-LURE_KO = {"jerk": "저킹만으", "retrieve": "리트리브만으", "pause": "멈춤으"}
 PERIOD_KO = {"morning": "아침", "day": "낮", "evening": "저녁", "night": "밤"}
 
 
@@ -61,7 +60,42 @@ def board(save, cont: str, now: datetime.datetime | None = None) -> dict:
         b["weekly"] = generate(save, cont, random.Random(f"{w}:{cont}"), weekly=True)
     if b["weekly"] is None:
         b["week"] = ""  # 아직 만들 게 없었다 — 다음에 다시
+    _drop_lure(save, cont, b)
     return b
+
+
+def _is_lure(q: dict | None) -> bool:
+    return bool(q) and not q.get("done") and any(c.get("t") == "lure" for c in q.get("conds", []))
+
+
+def _drop_lure(save, cont: str, b: dict) -> None:
+    """루어 액션 삭제 (DESIGN 47장): 옛 세이브의 아직 안 끝낸 '루어로 꾀어' 의뢰는 같은 날 · 주 씨앗의 새 의뢰로 바꿔 끼움
+    (일일 비늘석 표시는 그대로 옮김). 끝낸 것은 기록만 남김."""
+    if any(_is_lure(q) for q in b["daily"]):
+        rnd = random.Random(f"{b['date']}:{cont}:nolure")
+        keys = {title(q) for q in b["daily"] if not _is_lure(q)}
+        out = []
+        for q in b["daily"]:
+            if not _is_lure(q):
+                out.append(q)
+                continue
+            new = None
+            for _ in range(40):
+                cand = generate(save, cont, rnd)
+                if cand is not None and title(cand) not in keys:
+                    new = cand
+                    break
+            if new is not None:
+                if q.get("reward", {}).get("stone"):
+                    new["reward"]["stone"] = True
+                keys.add(title(new))
+                out.append(new)
+        b["daily"] = out
+    if _is_lure(b.get("weekly")):
+        stone = b["weekly"].get("reward", {}).get("stone")
+        b["weekly"] = generate(save, cont, random.Random(f"{b['week']}:{cont}:nolure"), weekly=True)
+        if b["weekly"] is not None and stone:
+            b["weekly"]["reward"]["stone"] = True
 
 
 def refresh(save, cont: str) -> bool:
@@ -157,7 +191,7 @@ def generate(save, cont: str, rnd, weekly: bool = False) -> dict | None:
         return None  # 아직 못 간 대륙
     singles = [t for t, v in c["templates"].items() if v["kind"] == "single"]
     for _ in range(40):
-        multi_ok = ["env", "lure"] + (["pattern"] if ctx["patterns"] else []) + (["mutation"] if ctx["mutations"] else [])
+        multi_ok = ["env"] + (["pattern"] if ctx["patterns"] else []) + (["mutation"] if ctx["mutations"] else [])
         use_single = bool(ctx["caught"]) and (weekly or rnd.random() < 0.65)
         if use_single:
             pool = ctx["caught"]
@@ -190,9 +224,6 @@ def generate(save, cont: str, rnd, weekly: bool = False) -> dict | None:
                 cond = {"t": t, "weather": rnd.choice(["clear", "rain"]), "period": rnd.choice(list(PERIOD_KO)), "spot": spot}
             elif t == "pattern":
                 cond = {"t": t, "pattern": rnd.choice(ctx["patterns"])}
-                spot = None
-            elif t == "lure":
-                cond = {"t": t, "lure": rnd.choice(["jerk", "retrieve", "pause"])}
                 spot = None
             else:
                 # 잘 나오는 변이 하나 1마리, 또는 아무 변이 2~3마리
@@ -240,14 +271,14 @@ def _reward(cont: str, q: dict, ctx: dict) -> dict:
 def cond_text(cond: dict) -> str:
     from src.fishing.mutation import cfg as mcfg
     t = cond["t"]
+    if t == "lure":   # 루어 액션 삭제 전에 받아 둔 의뢰 (board 가 바꿔 끼우지만, 이미 끝낸 것은 이름만 남음)
+        return "루어로 꾀어 {k}마리 잡기"
     tmpl = cfg()["templates"][t]["text"]
     if t == "pattern":
         return tmpl.format(pattern=load_json("patterns.json")["names"].get(cond["pattern"], cond["pattern"]), k="{k}")
     if t == "mutation":
         name = "아무" if cond["mutation"] == "any" else mcfg()["kinds"][cond["mutation"]]["name"]
         return tmpl.format(mutation=name, k="{k}")
-    if t == "lure":
-        return tmpl.format(lure=LURE_KO[cond["lure"]], k="{k}")
     if t == "env":
         return tmpl.format(weather=WEATHER_KO.get(cond["weather"], cond["weather"]), period=PERIOD_KO[cond["period"]],
                            spot=_spots()[cond["spot"]]["name"], k="{k}")
@@ -401,14 +432,7 @@ class QuestRun:
                 continue
             c = q["conds"][0]
             muts = result.get("mutations") or []
-            lure = getattr(fight, "lure_info", None) or {}
-            lure_ok = False
-            if c["t"] == "lure" and lure.get("bite"):
-                used = lure.get("used", set())
-                lure_ok = {"jerk": "jerk" in used and "retrieve" not in used,
-                           "retrieve": "retrieve" in used and "jerk" not in used,
-                           "pause": lure.get("profile") == "pause"}[c["lure"]]
-            if c["t"] == "env" or lure_ok or (c["t"] == "mutation" and muts and (c["mutation"] == "any" or c["mutation"] in muts)):
+            if c["t"] == "env" or (c["t"] == "mutation" and muts and (c["mutation"] == "any" or c["mutation"] in muts)):
                 q["have"] = min(q["need"], q["have"] + 1)
                 self.events.append("quest_progress")
                 if q["have"] >= q["need"]:

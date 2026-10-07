@@ -156,11 +156,8 @@ PSTEPS = {
     "TG-P16": [("지금이에요! 두 개 다!", "dual", "action")],
 }
 
-# 다른 시스템 (TG-08~19, TG-PH): 큰따옴표 문구 순서대로 (강조, 조건[, 덧붙임])
+# 다른 시스템 (TG-09~19, TG-PH — TG-08 루어 액션은 삭제): 큰따옴표 문구 순서대로 (강조, 조건[, 덧붙임])
 OTHER = {
-    "TG-08": {"title": "루어 액션", "who": "haru", "start": "event:lure_idle", "need_cond": "second_fishing",
-              "steps": [("freeze", "fish.bobber", "tap"), ("freeze", "fight.reel", "input:jerk"),
-                        ("wait", "fish.shadow", "event:bite")]},
     "TG-09": {"title": "수면 징후", "who": "haru", "start": "event:sign_seen",
               "steps": [("freeze", "fish.signs", "tap"), ("spotlight", "fish.signs", "event:cast_landed", {"allow": "cast"})]},
     "TG-10": {"title": "보물상자", "who": "haru", "start": "event:chest_card", "need_cond": "catch_card",

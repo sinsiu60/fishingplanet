@@ -90,10 +90,6 @@ def layout(w: int, h: int, ctx: dict, settings, items_open: bool = False) -> lis
             add("bag", w - 4 - sx - top, 4, top, top)
         if ctx.get("can_retrieve"):
             add("retrieve", m, h - m - 24 * s, 52 * s, 24 * s, label="회수")
-        if ctx.get("lure"):
-            # 대기 중 루어: 패드를 가볍게 누르고 있으면 리트리브 (짧게 탭 = 저킹)
-            pr = 32 * s
-            add("pad", w - m - 2 * pr, h - m - 2 * pr, 2 * pr, 2 * pr, "circle", "리트리브")
     return out
 
 

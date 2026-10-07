@@ -60,8 +60,6 @@ def check(game, name: str, run) -> bool:
         return any(ss.enhance_block(save, s) is None for s in d.get("scalestone", {}).get("items", []))
     if name == "has_materials":
         return sum(d.get("materials", {}).values()) > 0
-    if name == "second_fishing":
-        return d["stats"]["catches"] >= 1
     if name == "c402_done":
         from src.story import story
         return story.seen(save, "C4-02")
@@ -90,7 +88,6 @@ def check(game, name: str, run) -> bool:
 # ── 정지 단계 조작 ──
 ALLOWED = {
     "hook": ["primary"],
-    "jerk": ["primary", "reel_tap"],
     "reel": ["primary", "reel_tap"],
     "release": [],
     "lower": ["secondary"],
@@ -119,8 +116,6 @@ def input_ok(game, arg: str, run) -> bool:
     inp = game.input
     if arg in ("hook",):
         return passed(run, "primary")
-    if arg == "jerk":
-        return passed(run, "primary", "reel_tap")
     if arg == "reel":
         return inp.held("reel")
     if arg == "release":
@@ -179,7 +174,7 @@ def _circle(game, run) -> bool:
 
 
 # ── 그림 ──
-ANIM = {"hook": "tap", "jerk": "tap", "reel": "hold", "release": "release", "lower": "right", "drag_down": "key_q",
+ANIM = {"hook": "tap", "reel": "hold", "release": "release", "lower": "right", "drag_down": "key_q",
         "drag_min": "key_shift", "up": "swipe_u", "down": "swipe_d", "mash": "mash", "circle": "circle"}
 
 

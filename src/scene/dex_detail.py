@@ -12,7 +12,6 @@ import pygame
 from src.core.config import load_json
 from src.core.fonts import get_font
 from src.core.weather import WEATHER_KO
-from src.fishing.lure import profile_of
 from src.fishing.patterns import TIP_SHORT, fish_patterns
 from src.render.fish_draw import RANK_COLORS
 from src.save import dexbook
@@ -272,25 +271,17 @@ def _wrap(s: str, w: int, size: int) -> list[str]:
 
 
 def _unlock_rows(save, f: dict, e: dict, kind: str) -> list:
-    """(종류, 짧은 이름, 지금, 필요 [, 내용]) — 예고 힌트 1(3회) · 선호 리듬(5회) · 예고 힌트 2(10회)."""
+    """(종류, 짧은 이름, 지금, 필요 [, 내용]) — 예고 힌트 1(3회) · 예고 힌트 2(10회). (선호 리듬은 루어 액션과 함께 삭제, DESIGN 47장)"""
     n = e["count"]
     rows = []
-    lc = load_json("lure.json")
-    need_r = lc["dex_hint_catches"]
-    rhythm_ok = n >= need_r or dexbook.mastery(save, f) >= 3   # 숙련 3 보상 (전설은 3회)
     if kind == "phantom":
-        prof = lc["profiles"][profile_of(f)]
         spot = next((s["name"] for s in load_json("spots.json")["spots"] if s["id"] == f["spot"]), "")
         rows.append(("lock", "출몰지", 1, 1, [f"환상 · {spot}"]))
-        rows.append(("lock", "선호 리듬", min(n, need_r), need_r,
-                     [f"{prof['name']} — {prof['hint']}"] if rhythm_ok else None))
         return rows
     if f.get("hint3"):
         rows.append(("lock", "예고 힌트 1", min(n, 3), 3, [f["hint3"]] if n >= 3 else None))
     if kind == "limited":
         return rows
-    prof = lc["profiles"][profile_of(f)]
-    rows.append(("lock", "선호 리듬", min(n, need_r), need_r, [f"{prof['name']} — {prof['hint']}"] if rhythm_ok else None))
     if f.get("hint10"):
         rows.append(("lock", "예고 힌트 2", min(n, 10), 10, [f["hint10"]] if n >= 10 else None))
     return rows

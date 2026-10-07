@@ -8,9 +8,8 @@
   taps         최근 tap_window_sec 동안 연타 수
   circle       원 그리기 진행 (-1~1 바퀴, 부호 = 방향), turns = 지금까지 완성한 바퀴 수
   drag_min     드랙 순간 최저 (누르는 동안)
-  lure         대기 중 루어 상태: "-" / "retrieve"(감기 유지) / "pause"(아무것도 안 함)
 이벤트 (events, 틱마다 비움)
-  rod_up / rod_down / reel_tap / circle:+1 / circle:-1 / lure_jerk / lure_retrieve / lure_pause
+  rod_up / rod_down / reel_tap / circle:+1 / circle:-1
 """
 import math
 
@@ -123,9 +122,6 @@ class Controls:
         self.taps = 0
         self.circle = CircleTracker(cfg["circle_center_sec"], cfg["circle_idle_reset_sec"])
         self.drag_min = False
-        self.lure = "-"
-        self.press_t: float | None = None
-        self.idle_t = 0.0
         self.events: list[str] = []
         self._queued: list[str] = []  # 틱 밖(입력 이벤트)에서 생긴 것 → 다음 틱 events 로
         self.last_event = ""
@@ -151,9 +147,6 @@ class Controls:
         self.pitch = 0.0
         self.rod_state = 0
         self.drag_min = False
-        self.lure = "-"
-        self.press_t = None
-        self.idle_t = 0.0
 
     def update_fight(self, dt: float, t: float, inp) -> None:
         c = self.cfg
@@ -176,36 +169,12 @@ class Controls:
             self._emit(f"circle:{turn:+d}", t)
         self.drag_min = inp.held("drag_min")
 
-    def update_lure(self, dt: float, t: float, pressing: bool) -> None:
-        """찌가 물에 떠 있는 동안: 짧은 클릭(탭) = 저킹, 누르고 있기 = 감기, 한동안 아무것도 안 함 = 멈춤."""
-        c = self.cfg
-        if pressing:
-            self.idle_t = 0.0
-            if self.press_t is None:
-                self.press_t = t
-            elif t - self.press_t >= c["lure_retrieve_hold_sec"] and self.lure != "retrieve":
-                self.lure = "retrieve"
-                self._emit("lure_retrieve", t)
-            return
-        if self.press_t is not None:
-            if t - self.press_t <= c["lure_jerk_max_sec"]:
-                self._emit("lure_jerk", t)
-            self.press_t = None
-            if self.lure == "retrieve":
-                self.lure = "-"
-        self.idle_t += dt
-        if self.idle_t >= c["lure_pause_sec"] and self.lure != "pause":
-            self.lure = "pause"
-            self._emit("lure_pause", t)
-        elif self.idle_t < c["lure_pause_sec"] and self.lure == "pause":
-            self.lure = "-"
-
     def debug_lines(self, t: float) -> list[str]:
         p = self.circle.progress
         ev = self.last_event if t - self.last_event_t < 1.5 else "-"
         return [
             f"상하 {self.pitch:+.2f} 연타 {self.taps}/s",
             f"원 {p:+.2f}바퀴 (완성 {self.circle.turns})",
-            f"최저드랙 {'켬' if self.drag_min else '끔'} 루어 {self.lure}",
+            f"최저드랙 {'켬' if self.drag_min else '끔'}",
             f"입력 {ev}",
         ]

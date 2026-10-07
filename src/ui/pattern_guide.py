@@ -1,6 +1,6 @@
 """신규 패턴·루어를 직관적으로: 처음 만날 때 튜토리얼 카드(움직이는 시범 그림).
 
-- 카드: tutorial.CARDS 에 "pattern:<id>"·"lure_intro"로 들어가 있고(PC 문구), 터치 문구는 TOUCH_LINES.
+- 카드: tutorial.CARDS 에 "pattern:<id>"로 들어가 있고(PC 문구), 터치 문구는 TOUCH_LINES.
   카드 위쪽에 DEMO 그림이 움직이며 '무엇을 하라는지'를 보여 준다.
 - 파이팅 중 조작 방향 표시는 31장 C3부터 신호 슬롯(src/ui/signal_slots.py)이 맡는다.
 """
@@ -35,10 +35,6 @@ CARDS = {
     "pattern:thrash": ("공중 몸부림!", ["정점에 한 번, 떨어지기 직전에 한 번 더 우클릭"]),
     "pattern:bite": ("줄 물어뜯기!", ["막대가 다 차는 순간 Shift (드랙 순간 최저)"]),
     "pattern:dual": ("두 가지 동시에!", ["물고기 옆에 나란히 뜬 두 신호를 각각 함께"]),
-    "lure_intro": ("루어 액션!", [
-        "찌가 떠 있는 동안: 짧게 클릭 = 저킹 · 누르고 있기 = 리트리브 · 가만히 = 멈춤",
-        "물고기마다 좋아하는 리듬이 달라요. 그림자 위: ? 관심  ! 다가옴  ♥ 곧 문다  … 떠남",
-    ]),
 }
 
 TOUCH_LINES = {
@@ -57,13 +53,10 @@ TOUCH_LINES = {
     "pattern:thrash": ["정점에 한 번, 떨어지기 직전에 한 번 더 숙이기"],
     "pattern:bite": ["막대가 다 차는 순간 ▼ 길게 (드랙 순간 최저)"],
     "pattern:dual": ["나란히 뜬 두 신호를 손가락 둘로 각각"],
-    "lure_intro": ["찌가 떠 있는 동안: 물 위 짧게 탭 = 저킹 · 리트리브 패드 누르기 · 가만히 = 멈춤",
-                   "물고기마다 좋아하는 리듬이 달라요. 그림자 위: ? 관심  ! 다가옴  ♥ 곧 문다  … 떠남"],
 }
 
 # 카드 키 → 시범 그림 종류
 DEMO = {k: k.split(":", 1)[1] for k in CARDS if k.startswith(("pattern:", "telegraph:"))}
-DEMO["lure_intro"] = "lure"
 
 
 # ───────────────────────── 그림 조각 ─────────────────────────
@@ -317,36 +310,12 @@ def draw_demo(canvas, kind: str, rect: pygame.Rect, t: float, touch: bool) -> No
         canvas.fill(WHITE, (bx + int(bw * ph), cy + 5, 2, 9))
         pygame.draw.line(canvas, WHITE, (bx + 20, cy - 6), (bx + 46, cy - 6), 3)
         pygame.draw.polygon(canvas, WHITE, [(bx + 52, cy - 6), (bx + 44, cy - 11), (bx + 44, cy - 1)])
-    elif kind == "lure":
-        _lure_demo(canvas, rect, t, touch)
 
 
 def _rod_icon(canvas, x, y, lift: float) -> None:
     ang = math.radians(-35 - lift * 30)
     ex, ey = x + math.cos(ang) * 30, y + math.sin(ang) * 30
     pygame.draw.line(canvas, (190, 160, 110), (x, y), (ex, ey), 2)
-
-
-def _lure_demo(canvas, rect, t: float, touch: bool) -> None:
-    """루어: 세 가지 액션이 차례로 + 그림자 반응 표시."""
-    cx, cy = rect.center
-    phase = int(t / 2.0) % 3
-    names = ["저킹 (짧게 톡)", "리트리브 (누르고 있기)", "멈춤 (가만히)"]
-    for i, nm in enumerate(names):
-        text(canvas, nm, (rect.x + 8, rect.y + 10 + i * 13), GOLD if i == phase else DIM, 11, "midleft")
-    fx, fy = cx + 50, cy + 2
-    if phase == 0:
-        hop = 4 if (t * 2) % 1.0 < 0.15 else 0
-        pygame.draw.circle(canvas, (255, 90, 80), (fx, fy - hop), 3)
-    elif phase == 1:
-        off = int(((t % 2.0) / 2.0) * 16)
-        pygame.draw.circle(canvas, (255, 90, 80), (fx - off, fy), 3)
-    else:
-        pygame.draw.circle(canvas, (255, 90, 80), (fx, fy), 3)
-    sx = fx + 26 - int(min(1.0, (t % 6.0) / 6.0) * 16)
-    pygame.draw.ellipse(canvas, (50, 70, 90), (sx - 8, fy - 3, 16, 7))
-    marks = ["?", "!", "♥"]
-    text(canvas, marks[min(2, int((t % 6.0) / 2.0))], (sx, fy - 12), GOLD, 11, "center")
 
 
 # ───────────────────────── 카드 ─────────────────────────
@@ -371,7 +340,7 @@ def draw_card(canvas, key: str, title: str, lines_pc: list, focus, t: float, tou
     draw_demo(canvas, DEMO.get(key, ""), demo, t, touch)
     # 왼쪽: 파이팅 중 물고기 자리 배지에 뜨는 아이콘 그대로 (31장 C5)
     kind = DEMO.get(key, "")
-    if kind and kind != "lure":
+    if kind:
         from src.ui import signal_slots as ss
         fam = ss.family_of(kind)
         if fam in ss.cfg()["families"]:

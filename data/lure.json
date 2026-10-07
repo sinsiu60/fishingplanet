@@ -1,164 +1,99 @@
 {
-  "_설명": "루어 액션 + 수면 징후 (DESIGN.md 27-6, Phase U7). 대기 중(찌가 떠 있고 입질 전 WAIT) 저킹(짧은 클릭·탭) / 리트리브(누르고 있기) / 멈춤(아무것도 안 함). 착수 때 근처 물고기 하나(후보)를 정하고, 플레이어 리듬이 그 물고기 선호 프로필에 맞으면 관심도(-1~1, 숫자는 안 보임)가 오른다. 관심도만큼 대기 시계가 빨리 간다(최대 ×1/wait_mult_best = 대기 ×0.6). 관심도가 leave_at 아래로 떨어지면 후보가 떠나고, 새 후보는 지금 리듬에 맞는 물고기 가중치 ×pref_weight_mult. 아무것도 안 하면 지금과 똑같고, 잘못된 액션도 대기는 원래 최대(wait_sec 최대)를 넘지 않는다. 관심도가 bite_at 이상이면 bite_soon_sec 안에 마지막 접근 시작. 지금 리듬이 뚜렷한데 후보 프로필과 다르고 관심이 0 이하면 바로 떠나고(swap_cooldown_sec 뒤) 그 리듬을 좋아하는 물고기가 더 잘 온다. 후보가 떠나고 새로 오는 건 한 대기에 max_swaps번까지 — 리듬으로 종을 '고르는' 게 아니라 '기울이는' 정도 (희귀도 확정 금지).",
-  "wait_mult_best": 0.6,
-  "wait_rate_min": 0.8,
-  "pref_weight_mult": 1.5,
-  "leave_at": -0.45,
-  "commit_interest": 0.5,
-  "retrieve_speed": 0.7,
-  "recast_distance": 4.0,
-  "_shadow": "관심도 연출: 처음 액션 때 후보 그림자가 lurk_distance에 나타남 → 관심도에 따라 찌 쪽으로 돌고(turn_at) 다가오고(approach_at, near_distance까지) 맴돎(circle_at). 틀리면 돌아섬.",
-  "lurk_distance": 4.5,
-  "near_distance": 1.6,
-  "turn_at": 0.1,
-  "approach_at": 0.4,
-  "circle_at": 0.75,
-  "profiles": {
-    "_설명": "물고기 선호 리듬 5종. 맞는 '박'마다 gain, 틀린 행동마다 loss (관심도 -1~1).",
-    "jerk_fast": {
-      "name": "빠른 저킹",
-      "hint": "0.6~1.2초 간격으로 톡톡 저킹",
-      "interval": [
-        0.5,
-        1.3
-      ],
-      "gain": 0.4,
-      "loss": 0.15
-    },
-    "jerk_slow": {
-      "name": "느린 저킹",
-      "hint": "2~3초 간격으로 천천히 저킹",
-      "interval": [
-        1.8,
-        3.2
-      ],
-      "gain": 0.45,
-      "loss": 0.2
-    },
-    "retrieve": {
-      "name": "일정한 리트리브",
-      "hint": "끊지 말고 일정하게 감기",
-      "beat_sec": 1.0,
-      "gain": 0.3,
-      "loss": 0.2
-    },
-    "pause": {
-      "name": "긴 멈춤",
-      "hint": "한 번 움직이고 4초 넘게 가만히",
-      "first_sec": 2.5,
-      "beat_sec": 1.5,
-      "gain": 0.5,
-      "gain_more": 0.3,
-      "loss": 0.25
-    },
-    "mixed": {
-      "name": "저킹 두 번 → 멈춤",
-      "hint": "톡톡 두 번 뒤 잠깐 멈춤",
-      "pair_sec": 1.5,
-      "rest_sec": 1.8,
-      "gain": 0.6,
-      "loss": 0.2
-    }
-  },
-  "_assign": "프로필 배정: overrides(물고기 id) > 이름 키워드 > 행동 습성(점프·몸털기 많으면 빠른 저킹, 힘 모으기 많으면 멈춤, 돌진 위주면 리트리브, 방향 전환 위주면 느린 저킹).",
-  "overrides": {
-    "bass": "jerk_fast",
-    "mandarin_fish": "jerk_fast",
-    "tiger_mandarin": "jerk_fast",
-    "sea_bass": "jerk_fast",
-    "silver_bass": "jerk_fast",
-    "mahi": "jerk_fast",
-    "amethyst_bass": "jerk_fast",
-    "carp": "jerk_slow",
-    "crucian": "jerk_slow",
-    "golden_carp": "jerk_slow",
-    "fog_carp": "jerk_slow",
-    "silver_crucian": "jerk_slow",
-    "prism_carp": "jerk_slow",
-    "cloud_carp": "jerk_slow",
-    "dew_carp": "jerk_slow",
-    "dragon_carp": "jerk_slow",
-    "cherry_salmon": "retrieve",
-    "lenok": "retrieve",
-    "galaxy_trout": "retrieve",
-    "jack_mackerel": "retrieve",
-    "mackerel": "retrieve",
-    "cloud_trout": "retrieve",
-    "falls_salmon": "retrieve",
-    "rainbow_char": "retrieve",
-    "aurora_salmon": "retrieve",
-    "life_trout": "retrieve",
-    "thunder_flyer": "retrieve",
-    "petal_flyer": "retrieve",
-    "pale_chub": "retrieve",
-    "minnow": "retrieve",
-    "kkuri": "retrieve",
-    "catfish": "pause",
-    "ghost_catfish": "pause",
-    "mist_catfish": "pause",
-    "stalactite_catfish": "pause",
-    "oldwood_catfish": "pause",
-    "marsh_eel": "pause",
-    "echo_eel": "pause",
-    "root_eel": "pause",
-    "anglerfish": "pause",
-    "lantern_angler": "pause",
-    "glacier_ray": "pause",
-    "frost_cod": "pause",
-    "floe_flounder": "pause",
-    "goby": "pause",
-    "magma_moray": "pause",
-    "black_porgy": "mixed",
-    "red_seabream": "mixed",
-    "obsidian_bream": "mixed",
-    "rockfish": "mixed",
-    "rockfish_bollak": "mixed"
-  },
-  "signs": {
-    "_설명": "수면 징후: 대기 중 interval_sec마다 하나, life_sec 동안, 지름 diameter_m. 종류 가중치 weight (sparkle = 반짝이는 물결은 10%). 효과 = 정확도(1 − 찌~징후 거리/반지름, 0 미만 0)만큼 — birds: 입질 대기 ×(1 − (1−wait_mult)·정확도) / bubbles: 멈춤 프로필(바닥형) 가중치 ×(1 + (mult−1)·정확도) / jump: 고급 이상 ×… / sparkle: 변이 확률 ×…. 확률 보정만, 희귀도 확정 없음.",
-    "interval_sec": [
-      40,
-      90
-    ],
-    "first_sec": [
-      15,
-      35
-    ],
-    "life_sec": [
-      8,
-      14
-    ],
-    "diameter_m": 6.0,
-    "distance_m": [
-      10,
-      32
-    ],
-    "kinds": {
-      "birds": {
-        "name": "새 떼",
-        "weight": 30,
-        "wait_mult": 0.7
-      },
-      "bubbles": {
-        "name": "물거품",
-        "weight": 30,
-        "pause_mult": 1.8
-      },
-      "jump": {
-        "name": "물고기 점프",
-        "weight": 30,
-        "rare_mult": 1.4
-      },
-      "sparkle": {
-        "name": "반짝이는 물결",
-        "weight": 10,
-        "mutation_mult": 2.0
-      }
-    }
-  },
-  "dex_hint_catches": 5,
-  "bite_at": 0.9,
-  "bite_soon_sec": 0.4,
-  "swap_cooldown_sec": 0.5,
-  "max_swaps": 1
+ "_설명": "수면 징후 + 물고기 습성 분류 (DESIGN.md 27-6). 루어 액션(저킹 · 리트리브 · 멈춤 리듬, 관심도 · 후보 그림자)은 사용자 요청으로 삭제 (DESIGN 47장) — 남은 것: signs(수면 징후 4종)와 overrides(습성 분류: 물거품 징후가 pause = 바닥형 물고기 가중치를 올릴 때 씀).",
+ "_assign": "습성 배정: overrides(물고기 id) > 이름 키워드 > 행동 습성 (src/fishing/lure.py profile_of). 물거품 징후의 '멈춤(바닥)형' 판정에만 씀.",
+ "overrides": {
+  "bass": "jerk_fast",
+  "mandarin_fish": "jerk_fast",
+  "tiger_mandarin": "jerk_fast",
+  "sea_bass": "jerk_fast",
+  "silver_bass": "jerk_fast",
+  "mahi": "jerk_fast",
+  "amethyst_bass": "jerk_fast",
+  "carp": "jerk_slow",
+  "crucian": "jerk_slow",
+  "golden_carp": "jerk_slow",
+  "fog_carp": "jerk_slow",
+  "silver_crucian": "jerk_slow",
+  "prism_carp": "jerk_slow",
+  "cloud_carp": "jerk_slow",
+  "dew_carp": "jerk_slow",
+  "dragon_carp": "jerk_slow",
+  "cherry_salmon": "retrieve",
+  "lenok": "retrieve",
+  "galaxy_trout": "retrieve",
+  "jack_mackerel": "retrieve",
+  "mackerel": "retrieve",
+  "cloud_trout": "retrieve",
+  "falls_salmon": "retrieve",
+  "rainbow_char": "retrieve",
+  "aurora_salmon": "retrieve",
+  "life_trout": "retrieve",
+  "thunder_flyer": "retrieve",
+  "petal_flyer": "retrieve",
+  "pale_chub": "retrieve",
+  "minnow": "retrieve",
+  "kkuri": "retrieve",
+  "catfish": "pause",
+  "ghost_catfish": "pause",
+  "mist_catfish": "pause",
+  "stalactite_catfish": "pause",
+  "oldwood_catfish": "pause",
+  "marsh_eel": "pause",
+  "echo_eel": "pause",
+  "root_eel": "pause",
+  "anglerfish": "pause",
+  "lantern_angler": "pause",
+  "glacier_ray": "pause",
+  "frost_cod": "pause",
+  "floe_flounder": "pause",
+  "goby": "pause",
+  "magma_moray": "pause",
+  "black_porgy": "mixed",
+  "red_seabream": "mixed",
+  "obsidian_bream": "mixed",
+  "rockfish": "mixed",
+  "rockfish_bollak": "mixed"
+ },
+ "signs": {
+  "_설명": "수면 징후: 대기 중 interval_sec마다 하나, life_sec 동안, 지름 diameter_m. 종류 가중치 weight (sparkle = 반짝이는 물결은 10%). 효과 = 정확도(1 − 찌~징후 거리/반지름, 0 미만 0)만큼 — birds: 입질 대기 ×(1 − (1−wait_mult)·정확도) / bubbles: 멈춤 프로필(바닥형) 가중치 ×(1 + (mult−1)·정확도) / jump: 고급 이상 ×… / sparkle: 변이 확률 ×…. 확률 보정만, 희귀도 확정 없음.",
+  "interval_sec": [
+   40,
+   90
+  ],
+  "first_sec": [
+   15,
+   35
+  ],
+  "life_sec": [
+   8,
+   14
+  ],
+  "diameter_m": 6.0,
+  "distance_m": [
+   10,
+   32
+  ],
+  "kinds": {
+   "birds": {
+    "name": "새 떼",
+    "weight": 30,
+    "wait_mult": 0.7
+   },
+   "bubbles": {
+    "name": "물거품",
+    "weight": 30,
+    "pause_mult": 1.8
+   },
+   "jump": {
+    "name": "물고기 점프",
+    "weight": 30,
+    "rare_mult": 1.4
+   },
+   "sparkle": {
+    "name": "반짝이는 물결",
+    "weight": 10,
+    "mutation_mult": 2.0
+   }
+  }
+ }
 }

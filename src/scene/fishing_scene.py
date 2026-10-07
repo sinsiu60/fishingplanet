@@ -45,7 +45,7 @@ HINTS = {
     CastState.CHARGING: "놓으면 던지기   우클릭: 취소",
     CastState.SWING: "",
     CastState.FLIGHT: "",
-    CastState.LANDED: "좌클릭: 챔질(쑥!)·저킹   누르고 있기: 감기   우클릭: 회수   화면 끝: 둘러보기",
+    CastState.LANDED: "좌클릭: 챔질(쑥!)   우클릭: 회수   화면 끝: 둘러보기",
     CastState.RETRIEVE: "줄 감는 중...",
     CastState.HOOKED: "좌클릭 유지: 감기   우클릭: 숙이기   Q/E·휠: 드랙   마우스: 버티기   H: 도움말",
 }
@@ -124,7 +124,6 @@ class FishingScene(Scene):
         # 수면 징후 (U7): 전용 난수 (씨앗 = 시계, 다른 난수 흐름을 건드리지 않게)
         self.signs = SurfaceSigns(random.Random(int(_time.time() * 1000) + 7))
         self.sign_fx_t = 0.0
-        self.recast_told = False
         self.popups = fight_fx.JudgePopups()
         self.gather = fight_fx.GatherFX()
         self.screen_fx = ScreenFX(canvas.get_width(), canvas.get_height())
@@ -422,7 +421,6 @@ class FishingScene(Scene):
                 "show_pause": free and not ending and not fighting,  # 파이팅 중 메뉴 숨김 (뒤로 가기로 멈춤, 31장 C6)
                 "show_bag": free and self.can_open_menus(),
                 "can_retrieve": free and f is None and c.state == CastState.LANDED,
-                "lure": free and f is None and c.state == CastState.LANDED and self.bite.state == BiteState.WAIT,
                 "items": items, "drag": (f.drag, f.drag_steps) if fighting else None,
                 "safe_x": self.game.screen.safe_x}
 
@@ -1235,8 +1233,6 @@ class FishingScene(Scene):
         lat = load_json("mobile_config.json")["pump_latency_sec"] if self.touch else 0.0
         # 오디오 지연 보정 (설정 → 소리, 32장 S3): 소리가 늦게 들리는 기기면 박자 판정을 그만큼 늦춘다
         self.fight.input_latency = lat + self.settings.get("audio_offset_ms") / 1000
-        self.fight.lure_info = {"bite": self.bite.lure_bite, "used": set(self.bite.lure_used),
-                                "profile": getattr(self.bite, "lure_profile", None)}
         from src.save.quests import QuestRun
         self.quest_run = QuestRun(self.save, self.fight, fish["id"], self.spot_id, self.weather, self.clock.period()[0])
         if muts:
@@ -1509,7 +1505,6 @@ class FishingScene(Scene):
         for ev in self.cast.events:
             if ev == "splash":
                 self._splash()
-                self.recast_told = False
             elif ev == "launch":
                 self.sfx.play("sfx_cast_swing", 0.45 + 0.55 * self.cast.power)  # 휙 (파워만큼 크게)
                 lo, hi = load_json("details/map_details.json")["actions"]["cast_drops"]
@@ -1721,7 +1716,6 @@ class FishingScene(Scene):
             self.toasts.show(msg, INFO, 2.6, 11)
         w.events.clear()
         self._update_signs(dt)
-        self.lure_hop = max(0.0, getattr(self, "lure_hop", 0.0) - dt)
         self.wind.update(dt, self.weather)
         self.rain.dir = 1 if self.wind.x >= 0 else -1   # 빗줄기 기울기 = 바람 방향
         lf = self.legend_fx   # 여우비: 실제 날씨는 그대로, 화면 빗줄기만 (쏟아지는 순간 굵게 → 파이팅 내내 가늘게)
@@ -1786,7 +1780,7 @@ class FishingScene(Scene):
         self.life.update(dt, {
             "spot": self.spot_id, "season": self.season, "period": self.clock.period()[0], "weather": self.weather,
             "fighting": f is not None, "cam": cam, "ripples": self.ripples, "sfx": self.sfx,
-            "reeling": (self.ctl.lure == "retrieve" or c.state == CastState.RETRIEVE
+            "reeling": (c.state == CastState.RETRIEVE
                         or (f is not None and f.phase == "fight" and f.reeling)),
             "bobber_xz": (c.bx, c.bz) if c.state == CastState.LANDED and f is None else None})
         self._update_action_drops(dt)
@@ -1830,22 +1824,7 @@ class FishingScene(Scene):
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
         self.bite.bait = self.save.equipped("bait")
         self.bite.force_fish = self.all_fish[self.force_i] if self.force_i >= 0 else None
-        landed = self.cast.state == CastState.LANDED
-        if landed and self.bite.state == BiteState.WAIT and self.bite.phantom is None:
-            # 루어 (U7): 짧은 클릭·탭 = 저킹, 누르고 있기 = 리트리브, 가만히 = 멈춤
-            self.ctl.update_lure(dt, self.t, self.game.input.held("press"))
-            jerk = "lure_jerk" in self.ctl.events
-            retrieving = self.ctl.lure == "retrieve"
-            if retrieving:
-                retrieving = self._retrieve_lure(dt)
-            self.bite.lure_in = (jerk, retrieving)
-            if jerk:
-                self._jerk_fx()
-            self.lure_idle_t = getattr(self, "lure_idle_t", 0.0) + dt
-            if self.lure_idle_t >= 5.0 and self.bite.state in (BiteState.WAIT, BiteState.APPROACH) and self.training is None:
-                self.game.guide.event("lure_idle")   # TG-08 (예전 'lure_intro' 카드 대신)
-        else:
-            self.ctl.reset()
+        landed = self.cast.state == CastState.LANDED   # 대기 = 기다리기만 (루어 액션 저킹 · 리트리브는 삭제, DESIGN 47장)
         self.bite.sign_mods = self.signs.mods(self.cast.bx, self.cast.bz) if landed else {}
         self.bite.update(dt)
         for ev in self.bite.events:
@@ -1867,40 +1846,6 @@ class FishingScene(Scene):
             if self.wake_t > 0.12:
                 self.wake_t = 0.0
                 self.ripples.spawn(self.cast.bx, self.cast.bz, size=0.35, life=0.9)
-
-    def _retrieve_lure(self, dt: float) -> bool:
-        """리트리브: 찌가 일정 속도로 다가온다. 너무 가까우면 멈추고 다시 던지라고 안내."""
-        lc = self.bite.lcfg
-        c = self.cast
-        d = math.hypot(c.bx, c.bz)
-        if d <= lc["recast_distance"]:
-            if not self.recast_told:
-                self.recast_told = True
-                hint = "회수 버튼" if self.touch else "우클릭"
-                self.toasts.show(f"찌가 너무 가까워요 — {hint}으로 걷고 다시 던지세요", INFO, 2.4, 11)
-            return False
-        k = max(0.0, d - lc["retrieve_speed"] * dt) / d
-        c.bx, c.bz = c.bx * k, c.bz * k
-        self.bite.bobber = (c.bx, c.bz)
-        self.wake_t = getattr(self, "wake_t", 0.0) + dt
-        if self.wake_t > 0.25:
-            self.wake_t = 0.0
-            self.ripples.spawn(c.bx, c.bz, size=0.3, life=0.8)
-        return True
-
-    def _jerk_fx(self) -> None:
-        self.sfx.play("sfx_jerk", 0.7)
-        """저킹: 찌가 톡 튀며 작은 물결 + 아래쪽에 '톡! 저킹 (간격)' (리듬을 맞추기 쉽게)."""
-        prev = getattr(self, "last_jerk_t", None)
-        self.last_jerk_t = self.t
-        gap = self.t - prev if prev is not None and self.t - prev < 4.0 else None
-        self.lure_fb = ("톡! 저킹" + (f"  · 간격 {gap:.1f}초" if gap else ""), self.t)
-        c = self.cast
-        self.ripples.spawn(c.bx, c.bz, size=0.4, life=0.7)
-        p = self.cam.project(c.bx, c.bz)
-        if p:
-            self.droplets.burst(p[0], p[1], max(0.4, p[2] / 30), count=2)
-        self.lure_hop = 0.18
 
     def _update_signs(self, dt: float) -> None:
         """수면 징후: 생기고 사라짐 + 물 위 연출 (새 떼·물거품·점프·반짝임)."""
@@ -2427,7 +2372,6 @@ class FishingScene(Scene):
             self.bite.extra_pool = self._extra_fish()   # 계절·날씨 이벤트 한정 물고기 (35-4)
             self.bite.start((c.bx, c.bz), c.current_distance())
         self.idle_ripple_t = 0.0
-        self.lure_idle_t = 0.0
         self.life.on_cast_landed(self.season, self.clock.period()[0], self.spot_id)   # 잠자리 15% (E)
         self.game.guide.event("cast_landed")
 
@@ -3406,7 +3350,6 @@ class FishingScene(Scene):
             if sh is not None and self.bite.fish is not None:
                 sh = dict(sh, glow=GLOW.get(self.bite.fish["rarity"]))
             draw_fish_shadow(canvas, pal, cam, sh, t)
-            self._draw_lure_mark(canvas, sh, t)
             for gx, gz, gt in self.glints:
                 # 먼 수면 보라빛 물결 한 번: 납작한 고리가 퍼지며 사라짐
                 p = cam.project(gx, gz)
@@ -3579,7 +3522,6 @@ class FishingScene(Scene):
             hint = HINTS[c.state]
             if hint:
                 hud.draw_hint(canvas, pal, hint, center=self.touch)
-            self._draw_lure_status(canvas)
             side = self._side_menu_on()
             hud.draw_look_arrows(canvas, pal, self.look_left, self.look_right, t, right_inset=30 if side else 0)
             if side:
@@ -4082,45 +4024,6 @@ class FishingScene(Scene):
             a = 1 - (self.t - t0) / 0.35
             pygame.draw.line(canvas, lerp_color((40, 20, 70), col, a), (x0, y0), (x1, y1), max(1, int(width * a + 0.5)))
 
-    def _draw_lure_mark(self, canvas, sh, t: float) -> None:
-        """루어로 꾀는 중인 그림자 위 반응: ? 관심 / ! 다가옴 / ♥ 곧 문다 / … 떠남 (관심도 숫자는 안 보인다)."""
-        if sh is None or not self.bite.lure.engaged or not (sh.get("lurk") or sh.get("leaving")):
-            return
-        p = self.cam.project(sh["x"], sh["z"])
-        if not p or sh.get("alpha", 1) < 0.2:
-            return
-        from src.fishing.lure import cfg as lure_cfg
-        lc = lure_cfg()
-        k = self.bite.interest()
-        if sh.get("leaving"):
-            mark, col = "…", (170, 180, 200)
-        elif k >= lc["circle_at"]:
-            mark, col = "♥", (255, 130, 160)
-        elif k >= lc["approach_at"]:
-            mark, col = "!", (255, 214, 90)
-        elif k >= lc["turn_at"]:
-            mark, col = "?", (220, 230, 245)
-        else:
-            return
-        bob = math.sin(t * 5) * 1.5
-        hud.text(canvas, mark, (p[0], int(p[1] - 12 + bob)), col, 16, "center")
-
-    def _draw_lure_status(self, canvas) -> None:
-        """찌가 떠 있는 동안 내 입력이 어떻게 읽혔는지: 톡! 저킹(간격) / 리트리브 중 / 멈춤…"""
-        if self.cast.state != CastState.LANDED or self.bite.state == BiteState.BITE or not self.bite.lure.engaged:
-            return
-        msg, col = None, (190, 220, 255)
-        fb = getattr(self, "lure_fb", None)
-        if self.ctl.lure == "retrieve":
-            msg = "리트리브 중 (천천히 감기)"
-        elif fb is not None and self.t - fb[1] < 1.2:
-            msg = fb[0]
-        elif self.ctl.lure == "pause":
-            msg, col = "멈춤…", (170, 180, 200)
-        if msg:
-            w, h = canvas.get_size()
-            hud.text(canvas, msg, (w // 2, h - 30), col, 11, "center")
-
     def _fight_text_mode(self) -> bool:
         """파이팅(뜰채 포함) 중: 글자 예산 1개·6글자 (31장)."""
         return self.fight is not None and self.fight.phase in ("fight", "net")
@@ -4432,11 +4335,8 @@ class FishingScene(Scene):
         bob = 0.0
         dip = self.bite.dip if c.state in (CastState.LANDED, CastState.HOOKED) else 0.0
         if c.state == CastState.LANDED:
-            # 살랑살랑: 위아래 + 좌우로 아주 조금 (저킹이면 톡 튐)
+            # 살랑살랑: 위아래 + 좌우로 아주 조금
             bob = math.sin(self.t * 2.0) * max(0.5, s * 0.012)
-            hop = getattr(self, "lure_hop", 0.0)
-            if hop > 0:
-                bob -= math.sin(math.pi * hop / 0.18) * max(1.5, s * 0.05)
             sx += math.sin(self.t * 1.3) * max(0.3, s * 0.006)
         if c.state == CastState.RETRIEVE or dip > 0.5:
             sag = 3  # 팽팽

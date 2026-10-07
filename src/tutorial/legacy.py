@@ -23,7 +23,6 @@ def done_from(data: dict) -> list[str]:
         "TG-05": bool(data.get("patterns_seen")),
         "TG-06": st.get("earned", 0) > 0,
         "TG-07": st.get("earned", 0) > 0 or any(len(v) > 1 for v in owned.values() if isinstance(v, list)),
-        "TG-08": catches >= 2,
         "TG-09": catches >= 5,
         "TG-10": st.get("chests_opened", 0) > 0,
         "TG-11": data.get("quests", {}).get("done", 0) > 0 or bool(data.get("quests", {}).get("boards")),

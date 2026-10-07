@@ -134,14 +134,6 @@ def spot_stars(save, spot: str) -> tuple[int, int]:
     return sum(star_count(save, f) for f in fish), 5 * len(fish)
 
 
-def mastery_hint(fish: dict) -> str | None:
-    """숙련 3: 선호 루어 리듬 힌트."""
-    from src.fishing.lure import profile_of, cfg as lure_cfg
-    p = profile_of(fish)
-    names = lure_cfg().get("profile_names", {})
-    return names.get(p, p) if p else None
-
-
 # ── 칭호 · 보상 ──
 def master_title_id(fish: dict) -> str:
     return f"master_{fish['id']}"

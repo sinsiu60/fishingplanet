@@ -1,8 +1,7 @@
-"""루어 액션 검증 (LURE_ACTION.md, DESIGN.md 47장).
+"""입질 대기 측정 (DESIGN.md 47장). 루어 액션은 삭제됨 (LURE_ACTION.md 개편은 진행하지 않음) — 대기는 기다리기만.
 
-  python tools/lure_check.py baseline [n]     아무것도 안 하는 봇: 낚시터별 대기(접근 시작) · '쑥'까지 · 등급 분포 (낮 · 맑음, 비밀은 밤)
-                                              → tools/lure_baseline_la1.json (LA1 기준, LA5 에서 비교)
-LA5 에서 적극 · 바꾸기 봇과 가드레일 측정을 이 파일에 더한다.
+  python tools/lure_check.py baseline [n]     낚시터별 대기(접근 시작) · '쑥'까지 · 등급 분포 (낮 · 맑음, 비밀은 밤)
+                                              → tools/lure_baseline_la1.json (루어 삭제 전 '아무것도 안 함' 기준과 비교용)
 """
 import random, statistics, sys, os, json
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
