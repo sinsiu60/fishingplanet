@@ -22,7 +22,16 @@ def cfg() -> dict:
 
 
 def seen_list(save) -> list:
-    return save.data.setdefault("details", {}).setdefault("seen_hook_cinematic", [])
+    det = save.data.setdefault("details", {})
+    seen = det.setdefault("seen_hook_cinematic", [])
+    if not det.get("hook_seen_v151"):
+        # v1.5.1: 디테일 업데이트 전 세이브는 이미 잡은 종을 '본 것'으로 소급해서 전설 · 환상이 짧은 버전만 나왔음
+        # → 전설 · 환상 기록을 한 번 비움 (다음 만남에 전체 버전 한 번). 희귀는 그대로.
+        det["hook_seen_v151"] = True
+        big = {f["id"] for f in load_json("fish.json")["fish"] if f.get("rarity") == "legend"}
+        big |= {f["id"] for f in load_json("phantom.json")["fish"]}
+        seen[:] = [x for x in seen if x not in big]
+    return seen
 
 
 def plan(save, fish: dict | None, force_full: bool = False) -> dict:
