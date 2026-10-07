@@ -281,10 +281,21 @@ class _Writer:
 
     def submit(self, path, payload: str) -> None:
         with self.lock:
+            if self.thread is False:   # 스레드를 못 띄우는 곳(웹): 바로 씀
+                _write_file(path, payload)
+                return
             self.pending[path] = payload
             if self.thread is None:
-                self.thread = threading.Thread(target=self._run, name="save-writer", daemon=True)
-                self.thread.start()
+                try:
+                    self.thread = threading.Thread(target=self._run, name="save-writer", daemon=True)
+                    self.thread.start()
+                except RuntimeError:
+                    self.thread = False
+                    for pth, pl in list(self.pending.items()):
+                        _write_file(pth, pl)
+                    self.pending.clear()
+                    self.idle.set()
+                    return
         self.wake.set()
 
     def _run(self) -> None:

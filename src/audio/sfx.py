@@ -419,7 +419,10 @@ class Sfx:
                 print("sfx variant:", key, e)
             finally:
                 pend.discard(key)
-        threading.Thread(target=run, name="sfx-variant", daemon=True).start()
+        try:
+            threading.Thread(target=run, name="sfx-variant", daemon=True).start()
+        except RuntimeError:   # 웹(브라우저)은 스레드를 못 띄움 → 그 자리에서 만듦
+            run()
 
     def keep_recent(self, prefix: str, name: str, n: int = 2) -> None:
         """큰 소리(전설 · 환상의 노래 10~20MB)는 최근 n개만 메모리에 (O5)."""
