@@ -15,6 +15,13 @@
     "normal_sec": 1.6,
     "short_sec": 0.6,
     "skip_after_sec": 0.3,
+  "ppc_px": 4, "_ppc_px": "1cm 눈금 간격 (게임 해상도 px) — 물고기 크기와 상관없이 고정",
+  "min_len_cm": 60,
+  "slide_at": 1.0, "short_slide_at": 0.05, "slide_sec": 0.45,
+  "zoom_below": 0.3, "zoom_fill": 0.45, "zoom_max": 3.0, "zoom_hold_sec": 0.2,
+  "_zoom": "물고기가 화면 폭의 30% 보다 작으면 45% 가 되도록 확대 (최대 3배), 0.4~0.9초에 확대",
+  "pan_keep": 0.8, "pan_px_per_sec": 700, "pan_max_extra_sec": 2.2,
+  "_pan": "머리 끝 표시가 화면 80% 지점을 넘으면 카메라가 따라감, 넘는 px 를 700px/초로 (최대 +2.2초)",
     "flaps": [2, 3],
     "flap_sfx": {"small": "sfx_flap_s", "mid": "sfx_flap_m", "big": "sfx_flap_l"},
     "for": ["common", "uncommon", "rare"]

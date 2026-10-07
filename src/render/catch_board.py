@@ -1,6 +1,7 @@
 """잡은 직후 (DETAILS.md D, DESIGN.md 45장 DT7): 나무 계측판 · 놓아주기 장면. 수치는 data/details/hands_catch.json.
 
-계측판 (일반 · 고급 · 희귀, 뜰채 장면 → 포획 카드 사이):
+계측판 (일반 · 고급 · 희귀, 뜰채 장면 → 포획 카드 사이) — 눈금 간격은 늘 같고(ppc_px), 큰 물고기는 화면 밖까지 + 카메라 이동,
+아주 작은 물고기는 카메라 확대 (v1.5.2):
   보통 1.6초: 손이 물고기를 계측판(1cm 눈금, 10cm 마다 숫자)에 올림(0~0.35) → 파닥 2~3번 → 머리 끝 표시가 미끄러지며 크기에 멈춤(1.0~1.45)
   짧게 0.6초: 파닥 없이 눈금만 (물고기는 바로 놓여 있고 표시가 미끄러짐)
   0.3초 이후 탭 = 바로 카드. 젖은 비늘: 물고기 몸에 반짝임 점이 무작위로 깜빡임.
@@ -13,7 +14,7 @@ import pygame
 
 from src.core.config import load_json
 from src.core.mathutil import clamp, lerp, lerp_color
-from src.render.fish_draw import draw_fish_fit, draw_fish_side, fish_bounds, fish_colors, fish_shape
+from src.render.fish_draw import draw_fish_side, fish_bounds, fish_colors, fish_shape
 
 WOOD = (176, 128, 78)
 WOOD_D = (128, 88, 50)
@@ -33,21 +34,34 @@ def size_class(size_cm: float) -> str:
 
 
 class MeasureBoard:
+    """눈금(1cm = ppc_px)은 크기와 상관없이 늘 같다. 물고기가 판보다 길면 화면 밖으로 나가고 카메라가 머리 끝 표시를 따라
+    오른쪽으로 이동하며 잰다 (그만큼 길어짐). 아주 작은 물고기는 카메라가 물고기 쪽으로 확대해서 보여 준다."""
+
     def __init__(self, fish: dict, size_cm: float, mode: str, w: int, h: int, rnd=None):
         c = cfg()["board"]
+        self.c = c
         self.fish, self.size, self.mode = fish, size_cm, mode
         self.w, self.h = w, h
         self.t = 0.0
-        self.sec = c["short_sec"] if mode == "short" else c["normal_sec"]
         r = rnd or random.Random()
         self.flaps = [] if mode == "short" else sorted(r.uniform(0.42, 0.95) for _ in range(r.randint(*c["flaps"])))
         self.flap_fired = 0
         self.events: list[str] = []
-        # 판 길이: 크기보다 10~20cm 길게, 10cm 단위
-        self.len_cm = (int(size_cm // 10) + 2) * 10
         self.bx0, self.bx1 = int(w * 0.12), int(w * 0.88)
-        self.ppc = (self.bx1 - self.bx0 - 10) / self.len_cm
+        self.view_w = self.bx1 - self.bx0 - 6           # 0 눈금부터 오른쪽 끝까지 화면 폭 (px)
+        self.ppc = c["ppc_px"]                         # 1cm 눈금 간격 (고정)
+        self.len_cm = max(c["min_len_cm"], (int(size_cm // 10) + 2) * 10)
         self.by = int(h * 0.5)
+        fish_px = size_cm * self.ppc
+        # 작은 물고기: 물고기가 화면 폭의 zoom_fill 만큼 되도록 확대 (최대 zoom_max)
+        self.zoom = clamp(self.view_w * c["zoom_fill"] / max(1.0, fish_px), 1.0, c["zoom_max"]) \
+            if fish_px < self.view_w * c["zoom_below"] else 1.0
+        # 큰 물고기: 머리 끝 표시가 화면 pan_keep 지점을 넘으면 카메라가 따라감 → 넘는 만큼 시간을 더
+        self.overflow = max(0.0, fish_px - self.view_w * c["pan_keep"])
+        extra = min(c["pan_max_extra_sec"], self.overflow / c["pan_px_per_sec"])
+        self.slide = c["slide_sec"] + extra
+        self.slide_at = c["short_slide_at"] if mode == "short" else c["slide_at"]
+        self.sec = (c["short_sec"] if mode == "short" else c["normal_sec"]) + extra + (c["zoom_hold_sec"] if self.zoom > 1 else 0.0)
         self.glints = [(r.uniform(0.1, 0.9), r.uniform(-0.35, 0.35), r.uniform(0, 6.3)) for _ in range(10)]
         shape = fish_shape(fish)
         bx, by, bw, bh = fish_bounds(shape)
@@ -58,7 +72,7 @@ class MeasureBoard:
         return self.t >= self.sec
 
     def can_skip(self) -> bool:
-        return self.t >= cfg()["board"]["skip_after_sec"]
+        return self.t >= self.c["skip_after_sec"]
 
     def update(self, dt: float) -> list[str]:
         self.t += dt
@@ -69,80 +83,132 @@ class MeasureBoard:
         return ev
 
     def _marker_cm(self) -> float:
-        if self.mode == "short":
-            u = clamp((self.t - 0.05) / 0.45, 0, 1)
-        else:
-            u = clamp((self.t - 1.0) / 0.45, 0, 1)
+        u = clamp((self.t - self.slide_at) / self.slide, 0, 1)
+        if self.overflow > 0:   # 길게 미끄러질 땐 거의 일정한 속도로 (끝에서만 부드럽게 멈춤)
+            return self.size * (u if u < 0.85 else 0.85 + 0.15 * (1 - (1 - (u - 0.85) / 0.15) ** 2))
         return self.size * (1 - (1 - u) ** 3)
+
+    def camera(self) -> tuple[float, float]:
+        """(왼쪽 화면 기준 0 눈금에서 얼마나 오른쪽을 보고 있나 px(배율 1 기준), 배율)."""
+        z = 1.0
+        if self.zoom > 1:
+            zk = 1.0 if self.mode == "short" else smooth(clamp((self.t - 0.4) / 0.5, 0, 1))
+            z = lerp(1.0, self.zoom, zk)
+        pan = 0.0
+        if self.overflow > 0:
+            mpx = self._marker_cm() * self.ppc
+            pan = max(0.0, mpx - self.view_w * self.c["pan_keep"])
+        return pan, z
 
     def draw(self, canvas, pal) -> None:
         w, h = self.w, self.h
         shade = pygame.Surface((w, h), pygame.SRCALPHA)
         shade.fill((10, 12, 22, 200))
         canvas.blit(shade, (0, 0))
-        x0, x1, y = self.bx0, self.bx1, self.by
-        top, bot = y - 34, y + 34
-        # 나무판 + 결
-        canvas.fill(WOOD_D, (x0 + 2, top + 3, x1 - x0, bot - top))
-        canvas.fill(WOOD, (x0, top, x1 - x0, bot - top))
-        r = random.Random(17)
-        for _ in range(9):
-            gy = r.randint(top + 4, bot - 3)
-            gx = r.randint(x0, x1 - 60)
-            pygame.draw.line(canvas, WOOD_L if r.random() < 0.5 else WOOD_D, (gx, gy), (gx + r.randint(30, 90), gy), 1)
-        canvas.fill(WOOD_D, (x0, top, 6, bot - top))   # 0 쪽 멈춤 턱
-        zx = x0 + 6
-        font = None
-        from src.core.fonts import get_font
-        font = get_font(11)
-        for cm in range(0, self.len_cm + 1):
-            x = zx + int(cm * self.ppc)
-            if x > x1 - 2:
-                break
-            if cm % 10 == 0:
-                pygame.draw.line(canvas, INK, (x, top), (x, top + 9), 1)
-                if cm:
-                    img = font.render(str(cm), False, INK)
-                    canvas.blit(img, (x - img.get_width() // 2, top + 9))
-            elif cm % 5 == 0:
-                pygame.draw.line(canvas, INK, (x, top), (x, top + 6), 1)
-            elif self.ppc >= 2.0:
-                pygame.draw.line(canvas, INK, (x, top), (x, top + 3), 1)
-        # 물고기: 코끝을 0 에 대고 (머리 왼쪽) — 몸길이(그림 폭) = 크기 × 눈금 간격. 가로로 꽉 맞추는 draw_fish_fit 사용
+        pan, z = self.camera()
+        zx0 = self.bx0 + 6                      # 배율 1 · 이동 0 일 때 0 눈금의 화면 x
+        y0 = self.by
+        # 확대 중심: 물고기 가운데 (작은 물고기) — 0 눈금이 화면 안에 남도록
+        fish_px = self.size * self.ppc
+        if z > 1:
+            fc = zx0 + fish_px / 2
+            zk = (z - 1) / max(1e-6, self.zoom - 1)
+            ax, ay = lerp(zx0, fc, zk), y0
+        else:
+            ax, ay = zx0, y0
+
+        def X(cm: float) -> float:
+            return ax + (zx0 + cm * self.ppc - pan - ax) * z
+
+        def Y(dy: float) -> float:
+            return ay + dy * z
+
+        top, bot = Y(-34), Y(34)
+        x_start = X(-1.5)
+        x_end = X(self.len_cm + 4)
+        # 나무판 + 결 (cm 좌표에 고정 — 카메라와 함께 움직임)
+        left, right = max(-4, int(x_start)), min(w + 4, int(x_end))
+        if right > left:
+            canvas.fill(WOOD_D, (left + 2, int(top) + 3, right - left, int(bot - top)))
+            canvas.fill(WOOD, (left, int(top), right - left, int(bot - top)))
+            r = random.Random(17)
+            for _ in range(max(9, int(self.len_cm / 10))):
+                gy = r.uniform(-30, 31)
+                g0 = r.uniform(0, max(1, self.len_cm - 15))
+                g1 = g0 + r.uniform(8, 22)
+                col = WOOD_L if r.random() < 0.5 else WOOD_D
+                pygame.draw.line(canvas, col, (X(g0), Y(gy)), (X(g1), Y(gy)), 1)
+            stop_x = X(0) - 6 * z
+            if stop_x + 6 * z > -2:
+                canvas.fill(WOOD_D, (int(stop_x), int(top), max(2, int(6 * z)), int(bot - top)))   # 0 쪽 멈춤 턱
+        # 물고기: 코끝을 0 에 대고 (머리 왼쪽), 몸길이 = 크기 × 눈금 간격 (배율 포함). 판 위로 크면 화면 밖까지
         bx, by, bw, bh = self.fb
-        L = self.size * self.ppc / bw
-        fw, fh = int(round(self.size * self.ppc)), int(bh * L) + 4
+        L = fish_px * z / bw
         put = 1.0 if self.mode == "short" else smooth(clamp(self.t / 0.35, 0, 1))
         flap = 0.0
         for ft in self.flaps:
             d = self.t - ft
             if 0 <= d < 0.22:
                 flap = max(flap, math.sin(math.pi * d / 0.22))
-        cy = y + 2 - (1 - put) * 40 - flap * 6
-        draw_fish_fit(canvas, pygame.Rect(zx, int(cy - fh / 2), fw, fh), self.fish, L * 1.001, tail_wag=flap * 6)
+        cy = Y(-4) - (1 - put) * 40 - flap * 6
+        nose = X(0)
+        fcx = nose - bx * L
+        fcy = cy - (by + bh / 2) * L
+        if nose + bw * L > -10 and nose < w + 10:
+            draw_fish_side(canvas, fcx, fcy, L, 0.0, fish_colors(self.fish), -1, tail_wag=flap * 6, shape=self.shape)
         # 젖은 비늘 반짝임
+        fw, fh = bw * L, bh * L
         for u, v, ph in self.glints:
             if math.sin(self.t * 9 + ph * 3) > 0.55:
-                gx = zx + u * fw
-                gy = cy + v * fh * 0.7
-                canvas.fill((255, 255, 250), (int(gx), int(gy), 1, 1))
+                gx, gy = nose + u * fw, cy + v * fh * 0.7
+                if 0 <= gx < w and 0 <= gy < h:
+                    canvas.fill((255, 255, 250), (int(gx), int(gy), 1, 1))
+        # 줄자 띠 (판 아래쪽, 물고기 위에 — 큰 물고기도 눈금이 늘 보임). 1cm 눈금 · 5cm 중간 · 10cm 숫자 (간격 고정)
+        from src.core.fonts import get_font
+        font = get_font(11)
+        tape_h = 16                              # 띠 굵기 · 글자는 확대와 상관없이 같게 (눈금 간격만 확대)
+        tape_y0 = int(min(Y(18), h - tape_h - 6))
+        if right > left:
+            canvas.fill((236, 222, 176), (left, tape_y0, right - left, tape_h))
+            canvas.fill((198, 176, 120), (left, tape_y0 + tape_h - 1, right - left, 1))
+        step_px = self.ppc * z
+        cm0 = max(0, int((0 - X(0)) / step_px) - 1)
+        cm1 = min(self.len_cm, int((w - X(0)) / step_px) + 1)
+        for cm in range(cm0, cm1 + 1):
+            x = int(round(X(cm)))
+            if cm % 10 == 0:
+                pygame.draw.line(canvas, INK, (x, tape_y0), (x, tape_y0 + 8), 1)
+                img = font.render(str(cm), False, INK)
+                canvas.blit(img, (x - img.get_width() // 2, tape_y0 + tape_h - img.get_height() + 1))
+            elif cm % 5 == 0:
+                pygame.draw.line(canvas, INK, (x, tape_y0), (x, tape_y0 + 6), 1)
+                if step_px >= 9:
+                    img = font.render(str(cm), False, lerp_color(INK, (236, 222, 176), 0.35))
+                    canvas.blit(img, (x - img.get_width() // 2, tape_y0 + tape_h - img.get_height() + 1))
+            else:
+                pygame.draw.line(canvas, INK, (x, tape_y0), (x, tape_y0 + 3), 1)
+            if step_px >= 14:   # 크게 확대됐을 땐 1mm 대신 0.5cm 눈금
+                xh = int(round(X(cm + 0.5)))
+                pygame.draw.line(canvas, INK, (xh, tape_y0), (xh, tape_y0 + 2), 1)
         # 손 (올려놓는 동안만)
         if self.mode != "short" and self.t < 0.5:
             k = 1 - clamp((self.t - 0.3) / 0.2, 0, 1)
-            hx = zx + self.size * self.ppc * 0.55
+            hx = min(w * 0.6, nose + fw * 0.55)
             hy = cy - 10 - (1 - k) * 40
             skin = pal.get("hand", (230, 180, 140))
             pygame.draw.ellipse(canvas, skin, (hx - 12, hy - 6, 24, 12))
             pygame.draw.ellipse(canvas, pal.get("hand_shadow", (190, 140, 110)), (hx - 12, hy - 6, 24, 12), 1)
             pygame.draw.polygon(canvas, pal.get("sleeve", (70, 90, 140)), [(hx + 6, hy - 4), (hx + 40, hy - 40), (hx + 56, hy - 30), (hx + 12, hy + 4)])
-        # 머리 끝 표시 (미끄러지며 크기에 멈춤)
+        # 머리 끝 표시 (미끄러지며 크기에 멈춤 — 카메라가 따라감)
         mcm = self._marker_cm()
-        mx = zx + int(mcm * self.ppc)
-        canvas.fill((240, 236, 226), (mx - 1, top - 6, 3, bot - top + 8))
-        pygame.draw.polygon(canvas, (220, 70, 60), [(mx - 4, top - 10), (mx + 4, top - 10), (mx, top - 4)])
+        mx = int(round(X(mcm)))
+        ttop = max(2, int(top) - 6)
+        canvas.fill((240, 236, 226), (mx - 1, ttop, 3, int(tape_y0 + tape_h) - ttop + 2))
+        pygame.draw.polygon(canvas, (220, 70, 60), [(mx - 4, ttop - 4), (mx + 4, ttop - 4), (mx, ttop + 2)])
         if mcm > 0.1:
             label = font.render(f"{mcm:.1f}cm", False, (255, 240, 200))
-            canvas.blit(label, (min(x1 - label.get_width(), max(x0, mx - label.get_width() // 2)), top - 24))
+            lx = min(w - 4 - label.get_width(), max(4, mx - label.get_width() // 2))
+            canvas.blit(label, (lx, max(2, ttop - 18)))
 
 
 def smooth(u: float) -> float:
