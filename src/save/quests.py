@@ -99,6 +99,8 @@ def _make_daily(save, cont: str, seed: str) -> list[dict]:
             out.append(q)
         if len(out) >= cfg()["daily_count"]:
             break
+    if out:   # 비늘석 (46장): 일일 3개 중 1개(무작위) 보상에 비늘석 1개
+        rnd.choice(out)["reward"]["stone"] = True
     return out
 
 
@@ -229,6 +231,7 @@ def _reward(cont: str, q: dict, ctx: dict) -> dict:
         out["chest"] = [r["weekly_chest"]]
         out["points"] += r["weekly_points"]
         out["title"] = r["weekly_title"]
+        out["stone"] = True   # 주간 의뢰: 희귀 비늘석 확정 (46장)
     return out
 
 
@@ -273,6 +276,8 @@ def reward_text(rw: dict) -> str:
         parts.append("상자")
     if rw.get("title"):
         parts.append("칭호")
+    if rw.get("stone"):
+        parts.append("비늘석")
     return " · ".join(parts)
 
 
@@ -304,6 +309,10 @@ def complete(save, q: dict, rnd=random) -> dict:
         cos = cosmetics(save)
         if rw["title"] not in cos["titles"]:
             cos["titles"].append(rw["title"])
+    from src.save import scalestone
+    stones = scalestone.on_quest_complete(save, q, q["id"].split(":")[0] if ":" in q.get("id", "") else "sharmion")
+    if stones:
+        got["scalestones"] = stones
     return got
 
 

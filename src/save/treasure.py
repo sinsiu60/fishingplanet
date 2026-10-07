@@ -113,6 +113,10 @@ def open_chest(save, grade: str, spot: str, rnd=random) -> dict | None:
         d = roll_diary(save, rnd)
         if d is not None:
             out["diary"] = d
+        from src.save import scalestone
+        st = scalestone.roll_chest(save, grade, spot_continent(spot))   # 비늘석: 내용물과 별도 확률 (상자 rnd 는 건드리지 않음)
+        if st is not None:
+            out["scalestone"] = st
     return out
 
 

@@ -101,6 +101,11 @@ def migrate(data: dict, slot: int | None = None) -> dict:
     if "tutorial" not in data:
         from src.tutorial import legacy
         legacy.migrate(data)   # 가이드 튜토리얼 이전 세이브: 이미 쓴 시스템은 완료 처리 (DESIGN.md 40)
+    if "scalestone" not in data:
+        # 비늘석 이전 세이브 (46장): 이미 의뢰를 완료했으면 첫 의뢰 보너스는 지급 완료로 (환영 선물로 대신 — S4)
+        done = data.get("stats", {}).get("quests_done", 0) > 0
+        data["scalestone"] = {"items": [], "equipped": {k: None for k in ("rod", "reel", "line", "net")},
+                              "first_quest_bonus": done, "next_id": 1}
     if "legend_sales" not in data:
         # 전설 감가(A+D) 이전에 잡아 둔 살림망 전설은 제값으로 (규칙이 생기기 전에 잡은 것)
         legends = {f["id"] for f in load_json("fish.json")["fish"] if f["rarity"] == "legend"}
@@ -216,6 +221,9 @@ def new_data() -> dict:
         "continent": "sharmion",
         "unlocked_continents": ["sharmion"],
         "enhance": {},                                   # 장비 id → 강화 단계
+        # 비늘석 (46장): 보관함 · 장착 칸 4개 · 첫 의뢰 보너스 지급 여부 · 다음 고유 번호
+        "scalestone": {"items": [], "equipped": {"rod": None, "reel": None, "line": None, "net": None},
+                       "first_quest_bonus": False, "next_id": 1},
         "materials": {"sharmion": 0, "eldrasion": 0, "rare": 0},
         "scales": 0,                                     # 전설 비늘
         "chests": {"common": 0, "rare": 0, "special": 0, "legend": 0},
@@ -683,6 +691,15 @@ class SaveGame:
                 self.data["stats"]["earned"] += news["trophy"]
             else:
                 news["resell"] = cfg["resell_mult"]
+        # 비늘석 (46장): 일반 · 고급 0.8% / 희귀 3%, 전설 첫 포획 = 희귀 확정 — 표시는 파이팅 뒤 포획 카드 · 결과 화면
+        from src.save import scalestone
+        cont = spot_continent(fish["spot"]) if fish.get("spot") else "sharmion"
+        if fish["rarity"] == "legend":
+            stone = scalestone.grant_table(self, "legend_first", cont) if news["new"] else None
+        else:
+            stone = scalestone.roll_catch(self, fish, cont)
+        if stone is not None:
+            news["scalestone"] = stone
         st = self.data["stats"]
         st["catches"] += 1
         st["perfects"] += result.get("perfects", 0)
@@ -708,6 +725,9 @@ class SaveGame:
         st["perfects"] += result.get("perfects", 0)
         if result["rank"] == "S":
             st["s_ranks"] += 1
+        if got["new"]:   # 환상 첫 포획 = 전설 비늘석 확정 (환상 비밀: 포획 연출 뒤 카드에만)
+            from src.save import scalestone
+            news["scalestone"] = scalestone.grant_table(self, "phantom_first", spot_continent(result["fish"].get("spot", "")))
         return news
 
     def release_last(self, item: dict) -> dict:

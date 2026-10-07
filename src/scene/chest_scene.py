@@ -73,6 +73,9 @@ class ChestScene(Scene):
         if reward is None:
             return
         self.anim = {"grade": grade, "t": 0.0, "reward": reward, "fired": set()}
+        if reward.get("scalestone"):   # 비늘석 (46장): 상자 내용물과 별도
+            from src.save import scalestone
+            self._say(*scalestone.news_line(reward["scalestone"]))
         d = reward.get("diary")
         if d is not None:  # 낡은 어부의 수첩 (33장 P6) — 중복은 환상 비늘 1개
             self._say("낡은 어부의 수첩 한 장이 끼어 있었다 (수첩 탭)" if not d["dup"] else

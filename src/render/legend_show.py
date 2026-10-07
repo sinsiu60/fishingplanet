@@ -966,6 +966,11 @@ class LegendShow:
         if line:
             img = font11.render(" · ".join(line), False, (255, 214, 90))
             canvas.blit(img, (cx - img.get_width() // 2, r.y + 64))
+        if self.news.get("scalestone") and t >= m["rewards"] + 0.25 * len(icons):   # 전설 첫 포획 = 희귀 비늘석
+            from src.save import scalestone
+            txt, col = scalestone.news_line(self.news["scalestone"])
+            img = font11.render(txt, False, col)
+            canvas.blit(img, (cx - img.get_width() // 2, r.y + 75))
         if self.waiting() and int(self.clock * 2) % 2 == 0:
             img = font11.render("클릭해서 계속" if not self.final else "클릭해서 계속 — 그리고…", False, (220, 200, 160))
             canvas.blit(img, (cx - img.get_width() // 2, h - 14))

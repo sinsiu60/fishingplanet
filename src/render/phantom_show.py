@@ -715,6 +715,11 @@ class PhantomShow:
             if t >= m["rewards"] + 0.3 * len(icons):
                 img = font11.render(f"수집 보상: {ln}", False, (255, 214, 90))
                 canvas.blit(img, (cx - img.get_width() // 2, r.y + 64 + i * 11))
+        if self.news.get("scalestone") and t >= m["rewards"] + 0.3 * len(icons):   # 환상 첫 포획 = 전설 비늘석
+            from src.save import scalestone
+            txt, col = scalestone.news_line(self.news["scalestone"])
+            img = font11.render(txt, False, col)
+            canvas.blit(img, (cx - img.get_width() // 2, r.y + 64 + min(2, len(lines)) * 11))
         if self.waiting() and int(self.clock * 2) % 2 == 0:
             img = font11.render("클릭해서 계속", False, (190, 180, 210))
             canvas.blit(img, (cx - img.get_width() // 2, h - 14))

@@ -1,0 +1,10 @@
+{
+ "_설명": "비늘석 등급 4종 (SCALESTONE.md). mult = 옵션 수치 배율, cost = 강화 골드·소재 배율, salvage = 분해 기본 소재. 보라는 환상 전용이라 쓰지 않음.",
+ "order": ["common", "uncommon", "rare", "legend"],
+ "grades": {
+  "common":   {"name": "일반", "color": [216, 221, 230], "mult": 0.6, "cost": 0.4, "salvage": 2,  "icon": "scalestone_common"},
+  "uncommon": {"name": "고급", "color": [126, 214, 138], "mult": 0.8, "cost": 0.7, "salvage": 4,  "icon": "scalestone_uncommon"},
+  "rare":     {"name": "희귀", "color": [111, 183, 255], "mult": 1.0, "cost": 1.0, "salvage": 8,  "icon": "scalestone_rare"},
+  "legend":   {"name": "전설", "color": [255, 220, 120], "mult": 1.3, "cost": 1.8, "salvage": 16, "icon": "scalestone_legend"}
+ }
+}

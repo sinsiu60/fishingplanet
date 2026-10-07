@@ -462,6 +462,10 @@ class FishingScene(Scene):
                     got["_shown"] = True
                     from src.save.quests import reward_text
                     self.toasts.show(f"의뢰 완료! {reward_text(it[0]['reward'])}", (255, 214, 90), 3.0, 11)  # 소리 없이 (N3)
+                    from src.save import scalestone
+                    for info in got.get("scalestones", []):   # 비늘석 (46장): 어느 등급 · 첫 옵션인지
+                        txt, col = scalestone.news_line(info)
+                        self.toasts.show(txt, col, 3.0, 11)
         qr.events.clear()
 
     def _record_mutation(self, f, muts: list) -> None:
@@ -613,6 +617,18 @@ class FishingScene(Scene):
                 if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
                     self.cine_full = not self.cine_full   # Shift+F3: 입질 연출 늘 전체 버전 (DT4 디버그)
                     self.toasts.show(f"[테스트] 입질 연출 늘 전체 버전: {'켬' if self.cine_full else '끔'}", INFO, 1.5, 11)
+            elif a.value == "F8" and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    # Shift+F8: 비늘석 디버그 생성 — 등급 순환, 부옵션 1~5개 무작위 (46장)
+                    from src.save import scalestone
+                    gs = scalestone.grades()["order"]
+                    self.dbg_stone_i = (getattr(self, "dbg_stone_i", -1) + 1) % len(gs)
+                    n = random.randint(1, 5)
+                    ids = random.sample(scalestone.options()["order"], n)
+                    s = scalestone.debug_make(self.save, gs[self.dbg_stone_i], ids)
+                    g = scalestone.grade_info(s["grade"])
+                    self.toasts.show(f"[테스트] 비늘석 {g['name']} +{s['level']} · " +
+                                     ", ".join(scalestone.option_text(o) for o in s["opts"]), tuple(g["color"]), 2.5, 11)
             elif a.value in ("F4", "F6") and pygame.key.get_mods() & pygame.KMOD_SHIFT:
                 if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
                     self._p2_debug("full" if a.value == "F4" else "short")   # 환상 2페이즈 컷신 바로 보기

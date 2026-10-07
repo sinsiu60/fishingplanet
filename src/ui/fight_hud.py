@@ -226,6 +226,9 @@ def catch_badges(news: dict | None) -> list:
         from src.save import treasure
         info = treasure.grade_info(news["chest"])
         badges.append((f"{info['name']} 보물상자 획득!", tuple(info["color"])))
+    if news.get("scalestone"):   # 비늘석 (46장) — 파이팅이 끝난 뒤 카드에만
+        from src.save import scalestone
+        badges.append(scalestone.news_line(news["scalestone"]))
     badges += dex_badges(news)
     return badges
 

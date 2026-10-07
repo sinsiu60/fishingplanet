@@ -1,0 +1,15 @@
+{
+ "_설명": "비늘석 얻는 곳 (SCALESTONE.md). grade = 등급 확률(%). 상자 확률은 기존 내용물과 별도 (내용물 · 천장 영향 없음). 획득 표시는 파이팅이 끝난 뒤 포획 카드 · 결과 화면에만.",
+ "catch": {"chance": {"common": 0.008, "uncommon": 0.008, "rare": 0.03}, "grade": {"common": 70, "uncommon": 25, "rare": 5}},
+ "daily_quest": {"per_board": 1, "grade": {"common": 50, "uncommon": 50}},
+ "weekly_quest": {"grade": {"rare": 100}},
+ "chest": {
+  "common":  {"chance": 0.20, "grade": {"common": 60, "uncommon": 40}},
+  "rare":    {"chance": 0.35, "grade": {"uncommon": 60, "rare": 40}},
+  "special": {"chance": 0.60, "grade": {"rare": 80, "legend": 20}},
+  "legend":  {"chance": 1.00, "grade": {"legend": 100}}
+ },
+ "legend_first": {"grade": {"rare": 100}},
+ "phantom_first": {"grade": {"legend": 100}},
+ "first_quest": {"grade": {"uncommon": 100}}
+}
