@@ -16,7 +16,8 @@ from src.core.config import game_config, load_json
 from src.platform.detect import IS_MOBILE
 from src.core.mathutil import clamp
 from src.core.weather import WEATHER_KO
-from src.render import campsite
+from src.render import camp_fpv
+from src.render.palette import Palette
 from src.scene.base import Scene
 from src.ui.hud import text
 
@@ -92,6 +93,7 @@ class CampfireScene(Scene):
         self.applied = 0.0
         self.reduce = bool(game.settings.get("reduce_fx"))
         self.first = not game.save.data.get("rest_seen")
+        self.camp = None   # 캠프 장면 (첫 그리기 때 화면 크기로 구움)
         self.embers_on = not IS_MOBILE and game.settings.get("quality") != "low"
         self.rnd = random.Random()
         self.embers: list[list] = []
@@ -247,36 +249,31 @@ class CampfireScene(Scene):
             self.fishing.draw(canvas)   # 들어가고 나올 때만 낚시 화면
         else:
             w, h = canvas.get_size()
-            campsite.draw(canvas, self.fishing, self.t)
-            cx, by = campsite.fire_pos(w, h)
-            self._draw_event_back(canvas, cx, by, 1.0)
-            self._draw_fire(canvas, cx, by, 1.0)
-            self._draw_event_front(canvas, cx, by, 1.0)
             f = self.fishing
+            if self.camp is None or self.camp.w != w:
+                # 무거운 층은 장면 시작 때 한 번 굽기 (CAMPFIRE_FPV 공통 규칙)
+                self.camp = camp_fpv.CampFPV(w, h, f.season, snowy=f.spot_id == "ice_sea")
+                self.hand_pal = Palette().sample(13.0)   # CF1: 손은 낮 색 (조명은 CF2)
+                self.hand_look = f._hand_look()
+            pal = f.scene_palette()
+            cam = self.camp
+            cam.draw_sky(canvas, pal, f.clock.hour, self.t, visible=f.weather == "clear")
+            canvas.blit(cam.far, (0, 0))
+            canvas.blit(cam.near, (0, 0))
+            cx, by = cam.X(camp_fpv.FIRE[0]), camp_fpv.FIRE[1]
+            self._draw_event_back(canvas, cx, by, 1.0)
+            cam.draw_fire(canvas, 0, self.t)
+            canvas.blit(cam.front, (0, 0))
+            self._draw_event_front(canvas, cx, by, 1.0)
+            f.rain.draw(canvas, pal)
+            f.fog.draw(canvas, pal, camp_fpv.HORIZON, self.t)
+            f.season_fx.draw(canvas)
+            cam.draw_hands(canvas, self.hand_pal, self.hand_look)
             text(canvas, f"{f.clock.label()} · {WEATHER_KO[f.weather]}", (8, 6), (240, 236, 220), 11, "topleft")
         if black > 0:
             veil = pygame.Surface(canvas.get_size())
             veil.set_alpha(int(255 * clamp(black, 0.0, 1.0)))
             canvas.blit(veil, (0, 0))
-
-    def _draw_fire(self, canvas, cx: int, by: int, k: float) -> None:
-        s = 2   # 야영지에선 2배 (도트 그대로)
-        # 장작 2개 X 자 (16×6 → ×2)
-        pygame.draw.line(canvas, LOG, (cx - 8 * s, by + 3 * s), (cx + 8 * s, by - 2 * s), 3 * s)
-        pygame.draw.line(canvas, LOG, (cx - 8 * s, by - 2 * s), (cx + 8 * s, by + 3 * s), 3 * s)
-        # 불꽃 3겹 (높이 10~14px, 0.12초마다 1px씩)
-        heights = (14, 11, 7)
-        widths = (10, 7, 4)
-        for i, col in enumerate(FLAME):
-            hh = (heights[i] + self.flick[i]) * s
-            ww = widths[i] * s
-            dx = self.flick[(i + 1) % 3] * s
-            pts = [(cx - ww // 2 + dx, by - s), (cx + ww // 2 + dx, by - s), (cx + dx + (s if i % 2 else -s), by - s - hh)]
-            pygame.draw.polygon(canvas, col, pts)
-        for e in self.embers:   # 불티 점 2~4개
-            a = 1.0 - e[4]
-            col = (255, int(180 + 60 * a), int(90 * a))
-            canvas.fill(col, (int(cx + e[0] * s), int(by - 24 - e[1] * s), 2, 2))
 
     def _draw_event_back(self, canvas, cx: int, by: int, k: float) -> None:
         ev = self.event
