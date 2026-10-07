@@ -566,19 +566,13 @@ class SaveGame:
             k = 1.10 if period == "night" else 0.95
             c, w = (green[0] + green[1]) / 2, (green[1] - green[0]) * k
             green = [c - w / 2, c + w / 2]
-        green[1] = round(green[1] * (1 + ss.frac(self, "tension_limit")), 2)   # 장력 한계: 초록 위쪽 끝 +% (빨강이 늦게 시작)
-        return {"rod_green": green, "rod_tier": rod.get("tier", 1),
-                "reel_speed": reel["speed"] * (1 + ss.frac(self, "reel_speed")), "drag_steps": reel["drag_steps"],
-                "drag_cushion": reel.get("drag_cushion", 0.0),
-                "line_max": round(line["durability"] * (1 + ss.frac(self, "line_durability"))),
+        base = {"rod_green": green, "rod_tier": rod.get("tier", 1), "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
+                "drag_cushion": reel.get("drag_cushion", 0.0), "line_max": line["durability"],
                 "net_window_sec": net["window"], "net_fail_distance": net["fail_distance"],
-                "line_red_mult": (0.9 if self.charm_on("warm_gloves") else 1.0) * (1 - ss.frac(self, "line_wear")),
+                "line_red_mult": 0.9 if self.charm_on("warm_gloves") else 1.0,
                 "perfect_heal": 0.10 if rod["id"] == "dragon_scale_rod" else 0.0,
-                "auto_drag": reel["id"] == "ancient_reel",
-                "perfect_mult": 1 + ss.frac(self, "perfect_window"),
-                "hook_fill_mult": 1 - ss.frac(self, "hook_hold"),
-                "twist_mult": 1 - ss.frac(self, "twist_resist"),
-                "warn_add": ss.effect(self, "warning_lead")}
+                "auto_drag": reel["id"] == "ancient_reel"}
+        return ss.apply_fight(base, ss.effects(self))   # 비늘석 (칸 4개 합계, 상한 적용)
 
     def gear_tier(self, kind: str) -> int:
         """장착한 장비 티어 (전설 미끼처럼 티어 없는 미끼는 0)."""

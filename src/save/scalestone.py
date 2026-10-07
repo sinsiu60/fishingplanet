@@ -173,6 +173,31 @@ def frac(save, oid: str) -> float:
     return effect(save, oid) / 100.0
 
 
+def apply_fight(gear: dict, eff: dict) -> dict:
+    """장비 수치(Fight 에 넘길 dict) + 비늘석 합계 효과 {옵션 id: 상한 적용 값} → 새 dict (SaveGame.fight_gear · 시뮬이 같이 씀).
+    장력 한계 = 초록 위쪽 끝 × (1+%) · 줄 내구도 × (1+%) · 줄 마모 = 빨강 손상 × (1−%) · 감기 × (1+%) · 퍼펙트 창 × (1+%) ·
+    바늘 빠짐 / 꼬임 = 차는 속도 × (1−%) · 예고 여유 = +초."""
+    def f(oid):
+        return eff.get(oid, 0.0) / 100.0
+    g = dict(gear)
+    green = list(g["rod_green"])
+    green[1] = round(green[1] * (1 + f("tension_limit")), 2)
+    g["rod_green"] = green
+    g["reel_speed"] = g["reel_speed"] * (1 + f("reel_speed"))
+    g["line_max"] = round(g["line_max"] * (1 + f("line_durability")))
+    g["line_red_mult"] = g.get("line_red_mult", 1.0) * (1 - f("line_wear"))
+    g["perfect_mult"] = 1 + f("perfect_window")
+    g["hook_fill_mult"] = 1 - f("hook_hold")
+    g["twist_mult"] = 1 - f("twist_resist")
+    g["warn_add"] = eff.get("warning_lead", 0.0)
+    return g
+
+
+def effects(save) -> dict:
+    """{옵션 id: 상한 적용 합계} (장착 4개)."""
+    return {oid: t["eff"] for oid, t in totals(save).items()}
+
+
 # ───────────────────────── 소재 (대륙 소재 2종을 하나처럼) ─────────────────────────
 
 def materials_total(save) -> int:
