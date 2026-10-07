@@ -13,7 +13,6 @@ import random
 import pygame
 
 from src.core.config import game_config, load_json
-from src.platform.detect import IS_MOBILE
 from src.core.mathutil import clamp
 from src.core.weather import WEATHER_KO
 from src.render import camp_fpv
@@ -93,13 +92,17 @@ class CampfireScene(Scene):
         self.applied = 0.0
         self.reduce = bool(game.settings.get("reduce_fx"))
         self.first = not game.save.data.get("rest_seen")
-        self.camp = None   # 캠프 장면 (첫 그리기 때 화면 크기로 구움)
-        self.embers_on = not IS_MOBILE and game.settings.get("quality") != "low"
+        self.low = game.settings.get("quality") == "low"   # 화질 '낮음': 불티 절반 · 아지랑이 끔
         self.rnd = random.Random()
-        self.embers: list[list] = []
+        # 캠프 장면: 무거운 층은 장면 시작 때 한 번 굽기 (CAMPFIRE_FPV 공통 규칙)
+        w, h = game.screen.canvas.get_size()
+        self.camp = camp_fpv.CampFPV(w, h, fishing.season, snowy=fishing.spot_id == "ice_sea")
+        self.hand_pal = Palette().sample(13.0)   # 손 기본색 (밤 어둠 · 불빛은 조명이 입힘)
+        self.hand_look = fishing._hand_look()
+        for _ in range(90):   # 처음부터 불티 · 연기가 올라가 있게 (1.5초 미리)
+            self.camp.update(1 / 60, fishing.wind.x, self.low)
+        self.amb_t = 0.8   # 숲 공기 (낮 새 · 밤 귀뚜라미)
         self.skip_to: tuple[float, float] | None = None   # (건너뛴 순간 t, 끝 시각) — 남은 시간을 0.4초에
-        self.flick_t = 0.0
-        self.flick = [0, 0, 0]
         self.pop_t = 0.6
         self.done = False
         cf = campfire_cfg()
@@ -143,6 +146,7 @@ class CampfireScene(Scene):
 
     def update(self, dt: float) -> None:
         f = self.fishing
+        real_dt = dt   # 불 · 불티 · 연기 · 숯은 실제 시간으로 (타임랩스 · 건너뛰기와 상관없이)
         if self.skip_to is not None:
             # 남은 타임랩스를 skip_sec 에 몰아서: 시간을 그만큼 빨리 흘림
             s0, s1 = self.skip_to
@@ -156,23 +160,13 @@ class CampfireScene(Scene):
             self.applied = want
         f.weather_sys.events.clear()
         self._visuals(dt)
-        # 모닥불 흔들림 · 불티 · 탁탁 소리
-        self.flick_t += dt
-        if self.flick_t >= 0.12:
-            self.flick_t = 0.0
-            self.flick = [self.rnd.choice((-1, 0, 1)) for _ in range(3)]
+        self.real_t = getattr(self, "real_t", 0.0) + real_dt
+        self.camp.update(real_dt, f.wind.x, self.low)
+        self._ambience(real_dt)
         self.pop_t -= dt
         if self.pop_t <= 0 and self.t < self._end_time() - 0.3:
             self.pop_t = 0.6
             self.game.sfx.play(f"room_fire_pop{self.rnd.randrange(3)}", 0.35)
-        if self.embers_on:
-            if len(self.embers) < 4 and self.rnd.random() < dt * 4:
-                self.embers.append([self.rnd.uniform(-5, 5), 0.0, self.rnd.uniform(-4, 4), self.rnd.uniform(14, 24), 0.0])
-            for e in self.embers:
-                e[0] += e[2] * dt
-                e[1] += e[3] * dt
-                e[4] += dt
-            self.embers = [e for e in self.embers if e[4] < 1.0]
         # 모닥불의 작은 일
         if self.event is not None and not self.ev_started and self.t >= (self.ev_at if not self.reduce else DIM_IN):
             self.ev_started = True
@@ -190,6 +184,19 @@ class CampfireScene(Scene):
             self.ev_t += dt
         if self.t >= self._end_time() and not self.done:
             self._finish()
+
+    def _ambience(self, dt: float) -> None:
+        """숲 공기 (🅲-3): 낮 amb_bird 드물게 · 밤 amb_cricket (여름 · 가을). 새 효과음 없음."""
+        self.amb_t -= dt
+        if self.amb_t > 0:
+            return
+        self.amb_t = self.rnd.uniform(0.9, 1.6)
+        f = self.fishing
+        h = f.clock.hour % 24
+        if 6 <= h < 18 and f.weather == "clear" and self.rnd.random() < 0.35:
+            self.game.sfx.play("amb_bird", 0.25)
+        elif (h >= 20 or h < 5) and f.season in ("summer", "autumn") and f.weather != "storm":
+            self.game.sfx.play("amb_cricket", 0.22)
 
     def _visuals(self, dt: float) -> None:
         """그림만: 비 · 안개 · 번개 빛 (소리 · 천둥 이벤트는 버림)."""
@@ -248,27 +255,27 @@ class CampfireScene(Scene):
         if not camp:
             self.fishing.draw(canvas)   # 들어가고 나올 때만 낚시 화면
         else:
-            w, h = canvas.get_size()
             f = self.fishing
-            if self.camp is None or self.camp.w != w:
-                # 무거운 층은 장면 시작 때 한 번 굽기 (CAMPFIRE_FPV 공통 규칙)
-                self.camp = camp_fpv.CampFPV(w, h, f.season, snowy=f.spot_id == "ice_sea")
-                self.hand_pal = Palette().sample(13.0)   # CF1: 손은 낮 색 (조명은 CF2)
-                self.hand_look = f._hand_look()
-            pal = f.scene_palette()
             cam = self.camp
-            cam.draw_sky(canvas, pal, f.clock.hour, self.t, visible=f.weather == "clear")
-            canvas.blit(cam.far, (0, 0))
-            canvas.blit(cam.near, (0, 0))
+            hour, t = f.clock.hour, getattr(self, "real_t", self.t)
+            pal = f.scene_palette()
+            ls = cam.light_state(hour, f.weather, t)
+            cam.draw_world(canvas, pal, hour, t, ls, cloud_shift=self.applied * 18, sun=f.weather == "clear")
+            f.rain.draw(canvas, pal)
+            f.fog.draw(canvas, pal, camp_fpv.HORIZON, t)
+            f.season_fx.draw(canvas)
+            cam.draw_light(canvas, ls, t)
+            cam.draw_top(canvas, ls, t, haze=not self.low)
             cx, by = cam.X(camp_fpv.FIRE[0]), camp_fpv.FIRE[1]
             self._draw_event_back(canvas, cx, by, 1.0)
-            cam.draw_fire(canvas, 0, self.t)
-            canvas.blit(cam.front, (0, 0))
             self._draw_event_front(canvas, cx, by, 1.0)
-            f.rain.draw(canvas, pal)
-            f.fog.draw(canvas, pal, camp_fpv.HORIZON, self.t)
-            f.season_fx.draw(canvas)
-            cam.draw_hands(canvas, self.hand_pal, self.hand_look)
+            # 두 손: 0.3초에 올라오고 끝나기 0.3초 전에 내려감 · 1.6초 주기 1px 숨쉬기 · 가끔 손가락 오므림
+            end = self._end_time()
+            k_in = ease((self.t - DIM_IN / 2) / 0.3) * ease((end - DIM_IN / 2 - self.t) / 0.15)
+            dy = int(round((1 - k_in) * 48)) + (1 if math.sin(t * math.tau / 1.6) > 0 else 0)
+            curl = (t % 2.3) < 0.2
+            cam.draw_hands(canvas, self.hand_pal, self.hand_look, dy, curl, light=1 - 0.55 * ls["nk"],
+                           glow=max(ls["nk"], ls["glow"] / 40))
             text(canvas, f"{f.clock.label()} · {WEATHER_KO[f.weather]}", (8, 6), (240, 236, 220), 11, "topleft")
         if black > 0:
             veil = pygame.Surface(canvas.get_size())
