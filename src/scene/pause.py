@@ -1,11 +1,11 @@
-"""일시정지 메뉴 (ESC): 계속하기 · 사진 찍기 · 설정 · 저장 후 타이틀 · 저장 후 바탕화면 (지도·상점 등은 오른쪽 메뉴·단축키로).
+"""일시정지 메뉴 (ESC): 계속하기 · 사진 찍기 · 비늘석 보기 · 설정 · 저장 후 타이틀 · 저장 후 바탕화면 (지도·상점 등은 오른쪽 메뉴·단축키로).
 사진 찍기 (DT11): 낚시터 · 마을에서만, 파이팅 · 컷신 중엔 흐리게 (누를 수 없음)."""
 from src.scene.base import Scene
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text
 
 
-PANEL_Y, PANEL_H = 50, 172   # 버튼 5개가 창 안에 (예전 9개는 창 밖으로 넘쳤음)
+PANEL_Y, PANEL_H = 38, 198   # 버튼 6개가 창 안에 (예전 9개는 창 밖으로 넘쳤음)
 
 
 class PauseScene(Scene):
@@ -20,6 +20,7 @@ class PauseScene(Scene):
         bx, bw = w // 2 - 70, 140
         items = [("계속하기", self._resume),
                  ("사진 찍기", self._photo),
+                 ("비늘석 보기", self._stones),
                  ("설정", self._settings),
                  ("저장 후 타이틀", self._to_title),
                  ("저장 후 바탕화면", self._to_desktop)]
@@ -36,6 +37,11 @@ class PauseScene(Scene):
         from src.scene.photo_mode import PhotoScene
         self.game.scenes.pop()   # 일시정지 창은 닫고 풍경만
         self.game.scenes.push(PhotoScene(self.game, self.fishing))
+
+    def _stones(self) -> None:
+        """장착 중인 비늘석 4개 + 합계 효과 보기 (46장 S5, 변경은 마을 상점에서만)."""
+        from src.scene.scalestone_view import ScalestoneViewScene
+        self.game.scenes.push(ScalestoneViewScene(self.game, self.fishing))
 
     def _to_desktop(self) -> None:
         self.game.save_now()

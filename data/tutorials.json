@@ -526,6 +526,84 @@
     }
    ]
   },
+  "TG-12": {
+   "title": "비늘석",
+   "who": "haru",
+   "start": "event:interior_ready:haru",
+   "need_cond": "scalestone_tg12",
+   "after": [
+    "TG-07"
+   ],
+   "steps": [
+    {
+     "kind": "spotlight",
+     "target": "interior.menu.scalestone",
+     "text": "오, 비늘석을 구했구먼! {탭} 여기서 다룰 수 있소.",
+     "expr": "happy",
+     "until": "cond:shop_tab_scalestone",
+     "src_text": "오, 비늘석을 구했구먼! {탭} 여기서 다룰 수 있소."
+    },
+    {
+     "kind": "info",
+     "target": "ss.slots",
+     "text": "낚싯대, 릴, 줄, 뜰채에 **하나씩** 끼울 수 있소. 장비를 바꿔도 그대로 따라가지.",
+     "expr": "neutral",
+     "until": "tap",
+     "src_text": "낚싯대, 릴, 줄, 뜰채에 **하나씩** 끼울 수 있소. 장비를 바꿔도 그대로 따라가지."
+    },
+    {
+     "kind": "spotlight",
+     "target": "ss.list.first",
+     "text": "방금 얻은 비늘석을 골라 봐요.",
+     "expr": "neutral",
+     "until": "cond:ss_sel",
+     "src_text": "방금 얻은 비늘석을 골라 봐요."
+    },
+    {
+     "kind": "info",
+     "target": "ss.detail.opts",
+     "text": "지금은 **능력이 하나**뿐이지만, 강화할 때마다 **새 능력이 하나씩** 붙소. 최대 다섯 개!",
+     "expr": "surprised",
+     "until": "tap",
+     "src_text": "지금은 **능력이 하나**뿐이지만, 강화할 때마다 **새 능력이 하나씩** 붙소. 최대 다섯 개!"
+    },
+    {
+     "kind": "spotlight",
+     "target": "ss.btn.enhance",
+     "text": "한번 강화해 봐요. 실패는 없소.",
+     "expr": "happy",
+     "until": "event:ss_enhanced",
+     "src_text": "한번 강화해 봐요. 실패는 없소."
+    },
+    {
+     "kind": "info",
+     "target": "ss.detail.newopt",
+     "text": "이렇게 무엇이 붙을지는 **열어 봐야** 안다니까!",
+     "expr": "happy",
+     "until": "tap",
+     "src_text": "이렇게 무엇이 붙을지는 **열어 봐야** 안다니까!"
+    },
+    {
+     "kind": "spotlight",
+     "target": [
+      "ss.btn.equip",
+      "ss.slots"
+     ],
+     "text": "이제 끼워 봐요.",
+     "expr": "neutral",
+     "until": "event:ss_equipped",
+     "src_text": "이제 끼워 봐요."
+    },
+    {
+     "kind": "info",
+     "target": "ss.btn.totals",
+     "text": "여러 개를 끼우면 효과가 합쳐지는데, **너무 많이는 안 쌓이니** 골고루 끼워요.",
+     "expr": "neutral",
+     "until": "tap",
+     "src_text": "여러 개를 끼우면 효과가 합쳐지는데, **너무 많이는 안 쌓이니** 골고루 끼워요."
+    }
+   ]
+  },
   "TG-P1": {
    "title": "돌진",
    "who": "haru",
@@ -1331,49 +1409,6 @@
      "expr": null,
      "until": "tap",
      "src_text": "일주일에 한 번, 어려운 의뢰도 있어요."
-    }
-   ]
-  },
-  "TG-12": {
-   "title": "강화",
-   "who": "haru",
-   "start": "event:interior_ready:haru",
-   "need_cond": "scalestone_tg12",
-   "after": [
-    "TG-07"
-   ],
-   "steps": [
-    {
-     "kind": "spotlight",
-     "target": "interior.menu.enhance",
-     "text": "여기서 장비를 더 좋게 만들 수 있지. {탭}",
-     "expr": null,
-     "until": "cond:shop_enhance",
-     "src_text": "{탭} 장비를 더 좋게 만들 수 있어요."
-    },
-    {
-     "kind": "spotlight",
-     "target": "shop.list",
-     "text": "강화할 장비를 골라 봐.",
-     "expr": null,
-     "until": "cond:shop_sel_any",
-     "src_text": "강화할 장비를 고르고"
-    },
-    {
-     "kind": "info",
-     "target": "shop.enhance.cost",
-     "text": "돈이랑 **물고기 소재**가 들어. 소재는 물고기를 **분해**하면 나오고.",
-     "expr": null,
-     "until": "tap",
-     "src_text": "골드와 **물고기 소재**가 필요해요. 소재는 물고기를 **분해**하면 나와요."
-    },
-    {
-     "kind": "info",
-     "target": "shop.enhance.stars",
-     "text": "+3까지 올릴 수 있고, **실패는 없어**. 걱정 마!",
-     "expr": null,
-     "until": "tap",
-     "src_text": "+3까지 올릴 수 있고, **실패는 없어요**."
     }
    ]
   },

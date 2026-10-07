@@ -161,6 +161,14 @@ class ShopScene(Scene):
         self.lock_btn = ui.Button((D.x + 10 + sw, D.y + 138 + o, D.w - 16 - sw, 16), "잠금", self._toggle_lock)
         self.dis_btn = ui.Button((D.x + 6, D.y + 158 + o, D.w - 12, 14 if self.wide else 26), "분해", self._disassemble)
         self.sell_all_btn = ui.Button((self.LIST.x, fr.bottom - 21, self.LIST.w, 16), "", self._open_bulk)
+        if self.kind == "scalestone":
+            self._ss().layout()   # 비늘석 탭: 장착 칸 · 필터 줄 아래 목록, 상세 버튼 (46장 S5)
+
+    def _ss(self):
+        if getattr(self, "ss_tab", None) is None:
+            from src.scene.scalestone_tab import ScalestoneTab
+            self.ss_tab = ScalestoneTab(self)
+        return self.ss_tab
 
     def _sell_off(self) -> int:
         """판매 상세: 좁은 패널은 물고기 그림을 10px 줄여 분해 이유 두 줄 자리를 만든다."""
@@ -180,8 +188,8 @@ class ShopScene(Scene):
         if self.kind == "float":
             return load_json("floats.json")["floats"]
         if self.kind == "scalestone":
-            # 비늘석 탭 (46장): 장비 강화 탭 자리. 비늘석 목록 · 장착 칸은 S5 — 특급 배송 시스템은 그대로 이 탭 맨 아래
-            return [("delivery", {"id": "delivery", "name": "특급 배송 시스템", "tier": 0})]   # 야외 일괄 판매 (하루 n번)
+            # 비늘석 탭 (46장): 장비 강화 탭 자리 — [("stone", 비늘석)…] + 맨 아래 특급 배송 시스템 (그대로)
+            return self._ss().rows()
         return sorted(equipment()[self.kind], key=lambda g: g["tier"])
 
     def _extra(self) -> dict | None:
@@ -306,6 +314,8 @@ class ShopScene(Scene):
             self.host.shop_closed()
 
     def _action(self) -> None:
+        if self.kind == "scalestone" and self._ss().enter():
+            return
         if self.kind == "sell":
             idx = self._sel_index()
             if idx is None:
@@ -496,6 +506,8 @@ class ShopScene(Scene):
     # ── 입력 ──
     def handle_event(self, event) -> None:
         if event.type == pygame.KEYDOWN and self.bulk is None:
+            if self.kind == "scalestone" and self._ss().key(event):
+                return
             if event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_w, pygame.K_s):
                 d = -1 if event.key in (pygame.K_UP, pygame.K_w) else 1
                 self._select(self.sel + d)
@@ -519,6 +531,8 @@ class ShopScene(Scene):
                 self.bulk_scroll = max(0, min(max(0, n - vis), self.bulk_scroll - a.value))
             elif a.name == "primary":
                 self._bulk_click(a.pos)
+            return
+        if self.kind == "scalestone" and self._ss().handle_action(a):
             return
         if a.name == "back" or a.is_("menu", "shop"):
             self._close()
@@ -578,6 +592,8 @@ class ShopScene(Scene):
         self.age += dt
         self.mouse = self.ui_pointer()
         self.msg_t = max(0.0, self.msg_t - dt)
+        if self.kind == "scalestone":
+            self._ss().update(dt)
 
     # ── 그리기 ──
     def draw(self, canvas) -> None:
@@ -601,7 +617,7 @@ class ShopScene(Scene):
         if self.kind == "sell":
             self._draw_sell(canvas, rows)
         elif self.kind == "scalestone":
-            self._draw_scalestone(canvas, rows)
+            self._ss().draw(canvas)
         else:
             self._draw_buy(canvas, rows)
         self._draw_bottom(canvas)
@@ -620,9 +636,15 @@ class ShopScene(Scene):
     def _row_id(self, row) -> str:
         if self.kind == "sell":
             return self.save.data["keepnet"][row["idxs"][0]]["id"]
-        return row[1]["id"] if isinstance(row, tuple) else row["id"]   # 강화 탭 줄 = (종류, 장비)
+        if isinstance(row, tuple):   # 비늘석 탭 줄 = ("stone", 비늘석) / ("delivery", …)
+            return row[1].get("id") or f"ss{row[1].get('uid')}"
+        return row["id"]
 
     def tut_cond(self, name: str):
+        if self.kind == "scalestone":
+            v = self._ss().tut_cond(name)
+            if v is not None:
+                return v
         rows = self._rows()
         cur = self._row_id(rows[min(self.sel, len(rows) - 1)]) if rows else None
         if name == "shop_sell":
@@ -650,6 +672,9 @@ class ShopScene(Scene):
         if gear:
             T.mark_ui(self, "shop.tabs.gear", gear[0].unionall(gear))
         if self.bulk is not None:
+            return
+        if self.kind == "scalestone":
+            self._ss().mark()
             return
         T.mark_ui(self, "shop.list", self.LIST)
         first = self._tut_first()
@@ -694,6 +719,8 @@ class ShopScene(Scene):
             canvas.fill(su.BORDER, (x, self.tabs.rects[0].y + 3, 1, 11))
 
     def _draw_bottom(self, canvas) -> None:
+        if self.kind == "scalestone":
+            return   # 비늘석 탭이 아래 줄([합계 효과] [일괄 분해] · 안내)을 그림
         fr = self.frame
         y = fr.bottom - 13
         if self.kind == "sell":
@@ -836,6 +863,8 @@ class ShopScene(Scene):
         box = pygame.Rect(D.x + 6, D.y + 6, D.w - 12, 70)
         su.pic_box(canvas, box)
         gear_icon.draw(canvas, kind, it, (box.centerx - 32, box.centery - 32, 64, 64), dark=st == "locked")
+        if kind in ("rod", "reel", "line", "net"):
+            self._draw_slot_stone(canvas, kind, box)
         # 이름 + 티어 배지
         tier = "★" if is_extra else self._tier_label(it)
         br = su.badge(canvas, tier, (D.right - 6, D.y + 88), su.YELLOW, bold=True)
@@ -903,6 +932,19 @@ class ShopScene(Scene):
             self.confirm = None
         label = b.label if su.width(b.label) <= b.rect.w - 6 else b.label.replace("소지금이 ", "")
         su.button(canvas, b.rect, su.fit(label, b.rect.w - 6), style, self.mouse)
+
+    def _draw_slot_stone(self, canvas, kind: str, box: pygame.Rect) -> None:
+        """구매 탭 장비 상세: 지금 그 장비 칸에 있는 비늘석 작은 아이콘 + '새 장비로 바꿔도 그대로 적용돼요' (46장 S5)."""
+        from src.save import scalestone as ss
+        from src.ui import scalestone_ui as sui
+        st = ss.equipped_stones(self.save)[kind]
+        if st is None:
+            return
+        canvas.blit(sui.icon(st["grade"], small=True), (box.x + 3, box.y + 3))   # 왼쪽 위: 그 칸의 비늘석
+        text(canvas, f"+{st['level']}", (box.x + 21, box.y + 11), tuple(ss.grade_info(st["grade"])["color"]), 11, "midleft")
+        strip = pygame.Rect(box.x + 1, box.bottom - 14, box.w - 2, 13)   # 아래 띠: 안내 (장비 그림 위에 겹치지 않게 바탕)
+        canvas.fill(su.PIC_BG, strip)
+        text(canvas, su.fit("새 장비로 바꿔도 그대로 적용돼요", strip.w - 6), strip.center, su.SUB, 11, "center")
 
     def _more_arrows(self, canvas, area: pygame.Rect, up: bool, down: bool) -> None:
         """칸을 넘칠 때 오른쪽 위·아래 작은 화살표 (휠·클릭으로 넘김)."""
@@ -1240,29 +1282,6 @@ class ShopScene(Scene):
         su.button(canvas, cancel, "취소", "outline", self.mouse)
 
     # ── 강화 탭 ──
-    def _draw_scalestone(self, canvas, rows) -> None:
-        """비늘석 탭 (46장 S4: 장비 강화 탭 자리). 지금은 특급 배송 시스템 한 줄 — 비늘석 목록 · 장착 칸 · 상세는 S5."""
-        L = self.LIST
-        mats = self.save.data["materials"]
-        mline = f"소재 {mats.get('sharmion', 0) + mats.get('eldrasion', 0)}개"
-        text(canvas, su.fit(mline, L.w - 12), (L.x + 6, L.bottom - 8), su.SUB, 11, "midleft")
-        for i, (kind, g) in enumerate(rows):
-            r = self._row_rect(i)
-            if r is None:
-                continue
-            su.row_bg(canvas, r, i == self.sel, r.collidepoint(self.mouse))
-            ny, sy = (r.centery, r.centery) if self.wide else (r.y + 8, r.y + 19)
-            from src.save import delivery
-            dl = delivery.level(self.save)
-            gear_icon.draw(canvas, kind, g, (r.x + 30, sy - 7, 14, 14))
-            st = f"Lv{dl}" if dl else "미보유"
-            sr = text(canvas, st, (r.right - 4, sy), su.YELLOW if dl else su.SUB, 11, "midright")
-            nx = r.x + 48 if self.wide else r.x + 9
-            text(canvas, su.fit(g["name"], (sr.x - nx - 4) if self.wide else (r.right - 4 - nx)), (nx, ny), su.WHITE,
-                 11, "midleft")
-        if rows:
-            self._draw_delivery_detail(canvas, rows[self.sel][1])
-
     def _draw_delivery_detail(self, canvas, g: dict) -> None:
         """특급 배송 시스템: 야외에서 일괄 판매 하루 n번 (단계 = 횟수, 최대 5)."""
         from src.save import delivery

@@ -970,7 +970,12 @@ class LegendShow:
             from src.save import scalestone
             txt, col = scalestone.news_line(self.news["scalestone"])
             img = font11.render(txt, False, col)
-            canvas.blit(img, (cx - img.get_width() // 2, r.y + 75))
+            from src.ui.scalestone_ui import icon as _ss_icon   # 16x16 아이콘 + 등급 + 첫 옵션 (46장 S5)
+            ic = _ss_icon(self.news["scalestone"]["grade"], small=True)
+            x0 = cx - (img.get_width() + 18) // 2
+            y0 = r.y + 75
+            canvas.blit(ic, (x0, y0 + img.get_height() // 2 - 8))
+            canvas.blit(img, (x0 + 18, y0))
         if self.waiting() and int(self.clock * 2) % 2 == 0:
             img = font11.render("클릭해서 계속" if not self.final else "클릭해서 계속 — 그리고…", False, (220, 200, 160))
             canvas.blit(img, (cx - img.get_width() // 2, h - 14))

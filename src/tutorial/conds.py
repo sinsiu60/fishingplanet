@@ -55,7 +55,9 @@ def check(game, name: str, run) -> bool:
     if name == "has_fish":
         return bool(d["keepnet"])
     if name == "scalestone_tg12":
-        return False   # 장비 강화 제거 (46장 S4) — TG-12 는 S5 에서 'TG-12 비늘석'으로 교체될 때까지 쉼
+        # TG-12 비늘석 (46장 S5): 비늘석이 있고, 그중 하나라도 지금 강화할 수 있을 때 (5단계 '강화 완료'에서 막히지 않게)
+        from src.save import scalestone as ss
+        return any(ss.enhance_block(save, s) is None for s in d.get("scalestone", {}).get("items", []))
     if name == "has_materials":
         return sum(d.get("materials", {}).values()) > 0
     if name == "second_fishing":

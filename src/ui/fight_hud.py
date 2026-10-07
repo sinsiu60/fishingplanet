@@ -268,6 +268,13 @@ def _badge_kind(label: str):
 def _badge(canvas, label: str, col, pos, age: float) -> None:
     """기록 배지. 도감 새 칸 = 도장이 쾅 (1.3배 → 1배, 0.25초, 도장 테두리), 도감 별 = 반짝 튀어 오름 (1.2배 → 1배, 0.3초) (DT10)."""
     kind = _badge_kind(label)
+    if kind is None and label.startswith("비늘석 "):   # 비늘석 획득 = 16x16 아이콘 + 등급 + 첫 옵션 (46장 S5)
+        from src.save import scalestone
+        from src.ui.scalestone_ui import icon
+        g = next((g for g in scalestone.grades()["order"] if label.startswith(f"비늘석 {scalestone.grade_info(g)['name']}")), None)
+        if g is not None:
+            canvas.blit(icon(g, small=True), (pos[0], pos[1] - 8))
+            pos = (pos[0] + 18, pos[1])
     if kind is None:
         text(canvas, label, pos, col, 11, "midleft")
         return

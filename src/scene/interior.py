@@ -239,7 +239,8 @@ class InteriorScene(Scene):
         if mode == "buy" and g.run is not None and g.run["id"] == "TG-18" and "sell" not in tabs:
             tabs = ["sell"] + list(tabs)   # 특수 찌 튜토리얼: 돈이 모자라면 같은 창에서 팔 수 있게
         title = {"buy": "사기", "sell": "팔기", "scalestone": "비늘석"}[mode]
-        self.shop = ShopScene(self.game, self.fishing, tab=tab or tabs[0], frame=(130, 6, 342, 258), host=self, tabs=tabs,
+        frame = (8, 6, 464, 258) if mode == "scalestone" else (130, 6, 342, 258)   # 비늘석 탭은 넓은 틀 (장착 칸 · 목록 · 상세)
+        self.shop = ShopScene(self.game, self.fishing, tab=tab or tabs[0], frame=frame, host=self, tabs=tabs,
                               title=f"{self.nc['sign']} · {title}")
         self.react_line = None
         self.game.scenes.push(self.shop)

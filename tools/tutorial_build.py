@@ -104,6 +104,12 @@ SPEC = {
               "steps": [("shop.tab.rod", "cond:shop_tab_rod"), ("shop.list.tier", "tap"), ("shop.row.glass", "cond:shop_sel_glass"),
                         ("shop.detail.compare", "tap"), ("shop.detail.price", "tap"), ("shop.tabs.gear", "tap"),
                         ("shop.close", "closed:ShopScene")]},
+    # TG-12 비늘석 (SCALESTONE.md, DESIGN 46장 S5): 'TG-12 강화' 교체. 시작 = 비늘석을 얻은 뒤 하루네 낚시점 입장 (강화할 수 있을 때)
+    "TG-12": {"title": "비늘석", "who": "haru", "start": "event:interior_ready:haru", "need_cond": "scalestone_tg12",
+              "after": ["TG-07"],
+              "steps": [("interior.menu.scalestone", "cond:shop_tab_scalestone"), ("ss.slots", "tap"),
+                        ("ss.list.first", "cond:ss_sel"), ("ss.detail.opts", "tap"), ("ss.btn.enhance", "event:ss_enhanced"),
+                        ("ss.detail.newopt", "tap"), (["ss.btn.equip", "ss.slots"], "event:ss_equipped"), ("ss.btn.totals", "tap")]},
 }
 
 # 패턴 튜토리얼: (패턴 키, ① 강조, ② 강조, ② 조작) — 문구는 TG-P 표 (①②③)
@@ -164,10 +170,6 @@ OTHER = {
     "TG-11": {"title": "의뢰 게시판", "who": "haru", "start": "event:quests_open",
               "steps": [("info", "quests.daily", "tap"), ("info", "quests.cond", "tap"), ("info", "quests.reward", "tap"),
                         ("info", "quests.refresh", "tap"), ("info", "quests.weekly", "tap")]},
-    "TG-12": {"title": "강화", "who": "haru", "start": "event:interior_ready:haru", "need_cond": "scalestone_tg12",
-              "after": ["TG-07"],
-              "steps": [("spotlight", "interior.menu.enhance", "cond:shop_enhance"), ("spotlight", "shop.list", "cond:shop_sel_any"),
-                        ("info", "shop.enhance.cost", "tap"), ("info", "shop.enhance.stars", "tap")]},
     "TG-13": {"title": "어탁", "who": "haru", "start": "event:record_card", "need_cond": "catch_card",
               "steps": [("info", "catch.print_btn", "tap"), ("spotlight", "catch.print_btn", "event:print_made"),
                         ("wait", None, "auto:3")]},

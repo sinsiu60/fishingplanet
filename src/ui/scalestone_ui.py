@@ -9,7 +9,6 @@
   0.3초 이후 탭하면 바로 결과 · 화면 효과 줄이기 = 돌아가는 연출 없이 0.3초 페이드로 결과.
 그림은 정수배 확대만 (부드러운 보간 금지).
 """
-import math
 
 import pygame
 
@@ -222,8 +221,9 @@ def _perimeter_point(r: pygame.Rect, u: float) -> tuple[int, int]:
     return r.x, r.bottom - 1 - int(d)
 
 
-def draw_detail(canvas, rect, stone: dict, reveal: EnhanceReveal | None = None) -> dict:
+def draw_detail(canvas, rect, stone: dict, reveal: EnhanceReveal | None = None, buttons: bool = False) -> dict:
     """오른쪽 상세: 그림 3배(96x96) · 등급 이름 · +n · 부옵션 5줄 (빈 칸 회색 '강화하면 열림').
+    buttons = 상점 탭: 그림 오른쪽 아래(y+38~102)를 비용 · 버튼 자리로 비움 (이름 · +n 을 위로, 잠금은 +n 옆 자물쇠), 줄은 그림 바로 아래부터.
     돌려주는 값: {"stone": 그림 rect, "rows": [줄 rect × 5]} — 화면이 버튼 · 튜토리얼 강조 위치로 씀."""
     rect = pygame.Rect(rect)
     g = ss.grade_info(stone["grade"])
@@ -252,12 +252,19 @@ def draw_detail(canvas, rect, stone: dict, reveal: EnhanceReveal | None = None) 
             pygame.draw.rect(canvas, c, (p[0] - 1, p[1] - 1, 3, 3))
     lvl = reveal.level_shown() if reveal else stone["level"]
     x = sr.right + 8
-    text(canvas, f"{g['name']} 비늘석", (x, rect.y + 8), col, 13)
-    text(canvas, f"+{lvl}", (x, rect.y + 26), ui.ACCENT if lvl >= 4 else ui.TEXT, 16)
-    if stone.get("locked"):
-        text(canvas, "잠김", (x, rect.y + 48), ui.DIM, 11)
+    if buttons:
+        text(canvas, f"{g['name']} 비늘석", (x, rect.y + 4), col, 13)
+        lr = text(canvas, f"+{lvl}", (x, rect.y + 19), ui.ACCENT if lvl >= 4 else ui.TEXT, 16)
+        if stone.get("locked"):
+            from src.ui import shop_ui as su
+            su.lock(canvas, lr.right + 4, lr.centery, su.GRAY)
+    else:
+        text(canvas, f"{g['name']} 비늘석", (x, rect.y + 8), col, 13)
+        text(canvas, f"+{lvl}", (x, rect.y + 26), ui.ACCENT if lvl >= 4 else ui.TEXT, 16)
+        if stone.get("locked"):
+            text(canvas, "잠김", (x, rect.y + 48), ui.DIM, 11)
     rows = []
-    ry = rect.y + 4 + 96 + 8
+    ry = rect.y + 4 + 96 + (4 if buttons else 8)
     rh = 15
     rev_i = reveal.res["index"] if reveal else None
     for i in range(5):
