@@ -157,8 +157,9 @@ class FishingScene(Scene):
         self.p2_pending = None      # 2페이즈 진입 → 패턴 판정이 끝나면 시작 {"mode", "t"}
         self.p2_force = None        # 디버그 Shift+F4/F6: 다음 2페이즈 컷신 버전 강제
         self.p2_card = None         # 첫 만남 신호 카드 (컷신이 끝난 뒤, 재개 전)
-        self.p2_on = False          # 2페이즈 손 보랏빛 켜짐
-        self.p2_aura = 0.0          # 손 보랏빛 페이드 0~1
+        self.p2_on = False          # 2페이즈 뒷배경 보랏빛 오라 켜짐 (2페이즈 내내)
+        self.p2_aura = 0.0          # 오라 페이드 0~1 (포획 0.5초 · 실패 · 도주 1초에 사라짐)
+        self.p2_aura_fade = 1.0
         self.p2_log: list = []      # 컷신 전후 수치 (검증용)
         self.sig_dim_t = 0.0
         self.cine_clock = time.perf_counter   # 입질 연출 시계 (실제 시간, 시험에선 바꿔 끼움)
@@ -2756,13 +2757,20 @@ class FishingScene(Scene):
                 self._p2_resume()
         k = cine.k()
         self.phantom_fx.k_override = k
+        db = cine.amb_db() if cine.blocking else 0.0
+        if db < -0.5:
+            self.sfx.duck_levels({"amb": db}, hold=0.1, release=1.0)   # 주변 소리가 잦아듦 → 폭발 때 돌아옴
+        if cine.blocking:
+            self.p2_aura = max(self.p2_aura, cine.aura_in())          # E: 빛이 사그라들며 뒷배경 오라가 남음
+            if cine.boom is not None and cine.t >= cine.boom:
+                f.p2_shift = True
         if cine.finished:
             self.p2 = None
             self.phantom_fx.k_override = None
         return was
 
     def _p2_resume(self) -> None:
-        """재개: 체력 정확히 100% · 1초 유예 · 손 보랏빛 · 첫 만남 카드 · 세이브."""
+        """재개: 체력 정확히 100% · 1초 유예 · 2페이즈 체력 바 · 뒷배경 오라 · 첫 만남 카드 · 세이브."""
         f = self.fight
         c = load_json("phantom/phase2_cutscene.json")
         f.stamina = f.stamina_max * c["phase2_hp_percent"] / 100.0
@@ -2772,6 +2780,8 @@ class FishingScene(Scene):
         else:
             b._enter("idle", c["grace_sec"])
         self.p2_on = True
+        self.p2_aura = 1.0
+        f.p2_bar = True   # 체력 바 2페이즈 모습 (fight_hud.draw_boss_bar)
         if self.p2 is not None and self.p2.full:
             seen = phantom.state(self.save)["phase2_seen"]
             if f.fish["id"] not in seen:
@@ -2789,41 +2799,37 @@ class FishingScene(Scene):
         self.p2 = None
         self.p2_pending = None
         self.p2_card = None
-        self.p2_on = False
+        self.p2_on = False   # 오라는 남은 만큼 페이드 (_p2_aura_tick)
         self.p2_dbg_wait = 0.0
         self.phantom_fx.k_override = None
 
     def _p2_aura_tick(self, dt: float) -> None:
+        """뒷배경 오라: 2페이즈 내내. 포획 성공(환상 포획 연출 시작) 0.5초 · 실패 · 도주 1초에 사라짐."""
         f = self.fight
         on = self.p2_on and f is not None and f.phase in ("fight", "net")
+        A = load_json("phantom/phase2_cutscene.json")["aura"]
         if self.p2_on and not on:
-            self.p2_on = False   # 포획 · 실패 · 도주: 0.3초에 걸쳐 사라짐
-        sec = load_json("phantom/phase2_cutscene.json")["hand"]["fade_sec"]
-        self.p2_aura = min(1.0, self.p2_aura + dt / sec) if on else max(0.0, self.p2_aura - dt / sec)
+            self.p2_on = False
+            self.p2_aura_fade = A["fade_catch"] if f is not None and f.phase == "caught" else A["fade_fail"]
+        if not on and not (self.p2 is not None and self.p2.blocking):
+            self.p2_aura = max(0.0, self.p2_aura - dt / self.p2_aura_fade)
 
-    def _p2_draw_hand(self, canvas, geo) -> None:
-        """손 테두리: 컷신 번쩍(0.1초) · 2페이즈 동안 은은한 보랏빛 (30 ↔ 60%, 2초 주기). + 줄을 타는 빛 덩어리."""
-        if self.p2 is None and self.p2_aura <= 0:
-            return
-        from src.render.rod import hand_outline
-        c = load_json("phantom/phase2_cutscene.json")
-        H = c["hand"]
-        if self.p2 is not None and self.fight is not None and self.p2.blocking:
-            self.p2.draw_line_orb(canvas, getattr(self, "_fight_pts", None), geo)
-        a = 0.0
-        if self.p2_aura > 0:
-            br = H["lo"] + (H["hi"] - H["lo"]) * (0.5 - 0.5 * math.cos(math.tau * self.t / H["period"]))
-            a = br * self.p2_aura
-            w, h = canvas.get_size()
-            hand = pygame.Rect(int(geo["hand"][0]) - 16, int(geo["hand"][1]) - 16, 32, 32)
-            for sx, sy in signal_slots.slot_positions(w, h, self.touch, bool(self.touch and self.settings.get("touch_left"))):
-                if hand.colliderect((sx - 18, sy - 18, 36, 36)):
-                    a *= H["slot_overlap_mult"]   # 신호 슬롯과 겹치는 배치면 밝기 절반
-                    break
-        if self.p2 is not None:
-            a = max(a, self.p2.hand_alpha())
-        if a > 0:
-            hand_outline(canvas, geo, tuple(c["colors"]["rim"]), a, bool(self._hand_look().get("mitten")))
+    def _p2_draw_rod(self, canvas, drop: float) -> None:
+        """컷신: 고개를 숙이며 손 · 낚싯대가 화면 아래로 천천히 빠짐 (drop px), 솟구친 뒤 다시 올라옴."""
+        from src.render.rod import draw_rod, gear_look
+        from src.save.quests import skin_colors
+        geo = self._rod_geo()
+        if drop > 0.5:
+            geo = {k: ((v[0], v[1] + drop) if k in ("hand", "butt", "ctrl", "tip") else v) for k, v in geo.items()}
+        else:
+            self._draw_fight_line(canvas, self._p2_pal, geo["tip"])
+        rod_l = gear_look("rod", self.save.gear_tier("rod"))
+        reel_l = gear_look("reel", self.save.gear_tier("reel"))
+        skin = skin_colors(self.save, "rod_skin")
+        if skin:
+            rod_l = dict(rod_l, rod=skin[0], hi=skin[1])
+            reel_l = dict(reel_l, body=skin[2])
+        draw_rod(canvas, self._p2_pal, geo, self.cast.reel_angle, rod_l, reel_l, self.t, hand_look=self._hand_look())
 
     def _p2_debug(self, mode: str) -> None:
         """디버그 Shift+F4(전체) / Shift+F6(짧은): 환상어 파이팅이면 곧바로 2페이즈 컷신, 아니면 다음 환상어로 파이팅을 열고 컷신."""
@@ -3348,6 +3354,12 @@ class FishingScene(Scene):
                 layer.blit(m, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
                 canvas.blit(layer, (0, 0))
             pfx.draw_ring(canvas, int(cam.horizon))
+        if self.p2_aura > 0.005:
+            # 환상 2페이즈: 뒷배경 보랏빛 오라 (하늘 · 먼 산 · 수평선 — 물고기 · 찌 · 줄 · 손 · 신호 · HUD 뒤)
+            from src.core import fxq
+            from src.render.phantom_phase2 import draw_aura
+            holes = getattr(self.screen_weather.protect, "rects", None) or []
+            draw_aura(canvas, int(cam.horizon), t, self.p2_aura, fxq.level(), holes)
         if self.catch_show is not None:
             self.catch_show.draw(canvas, pal)  # 환상어 포획 연출 (카드까지)
             if self.catch_show.waiting():
@@ -3431,7 +3443,8 @@ class FishingScene(Scene):
             landing_marker(canvas, pal, cam, math.sin(ang) * d, math.cos(ang) * d, t)
 
         hanging = c.state in (CastState.READY, CastState.CHARGING, CastState.SWING)
-        if f is not None and f.phase in ("fight", "net"):
+        p2_cam = self.p2 is not None and self.p2.blocking and f is not None
+        if f is not None and f.phase in ("fight", "net") and not p2_cam:
             self._draw_fight_line(canvas, pal, tip)
         elif not hanging and f is None:
             self._draw_line_and_bobber(canvas, pal, tip)
@@ -3469,8 +3482,8 @@ class FishingScene(Scene):
             rod_l = dict(rod_l, rod=skin[0], hi=skin[1])
             reel_l = dict(reel_l, body=skin[2])
         self._draw_trail(canvas, "rod_skin", geo["tip"], 2)
-        draw_rod(canvas, pal, geo, c.reel_angle, rod_l, reel_l, t, hand_look=self._hand_look())
-        self._p2_draw_hand(canvas, geo)
+        if not p2_cam:   # 2페이즈 컷신: 낚싯대 · 손 · 줄은 컷신이 카메라에 맞춰 그림
+            draw_rod(canvas, pal, geo, c.reel_angle, rod_l, reel_l, t, hand_look=self._hand_look())
         self.life.draw_fly(canvas, geo["tip"], t)   # 낚싯대 끝 잠자리 (DT8)
         if self.bait_anim is not None and hanging:
             self._draw_bait_anim(canvas, pal, tip)
@@ -3504,6 +3517,10 @@ class FishingScene(Scene):
         self.map_fx.draw_screen(canvas)           # 계곡: 위에서 떨어지는 물방울 (DT3)
         self.legend_fx.draw_screen(canvas, pal)   # ② 전설 고유 연출 (DT5)
         self.phantom_hfx.draw_screen(canvas, pal)  # ② 환상 고유 연출 (DT6)
+        if p2_cam:
+            # 2페이즈 컷신: 카메라(고개 숙임 · 수면 · 물속 · 솟구침) · 폭발 · 흔들림 — HUD 는 이 뒤에 (흔들지 않음)
+            self._p2_pal = pal
+            self.p2.compose(canvas, self._fish_screen(), int(cam.horizon), self._p2_draw_rod)
         if getattr(self, "scenic", False):
             return   # 이동 컷신의 도착 전경: 풍경·낚싯대까지만 (HUD·카드 없음)
         self._draw_event_banner(canvas)
@@ -3586,7 +3603,7 @@ class FishingScene(Scene):
             self._draw_touch_controls(canvas)
         if self.p2 is not None and self.p2.blocking and f is not None:
             # 2페이즈 컷신: 물속 장면 · 도약 · 체력 게이지 (맨 앞 — 터치 조작도 덮음, 화면 어디를 눌러도 건너뛰기)
-            self.p2.draw_top(canvas, self._fish_screen())
+            self.p2.draw_top(canvas)
         self._mark_targets(canvas)
         hud.draw_cursor(canvas, self.mouse)
 
@@ -3783,7 +3800,6 @@ class FishingScene(Scene):
         dx += self._wind_bend()   # 바람 쪽으로 휨 (A-2)
         pts = draw_line(canvas, pal, tip, (sx, sy + bob - size * 0.25), sag, bias=0.6, dx=dx, color=color,
                         cracks=cracks, t=self.t)
-        self._fight_pts = pts   # 2페이즈 컷신: 빛이 이 줄을 타고 올라옴
         rush_cue.draw_pulse(canvas, pts, rph, self.t)   # 빛 펄스: 물고기 → 손
         rush_cue.draw_taut(canvas, pts, rph, self.t)    # 돌진 순간 줄이 튕김
         rush_cue.draw_light_pulse(canvas, pts, lph, self.t)

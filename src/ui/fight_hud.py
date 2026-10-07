@@ -149,15 +149,22 @@ def draw_boss_bar(canvas, pal, fight) -> None:
             on = (190, 120, 255) if fish.get("rarity") == "phantom" else (255, 214, 90)
             col = on if i <= fight.brain.phase else (80, 70, 50)
             pygame.draw.polygon(canvas, col, [(cx, cy - 3), (cx + 3, cy), (cx, cy + 3), (cx - 3, cy)])
-    canvas.fill(SHADOW, (x - 1, y - 1, bw + 2, bh + 2))
-    canvas.fill((50, 30, 36), (x, y, bw, bh))
-    canvas.fill((235, 90, 80), (x, y, int(bw * fight.stamina_frac), bh))
-    canvas.fill((255, 170, 150), (x, y, int(bw * fight.stamina_frac), 1))
-    pygame.draw.rect(canvas, rc, (x - 2, y - 2, bw + 4, bh + 4), 1)
+    p2 = getattr(fight, "p2_bar", False)
+    if p2:   # 환상 2페이즈 모습 (PHANTOM_PHASE2.md 6번): 보라 그라데이션 · 이중 테두리 · 마름모 · 반짝 · 점 2개
+        import time
+        from src.render.phantom_phase2 import draw_p2_bar
+        draw_p2_bar(canvas, x, y, bw, bh, fight.stamina_frac, time.perf_counter())
+    else:
+        canvas.fill(SHADOW, (x - 1, y - 1, bw + 2, bh + 2))
+        canvas.fill((50, 30, 36), (x, y, bw, bh))
+        canvas.fill((235, 90, 80), (x, y, int(bw * fight.stamina_frac), bh))
+        canvas.fill((255, 170, 150), (x, y, int(bw * fight.stamina_frac), 1))
+        pygame.draw.rect(canvas, rc, (x - 2, y - 2, bw + 4, bh + 4), 1)
     st = fight.brain.display_name()
     if fight.brain.state == "fake_tired":
         st = "지침"
-    text(canvas, st, (x + bw + 6, y + 3), STATE_COLOR.get(st, (255, 200, 170)), 11, "midleft")
+    shift = p2 or getattr(fight, "p2_shift", False)   # 2페이즈 바의 마름모 · 점 2개 오른쪽으로 (컷신 폭발부터)
+    text(canvas, st, (x + bw + (26 if shift else 6), y + 3), STATE_COLOR.get(st, (255, 200, 170)), 11, "midleft")
 
 
 def draw_drag(canvas, pal, fight, need: bool = False, t: float = 0.0) -> None:

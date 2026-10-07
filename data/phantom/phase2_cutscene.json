@@ -1,5 +1,5 @@
 {
- "_설명": "환상 2페이즈 진입 컷신 (PHANTOM_PHASE2.md, DESIGN.md 33-12). 시간 = 초, 색 = PHANTOM_PHASE2.md 그대로. eye = 물고기 길이 L 기준 눈 위치 (머리 왼쪽, 가운데 0 — fish_draw 의 모양에서 계산: [EYE_AT x, EYE_AT y × 몸 높이 비율]). 컷신에 물고기 이름 · 글자 없음 (name_ko 는 데이터 확인용).",
+ "_설명": "환상 2페이즈 진입 컷신 개정판 '어둠 속의 그것 → 각성' (PHANTOM_PHASE2.md, DESIGN.md 33-12). 시간 = 초, 색 = 문서 그대로. eye = [눈 x, 눈 y] (물고기 길이 L 기준, 몸 가운데 0 — fish_draw 모양에서 계산). 가림 = 눈 y(+눈 반지름) 위쪽 전체. 컷신에 이름 · 글자 없음 (name_ko 는 데이터 확인용).",
  "phase2_hp_percent": 100,
  "_phase2_hp_percent": "의도된 값 — 2페이즈는 체력 100%에서 시작해 파이팅이 길어지는 것이 목표. 회복량 · 2페이즈 난이도 · 패턴 빈도를 임의로 낮추지 않음",
  "colors": {
@@ -13,15 +13,25 @@
    140,
    240
   ],
+  "deep": [
+   122,
+   79,
+   208
+  ],
   "bg_top": [
    58,
    34,
    102
   ],
   "bg_bottom": [
-   20,
    10,
-   38
+   5,
+   20
+  ],
+  "bar_bg": [
+   26,
+   16,
+   48
   ],
   "dusk": [
    [
@@ -37,71 +47,238 @@
   ]
  },
  "full": {
-  "orb_sec": 0.8,
-  "orb_d": 6,
-  "line_glow_sec": 0.3,
-  "hand_flash_sec": 0.1,
-  "dive": [
-   0.8,
-   1.2
+  "tilt": [
+   0.0,
+   0.6
   ],
-  "underwater": [
-   1.2,
-   2.6
+  "approach": [
+   0.6,
+   1.4
   ],
-  "turn": [
-   1.2,
-   1.8
-  ],
-  "heal": [
+  "boundary": [
    1.4,
-   2.2
+   1.9
   ],
-  "eye": [
-   2.2,
+  "sink": [
+   1.9,
    2.6
   ],
-  "rise": [
+  "reveal": [
    2.6,
    3.2
   ],
-  "jump_speed": 0.3,
-  "max_wait_bars": 1,
-  "swell_before": 0.6
+  "hold": [
+   3.2,
+   4.0
+  ],
+  "gather": [
+   4.0,
+   5.6
+  ],
+  "rings": [
+   4.0,
+   4.6,
+   5.05
+  ],
+  "ring_every_after": 0.3,
+  "sync": "bar",
+  "rise": 0.3,
+  "fill_sec": 1.2,
+  "e_sec": 1.0,
+  "swell_from": 5.0
  },
  "short": {
-  "orb_sec": 0.4,
-  "jump": [
-   0.4,
+  "tilt": [
+   0.0,
+   0.25
+  ],
+  "approach": [
+   0.25,
+   0.5
+  ],
+  "boundary": [
+   0.5,
+   0.7
+  ],
+  "sink": [
+   0.7,
+   0.8
+  ],
+  "reveal": [
+   0.8,
+   1.1
+  ],
+  "hold": [
+   1.1,
+   1.4
+  ],
+  "gather": [
+   1.4,
+   2.2
+  ],
+  "rings": [
+   1.4,
+   1.8
+  ],
+  "ring_every_after": 0.3,
+  "sync": "beat",
+  "rise": 0.3,
+  "fill_sec": 0.9,
+  "e_sec": 0.5,
+  "swell_from": 1.4
+ },
+ "ring_sec": 0.5,
+ "ring_r": [
+  72,
+  6
+ ],
+ "swell_sec": 0.9,
+ "skip_after": 1.0,
+ "grace_sec": 1.0,
+ "shake": {
+  "hz": 20,
+  "_설명": "정수 픽셀 무작위 이동 최대값 — A 0→0.5 / B 0.5→1 / C 1→2 / D 2→4(폭발 최고)→3→1 / E 1→0. 게임 장면만, 체력 바 · HUD 는 흔들지 않음",
+  "a": [
+   0.0,
+   0.0,
+   0.5,
+   0.5
+  ],
+  "b": [
+   0.5,
    1.0
   ],
-  "heal": [
-   0.4,
-   0.9
+  "c": [
+   1.0,
+   2.0
+  ],
+  "d": [
+   [
+    0.0,
+    2.0
+   ],
+   [
+    0.3,
+    4.0
+   ],
+   [
+    0.6,
+    3.0
+   ],
+   [
+    1.5,
+    1.0
+   ]
+  ],
+  "e": [
+   1.0,
+   0.0
   ]
  },
- "skip_after": 0.5,
- "skip_heal_sec": 0.2,
- "grace_sec": 1.0,
+ "flash": {
+  "max": 0.6,
+  "reduce_max": 0.3,
+  "sec": 0.15
+ },
+ "burst": {
+  "ring_sec": 1.0,
+  "rays": 14,
+  "ray_sec": 0.35
+ },
  "k": {
   "fight": 0.6,
-  "peak": 1.0,
-  "reduce_peak": 0.8,
-  "back_sec": 0.5
+  "peak": 1.0
  },
- "hand": {
-  "lo": 0.3,
-  "hi": 0.6,
-  "period": 2.0,
-  "fade_sec": 0.3,
-  "slot_overlap_mult": 0.5
+ "amb_duck_db": -12,
+ "camera": {
+  "tilt_zoom": 1.3,
+  "tilt_y": 0.45,
+  "approach_zoom": 3.2,
+  "approach_y": 0.62,
+  "boundary_zoom": 3.6,
+  "rise_zoom": 2.0,
+  "rod_drop_px": 140,
+  "max_zoom": 6.0,
+  "_zoom": "approach_zoom 은 최소값 — 찌가 수평선에 가까우면 수면이 화면을 가득 채우도록 최대 max_zoom 까지 키움"
  },
- "gauge": {
+ "reduce": {
+  "fade_sec": 0.8,
+  "rise_fade": 0.3
+ },
+ "fish_y": 0.6,
+ "fish_len": 104,
+ "fish_bright": [
+  0.4,
+  0.6
+ ],
+ "cover_fade_px": 4,
+ "bar": {
   "w": 150,
   "h": 6,
   "y": 20,
+  "grad": [
+   [
+    122,
+    79,
+    208
+   ],
+   [
+    180,
+    140,
+    240
+   ]
+  ],
   "tip_px": 2,
-  "flash_sec": 0.1
+  "tip": [
+   226,
+   210,
+   255
+  ],
+  "bg": [
+   26,
+   16,
+   48
+  ],
+  "outer": [
+   226,
+   210,
+   255
+  ],
+  "inner": [
+   122,
+   79,
+   208
+  ],
+  "deco_px": 5,
+  "shine_every": 3.0,
+  "shine_sec": 0.6,
+  "dot_color": [
+   190,
+   120,
+   255
+  ],
+  "flash_sec": 0.1,
+  "morph_sec": 0.2,
+  "deco": [
+   0.1,
+   0.3
+  ]
+ },
+ "aura": {
+  "color": [
+   180,
+   140,
+   240
+  ],
+  "band_frac": 0.4,
+  "lo": 0.3,
+  "hi": 0.45,
+  "period": 4.0,
+  "edge_px": 24,
+  "edge_k": 0.4,
+  "fade_catch": 0.5,
+  "fade_fail": 1.0,
+  "fade_in": 1.0
  },
  "particles": {
   "high": 30,
@@ -109,7 +286,7 @@
   "low": 10
  },
  "music": {
-  "to_muffled_sec": 0.3,
+  "to_muffled_sec": 0.5,
   "back_sec": 0.15
  },
  "fish": {
