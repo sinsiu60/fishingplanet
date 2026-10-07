@@ -6,6 +6,7 @@
 
 1. 획득: 낚시터(샤르미온 초반 · 중반 · 후반, 엘드라시온)별 시간당 비늘석 개수 · 등급 분포 (tools/scalestone_sim.py 와 같은 가정)
 2. 강화 비용 ÷ 시간당 수입: 희귀 +4 하나 (9,200원 · 소재 75) 만드는 데 몇 시간
+   (S6 승인 뒤: 장력 한계 = 초록 폭 × % · 판매가 상한 5% · 희귀 확률 상한 1.5%p)
 3. 파이팅: 비늘석 없음 / 평균 세팅 (희귀 +4 ×4, 부옵션 무작위) / 최고 세팅 (파이팅 옵션 8종 모두 상한 — 실제로는 못 만드는 위쪽 끝)
    티어별 포획 성공률 · 평균 파이팅 시간 (balance_sim 봇 '보통'). 최고 세팅 T(n) 이 맨몸 T(n+1) 보다 강하면 표시
 4. 경제: 시간당 판매 골드 증가 (판매가 · 희귀 확률 · 대물 확률) — 기존 대비 +10% 이내인지
@@ -144,14 +145,15 @@ def economy(avg: dict) -> None:
         print(f"  {sid:14s} {stage(sid):10s} {inc['gold_h']:>14,.0f}   {h_g:8.2f}h   {inc['mat_h']:>18.1f}   {h_m:8.2f}h   {lost:>12,.0f}원")
     print()
     print("## 4. 경제: 시간당 판매 골드 (비늘석 없음 대비)")
-    print("  낚시터          평균 세팅 (판매가 · 희귀 · 대물)        최고 세팅 (판매가 10% · 희귀 2.5%p · 대물 12%)")
     best = best_econ()
+    print(f"  낚시터          평균 세팅 (판매가 · 희귀 · 대물)        최고 세팅 (판매가 {best['sell_price']:g}% · 희귀 {best['rare_chance']:g}%p · "
+          f"대물 {best['trophy_chance']:g}% = 상한)")
     av = {k: avg.get(k, 0.0) for k in ("sell_price", "rare_chance", "trophy_chance", "material_gain")}
     worst = 0.0
     for sid in SPOTS:
-        b = base[sid]["gold_h"]
-        a = spot_income(sid, av)["gold_h"]
-        x = spot_income(sid, best)["gold_h"]
+        b = spot_income(sid, {}, n=50000)["gold_h"]   # 같은 씨앗 · 큰 표본 (2만은 ±1%p 흔들림)
+        a = spot_income(sid, av, n=50000)["gold_h"]
+        x = spot_income(sid, best, n=50000)["gold_h"]
         worst = max(worst, x / b - 1)
         print(f"  {sid:14s} {a / b * 100 - 100:+6.1f}%  ({a:>10,.0f})            {x / b * 100 - 100:+6.1f}%  ({x:>10,.0f})")
     print(f"  평균 세팅 효과: 판매가 +{av['sell_price']:.2f}% · 희귀 +{av['rare_chance']:.2f}%p · 대물 +{av['trophy_chance']:.2f}%")

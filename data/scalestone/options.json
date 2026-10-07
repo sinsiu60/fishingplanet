@@ -3,7 +3,7 @@
  "order": ["tension_limit", "line_durability", "line_wear", "reel_speed", "perfect_window", "hook_hold", "twist_resist", "warning_lead",
            "hook_window", "trophy_chance", "rare_chance", "sell_price", "material_gain"],
  "options": {
-  "tension_limit":   {"name": "장력 한계",       "group": "fight",   "range": [2, 4],      "unit": "pct", "cap": 12,   "weight": 10, "sign": 1},
+  "tension_limit":   {"name": "장력 한계",       "group": "fight",   "range": [2, 4],      "unit": "pct", "cap": 12,   "weight": 10, "sign": 1, "desc": "초록 구간 위쪽 끝을 초록 폭의 %만큼 올림 (빨강이 늦게 시작)"},
   "line_durability": {"name": "줄 내구도",       "group": "fight",   "range": [3, 6],      "unit": "pct", "cap": 18,   "weight": 10, "sign": 1},
   "line_wear":       {"name": "줄 마모 감소",    "group": "fight",   "range": [3, 6],      "unit": "pct", "cap": 18,   "weight": 10, "sign": -1, "desc": "빨간 칸에서 줄이 닳는 속도"},
   "reel_speed":      {"name": "감기 속도",       "group": "fight",   "range": [2, 4],      "unit": "pct", "cap": 12,   "weight": 10, "sign": 1},
@@ -13,8 +13,8 @@
   "warning_lead":    {"name": "예고 여유",       "group": "fight",   "range": [0.02, 0.05], "unit": "sec", "cap": 0.15, "weight": 10, "sign": 1, "desc": "예고 신호가 더 일찍 보임"},
   "hook_window":     {"name": "챔질 여유",       "group": "catch",   "range": [0.02, 0.04], "unit": "sec", "cap": 0.12, "weight": 8,  "sign": 1, "desc": "챔질 판정 시간"},
   "trophy_chance":   {"name": "대물 확률",       "group": "catch",   "range": [2, 4],      "unit": "pct", "cap": 12,   "weight": 8,  "sign": 1, "desc": "그 종 크기 범위 상위 10%가 나올 확률 (기존 확률에 곱함)"},
-  "rare_chance":     {"name": "희귀 확률",       "group": "catch",   "range": [0.3, 0.8],  "unit": "pp",  "cap": 2.5,  "weight": 8,  "sign": 1, "desc": "희귀 등급 물고기 확률에 더함"},
-  "sell_price":      {"name": "판매가",          "group": "harvest", "range": [2, 4],      "unit": "pct", "cap": 10,   "weight": 6,  "sign": 1},
+  "rare_chance":     {"name": "희귀 확률",       "group": "catch",   "range": [0.3, 0.8],  "unit": "pp",  "cap": 1.5,  "weight": 8,  "sign": 1, "desc": "희귀 등급 물고기 확률에 더함 (상한 2.5 → 1.5, S6 검증)"},
+  "sell_price":      {"name": "판매가",          "group": "harvest", "range": [2, 4],      "unit": "pct", "cap": 5,    "weight": 6,  "sign": 1, "desc": "상한 10 → 5 (S6 검증: 최고 세팅 판매 수입 +10% 이내)"},
   "material_gain":   {"name": "소재 획득량",     "group": "harvest", "range": [4, 8],      "unit": "pct", "cap": 25,   "weight": 6,  "sign": 1, "desc": "분해 시 얻는 물고기 소재"}
  }
 }
