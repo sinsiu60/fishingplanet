@@ -14,7 +14,11 @@ import pygame
 
 from src.core.config import game_config, load_json
 from src.platform.detect import IS_MOBILE
+from src.core.mathutil import clamp
+from src.core.weather import WEATHER_KO
+from src.render import campsite
 from src.scene.base import Scene
+from src.ui.hud import text
 
 LOG = (0x6B, 0x4A, 0x2E)
 FLAME = ((0xE8, 0x74, 0x3B), (0xF6, 0xB1, 0x4A), (0xFF, 0xF1, 0xA8))
@@ -226,49 +230,53 @@ class CampfireScene(Scene):
             g.scenes.pop()
 
     # ── 그리기 ──
-    def draw(self, canvas) -> None:
-        self.fishing.draw(canvas)   # 마을 부두에서 연 지도에서 쉬어도 배경은 낚시터 (48-1 ⑥)
-        w, h = canvas.get_size()
-        # 어둑함: 0.3초 들어오고 2.2초부터 걷힘 (줄이기: 0.3 / 0.3)
+    def _black(self) -> tuple[bool, float]:
+        """(야영지를 그릴지, 검정 덮개 0..1): 0~0.15 낚시 화면 → 검정, 0.15~0.3 검정 → 야영지, 끝도 거꾸로."""
         end = self._end_time()
-        k = min(1.0, self.t / DIM_IN) if self.t < end - DIM_IN else max(0.0, (end - self.t) / DIM_IN)
-        if k > 0:
-            dim = pygame.Surface((w, h), pygame.SRCALPHA)
-            for y in range(0, h, 4):   # 화면 아래쪽부터 어둑하게 (아래 30% → 위 10%)
-                a = int(255 * 0.3 * k * (0.35 + 0.65 * y / h))
-                dim.fill((0, 0, 0, a), (0, y, w, 4))
-            canvas.blit(dim, (0, 0))
-        if k <= 0:
-            return
-        cx, by = w // 2, h - 28   # 아래 가운데 (맨 아래 조작 안내 줄 위)
-        self._draw_event_back(canvas, cx, by, k)
-        self._draw_fire(canvas, cx, by, k)
-        self._draw_event_front(canvas, cx, by, k)
+        half = DIM_IN / 2
+        if self.t < DIM_IN:
+            return (self.t >= half, self.t / half if self.t < half else 1 - (self.t - half) / half)
+        if self.t > end - DIM_IN:
+            u = self.t - (end - DIM_IN)
+            return (u < half, u / half if u < half else 1 - (u - half) / half)
+        return True, 0.0
+
+    def draw(self, canvas) -> None:
+        camp, black = self._black()
+        if not camp:
+            self.fishing.draw(canvas)   # 들어가고 나올 때만 낚시 화면
+        else:
+            w, h = canvas.get_size()
+            campsite.draw(canvas, self.fishing, self.t)
+            cx, by = campsite.fire_pos(w, h)
+            self._draw_event_back(canvas, cx, by, 1.0)
+            self._draw_fire(canvas, cx, by, 1.0)
+            self._draw_event_front(canvas, cx, by, 1.0)
+            f = self.fishing
+            text(canvas, f"{f.clock.label()} · {WEATHER_KO[f.weather]}", (8, 6), (240, 236, 220), 11, "topleft")
+        if black > 0:
+            veil = pygame.Surface(canvas.get_size())
+            veil.set_alpha(int(255 * clamp(black, 0.0, 1.0)))
+            canvas.blit(veil, (0, 0))
 
     def _draw_fire(self, canvas, cx: int, by: int, k: float) -> None:
-        # 바닥 빛: 반지름 28px 주황 더하기 20%, 0.5초 주기 숨쉬기
-        breath = 0.85 + 0.15 * math.sin(self.t * math.tau / 0.5)
-        r = 28
-        glow = pygame.Surface((r * 2, r), pygame.SRCALPHA)
-        pygame.draw.ellipse(glow, (int(232 * 0.2 * k * breath), int(116 * 0.2 * k * breath), int(59 * 0.2 * k * breath)),
-                            glow.get_rect())
-        canvas.blit(glow, (cx - r, by - r // 2), special_flags=pygame.BLEND_RGB_ADD)
-        # 장작 2개 X 자 (16×6)
-        pygame.draw.line(canvas, LOG, (cx - 8, by + 3), (cx + 8, by - 2), 3)
-        pygame.draw.line(canvas, LOG, (cx - 8, by - 2), (cx + 8, by + 3), 3)
+        s = 2   # 야영지에선 2배 (도트 그대로)
+        # 장작 2개 X 자 (16×6 → ×2)
+        pygame.draw.line(canvas, LOG, (cx - 8 * s, by + 3 * s), (cx + 8 * s, by - 2 * s), 3 * s)
+        pygame.draw.line(canvas, LOG, (cx - 8 * s, by - 2 * s), (cx + 8 * s, by + 3 * s), 3 * s)
         # 불꽃 3겹 (높이 10~14px, 0.12초마다 1px씩)
         heights = (14, 11, 7)
         widths = (10, 7, 4)
         for i, col in enumerate(FLAME):
-            hh = heights[i] + self.flick[i]
-            ww = widths[i]
-            dx = self.flick[(i + 1) % 3]
-            pts = [(cx - ww // 2 + dx, by - 1), (cx + ww // 2 + dx, by - 1), (cx + dx + (1 if i % 2 else -1), by - 1 - hh)]
+            hh = (heights[i] + self.flick[i]) * s
+            ww = widths[i] * s
+            dx = self.flick[(i + 1) % 3] * s
+            pts = [(cx - ww // 2 + dx, by - s), (cx + ww // 2 + dx, by - s), (cx + dx + (s if i % 2 else -s), by - s - hh)]
             pygame.draw.polygon(canvas, col, pts)
         for e in self.embers:   # 불티 점 2~4개
             a = 1.0 - e[4]
             col = (255, int(180 + 60 * a), int(90 * a))
-            canvas.set_at((int(cx + e[0]), int(by - 12 - e[1])), col)
+            canvas.fill(col, (int(cx + e[0] * s), int(by - 24 - e[1] * s), 2, 2))
 
     def _draw_event_back(self, canvas, cx: int, by: int, k: float) -> None:
         ev = self.event
@@ -291,16 +299,16 @@ class CampfireScene(Scene):
         if eid == "cat":
             from src.render import village_life as vl
             walk = min(1.0, self.ev_t / 0.8)
-            x = cx + 46 - 22 * walk
-            vl.draw_cat(canvas, x, by + 4, "walk" if walk < 1.0 else "sleep", -1, self.t, step=self.ev_t * 6)
+            x = cx + 96 - 60 * walk   # 오른쪽 풀밭에서 걸어와 불 앞에서 잠
+            vl.draw_cat(canvas, x, by + 14, "walk" if walk < 1.0 else "sleep", -1, self.t, step=self.ev_t * 6)
         elif eid == "fireflies":
             from src.render.map_fx import cfg as map_cfg
             col = tuple(map_cfg()["fireflies"]["color"])   # 반딧불 (DETAILS A-5) 색 그대로
             for p in self.ev_data["pts"]:
                 if math.sin(self.t * 3 + p[2]) > -0.2:
-                    canvas.set_at((int(cx + p[0] + math.sin(self.t + p[2]) * 3), int(by + p[1])), col)
+                    canvas.fill(col, (int(cx + p[0] * 1.8 + math.sin(self.t + p[2]) * 4), int(by + p[1] * 1.6 - 6), 2, 2))
         elif eid == "snow":
             for p in self.ev_data["pts"]:
-                y = by - 60 + ((self.ev_t * 22 + p[2] * 9) % 52)
-                if y < by - 10:
-                    canvas.set_at((int(cx + p[0] * 0.5), int(y)), (250, 252, 255))
+                y = by - 90 + ((self.ev_t * 30 + p[2] * 13) % 70)
+                if y < by - 26:   # 불 위에서 녹음
+                    canvas.fill((250, 252, 255), (int(cx + p[0] * 0.8), int(y), 2, 2))

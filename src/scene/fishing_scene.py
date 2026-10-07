@@ -3283,6 +3283,20 @@ class FishingScene(Scene):
         # 색(정수 튜플)만 — 별 · 반사 세기 같은 실수값은 시각과 함께 매 프레임 조금씩 변해 열쇠로 쓰면 캐시가 전혀 안 맞는다 (갱신 때 반영됨)
         return tuple(sorted((k, v) for k, v in pal.items() if isinstance(v, tuple)))
 
+    def scene_palette(self) -> dict:
+        """지금 시각 · 낚시터 · 날씨 · 계절 · 이벤트를 입힌 팔레트 (모닥불 야영지 배경도 같이 씀)."""
+        pal = themed_palette(self.palette.sample(self.clock.hour), self.theme, self.weather, self.lightning.flash, self.legend_k)
+        from src.render.season_fx import season_palette
+        pal = season_palette(pal, self.season, self.spot.get("continent", "sharmion"))   # 계절 색감 (은은하게)
+        from src.render.event_fx import event_palette
+        pal = event_palette(pal, self._event_id(), self.spot.get("continent", "sharmion"))   # 붉은 달·은빛 안개 (환상 팔레트가 위)
+        pal = self._line_pal(pal)
+        if self.dragon_k > 0.01:
+            for key, v in pal.items():
+                if isinstance(v, tuple) and key not in ("text", "bobber", "bobber_base"):
+                    pal[key] = lerp_color(v, (120, 16, 26), 0.28 * self.dragon_k)
+        return pal
+
     def _draw_world(self, canvas, pal: dict) -> None:
         """하늘·별·해달·구름·산·물 (환상 파장은 이걸 두 번 그려 마스크로 합성).
         하늘~구름 과 물은 띠 캐시(_bg_band, 15fps); 이벤트 하늘(유성) · 번개 · 산 · 배 등불은 매 프레임."""
@@ -3331,16 +3345,7 @@ class FishingScene(Scene):
         world.SKY.clear()
         world.SKY.update(date_events.sky_tweak(hour))   # 새해 아침 해돋이 · 추석 보름달 (DT11)
         theme, weather = self.theme, self.weather
-        pal = themed_palette(self.palette.sample(hour), theme, weather, self.lightning.flash, self.legend_k)
-        from src.render.season_fx import season_palette
-        pal = season_palette(pal, self.season, self.spot.get("continent", "sharmion"))   # 계절 색감 (은은하게)
-        from src.render.event_fx import event_palette
-        pal = event_palette(pal, self._event_id(), self.spot.get("continent", "sharmion"))   # 붉은 달·은빛 안개 (환상 팔레트가 위)
-        pal = self._line_pal(pal)
-        if self.dragon_k > 0.01:
-            for key, v in pal.items():
-                if isinstance(v, tuple) and key not in ("text", "bobber", "bobber_base"):
-                    pal[key] = lerp_color(v, (120, 16, 26), 0.28 * self.dragon_k)
+        pal = self.scene_palette()
         cam, c, t, f = self.cam, self.cast, self.t, self.fight
         pfx = self.phantom_fx
         base_pal = pal
