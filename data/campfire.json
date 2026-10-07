@@ -1,0 +1,98 @@
+{
+ "_설명": "모닥불의 작은 일 (TIME_REST.md 🅳, DESIGN.md 48장). 쉬기 한 번마다 최대 하나: 조건이 맞는 것 중 표 순서대로 chance 를 굴려 처음 걸린 것. 타임랩스 at_sec 무렵에 장면, 끝날 때 화면 아래 한 줄 line_sec 초. 게임 효과(확률 · 보상) 없음. 이야기 일지엔 쓰지 않음. 본 기록 = 세이브 campfire_seen, 6가지 모두 = 업적 '모닥불 친구'(칭호만).",
+ "at_sec": 1.2,
+ "line_sec": 2.4,
+ "events": [
+  {
+   "id": "cat",
+   "name": "나비가 와서 눕기",
+   "cond": {
+    "cat_affection": 5,
+    "spots": [
+     "reservoir"
+    ]
+   },
+   "chance": 0.5,
+   "sound": [
+    "sfx_cat_purr",
+    0.4
+   ],
+   "line": "나비가 따라와 불 옆에서 잠들었다."
+  },
+  {
+   "id": "meteor",
+   "name": "별똥별",
+   "cond": {
+    "passes_night_clear": true
+   },
+   "chance": 0.25,
+   "line": "별똥별이 지나갔다."
+  },
+  {
+   "id": "fireflies",
+   "name": "반딧불",
+   "cond": {
+    "season": [
+     "summer"
+    ],
+    "passes_night": true,
+    "spots": [
+     "reservoir",
+     "valley",
+     "marsh"
+    ]
+   },
+   "chance": 0.3,
+   "line": "반딧불이 불빛을 보러 왔다."
+  },
+  {
+   "id": "rain_roof",
+   "name": "빗소리",
+   "cond": {
+    "passes_weather": [
+     "rain"
+    ]
+   },
+   "chance": 0.3,
+   "sound": [
+    "room_rain_roof_light",
+    0.5
+   ],
+   "line": "텐트 위로 비가 두드렸다."
+  },
+  {
+   "id": "snow",
+   "name": "눈",
+   "cond": {
+    "season_or_spots": {
+     "season": [
+      "winter"
+     ],
+     "spots": [
+      "ice_sea"
+     ]
+    }
+   },
+   "chance": 0.3,
+   "line": "눈이 불 위에서 녹았다."
+  },
+  {
+   "id": "owl",
+   "name": "올빼미",
+   "cond": {
+    "passes_night": true,
+    "spots": [
+     "valley",
+     "world_tree",
+     "marsh"
+    ]
+   },
+   "chance": 0.2,
+   "sound": [
+    "amb_owl",
+    0.5
+   ],
+   "line": "멀리서 올빼미가 울었다."
+  }
+ ]
+}

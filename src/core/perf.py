@@ -330,9 +330,12 @@ class BenchRunner:
         fs = self.fs
         fs._set_spot(spot)
         fs.clock.hour = hour
-        fs.weather_sys.current = weather
-        fs.weather_sys.upcoming = weather
-        fs.weather_sys.next_change = fs.weather_sys.abs_time(fs.clock.day, hour) + 24
+        ws = fs.weather_sys
+        ws.set_spot(spot, fs.spot["weather"])
+        now = ws.abs_time(fs.clock.day, hour)
+        ws.set_override(weather, now, now + 24)   # 측정 동안 그 날씨로 고정
+        ws.update(fs.clock.day, hour)
+        ws.events.clear()
         fs.bite.stop()
         fs.cast.reset()
 

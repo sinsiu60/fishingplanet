@@ -9,7 +9,7 @@ from src.audio import reel_audio
 from src.core.config import game_config, load_json
 from src.core.fonts import get_font
 from src.core.game_clock import PERIODS, GameClock
-from src.core.weather import WEATHER_KO, Weather, roll_weather
+from src.core.weather import WEATHER_KO, Weather
 from src.core.mathutil import clamp, lerp, lerp_color, scale_color, smoothstep
 from src.fishing.bite import BiteController, BiteState, roll_size
 from src.fishing.casting import CastController, CastState
@@ -137,9 +137,9 @@ class FishingScene(Scene):
             self.force_i = next((i for i, x in enumerate(self.all_fish) if x["id"] == force), -1)
         self._set_spot(self.save.data["spot"] if self.save.data["spot"] in self.spots else "reservoir")
         d = self.save.data
-        self.weather_sys = Weather(d.get("weather", "clear"),
-                                   d.get("weather_next") or roll_weather(self.spot["weather"]),
-                                   d.get("weather_change", 0.0))
+        # 날씨 = 정해진 예보표 (TIME_REST 🅰, DESIGN 48장): 세이브 weather_seed 하나로 (낚시터, 3시간 칸)마다 정해짐
+        self.weather_sys = Weather(d, self.spot_id, self.spot["weather"])
+        self.weather_sys.update(self.clock.day, self.clock.hour)
         self.rain = Rain(canvas.get_width(), canvas.get_height())
         self.fog = Fog(canvas.get_width(), canvas.get_height())
         self.lightning = Lightning()
@@ -244,6 +244,7 @@ class FishingScene(Scene):
         self.cast_loops: dict[str, str | None] = {"charge": None, "line": None}
         self.captions = None     # [글자, 남은 시간] 소리 자막
         self.t = 0.0
+        self.campfire_line = None   # (글자, 끝 self.t) — 모닥불의 작은 일 한 줄 (TIME_REST 🅳)
         self.mouse = (canvas.get_width() // 2, canvas.get_height() // 2)
         self.look_left = self.look_right = False
         self.idle_ripple_t = 0.0
@@ -256,6 +257,8 @@ class FishingScene(Scene):
     def _set_spot(self, spot_id: str) -> None:
         self.spot_id = spot_id
         self.spot = self.spots[spot_id]
+        if getattr(self, "weather_sys", None) is not None:
+            self.weather_sys.set_spot(spot_id, self.spot["weather"])   # 그 낚시터의 예보표 (DESIGN 48장)
         self.theme = self.spot["theme"]
         self.hazard_decor = world.HazardDecor(self.spot["hazards"])
         self.screen_fx.sway = self.theme.get("sway", 0)
@@ -279,15 +282,14 @@ class FishingScene(Scene):
 
     # ───────────────────────── 이동 · 휴식 ─────────────────────────
     def travel(self, spot_id: str) -> None:
-        """지도에서 이동: 1시간 흐르고, 그 지역 기후로 예보가 바뀐다."""
+        """지도에서 이동: 1시간 흐름. 도착한 낚시터의 예보표 그대로 (다시 뽑지 않음, TIME_REST 🅰) — 도착 토스트에 날씨."""
         self.bite.stop()
         self.cast.reset()
         self.cam.yaw = 0.0
         self._set_spot(spot_id)
         self.save.data["continent"] = self.spot.get("continent", "sharmion")
         self._advance_hours(1.0)
-        self.weather_sys.reroll_upcoming(self.spot["weather"])
-        self.toasts.show(f"{self.spot['name']}에 도착했다", GOOD, 2.0)
+        self.toasts.show(f"{self.spot['name']}에 도착했다 · {WEATHER_KO[self.weather]}", GOOD, 2.0)
         line = phantom.rumor()  # 가끔 소문 한 줄 (로딩 문구 풀, 33장 P6)
         if line:
             self.toasts.show(line, (190, 160, 235), 3.2, 11)
@@ -306,14 +308,49 @@ class FishingScene(Scene):
                 return start, name
         return starts[0][0] + 24.0, starts[0][1]
 
-    def rest(self) -> str:
-        """텐트에서 쉬기: 다음 시간대 시작까지 시간을 넘긴다 (날씨도 그만큼 진행)."""
+    def rest_options(self) -> list[dict]:
+        """골라 쉬기 (TIME_REST 🅱): [아침][낮][저녁][밤] 각각 다음 시작 시각 (지금 그 시간대 안이면 다음 날) · 넘길 시간(≤ 24) · 그때 날씨."""
+        h = self.clock.hour
+        now = self.weather_sys.abs_time(self.clock.day, h)
+        out = []
+        for start, pid, name in PERIODS:
+            hours = (start - h) % 24 or 24.0   # 다음 시작 시각 (지금 그 시간대 안이면 다음 날 — 늘 ≤ 24시간)
+            t = now + hours
+            tomorrow = int(t // 24) > self.clock.day
+            out.append({"pid": pid, "name": name, "start": start, "hours": hours, "tomorrow": tomorrow,
+                        "weather": self.weather_sys.at_time(t)})
+        return out
+
+    def can_rest(self) -> bool:
+        """파이팅 중 · 환상 대기 연출 중엔 못 쉼."""
+        return self.fight is None and self.bite.phantom is None and self.landing is None
+
+    def rest_begin(self) -> None:
+        """쉬기 시작: 찌 · 입질 초기화 (모닥불 타임랩스가 시계를 옮김)."""
         self.bite.stop()
         self.cast.reset()
-        start, name = self._next_period()
-        self._advance_hours(start - self.clock.hour)
+
+    def rest_end(self) -> str:
+        """쉬기 끝: 날씨 이벤트 비우고 저장, 도착 시각 · 날씨 글자."""
+        self.weather_sys.events.clear()
         self.game.save_now()
         return f"{self.clock.label()} · {WEATHER_KO[self.weather]}"
+
+    def rest(self) -> str:
+        """(예전 호환) 다음 시간대로 바로 — 지금은 지도의 골라 쉬기 + 모닥불 장면을 씀."""
+        self.rest_begin()
+        start, name = self._next_period()
+        self._advance_hours(start - self.clock.hour)
+        return self.rest_end()
+
+    def _campfire_debug(self) -> None:
+        from src.scene.campfire import CampfireScene, campfire_cfg
+        if not self.can_rest():
+            return
+        evs = [e["id"] for e in campfire_cfg()["events"]]
+        self.dbg_camp_i = (getattr(self, "dbg_camp_i", -1) + 1) % len(evs)
+        self.rest_begin()
+        self.game.scenes.push(CampfireScene(self.game, self, 3.0, force_event=evs[self.dbg_camp_i]))
 
     def _advance_hours(self, hours: float) -> None:
         self.clock.hour += hours
@@ -442,7 +479,11 @@ class FishingScene(Scene):
             self.toasts.show(f"[테스트] {treasure.grade_info(grade)['name']} 상자 지급 (C: 열기)", INFO, 1.5, 11)
         elif key == "F5":
             w = self.weather_sys
-            w.current = WEATHERS[(WEATHERS.index(w.current) + 1) % len(WEATHERS)]
+            nxt = WEATHERS[(WEATHERS.index(w.current) + 1) % len(WEATHERS)]
+            now = w.abs_time(self.clock.day, self.clock.hour)
+            w.set_override(nxt, now, w.next_change if w.next_change > now else now + 3)   # 이번 칸 끝까지 덮어쓰기
+            w.update(self.clock.day, self.clock.hour)
+            w.events.clear()
             self.toasts.show(f"[테스트] 날씨: {WEATHER_KO[w.current]}", INFO, 1.5, 11)
 
     def _quest_events(self, qr) -> None:
@@ -628,6 +669,9 @@ class FishingScene(Scene):
                     g = scalestone.grade_info(s["grade"])
                     self.toasts.show(f"[테스트] 비늘석 {g['name']} +{s['level']} · " +
                                      ", ".join(scalestone.option_text(o) for o in s["opts"]), tuple(g["color"]), 2.5, 11)
+            elif a.value == "F7" and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
+                    self._campfire_debug()   # Shift+F7: 모닥불의 작은 일 6종 차례로 강제 (3시간 쉬기, 48장)
             elif a.value in ("F4", "F6") and pygame.key.get_mods() & pygame.KMOD_SHIFT:
                 if self.fish_cfg.get("debug_keys") or load_json("mobile_config.json").get("debug_build"):
                     self._p2_debug("full" if a.value == "F4" else "short")   # 환상 2페이즈 컷신 바로 보기
@@ -3531,6 +3575,12 @@ class FishingScene(Scene):
             from src.ui import achv_toast
             achv_toast.draw(self.game, canvas)
         self.toasts.draw(canvas)
+        if self.campfire_line is not None:
+            line, end = self.campfire_line
+            if self.t >= end:
+                self.campfire_line = None
+            elif end - self.t > 0.4 or int(self.t * 20) % 2 == 0:
+                hud.text(canvas, line, (self.cam.width // 2, self.cam.height - 34), (255, 222, 170), anchor="center")
         la = self.phantom_fx.line_alpha()
         if la > 0:
             # 환상 등장 대사 (위쪽 가운데, 연보라 페이드)

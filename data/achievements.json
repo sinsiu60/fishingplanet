@@ -40,6 +40,7 @@
   {"id": "quests_50", "cat": "craft", "name": "게시판의 단골", "desc": "의뢰 50개 완료", "type": "quests_done", "goal": 50},
   {"id": "print_first", "cat": "craft", "name": "먹물 한 방울", "desc": "어탁 남기기", "type": "prints", "goal": 1},
   {"id": "print_10", "cat": "craft", "name": "어탁 갤러리", "desc": "어탁 10장", "type": "prints", "goal": 10},
+  {"id": "campfire_all", "cat": "special", "name": "모닥불 친구", "desc": "모닥불 옆에서 작은 일 6가지 모두 보기 · 칭호 「모닥불 친구」", "type": "campfire_seen", "goal": 6},
   {"id": "phantom_first", "cat": "special", "name": "숨을 죽인 물", "desc": "환상의 물고기 낚기", "type": "phantoms", "goal": 1, "hidden_until_phantom": true},
   {"id": "phantom_all", "cat": "special", "name": "열두 개의 환상", "desc": "환상의 물고기 12종 모두", "type": "phantoms", "goal": 12, "hidden_until_phantom": true}
  ]

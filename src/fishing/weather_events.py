@@ -56,6 +56,9 @@ def tick(save, day: int, hour: float, weather: str, rnd=_RNG) -> str | None:
     if st["day"] != day:   # 새 하루: 오늘 계획 (하루 1개 이하)
         st["day"] = day
         st["plan"] = None
+        if rnd is _RNG:   # 날씨 예보표와 같은 씨앗 → 같은 날은 늘 같은 결과 (TIME_REST 🅰)
+            from src.core.weather import ensure_seed
+            rnd = random.Random(f"{ensure_seed(save.data)}:event:{day}")
         r = rnd.random()
         acc = 0.0
         for e in cfg()["events"]:

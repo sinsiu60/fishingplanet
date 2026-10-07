@@ -206,7 +206,7 @@ def new_data() -> dict:
     now = time.time()
     return {
         "version": VERSION, "created": now, "updated": now, "playtime": 0.0,
-        "money": 0, "hour": 7.0, "day": 1, "spot": "reservoir", "weather": "clear",
+        "money": 0, "hour": 7.0, "day": 1, "spot": "reservoir",
         "unlocked_spots": ["reservoir"],
         "gear": {k: eq[k][0]["id"] for k in GEAR_KINDS} | {"bait": "worm"},
         "owned": {k: [eq[k][0]["id"]] for k in GEAR_KINDS} | {"bait": ["worm"]},

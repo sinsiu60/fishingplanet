@@ -76,6 +76,8 @@ def value(save, a: dict) -> int:
         return len(d.get("prints", {}))
     if t == "release":
         return int(d.get("details", {}).get("release_count", 0))
+    if t == "campfire_seen":   # 모닥불의 작은 일 (TIME_REST 🅳)
+        return len(set(d.get("campfire_seen", [])))
     if t == "phantoms":
         from src.fishing import phantom
         return len(phantom.state(save).get("caught", {}))

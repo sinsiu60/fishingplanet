@@ -16,6 +16,12 @@
   "time": {
     "start_hour": 7.0,
     "day_length_sec": 1200,
-    "fast_mult": 40
+    "fast_mult": 40,
+    "_time_rest": "TIME_REST.md (DESIGN 48장): 날씨 예보표 칸 · 지도 예보 길이 · 쉬기 최대 · 모닥불 타임랩스 길이 · 건너뛸 때 몰아서 끝내는 시간",
+    "weather_block_hours": 3,
+    "forecast_hours": 48,
+    "rest_max_hours": 24,
+    "campfire_sec": 2.5,
+    "campfire_skip_sec": 0.4
   }
 }

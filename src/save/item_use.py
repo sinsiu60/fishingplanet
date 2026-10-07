@@ -69,6 +69,8 @@ def choose(game, fishing, iid: str, value) -> tuple[str, tuple]:
         fishing.clock.hour = value + 0.01
         return "시간이 흘러갔다...", GOOD
     ws = fishing.weather_sys
-    ws.current = value
-    ws.next_change = Weather.abs_time(fishing.clock.day, fishing.clock.hour) + 12  # 실제 10분 = 게임 12시간
+    now = Weather.abs_time(fishing.clock.day, fishing.clock.hour)
+    ws.set_override(value, now, now + 12)  # 실제 10분 = 게임 12시간 — 그 동안 예보표 위에 덮어씀 (DESIGN 48장)
+    ws.update(fishing.clock.day, fishing.clock.hour)
+    ws.events.clear()
     return f"날씨가 바뀌었다: {WEATHER_KO[value]}", GOOD
