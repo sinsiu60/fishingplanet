@@ -753,9 +753,7 @@ class PhantomShow:
 
 
 def pick_variant(news: dict) -> str:
-    """첫 포획 = full, 12종 완성 순간 = extended, 재포획 = short."""
-    if news.get("phantom_new"):
-        if any("환상을 낚은 자" in r for r in news.get("phantom_rewards", [])):
-            return "extended"
-        return "full"
-    return "short"
+    """12종 완성 순간 = extended, 그 밖엔 full — 다시 잡아도 첫 포획과 같은 전체 연출 (사용자 요청, short 는 안 씀)."""
+    if news.get("phantom_new") and any("환상을 낚은 자" in r for r in news.get("phantom_rewards", [])):
+        return "extended"
+    return "full"

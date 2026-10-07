@@ -31,13 +31,13 @@ def tl() -> dict:
 
 
 def pick_variant(fish: dict, news: dict, save=None) -> str:
-    """최종 보스이고 엔딩을 아직 안 봤으면 final, 그 종 첫 포획이면 full, 아니면 short."""
+    """최종 보스이고 엔딩을 아직 안 봤으면 final, 아니면 full — 다시 잡아도 첫 포획과 같은 전체 연출 (사용자 요청, short 는 안 씀)."""
     c = tl()
     if fish["id"] in c["final_fish"] and save is not None:
         seen = save.data.get("ending_seen") if fish["id"] == "dragon_carp" else save.data["flags"].get("final_ending_seen")
         if not seen:
             return "final"
-    return "full" if (news or {}).get("new") else "short"
+    return "full"
 
 
 class LegendShow:

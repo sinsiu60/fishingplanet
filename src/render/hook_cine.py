@@ -5,7 +5,7 @@
                      · 챔질 판정(bite.py BITE 창)은 건드리지 않는다 — 그림과 소리만.
   ② 챔질 연출 (post) 챔질 성공 직후 — FishingScene 이 Fight 를 아직 만들지 않고 기다림(물고기가 당기지 않음) · 입력 무시
                      · skip_after_sec 이후 탭하면 건너뛰기 → 끝나면 파이팅 시작.
-반복: 첫 만남(seen_hook_cinematic 에 없는 종) = 전체 / 재회 = 전설 · 환상 짧은 버전, 희귀는 ① 만 / 일반 · 고급 = 없음.
+반복: 첫 만남(seen_hook_cinematic 에 없는 종) = 전체 / 재회 = 희귀는 ① 만 · **전설 · 환상은 다시 잡아도 전체** (사용자 요청) / 일반 · 고급 = 없음.
 
 ②의 사건(events)은 데이터로 적고 장면이 실행한다: slowmo · bend · sfx · haptic · line_drops · pull (DT5 · DT6 에서 종류를 더함).
 시간은 실제 초 — 슬로모션 중에도 연출 길이는 같다.
@@ -42,7 +42,8 @@ def plan(save, fish: dict | None, force_full: bool = False) -> dict:
     C = cfg()
     if rar not in C["rules"]["full_for"] or rar not in C or not C[rar].get("post", True):
         return {"pre": False, "post": None, "rarity": rar}
-    first = force_full or fish["id"] not in seen_list(save)
+    # 전설 · 환상은 다시 잡아도 첫 만남과 같은 전체 연출 (사용자 요청) — 희귀만 재회 때 ① 예고만
+    first = force_full or rar in ("legend", "phantom") or fish["id"] not in seen_list(save)
     if first:
         post = "full"
     elif rar in C["rules"]["short_for"]:

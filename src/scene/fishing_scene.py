@@ -2736,8 +2736,7 @@ class FishingScene(Scene):
         f = self.fight
         mode = (self.p2_pending or {}).get("mode")
         self.p2_pending = None
-        seen = f.fish["id"] in phantom.state(self.save)["phase2_seen"]
-        full = mode == "full" or (mode is None and not seen)
+        full = mode != "short"   # 다시 만나도 첫 만남과 같은 전체 컷신 (사용자 요청) — 짧은 버전은 Shift+F6 디버그만
 
         def wait(kind, lead):
             m = self._p2_music()
