@@ -1,6 +1,6 @@
 {
  "_설명": "건물 내부 대화 화면 (DESIGN.md 35-3a, INTERIOR_NPC.md). bg = src/render/interior.py 배경 이름, menu = 메뉴 순서 (buy 사기 · sell 팔기 · scalestone 비늘석 · talk 대화 · old_tales 옛이야기 · legend_tales 전설 이야기 · season_tales 계절 이야기 · leave 나가기). voice: sound = 말소리 이름(뒤에 0~2 변주), cps = 초당 글자 수, every = 몇 글자마다 한 번, excited_cps = 그 표정일 때 빨라짐 (오렌). shop_tabs = 사기 탭들.",
- "menu_names": {"buy": "사기", "sell": "팔기", "scalestone": "비늘석", "talk": "대화", "old_tales": "옛이야기", "legend_tales": "전설 이야기", "season_tales": "계절 이야기", "leave": "나가기", "journal": "낚시 일지", "memories": "추억", "notebook": "수첩"},
+ "menu_names": {"buy": "사기", "sell": "팔기", "scalestone": "비늘석", "talk": "대화", "old_tales": "옛이야기", "legend_tales": "전설 이야기", "season_tales": "계절 이야기", "leave": "나가기", "journal": "낚시 일지", "memories": "추억", "notebook": "수첩", "exam": "시험", "letter": "백 노인의 편지"},
  "shop_tabs": {"buy": ["rod", "reel", "line", "net", "bait", "float"], "sell": ["sell"], "scalestone": ["scalestone"]},
  "fade_sec": 0.4,
  "blink_every": [3.0, 5.0],
@@ -10,9 +10,9 @@
  "npcs": {
   "haru": {"sign": "하루네 낚시점", "bg": "haru_shop", "cont": "sharmion", "menu": ["buy", "sell", "scalestone", "talk", "leave"],
            "voice": {"sound": "ui_voice_haru", "cps": 30, "every": 2, "vol": 0.55}},
-  "baek": {"sign": "노인 어부의 오두막", "bg": "baek_hut", "cont": "sharmion", "menu": ["talk", "old_tales", "leave"],
+  "baek": {"sign": "노인 어부의 오두막", "bg": "baek_hut", "cont": "sharmion", "menu": ["talk", "old_tales", "exam", "leave"],
            "voice": {"sound": "ui_voice_baek", "cps": 13, "every": 2, "vol": 0.6}},
-  "ella": {"sign": "아스테라 수정 공방", "bg": "ella_workshop", "cont": "eldrasion", "menu": ["buy", "sell", "scalestone", "talk", "leave"],
+  "ella": {"sign": "아스테라 수정 공방", "bg": "ella_workshop", "cont": "eldrasion", "menu": ["buy", "sell", "scalestone", "talk", "letter", "leave"],
            "voice": {"sound": "ui_voice_ella", "cps": 21, "every": 3, "vol": 0.45}},
   "home": {"sign": "{player}의 집", "bg": "home_room", "cont": "sharmion", "menu": ["journal", "memories", "notebook", "leave"],
            "voice": {"sound": "ui_voice_haru", "cps": 30, "every": 99, "vol": 0.0}},

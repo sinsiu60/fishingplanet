@@ -74,6 +74,10 @@ def start_game(game, save: SaveGame) -> None:
     from src.scene import scalestone_notice
     if scalestone_notice.pending(game.save):   # 장비 강화 → 비늘석 안내 + 환영 선물 (46장 S4, 옛 세이브 처음 한 번)
         game.scenes.push(scalestone_notice.ScalestoneNoticeScene(game))
+    from src.save import exam
+    if exam.legacy_notice(game.save):   # 백 노인의 시험 이전 세이브: 자동 합격 안내 한 번 (49-3, 🅱-5)
+        from src.scene.exam_scene import ExamNoticeScene
+        game.scenes.push(ExamNoticeScene(game))
     game.fade_in(0.7)
 
 

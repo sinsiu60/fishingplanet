@@ -417,6 +417,18 @@ def draw_catch_info(canvas, result: dict, t: float, news: dict | None = None) ->
         stats = (f"퍼펙트 {result['perfects']}   실수 {result['misses']}   줄 손상 {result['line_damage'] * 100:.0f}%   "
                  f"시간 {result['elapsed']:.0f}초 (기준 {result['par']:.0f}초)")
         text(canvas, stats, (w // 2, y), (220, 225, 240), 11, "center")
+    ex = (news or {}).get("exam")
+    if ex:   # 백 노인의 시험 판 (49-3): 가치 · 살림망 대신 합격 판정
+        if t > 0.95:
+            if ex["pass"]:
+                text(canvas, f"T{ex['tier']} 시험 합격!", (w // 2, y + 18), (110, 220, 130), 16, "center")
+            else:
+                text(canvas, f"T{ex['tier']} 시험 불합격 — {ex['need']}", (w // 2, y + 18), (255, 140, 120), 11, "center")
+        if t > 1.2:
+            text(canvas, "시험용 물고기 — 살림망 · 도감에 넣지 않아요", (w // 2, 240), (170, 180, 200), 11, "center")
+        if t > CATCH_READY_T + 0.5 and int(t * 2) % 2 == 0:
+            text(canvas, "클릭해서 계속", (w // 2, 256), (170, 180, 200), 11, "center")
+        return
     if t > 0.95:
         k = clamp((t - 0.95) / 0.5, 0, 1)
         shown = int(result["price"] * (1 - (1 - k) ** 2))

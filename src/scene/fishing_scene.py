@@ -111,6 +111,8 @@ class FishingScene(Scene):
         self.cast = CastController()
         self.bite = BiteController()
         self.training = None  # 훈련 수조 (src/scene/training.py, 31장 C5)
+        self.exam_fish = None   # 백 노인의 시험 (49-3): 이번 착수의 시험 물고기 (시험 찌 · 시험 낚시터)
+        self.exam_run = None    # 시험 판 진행 중 {"tier", "miss": {패턴: 놓친 수}}
         self.sfx = game.sfx
         self.toasts = hud.Toasts()
         self.ripples = Ripples()
@@ -840,8 +842,9 @@ class FishingScene(Scene):
         self.fight_audio.stop()
         self.signal_audio.stop()
 
-    def start_training(self) -> None:
-        """훈련 수조 (31장 C5): 해금 패턴 무한 반복, 보상·패널티 없음. 지도·수집 서랍에서."""
+    def start_training(self, pattern: str | None = None) -> None:
+        """훈련 수조 (31장 C5): 해금 패턴 무한 반복, 보상·패널티 없음. 지도·수집 서랍에서.
+        pattern = 그 패턴을 골라 둔 채로 (백 노인 시험 3번 불합격 뒤 바로가기, 49-3)."""
         if self.fight is not None or self.training is not None:
             return
         from src.scene.training import TrainingTank
@@ -852,7 +855,7 @@ class FishingScene(Scene):
                 top.leave()
             else:
                 stack.pop()
-        self.training = TrainingTank(self)
+        self.training = TrainingTank(self, pattern)
         self.training.start()
 
     def write_save(self) -> None:
@@ -1106,7 +1109,8 @@ class FishingScene(Scene):
             self.toasts.show("챔질 성공!", GOOD, 1.0)
             self._splash_at(c.bx, c.bz, big=0.6)
             from src.render import hook_cine
-            pl = hook_cine.plan(self.save, self.bite.fish, self.cine_full) if self.training is None else {"post": None}
+            pl = hook_cine.plan(self.save, self.bite.fish, self.cine_full) \
+                if self.training is None and self.exam_fish is None else {"post": None}
             if pl.get("post") and self.hook_cine.start_post(pl["rarity"], self.bite.fish, pl["post"]):
                 self.cine_ran = True
                 # ② 챔질 연출: 끝날 때까지 파이팅을 만들지 않는다 (물고기가 당기지 않음) — update 에서 _begin_fight
@@ -1134,6 +1138,20 @@ class FishingScene(Scene):
             return
         if self.phantom_fx.locked():
             return  # 파장이 퍼지는 동안 회수 무시
+        if self.cast.state == CastState.LANDED and self.exam_fish is not None and self.bite.state != BiteState.HOOKED:
+            # 시험 찌를 낀 채 회수: "시험을 미루겠나?" — 예 = 시험 찌 반납 (불합격 아님), 둘 다 줄은 걷는다 (49-3)
+            from src.save import exam
+            from src.scene.confirm import ConfirmScene
+
+            def yes():
+                exam.postpone(self.save)
+                self.game.save_now()
+                self.toasts.show("시험 찌를 돌려줬다 (백 노인에게 다시 받을 수 있음)", INFO, 2.6, 11)
+            self.bite.stop()
+            self.cast.cancel_or_retrieve()
+            self.exam_fish = None
+            self.game.scenes.push(ConfirmScene(self.game, "시험을 미루겠나?", yes, yes="예 (반납)", no="아니요"))
+            return
         if self.cast.state == CastState.LANDED:
             if self.bite.phantom is not None and self.bite.state != BiteState.HOOKED:
                 # 대사 이후 직접 회수: 보라가 찌로 빨려 들어감 (천장 카운트는 유지)
@@ -1248,12 +1266,15 @@ class FishingScene(Scene):
         c = self.cast
         fish = self.bite.fish
         from src.save import scalestone as _ss
-        size = roll_size(fish, self.bite.cast_distance, trophy=_ss.frac(self.save, "trophy_chance"))
+        ex = self.training is None and bool(fish.get("exam"))   # 백 노인의 시험 판 (49-3): 순수 실력
+        if ex:
+            self.exam_run = {"tier": int(fish["exam"]), "miss": {}}
+        size = roll_size(fish, self.bite.cast_distance, trophy=0.0 if ex else _ss.frac(self.save, "trophy_chance"))
         # 변이 (U5): 챔질 순간 굴림 (테스트: F10 강제 지정)
         from src.fishing import mutation, weather_events
         force = getattr(self, "force_mut", None)
         train = self.training is not None
-        muts = [] if train else mutation.roll(self.save, fish, self.weather, force=force if force else None,
+        muts = [] if train or ex else mutation.roll(self.save, fish, self.weather, force=force if force else None,
                              chance_mult=(self.bite.sign_mods.get("mutation_mult", 1.0) if self.bite.sign_mods else 1.0)
                              * weather_events.benefit(self.save, "mutation_mult", 1.0))   # 붉은 달: 변이 ×1.5
         if muts:
@@ -1261,9 +1282,16 @@ class FishingScene(Scene):
             if "giant" in muts:
                 size = round(size * mutation.cfg()["kinds"]["giant"]["size_mult"], 1)
         angle = math.atan2(c.bx, c.bz)
-        self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=self.save.fight_gear(self.clock.period()[0]),
-                           hazards=[] if train else self.spot["hazards"], gimmick=None if train else self.current_gimmick(),
-                           float_need=self.save.float_need(fish, self.spot), float_tier=self.save.float_tier(),
+        if ex:   # 빌린 다음 티어 기본 장비 — 비늘석 · 부적 · 상자 장비 효과 없음, 찌 부족 도주 · 기믹 없음
+            from src.save import exam as _exam
+            gear, gim, fneed = _exam.borrowed_gear(self.exam_run["tier"]), None, 0
+        else:
+            gear = self.save.fight_gear(self.clock.period()[0])
+            gim = None if train else self.current_gimmick()
+            fneed = self.save.float_need(fish, self.spot)
+        self.fight = Fight(fish, size, c.current_distance(), angle, self.cam.yaw, gear=gear,
+                           hazards=[] if train else self.spot["hazards"], gimmick=gim,
+                           float_need=fneed, float_tier=self.save.float_tier(),
                            touch_lead=load_json("mobile_config.json")["touch_lead_sec"] if self.touch else 0.0)
         self.toasts.items.clear()
         self.toasts.sink = self._say  # 파이팅 중 글자 슬롯 하나 (31장)
@@ -1278,7 +1306,8 @@ class FishingScene(Scene):
         # 오디오 지연 보정 (설정 → 소리, 32장 S3): 소리가 늦게 들리는 기기면 박자 판정을 그만큼 늦춘다
         self.fight.input_latency = lat + self.settings.get("audio_offset_ms") / 1000
         from src.save.quests import QuestRun
-        self.quest_run = QuestRun(self.save, self.fight, fish["id"], self.spot_id, self.weather, self.clock.period()[0])
+        self.quest_run = None if ex else QuestRun(self.save, self.fight, fish["id"], self.spot_id, self.weather,
+                                                  self.clock.period()[0])
         if muts:
             kinds = mutation.cfg()["kinds"]
             col = tuple(kinds[muts[0]]["color"])
@@ -1292,7 +1321,9 @@ class FishingScene(Scene):
                 self.game.guide.event(f"first:{key}")   # TG-19 (예전 기믹 카드 대신)
         from src.fishing.fight import fish_gear_tier
         need_rod = fish_gear_tier(fish)
-        if not train and self.save.gear_tier("rod") < need_rod and fish["rarity"] != "common":
+        if ex:
+            self.toasts.show("시험!", (242, 196, 107), 2.4, 11)
+        elif not train and self.save.gear_tier("rod") < need_rod and fish["rarity"] != "common":
             # 낚싯대가 약하면 울렁임이 커진다 — 왜 어려운지 알려 준다
             self.toasts.show("버겁다!", BAD, 2.6, 11)
         if fish["rarity"] == "phantom":
@@ -1393,6 +1424,7 @@ class FishingScene(Scene):
 
     def _end_fight(self) -> None:
         last = self.fight.result if self.fight is not None else None
+        exam_res = (self.exam_run or {}).get("result")
         if self.fight is not None and load_json("fishing_config.json").get("debug_keys"):
             # 디버그 빌드: 파이팅 로그를 세이브 폴더/fight_logs/날짜.jsonl 에 (tools/fight_log.py read 로 분석)
             from src.core.paths import save_dir
@@ -1436,6 +1468,8 @@ class FishingScene(Scene):
         self.bite.stop()
         self.cast.reset()
         self.game.screen.shake = (0, 0)
+        if self.exam_run is not None or self.exam_fish is not None:
+            self._exam_end(exam_res)
 
     # ───────────────────────── 로직 (60틱 고정) ─────────────────────────
     def update(self, dt: float) -> None:
@@ -1867,7 +1901,8 @@ class FishingScene(Scene):
     def _update_waiting(self, dt: float) -> None:
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
         self.bite.bait = self.save.equipped("bait")
-        self.bite.force_fish = self.all_fish[self.force_i] if self.force_i >= 0 else None
+        self.bite.force_fish = self.exam_fish if self.exam_fish is not None else \
+            (self.all_fish[self.force_i] if self.force_i >= 0 else None)
         landed = self.cast.state == CastState.LANDED   # 대기 = 기다리기만 (루어 액션 저킹 · 리트리브는 삭제, DESIGN 47장)
         self.bite.sign_mods = self.signs.mods(self.cast.bx, self.cast.bz) if landed else {}
         self.bite.update(dt)
@@ -2005,7 +2040,7 @@ class FishingScene(Scene):
                 for at, kind in fight_hud.badge_times(news):
                     if prev < at <= self.end_t:
                         self.sfx.play("ui_stamp" if kind == "stamp" else "ui_star", 0.6)
-            if f.phase == "caught" and prev < 1.6 <= self.end_t and self.training is None:
+            if f.phase == "caught" and prev < 1.6 <= self.end_t and self.training is None and self.exam_run is None:
                 self.game.guide.event("catch_shown")   # TG-03: 배지까지 다 뜬 뒤
                 if getattr(self, "print_offer", None) is not None and news.get("record"):
                     self.game.guide.event("record_card")   # TG-13 (첫 포획이 아닌 크기 신기록)
@@ -2366,7 +2401,9 @@ class FishingScene(Scene):
     def _use_fight_item(self, item_id: str) -> None:
         """파이팅 중 소모품 (1: 수리용 실타래 / 2: 잔잔한 물 부적), 파이팅당 1개."""
         f = self.fight
-        if self.save.consumable_count(item_id) <= 0:
+        if self.exam_run is not None:
+            self.toasts.show("시험 중!", BAD, 1.4, 11)   # 시험 판: 소모품 효과 끔 (49-3)
+        elif self.save.consumable_count(item_id) <= 0:
             self.toasts.show("없음!", BAD, 1.2, 11)
         elif f.consumable_used:
             self.toasts.show("1개만!", BAD, 1.4, 11)
@@ -2398,7 +2435,15 @@ class FishingScene(Scene):
         ph = None
         from src.tutorial import scripts
         self.bite.script = scripts.plan(self.game, "bite") if self.training is None else None   # TG-01 대본 입질
-        if self.training is None and self.force_i < 0 and not self.bite.script:
+        self.exam_fish = None
+        from src.save import exam
+        act = exam.active(self.save) if self.training is None and not self.bite.script else None
+        if act and exam.on_exam_spot(self.save, self.spot_id):
+            self.exam_fish = exam.exam_fish(int(act["tier"]))   # 시험 찌: 3초 뒤 시험 물고기 (날씨 · 시간 · 미끼 무시)
+        elif act:
+            names = exam.spot_names(exam.passed(self.save))
+            self.toasts.show(f"시험 찌는 {', '.join(names)}에서", INFO, 2.4, 11)
+        if self.training is None and self.force_i < 0 and not self.bite.script and self.exam_fish is None:
             test = self.settings.get("test_phantom")  # 설정 → 접근성 '테스트: 다음 착수에 환상 물고기'
             ph = phantom.roll(self.save, self.spot_id, force=self.force_phantom or test)
             self.force_phantom = False
@@ -2415,6 +2460,8 @@ class FishingScene(Scene):
             self.bite.season = self.season
             self.bite.extra_pool = self._extra_fish()   # 계절·날씨 이벤트 한정 물고기 (35-4)
             self.bite.start((c.bx, c.bz), c.current_distance())
+            if self.exam_fish is not None:
+                self.bite.timer = exam.cfg()["bite_delay_sec"]
         self.idle_ripple_t = 0.0
         self.life.on_cast_landed(self.season, self.clock.period()[0], self.spot_id)   # 잠자리 15% (E)
         self.game.guide.event("cast_landed")
@@ -2452,7 +2499,8 @@ class FishingScene(Scene):
         elif ev == "bite":
             self.life.scare_fly()
             from src.render import hook_cine
-            pl = hook_cine.plan(self.save, self.bite.fish, self.cine_full) if self.training is None else {"pre": False}
+            pl = hook_cine.plan(self.save, self.bite.fish, self.cine_full) \
+                if self.training is None and self.exam_fish is None else {"pre": False}
             pre = hook_cine.cfg().get(pl.get("rarity") or "", {}).get("pre") if pl["pre"] else None
             if isinstance(pre, dict):
                 # ① 입질 예고 (희귀: 물속 파란 빛 + 묵직한 '쑥' / 전설: 수면 불룩 + 쿵 / 환상: 소리 없이) — 그림 · 소리만, 챔질 창은 그대로
@@ -2913,6 +2961,14 @@ class FishingScene(Scene):
         if self.training is not None:
             self.training.count(pid, ok)  # 훈련은 성공률만, 세이브는 건드리지 않음
             return
+        if self.exam_run is not None:
+            # 시험 판: 숙련도 · 연속 실패는 건드리지 않고, 놓친 패턴만 (3번 불합격 뒤 힌트, 49-3)
+            if not ok:
+                m = self.exam_run["miss"]
+                m[pid] = m.get(pid, 0) + 1
+                if pid not in self.missed_signals:
+                    self.missed_signals.append(pid)
+            return
         mastery = self.save.data.setdefault("pattern_mastery", {})
         streak = self.save.data.setdefault("pattern_fail_streak", {})
         if ok:
@@ -3139,6 +3195,10 @@ class FishingScene(Scene):
             self.sfx.play("sfx_splash")
             self.toasts.show("놓쳤다!", BAD, 2.0, 11)
             self._splash_at(x, z, 1.0)
+        elif ev == "caught" and self.exam_run is not None:
+            self._exam_caught(f)
+        elif ev.startswith("lost:") and self.exam_run is not None:
+            self._exam_lost(f, ev)
         elif ev == "caught":
             pose, _ = f.net_pose()
             shown = self._display_fish(f.fish)
@@ -3256,6 +3316,48 @@ class FishingScene(Scene):
                 self.sfx.duck("snap")  # 팅! 뒤 잠깐 무음 (N3: 놓침 하강음 없음 — 끊김·달아남 소리로 충분)
             self.end_t = 0.0
             self.shake_kick = 4.0 if ev == "lost:snap" else 0.0
+
+    # ── 백 노인의 시험 판 (49-3) ──
+    def _exam_caught(self, f) -> None:
+        """시험 물고기 포획: 가방 · 도감 · 의뢰 · 업적 · 통계 · 상자 · 어탁 없음 → 합격 판정만."""
+        from src.save import exam
+        pose, _ = f.net_pose()
+        shown = self._display_fish(f.fish)
+        self.chest_drop = None
+        self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46, chest=None, golden=False)
+        f.result["fish"] = shown
+        self.end_t = 0.0
+        t = self.exam_run["tier"]
+        ok = exam.judge(t, f.result)
+        res = exam.finish(self.save, ok, self.clock.day, self.exam_run["miss"])
+        self.exam_run["result"] = res
+        self.catch_news = {"exam": res | {"need": exam.pass_text(t)}}
+        self.print_offer = None
+        self.release_item = None
+        self.game.save_now()
+
+    def _exam_lost(self, f, ev: str) -> None:
+        """시험 물고기를 놓침 = 불합격 (기록 · 통계 없음)."""
+        from src.save import exam
+        res = exam.finish(self.save, False, self.clock.day, self.exam_run["miss"])
+        self.exam_run["result"] = res
+        self.game.save_now()
+        self.game.haptics.vibrate("lose")
+        self.sfx.play("sfx_line_snap" if ev == "lost:snap" else "sfx_flee")
+        if ev == "lost:snap":
+            self.sfx.duck("snap")
+        self.end_t = 0.0
+        self.shake_kick = 4.0 if ev == "lost:snap" else 0.0
+
+    def _exam_end(self, res: dict | None) -> None:
+        """시험 판 결과 화면을 닫은 뒤: 백 노인 대사 (T6 부터는 편지)."""
+        self.exam_run = None
+        self.exam_fish = None
+        if not res:
+            return
+        from src.scene.exam_scene import ExamResultScene
+        self.game.scenes.push(ExamResultScene(self.game, self, res))
+        self.game.guide.event("exam_end")
 
     # ───────────────────────── 그리기 ─────────────────────────
     WATER_MARGIN = 6   # 물결 마루가 수평선 위로 올라올 수 있는 최대 픽셀 (진폭 2 × 폭풍 1.9 × 바다 1.3)
@@ -3858,6 +3960,9 @@ class FishingScene(Scene):
             return
         if f.phase == "lost":
             fight_hud.draw_lose_panel(canvas, f, LOSE_REASONS[f.lose_reason], self.end_t)
+            if self.exam_run is not None and self.end_t > 0.6:
+                hud.text(canvas, f"T{self.exam_run['tier']} 시험 불합격 — 게임 하루 뒤 다시", (canvas.get_width() // 2, 58),
+                         BAD, 11, "center")
             if self.missed_signals or self.mastery_ups:
                 signal_slots.draw_result_icons(canvas, self.missed_signals, self.mastery_ups,
                                                (canvas.get_width() // 2 - 110, 194), self.t)
@@ -4012,8 +4117,8 @@ class FishingScene(Scene):
     def _equipped_float(self) -> dict | None:
         """엘드라시온에서 장착한 특수 찌 (샤르미온에선 효과도 외형도 없음)."""
         fid = self.save.data["float"].get("equipped")
-        if not fid or self.spot.get("continent") != "eldrasion":
-            return None
+        if not fid or self.spot.get("continent") != "eldrasion" or self._exam_float_on():
+            return None   # 시험 찌가 끼워져 있으면 그 찌 대신 (49-3)
         return next((f for f in load_json("floats.json")["floats"] if f["id"] == fid), None)
 
     def _draw_float_mark(self, canvas, x: float, y: float, size: float, dip: float) -> None:
@@ -4059,7 +4164,15 @@ class FishingScene(Scene):
             out = dict(out, bobber=lerp_color((255, 196, 60), (255, 250, 200), glint * 0.5))
         if (self.save.charm_on("pinwheel_float") and self.bite.state == BiteState.NIBBLE and self.bite.dip > 0.03):
             out = dict(out, bobber=(90, 220, 255))
+        if self.training is None and self._exam_float_on():
+            # 백 노인의 시험 찌 (49-3): 장착 중인 찌 대신 — 누런 오동나무색 + 갈색 띠 + 빨간 점
+            out = dict(out, bobber=(232, 196, 120), bobber_base=(150, 104, 52), bobber_band=(110, 70, 36),
+                       bobber_dot=(232, 74, 74), bobber_star=False)
         return out
+
+    def _exam_float_on(self) -> bool:
+        from src.save import exam
+        return exam.active(self.save) is not None and exam.on_exam_spot(self.save, self.spot_id)
 
     def _draw_trail(self, canvas, kind: str, pos, width: int) -> None:
         """환상 외형 (33장 P5): 찌·낚싯대 끝이 지나간 자리에 보랏빛 잔상 (움직일 때만 보임)."""

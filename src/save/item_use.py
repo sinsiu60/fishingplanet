@@ -14,7 +14,10 @@ BAD = (255, 140, 120)
 def item_state(save, it: dict) -> tuple[str, bool]:
     iid, kind = it["id"], it["kind"]
     if kind in ("rod", "reel", "net"):
-        return ("장착 중", False) if save.data["gear"][kind] == iid else ("장착하기", True)
+        if save.data["gear"][kind] == iid:
+            return "장착 중", False
+        t = save.equip_locked(kind, iid)
+        return (f"시험 필요 (T{t})", False) if t else ("장착하기", True)   # 합격 티어보다 높은 상자 장비: 보관만 (49-3)
     if kind == "charm":
         if save.charm_on(iid):
             return "부적 해제", True

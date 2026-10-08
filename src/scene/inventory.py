@@ -89,7 +89,12 @@ class InventoryScene(Scene):
             out += [tr.item_info(i) for i, n in items["consumables"].items() if n > 0]
             order = {g: i for i, g in enumerate(tr.GRADES)}
             out.sort(key=lambda it: (order[it["grade"]], it["name"]))
-            return [{"type": "treasure", "item": it} for it in out]
+            rows = [{"type": "treasure", "item": it} for it in out]
+            from src.save import exam
+            act = exam.active(s)
+            if act:   # 시험 찌 (백 노인이 준 것, 소모품 칸에 1개 — 49-3)
+                rows.insert(0, {"type": "exam", "item": {"id": "exam_float", "name": "시험 찌", "tier": act["tier"]}})
+            return rows
         # 재료
         rows = [{"type": "mat", "key": "money", "name": "돈", "n": ui.money_text(d["money"])},
                 {"type": "mat", "key": "scales", "name": "전설 비늘", "n": d["scales"]},
@@ -124,7 +129,12 @@ class InventoryScene(Scene):
     # ── 버튼 ──
     def _state(self, e: dict) -> tuple[str, bool]:
         if e["type"] == "gear":
-            return ("장착 중", False) if self._equipped(e) else ("장착하기", True)
+            if self._equipped(e):
+                return "장착 중", False
+            t = self.save.equip_locked(e["kind"], e["item"]["id"]) if e["kind"] in GEAR_KINDS else None
+            return (f"시험 필요 (T{t})", False) if t else ("장착하기", True)   # 상자 장비: 보관만 (49-3)
+        if e["type"] == "exam":
+            return "자동 장착 중", False
         if e["type"] == "float":
             return ("해제", True) if self._equipped(e) else ("장착하기", True)
         if e["type"] == "treasure":
@@ -191,7 +201,11 @@ class InventoryScene(Scene):
         out.append(("bait", "미끼", s.equipped("bait")["name"]))
         fid = d["float"]["equipped"]
         fname = next((f["name"] for f in load_json("floats.json")["floats"] if f["id"] == fid), None)
-        out.append(("float", "특수 찌", fname))
+        from src.save import exam
+        if exam.active(s):
+            out.append(("items", "찌", "시험 찌"))   # 시험 찌가 장착 중인 찌 대신 (49-3)
+        else:
+            out.append(("float", "특수 찌", fname))
         for i, c in enumerate(s.charms()):
             out.append(("items", f"부적 {i + 1}", tr.item_info(c)["name"] if c else None))
         cos = d["items"].get("cosmetic")
@@ -306,6 +320,8 @@ class InventoryScene(Scene):
                 status, scol = str(e["n"]), ui.TEXT
             elif self._equipped(e):
                 status, scol = "장착", ui.GOOD
+            elif e["type"] == "exam":
+                status, scol = "×1", ui.TEXT
             elif e["type"] == "treasure" and e["item"]["kind"] == "consumable":
                 status, scol = f"×{self.save.consumable_count(e['item']['id'])}", ui.TEXT
             else:
@@ -323,6 +339,8 @@ class InventoryScene(Scene):
             return e.get("col", ui.TEXT)
         if e["type"] == "gear" and e["item"].get("treasure"):
             return (255, 214, 90)
+        if e["type"] == "exam":
+            return (242, 196, 107)
         return ui.TEXT
 
     def _draw_detail(self, canvas, e: dict) -> None:
@@ -344,6 +362,15 @@ class InventoryScene(Scene):
             text(canvas, f"특수 찌 · {e['item']['tier']}단계", (x, y + 4), ui.DIM, 11, "midleft")
             y += 15
             lines = wrap_text(e["item"].get("desc", ""), w)
+        elif e["type"] == "exam":
+            from src.save import exam
+            t = e["item"]["tier"]
+            text(canvas, f"소모품 · T{t} 시험", (x, y + 4), ui.DIM, 11, "midleft")
+            y += 15
+            spots = exam.spot_names(t - 1)
+            lines = wrap_text("백 노인이 준 찌. 낀 채 던지면 3초 뒤 시험 물고기가 문다.", w)
+            lines += wrap_text("시험 장소: " + ", ".join(spots), w)
+            lines += wrap_text("합격: " + exam.pass_text(t), w)
         elif e["type"] == "treasure":
             it = e["item"]
             text(canvas, f"{tr.grade_info(it['grade'])['name']} · {KIND_KO.get(it['kind'], it['kind'])}", (x, y + 4), ui.DIM, 11,

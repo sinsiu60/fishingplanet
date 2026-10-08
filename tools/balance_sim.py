@@ -225,7 +225,7 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
         probe["sec"] = probe.get("sec", 0.0) + f.elapsed
     res = {"ok": f.phase == "caught", "t": round(f.elapsed, 1), "reason": f.lose_reason}
     if f.result:
-        res.update(rank=f.result["rank"], size=f.result["size"], perfects=f.result["perfects"])
+        res.update(rank=f.result["rank"], size=f.result["size"], perfects=f.result["perfects"], opp=f.result.get("opp"))
     return res
 
 
@@ -285,6 +285,8 @@ class Sim:
         self.spot_stats: dict[str, list] = {}   # 낚시터별 [번 돈, 머문 초, 잡은 수]
         self.unlock_money: dict[str, int] = {}
         self.eldra_entry_t = None
+        self.day = 1
+        self.exam_log: list[tuple] = []     # (분, 티어, 합격, 랭크) — 백 노인의 시험 (DESIGN 49-3)
 
     # 시간·날씨
     def advance(self, sec: float) -> None:
@@ -296,6 +298,7 @@ class Sim:
         while self.hour >= self.next_weather + 0.0001 or self.hour >= 24:
             if self.hour >= 24:
                 self.hour -= 24
+                self.day += 1
                 self.next_weather -= 24
             if self.hour >= self.next_weather:
                 w = self.spots[self.spot]["weather"]
@@ -317,6 +320,7 @@ class Sim:
             self.hour += 0.5
             if self.hour >= 24:
                 self.hour -= 24
+                self.day += 1
             if self.hour >= self.next_weather or self.next_weather - self.hour > 3:
                 w = self.spots[self.spot]["weather"]
                 keys = list(w)
@@ -472,6 +476,24 @@ class Sim:
         order = ["reservoir", "valley", "breakwater", "offshore", "deep", "secret",
                  "marsh", "crystal_cave", "sky_falls", "volcano", "ice_sea", "world_tree"]
         opened = [o for o in order if o in s.data["unlocked_spots"]]
+        # 0) 백 노인의 시험 자격이 모자라면 (49-3): 지금 합격 티어 낚시터로 — 전설(③) · 빈 도감 칸(①) · 별(②) 순
+        from src.save import exam
+        if exam.next_tier(s) and not exam.eligible(s):
+            base = [o for o in opened if o in exam.base_spots(s)]
+            for o in base:
+                leg = next((f for f in all_fish() if f["spot"] == o and f["rarity"] == "legend"), None)
+                if leg and not s.caught(leg["id"]) and self.legend_bait_owned(leg) and self.can_hold(o, True):
+                    self.go(o)
+                    return
+            for o in base:
+                missing = [f for f in all_fish() if f["spot"] == o and f["rarity"] != "legend" and not s.caught(f["id"])]
+                if missing and self.can_hold(o, False):
+                    self.go(o)
+                    return
+            for o in base:
+                if self.can_hold(o, False):
+                    self.go(o)
+                    return
         # 1) 아직 안 잡은 전설이 있고 미끼가 있는 곳
         for o in reversed(opened):
             leg = next((f for f in all_fish() if f["spot"] == o and f["rarity"] == "legend"), None)
@@ -577,8 +599,38 @@ class Sim:
                 self.chests_by_cont[sp.get("continent", "sharmion")][0] += 1
                 treasure.open_chest(s, g, self.spot, self.rnd)  # 바로 연다 (골드·소재만 반영, 아이템 효과는 없음)
 
+    def take_exam(self) -> None:
+        """백 노인의 시험 (49-3): 자격을 채우면 마을에 들러 시험 찌를 받고 (이동 1분) 시험 물고기와 한 판 (빌린 장비, 봇 실력).
+        불합격이면 모닥불에서 다음 날 아침까지 쉬고 다시."""
+        from src.save import exam
+        s = self.s
+        t = exam.next_tier(s)
+        if t is None or not exam.eligible(s):
+            return
+        if exam.retry_wait(s, self.day):
+            while exam.retry_wait(s, self.day):   # 모닥불: 다음 날 아침까지 (실제 5초)
+                self.rest_to("night")
+                self.rest_to("morning")
+            return
+        self.advance(60.0)                        # 백 노인 오두막 왕복
+        fish = exam.exam_fish(t)
+        spot = self.spots[exam.base_spots(s)[0]]
+        res = bot_fight(fish, spot, exam.borrowed_gear(t), SKILLS[self.skill], self.rnd)
+        self.advance(self.OVERHEAD + res["t"])
+        # 사람 보정: 봇 랭크 대신 사람 분포로 한 번 더 (봇은 줄 · 시간 점수를 거의 잃지 않음)
+        ok = res["ok"] and self.rnd.random() < HUMAN[self.skill]["success"]
+        if ok:
+            ranks = HUMAN[self.skill]["ranks"]
+            res["rank"] = self.rnd.choices("SABC", [ranks[k] for k in "SABC"])[0]
+        passed = exam.judge(t, res if ok else None)
+        exam.give_float(s)
+        exam.finish(s, passed, self.day)
+        self.exam_log.append((round(self.t / 60, 1), t, passed, res.get("rank") if ok else "놓침"))
+        self.note(f"시험 T{t} {'합격' if passed else '불합격'}")
+
     def run(self, max_hours: float = 40.0) -> dict:
         while self.t < max_hours * 3600:
+            self.take_exam()
             self.try_unlocks()
             self.buy_legend_baits()
             self.buy_upgrades()
@@ -605,6 +657,7 @@ class Sim:
             "finished": s.caught("orsiel"),
             "spot_stats": {k: (round(v[0] / max(1, v[1] / 60)), round(v[1] / 60), v[2]) for k, v in self.spot_stats.items()},
             "unlock_money": self.unlock_money,
+            "exams": self.exam_log,
         }
 
 

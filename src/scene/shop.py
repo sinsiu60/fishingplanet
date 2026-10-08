@@ -774,7 +774,10 @@ class ShopScene(Scene):
         return "buy" if self.save.money >= it["price"] else "short"
 
     def _locked_label(self, it: dict) -> str:
-        if self.kind == "float" or self.save.gear_locked_reason(it):
+        reason = None if self.kind == "float" else self.save.gear_locked_reason(it)
+        if reason and reason.startswith("백 노인"):
+            return f"시험 T{it['tier']}"   # 백 노인의 시험 (49-3)
+        if self.kind == "float" or reason:
             return "엘드라시온"
         return "잠김"
 
@@ -876,6 +879,8 @@ class ShopScene(Scene):
         if st == "locked":
             reason = (self.save.gear_locked_reason(it) or (kind == "bait" and self.save.bait_locked_reason(it))
                       or "엘드라시온 대륙에서 판매")
+            if reason.startswith("백 노인"):
+                reason += " 합격 필요"
             warn = (reason, su.RED)
         elif st in ("buy", "short"):
             need = self.save.scale_warning(it) if kind != "float" else 0
@@ -921,7 +926,10 @@ class ShopScene(Scene):
         elif st == "owned":
             b.label, b.enabled, style = "장착하기", True, "outline"
         elif st == "locked":
-            b.label, b.enabled, style = ("엘드라시온에서 해금" if self._locked_label(it) == "엘드라시온" else "잠김"), False, "dim"
+            lab = self._locked_label(it)
+            b.label = "엘드라시온에서 해금" if lab == "엘드라시온" else \
+                f"백 노인의 시험 (T{it['tier']})" if lab.startswith("시험") else "잠김"
+            b.enabled, style = False, "dim"
         elif st == "short":
             b.label, b.enabled, style = f"소지금이 {it['price'] - self.save.money:,}원 부족해요", False, "dim"
         elif not scales_ok:

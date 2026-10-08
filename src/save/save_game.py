@@ -153,6 +153,9 @@ def migrate(data: dict, slot: int | None = None) -> dict:
                               "first_quest_bonus": done, "next_id": 1}
     if "enhance" in data:
         _refund_enhance(data)
+    if "exam" not in data:
+        from src.save import exam
+        exam.migrate(data)   # 시험 이전 세이브: 가진 장비 최고 티어까지 자동 합격 + 안내 한 번 (BAEK_EXAM 🅱-5)
     if "legend_sales" not in data:
         # 전설 감가(A+D) 이전에 잡아 둔 살림망 전설은 제값으로 (규칙이 생기기 전에 잡은 것)
         legends = {f["id"] for f in load_json("fish.json")["fish"] if f["rarity"] == "legend"}
@@ -164,6 +167,11 @@ def migrate(data: dict, slot: int | None = None) -> dict:
 
 def equipment() -> dict:
     return load_json("equipment.json")
+
+
+def _shop_gear_ids() -> set:
+    eq = equipment()
+    return {g["id"] for k in GEAR_KINDS for g in eq[k]}
 
 
 def baits() -> dict:
@@ -256,7 +264,13 @@ def new_data() -> dict:
         "tutorial": {"done": [], "active": None, "enabled": True, "replay": []},   # 가이드 튜토리얼 (DESIGN.md 40)
         "season_seen": None,                             # 마지막으로 마을에서 본 계절 (계절 바뀜 알림)
         "events": {"day": -1, "plan": None, "active": None, "seen": {}},  # 날씨 이벤트 (오늘 계획·진행 중·본 횟수)
+        "exam": exam_default(),                          # 백 노인의 등급 시험 (DESIGN.md 49-3, src/save/exam.py)
     }
+
+
+def exam_default() -> dict:
+    from src.save.exam import default_state
+    return default_state()
 
 
 def _write_file(path, payload: str) -> bool:
@@ -408,9 +422,12 @@ class SaveGame:
         특별은 얻은 대륙 기준). 대가(-5%)는 그대로 유지. 상점 최고 티어를 넘지 않는다."""
         from src.save.treasure import item_info
         it = item_info(item_id)
-        cont = self.top_continent() if it["grade"] == "legend" else \
-            self.data["items"].get("origin", {}).get(item_id, "sharmion")
-        top = TOP_TIER[cont]
+        origin = self.data["items"].get("origin", {}).get(item_id, "sharmion")
+        top = TOP_TIER[origin]
+        if it["grade"] == "legend":
+            # 전설: 열린 가장 높은 대륙까지 자동 상향 — 단 백 노인 시험 합격 티어까지만 (얻은 대륙 기준 아래로는 안 내려감, 49-3)
+            from src.save import exam
+            top = max(top, min(TOP_TIER[self.top_continent()], exam.passed(self)))
         base = max((g for g in equipment()[kind] if g["tier"] <= top), key=lambda g: g["tier"])
         g = copy.deepcopy(base)
         g.pop("continent", None)
@@ -603,11 +620,24 @@ class SaveGame:
         return None
 
     def gear_locked_reason(self, item: dict) -> str | None:
-        """대륙 잠금 (엘드라시온 장비)."""
+        """대륙 잠금 (엘드라시온 장비) · 백 노인의 시험 잠금 (합격 티어보다 높은 장비, 49-3)."""
         cont = item.get("continent")
         if cont and cont not in self.data["unlocked_continents"]:
             return "엘드라시온 대륙에서 판매"
+        if item.get("id") in _shop_gear_ids():   # 미끼 · 특수 찌 · 소모품은 시험과 무관
+            from src.save import exam
+            t = exam.gear_lock_tier(self, item)
+            if t is not None:
+                return exam.lock_label(t)
         return None
+
+    def equip_locked(self, kind: str, item_id: str) -> int | None:
+        """장착 잠금 (상자 장비가 합격 티어보다 높으면 보관만): 필요한 시험 티어 또는 None."""
+        if kind not in GEAR_KINDS:
+            return None
+        from src.save import exam
+        g = self.treasure_gear(kind, item_id) if self.owns_treasure(kind, item_id) else find_gear(kind, item_id)
+        return exam.gear_lock_tier(self, g)
 
     def buy(self, kind: str, item: dict) -> str:
         if self.owns(kind, item["id"]):
@@ -625,7 +655,7 @@ class SaveGame:
         return "ok"
 
     def equip(self, kind: str, item_id: str) -> None:
-        if self.owns(kind, item_id):
+        if self.owns(kind, item_id) and self.equip_locked(kind, item_id) is None:
             self.data["gear"][kind] = item_id
 
     # ── 포획 · 판매 ──

@@ -39,7 +39,7 @@ def unlocked(save, tutorial) -> list[str]:
 
 
 class TrainingTank:
-    def __init__(self, scene):
+    def __init__(self, scene, pattern: str | None = None):
         self.scene = scene
         pats = unlocked(scene.save, scene.tutorial) or ["rush"]
         fams = []
@@ -54,6 +54,12 @@ class TrainingTank:
         self.entries += [("ph", fid) for fid in phantom.caught_ids(scene.save)]
         self.pats = pats
         self.index = 0
+        if pattern is not None:   # 백 노인 시험 3번 불합격 뒤 바로가기: 그 패턴을 골라 둔 채로 (49-3)
+            if ("pat", pattern) not in self.entries and pattern in BASE_FISH:
+                self.entries.insert(0, ("pat", pattern))
+                self.pats.append(pattern)
+            if ("pat", pattern) in self.entries:
+                self.index = self.entries.index(("pat", pattern))
         self.speed = 1
         self.ok = 0
         self.n = 0

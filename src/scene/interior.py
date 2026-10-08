@@ -217,7 +217,10 @@ class InteriorScene(Scene):
 
     # ── 메뉴 ──
     def _menu_items(self) -> list[str]:
-        return self.nc["menu"] if self.menu_on else []
+        if not self.menu_on:
+            return []
+        from src.save import exam
+        return [m for m in self.nc["menu"] if m != "letter" or exam.letter_menu(self.save)]   # 엘라 편지: T6 시험부터
 
     def _choose(self, item: str) -> None:
         self.game.sfx.play("ui_click")
@@ -229,6 +232,11 @@ class InteriorScene(Scene):
         elif item in ("old_tales", "legend_tales", "season_tales"):
             ln = dialogue.tale(self.save, self.npc, item, self._ctx())
             self.say(dialogue.seq_of(ln) if ln else [("neutral", "…")])
+        elif item in ("exam", "letter"):
+            from src.scene.exam_scene import ExamScene   # 백 노인의 시험 (49-3)
+            self.react_line = None
+            self.shop = ExamScene(self.game, self.fishing, self, letter=item == "letter")
+            self.game.scenes.push(self.shop)
         elif item == "leave":
             self._begin_leave()
 
@@ -505,5 +513,5 @@ class InteriorScene(Scene):
         self._box(canvas, box)
         text(canvas, self.name, (box.x + 8, box.y + 12), NAME_COL, 11, "midleft")
         if self.react_line:
-            for j, ln in enumerate(hud.wrap_rich(self.react_line[1], box.w - 16)[:3]):
-                hud.rich_text(canvas, ln, (box.x + 8, box.y + 30 + j * 16), (255, 255, 255), 11, "midleft")
+            for j, ln in enumerate(hud.wrap_rich(self.react_line[1], box.w - 16)[:4]):
+                hud.rich_text(canvas, ln, (box.x + 8, box.y + 28 + j * 15), (255, 255, 255), 11, "midleft")
