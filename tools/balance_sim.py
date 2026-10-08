@@ -36,8 +36,8 @@ SKILLS = {
     "average": dict(sigma=0.10, react=0.40, miss_jump=0.10, turn_sigma=0.11, taps=4.0, turns=1.15, miss_pattern=0.15,
                     beat_sigma=0.07, see_fake=0.7),
 }
-# '드랙만' 봇 (CORE_UPDATE CU2): '보통'과 같은 손이지만 패턴 입력(PatternInput)을 늘 None — 신호 대응 · 틈 공략을 하지 않음.
-# (점프 · 방향 전환 · 몸털기 직접 대응(dip/flick)과 드랙 · 감기 · 낚싯대 방향은 그대로 — 문서의 측정 방법 그대로)
+# '드랙만' 봇 (CORE_UPDATE CU2 측정 방법): '보통'과 같은 손이지만 패턴 입력(PatternInput) 늘 None · 풀기(CU3) 안 누름 ·
+# 틈(CU4)엔 감지 않음. 점프 숙이기 · 꺾기 · 몸털기(dip/flick)와 감기 · 낚싯대 방향(측면)은 그대로 — CU2 기준과 같은 정의 (DESIGN 52-1 질문 1)
 SKILLS_ALL = dict(SKILLS, drag_only=dict(SKILLS["average"], no_patterns=True))
 # 그 낚시터에 처음 도착할 무렵의 장비 티어 (진행 경로 가정)
 SPOT_TIER = {s["id"]: s.get("gear_tier", 1) for s in load_json("spots.json")["spots"]}  # spots.json gear_tier
@@ -54,7 +54,7 @@ def gear_for_tier(tier: int) -> dict:
     eq = equipment()
     pick = {k: max((g for g in eq[k] if g["tier"] <= tier), key=lambda g: g["tier"]) for k in ("rod", "reel", "line", "net")}
     rod, reel, line, net = pick["rod"], pick["reel"], pick["line"], pick["net"]
-    return {"rod_green": list(rod["green"]), "rod_tier": rod["tier"], "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
+    return {"rod_green": list(rod["green"]), "rod_tier": rod["tier"], "reel_tier": reel["tier"], "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
             "drag_cushion": reel.get("drag_cushion", 0.0), "line_max": line["durability"], "net_window_sec": net["window"], "net_fail_distance": net["fail_distance"]}
 
 
@@ -138,6 +138,9 @@ class BotPlayer:
         cur = b.pending if b.state == "telegraph" else b.state
         if not (cur == "shake" and self.pat_id == "shake" and self.pat_seen_t >= skill["react"] and not self.pat_skip):
             self.aim += (target - self.aim) * 0.08  # 머리 흔들기 대응 중엔 손을 멈춘다
+        none = skill.get("no_patterns")   # '드랙만': 신호 대응 전부 안 함
+        if none and getattr(f, "gap_t", 0) > 0:
+            reeling = False                # 틈 공략도 안 함
         # 공중 몸부림: 정점 + 착수 직전
         if b.state == "jump" and b.jump_kind == "thrash" and not b.jump_judged:
             i = 0 if not b.thrash_judged[0] else 1

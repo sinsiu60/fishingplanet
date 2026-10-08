@@ -28,11 +28,10 @@
     "aim_rate_max": 0.15,
     "fail_frac": 0.2,
     "hook_per_sec": 25,
-    "ok_stamina": 8,
     "ok_burst": 0.1
   },
   "dive": {
-    "_설명": "② 그림자가 작아지며 가라앉음 + 기포 멈춤. 낚싯대를 위로(pitch ≥ pitch_need) hold_need 이상 유지. 올리고 있는 동안은 줄이 풀리지 않는다. 실패 → 줄 −line_frac, 거리 +distance. 성공 → 스태미나 −.",
+    "_설명": "② 그림자가 작아지며 가라앉음 + 기포 멈춤. 낚싯대를 위로(pitch ≥ pitch_need) hold_need 이상 유지. 올리고 있는 동안은 줄이 풀리지 않는다. 실패 → 줄 −line_frac, 거리 +distance. 성공 → 스태미나는 판정 등급대로 (core.json attack, CU4).",
     "telegraph_mult": 1.0,
     "sec": [
       1.5,
@@ -44,8 +43,7 @@
     "pitch_need": 0.5,
     "hold_need": 0.6,
     "fail_line_frac": 0.08,
-    "fail_distance": 3.0,
-    "ok_stamina": 4
+    "fail_distance": 3.0
   },
   "surface": {
     "_설명": "③ 수면에 V자 물살. 낚싯대를 아래로(pitch ≤ −pitch_need) hold_need 이상 유지. 실패 → 바로 점프 시도(예고 fail_jump_telegraph초, 기존 숙이기 판정). 성공 → 거리 −distance.",

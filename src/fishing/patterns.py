@@ -150,8 +150,7 @@ class Shake(Judge):
         return not reeling and aim_rate <= self.c["aim_rate_max"]
 
     def _success(self, f):
-        f.stamina -= self.c["ok_stamina"]
-        f.brain.lose_burst(self.c["ok_burst"])
+        f.brain.lose_burst(self.c["ok_burst"])   # 체력은 fight.pattern_result 가 비율로 (CU4)
 
     def _fail(self, f):
         bad = self.judged_t - self.ok_t
@@ -172,9 +171,6 @@ class Dive(Judge):
     @property
     def hold_payout(self) -> bool:
         return self.active and self.last_ok
-
-    def _success(self, f):
-        f.stamina -= self.c["ok_stamina"]
 
     def _fail(self, f):
         f.line -= f.line_max * self.c["fail_line_frac"]

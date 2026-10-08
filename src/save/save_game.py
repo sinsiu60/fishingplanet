@@ -598,7 +598,7 @@ class SaveGame:
             k = 1.10 if period == "night" else 0.95
             c, w = (green[0] + green[1]) / 2, (green[1] - green[0]) * k
             green = [c - w / 2, c + w / 2]
-        base = {"rod_green": green, "rod_tier": rod.get("tier", 1), "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
+        base = {"rod_green": green, "rod_tier": rod.get("tier", 1), "reel_tier": reel.get("tier", 1), "reel_speed": reel["speed"], "drag_steps": reel["drag_steps"],
                 "drag_cushion": reel.get("drag_cushion", 0.0), "line_max": line["durability"],
                 "net_window_sec": net["window"], "net_fail_distance": net["fail_distance"],
                 "line_red_mult": 0.9 if self.charm_on("warm_gloves") else 1.0,

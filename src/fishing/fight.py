@@ -22,6 +22,7 @@ LOSE_REASONS = {
     "dive": ("줄이 끊어졌다", "잠수할 때 줄이 바닥에 쓸렸다. 그림자가 작아지며 가라앉으면 낚싯대를 위로 세우세요."),
     "twist": ("줄이 끊어졌다", "꼬인 줄이 버티지 못했다. 줄에 나선이 보이면 원을 그려 꼬임을 풀어 주세요."),
     "worn": ("바늘이 빠졌다", "신호 대응(숙이기·꺾기·몸털기)을 세 번 놓쳐 바늘이 헐거워졌다. 바늘 게이지의 어두운 칸은 다시 줄어들지 않아요."),
+    "overtime": ("줄이 닳아 끊어졌다", "너무 오래 끌었다. 신호에 맞춰 받아내고(퍼펙트) 큰 행동 뒤 틈에 꾹 감아 지치게 하세요."),
     "escape": ("마지막 발악! 줄을 끊고 달아났다", "엘드라시온의 물고기는 특수 찌 없이는 끝까지 잡을 수 없다. 상점에서 필요한 찌를 장착하세요."),
 }
 
@@ -99,6 +100,18 @@ class Fight:
         self.rel_hold = 0.0                   # 돌진이 끝난 뒤 풀어 둔 단계를 유지하는 남은 초
         self.rel_hold_drag = 1
         self.rel_late = False                  # 돌진이 시작된 뒤 늦게 누름 (놓침 판정 + 그때부터 최저)
+        # 신호가 중요하게 (CU4): 체력은 최대 체력 비율로 · 휘청 · 틈 공략 · 측면 압박 · 오래 끌기
+        self.atk = load_json("core.json")["attack"]
+        # 전설 · 환상: 신호 하나의 비율을 줄여 긴 싸움 유지 (atk.big_mult — 등급 안에서는 크기 상관없이 같은 무게)
+        self.atk_k = self.atk["big_mult"] if fish.get("rarity") in ("legend", "phantom") else 1.0
+        self.stagger_t = 0.0                   # 퍼펙트 뒤 휘청 (감기 빠름 · 그림자 비틀)
+        self.stam_fx: dict | None = None       # 체력 바 연출 {kind, t, from, to}
+        self.gap_t = 0.0                       # 틈 (큰 행동 직후) 남은 초
+        self.gap_hold = 0.0
+        self.gap_done = False
+        self.gap_hits = 0
+        self._gap_prev = None
+        self.overtime = False
         self.ctl = None  # 추가 조작 상태 (src/platform/gesture.Controls, 낚시 씬이 넣어 줌)
         # 신규 패턴 (U3): 진행 중 판정, 꼬임 게이지, 연쇄 콤보
         self.inp = PatternInput()
@@ -262,6 +275,37 @@ class Fight:
                 best, best_d = (1 if center > self.angle else -1), d
         return best
 
+    def _gap_tick(self, dt: float, reeling: bool) -> float:
+        """틈 공략 (CU4-3): 큰 행동이 끝난 직후 gap.sec 동안 꾹 감으면 체력 −6%/초 + 릴 티어별 당김. 돌려줌: 추가 소모(초당)."""
+        g = self.atk["gap"]
+        st = self.brain.state
+        prev, self._gap_prev = self._gap_prev, st
+        if st in g["actions"]:
+            self.gap_t = 0.0
+        elif prev in g["actions"] and self.phase == "fight":
+            self.gap_t, self.gap_hold, self.gap_done = g["sec"], 0.0, False
+            self.events.append("gap_open")
+        if self.gap_t <= 0:
+            return 0.0
+        self.gap_t -= dt
+        if not reeling:
+            return 0.0
+        tiers = g["pull_by_tier"]
+        pull = tiers[int(clamp(self.gear.get("reel_tier", 1), 1, len(tiers))) - 1]
+        self.distance = max(0.0, self.distance - pull / g["sec"] * dt)
+        self.gap_hold += dt
+        if self.gap_hold >= g["ok_hold_sec"] and not self.gap_done:
+            self.gap_done = True
+            self.gap_hits += 1
+            self.opp["G"] += 1   # 랭크 '신호' 응답 기회 (공격 성공 = 좋음 취급)
+            self.events.append("gap_hit")
+        return self.stamina_max * g["drain_frac"] * self.atk_k
+
+    def _side_hazard_mult(self, lateral: float) -> float:
+        """측면 압박 (CU4-4): 반대쪽으로 당기는 중 위협 구역 쪽으로 끌려가는 속도 ×0.7."""
+        cd = self._cover_dir()
+        return self.atk["side"]["hazard_lateral_mult"] if cd and cd * lateral > 0 else 1.0
+
     def fish_xz(self) -> tuple[float, float]:
         a = self.show_angle
         return math.sin(a) * self.distance, math.cos(a) * self.distance
@@ -309,6 +353,7 @@ class Fight:
         else:   # 놓침: 드랙이 날뛰는 중 단계에 머물러 장력이 크게 튐 (바늘 게이지 벌은 없음 — 돌진 자체가 벌)
             self.opp["M"] += 1
             self.misses += 1
+            self._stam("miss")
             self.perfect_streak = 0
             if self.combo:
                 self.combo.fail()
@@ -426,6 +471,7 @@ class Fight:
         b.jump_judged = True
         self.misses += 1
         self.opp["M"] += 1
+        self._stam("miss")
         self.perfect_streak = 0
         if self.combo:
             self.combo.fail()
@@ -482,7 +528,7 @@ class Fight:
             perfect = abs(off) <= fc["turn_perfect_sec"]
             self.turn_mult = fc["turn_ok_lateral"]
             self.tension = max(0.0, self.tension - fc["turn_ok_tension_relief"])
-            self.stamina -= fc["turn_perfect_stamina"] if perfect else fc["turn_ok_stamina"]
+            self._stam("perfect" if perfect else "good")
             if perfect:
                 self.brain.lose_burst(0.1)
                 self.perfects += 1
@@ -513,6 +559,7 @@ class Fight:
                 self.combo.fail()
             self.misses += 1
             self.opp["M"] += 1
+            self._stam("miss")
             self.perfect_streak = 0
             self.last_judge = "flick_miss"
             self.events.append("flick_miss")
@@ -571,7 +618,7 @@ class Fight:
             self.events.append("scale_heal")
         self.perfects += 1
         self.perfect_streak += 1
-        self.stamina -= self.cfg["perfect_stamina"]
+        self._stam("perfect")
         self.brain.lose_burst(self.cfg["perfect_burst"])
         self.last_judge = "perfect"
         self.events.append("perfect")
@@ -580,9 +627,25 @@ class Fight:
         self.opp["G"] += 1
         self.goods += 1
         self.perfect_streak = 0
-        self.stamina -= self.cfg["good_stamina"]
+        self._stam("good")
         self.last_judge = "good"
         self.events.append("good")
+
+    def _stam(self, kind: str) -> None:
+        """신호 결과 → 체력 (CU4-2, 최대 체력 비율): 퍼펙트 −10% + 휘청 / 좋음 −5% / 놓침 +6% ('숨을 돌렸다')."""
+        a = self.atk
+        before = self.stamina_frac
+        if kind == "perfect":
+            self.stamina = max(0.0, self.stamina - self.stamina_max * a["perfect_frac"] * self.atk_k)
+            self.stagger_t = a["stagger_sec"]
+        elif kind == "good":
+            self.stamina = max(0.0, self.stamina - self.stamina_max * a["good_frac"] * self.atk_k)
+        else:
+            if self.brain.state == "exhausted":
+                return
+            self.stamina = min(self.stamina_max, self.stamina + self.stamina_max * a["miss_heal_frac"] * self.atk_k)
+            self.events.append("stamina_heal")
+        self.stam_fx = {"kind": kind, "t": self.elapsed, "from": before, "to": self.stamina_frac}
 
     def _fail_floor(self) -> None:
         """신호 대응 실패: 바늘 게이지 바닥이 1/3씩 올라가 다시 내려오지 않는다."""
@@ -603,6 +666,8 @@ class Fight:
         # 연출 등급 (PERFECT / GREAT): 판정·랭크엔 영향 없음
         self.last_grade = "perfect" if result == "ok" and j is not None and j.perfect() else "good"
         self.opp["M" if result == "fail" else "P" if self.last_grade == "perfect" else "G"] += 1
+        if result in ("ok", "fail"):
+            self._stam("miss" if result == "fail" else self.last_grade)
         self.events.append(f"pattern_{result}:{pid}")
 
     def _miss(self, kind: str) -> None:
@@ -613,6 +678,7 @@ class Fight:
         self.perfect_streak = 0
         self.tension += self.cfg["miss_tension_spike"]
         self.hook += self.cfg["miss_hook"]
+        self._stam("miss")
         self._fail_floor()
         self.last_jump_miss_t = self.elapsed
         self.last_judge = kind
@@ -848,6 +914,9 @@ class Fight:
             reel_in = 0.0
         if self.reel_bonus_t > 0:
             reel_in *= 1 + self.reel_bonus  # 펌핑 리듬 보상
+        if self.stagger_t > 0:
+            self.stagger_t -= dt
+            reel_in *= self.atk["stagger_reel_mult"]   # 퍼펙트 뒤 휘청 (CU4-2)
         if self.manual_drag:
             reel_in *= 1 + self.rel_cfg["manual_reel_bonus"]   # '드랙 직접 조절' 수고 보상 (CU3-3)
         if any(p.hold_payout for p in self.pats):
@@ -861,12 +930,14 @@ class Fight:
             lateral = b.turn_dir * b.turn_speed * self.turn_mult
             if self.align < 0:
                 lateral *= 1 - cfg["rod_align_lateral"] * (-self.align)
+                lateral *= self._side_hazard_mult(lateral)
             self.angle += lateral * dt
         elif b.state == "rush" and b.cover_dir and b.cover_bias > 0:
             # 숨을 곳이 있는 물고기는 돌진도 그쪽으로 휜다
             lateral = b.cover_dir * b.turn_speed * b.cfg["cover_rush_lateral"] * b.cover_bias
             if self.align < 0:
                 lateral *= 1 - cfg["rod_align_lateral"] * (-self.align)
+                lateral *= self._side_hazard_mult(lateral)
             self.angle += lateral * dt
         else:
             self.angle += math.sin(self.elapsed * 0.7) * 0.02 * dt
@@ -876,6 +947,14 @@ class Fight:
         m = cfg["max_fish_angle"]
         self.angle = clamp(self.angle, self.yaw - m, self.yaw + m)
 
+        # 오래 끌기 (CU4-2): par × 2.5 를 넘으면 줄이 서서히 닳음
+        if self.elapsed > self.par * self.atk["overtime_par_mult"]:
+            if not self.overtime:
+                self.overtime = True
+                self.events.append("overtime")
+            wear = self.line_max * self.atk["overtime_line_frac"] * dt
+            self.line -= wear
+            self.line_damage += wear
         # 줄 내구도 (빨간 구간에서 서서히)
         if self.tension > self.green_high:
             dmg = (self.tension - self.green_high) * cfg["line_damage_per_tension"] * dt
@@ -924,13 +1003,19 @@ class Fight:
             drain += cfg["stamina_drain_active"] + self.tension / 100 * cfg["stamina_drain_per_tension"]
         elif reeling and b.is_calm:
             drain += cfg["stamina_drain_reel_calm"]
+        drain += self._gap_tick(dt, reeling)
+        if self.align < 0:   # 측면 압박 (CU4-4): 반대쪽으로 당기는 만큼
+            drain += self.stamina_max * self.atk["side"]["drain_frac"] * min(1.0, -self.align)
         self.stamina = max(0.0, self.stamina - drain * dt)
 
         # 종료 판정
         recent = self.last_pattern_fail if self.last_pattern_fail and \
             self.elapsed - self.last_pattern_fail[1] < 2.5 else None
         if self.line <= 0:
-            self._lose(recent[0] if recent and recent[0] in ("dive", "twist") else "snap")
+            if recent and recent[0] in ("dive", "twist"):
+                self._lose(recent[0])
+            else:
+                self._lose("overtime" if self.overtime and self.tension <= self.green_high else "snap")
         elif self.snag >= 100:
             self._lose("snag")
         elif self.hook >= 100:

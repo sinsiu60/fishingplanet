@@ -70,6 +70,8 @@ TIPS = {
     "tired": "지쳤다! 지금 크게 감으세요",
     "fake_tired": "기포가 계속 올라온다 = 가짜 지침! 돌진 대비",
     "telegraph:lure": "등불만 번쩍 = 가짜 신호! 기포·판정 원이 없으면 속지 마세요",
+    "gap_open": "땀방울 = 틈! 지금 꾹 감으면 크게 지쳐요",            # CU4-3
+    "overtime": "너무 오래 끌었다 — 줄이 닳기 시작! 신호를 받아내 지치게 하세요",   # CU4-2
 }
 # 소리 자막 (설정 '소리 자막'): 예고 소리를 글자로도 보여준다
 CAPTIONS = {"telegraph:rush": "웅— 줄이 울린다 (돌진)", "telegraph:jump": "보글보글 — 기포 (점프)",
@@ -2152,6 +2154,7 @@ class FishingScene(Scene):
         b = f.brain
         self.fx_t += dt
         self.pump_flash = max(0.0, getattr(self, "pump_flash", 0.0) - dt)
+        self.gap_flash = max(0.0, getattr(self, "gap_flash", 0.0) - dt)
         self.ink_t = max(0.0, self.ink_t - dt)
         p = self.cam.project(x, z)
         sig = b.signal
@@ -3043,6 +3046,10 @@ class FishingScene(Scene):
         self.sfx.boost = 2 if "clear" in f.mutations and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
         if ev in SUCC_RESET or ev.startswith(("pattern_fail", "lost:")):
             self.succ_streak = 0  # 연속 성공 끊김
+        if ev == "gap_hit":   # 틈 공략 성공 (CU4-3): 흰 금색 짧은 번쩍 + 작은 반짝
+            self.gap_flash = 0.18
+            p = self._fish_screen()
+            self._success("small", lambda: self.pvfx.success("rush", p[0], p[1], False, (255, 236, 170)))
         if ev == "rush_ok":
             p = self._fish_screen()
             self._success("small", lambda: self.pvfx.success("rush", p[0], p[1], False, (255, 170, 90)))  # 돌진을 버텼다: 작은 반짝
@@ -3608,6 +3615,8 @@ class FishingScene(Scene):
             elif not f.brain.dark:
                 sh = self._fight_shadow()
                 draw_fish_shadow(canvas, pal, cam, sh, t)
+                if f.gap_t > 0:
+                    fight_hud.draw_sweat(canvas, cam.project(sh["x"], sh["z"], -0.2), t)   # 틈: 땀방울 2개 (CU4-3)
                 from src.ui import rush_cue
                 rph = self._rush_ph()
                 if rph is not None:
@@ -3682,6 +3691,8 @@ class FishingScene(Scene):
         if not p2_cam:   # 2페이즈 컷신: 낚싯대 · 손 · 줄은 컷신이 카메라에 맞춰 그림
             draw_rod(canvas, pal, geo, c.reel_angle, rod_l, reel_l, t, hand_look=self._hand_look())
         self.life.draw_fly(canvas, geo["tip"], t)   # 낚싯대 끝 잠자리 (DT8)
+        if f is not None and f.phase == "fight" and f.align < -0.3 and not p2_cam:
+            fight_hud.draw_side_wake(canvas, geo["tip"], -f.fish_side(), t)   # 측면 압박: 낚싯대 끝 흰 물살 (CU4-4)
         if self.bait_anim is not None and hanging:
             self._draw_bait_anim(canvas, pal, tip)
 
@@ -3866,6 +3877,10 @@ class FishingScene(Scene):
             wag = 16.0 if (self.t * 2.2) % 1.0 < 0.18 else 3.0
         elif b.state == "tired":
             wag = 0.5
+        if f.stagger_t > 0:   # 퍼펙트 뒤 휘청 (CU4-2): 그림자가 비틀거림
+            heading += math.sin(self.t * 9.0) * 0.35 * min(1.0, f.stagger_t / 0.4)
+        if f.gap_t > 0:       # 틈 (CU4-3): 헐떡이며 느려짐
+            wag *= f.atk["gap"]["shadow_speed"]
         if f.fish["rarity"] == "legend":
             scale *= self.fish_cfg["legend"]["shadow_scale"] * 0.55
         alpha *= f.fish.get("shadow_alpha", 1.0)  # 투명 변이
@@ -4168,6 +4183,8 @@ class FishingScene(Scene):
         self.arena.draw_bars(canvas)                       # 시네마 띠 (HUD 는 그 위 · 안쪽)
         # HUD 우선순위 (31장 C6): 1 신호 칸 / 2 장력·내구도 / 3 드랙(필요할 때만 진하게) / 4 거리(작게) / 5 의뢰·소모품(반투명).
         # 신호가 막 뜨면 3 이하는 잠깐 더 흐려진다.
+        if getattr(self, "gap_flash", 0.0) > 0:   # 틈 공략 성공: 흰 금색 번쩍 10% (BOSS_ARENA 받아침 테두리처럼 짧게)
+            fight_hud.draw_gap_flash(canvas, self.gap_flash / 0.18)
         fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
         self._boss_bar(canvas, pal, f)
         dim = 1.0 - 0.55 * min(1.0, self.sig_dim_t / 0.3)

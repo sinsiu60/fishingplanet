@@ -165,14 +165,81 @@ def draw_boss_bar(canvas, pal, fight) -> None:
     else:
         canvas.fill(SHADOW, (x - 1, y - 1, bw + 2, bh + 2))
         canvas.fill((50, 30, 36), (x, y, bw, bh))
-        canvas.fill((235, 90, 80), (x, y, int(bw * fight.stamina_frac), bh))
-        canvas.fill((255, 170, 150), (x, y, int(bw * fight.stamina_frac), 1))
-        pygame.draw.rect(canvas, rc, (x - 2, y - 2, bw + 4, bh + 4), 1)
+        _stamina_fill(canvas, fight, x, y, bw, bh)
+        border = rc
+        if getattr(fight, "gap_t", 0) > 0 and int(fight.elapsed * 8) % 2 == 0:
+            border = (255, 220, 90)   # 틈 (CU4-3): 테두리 노란 깜빡
+        pygame.draw.rect(canvas, border, (x - 2, y - 2, bw + 4, bh + 4), 1)
+        fx = getattr(fight, "stam_fx", None)
+        if fx and fx["kind"] == "perfect" and fight.elapsed - fx["t"] < fight.atk["bar"]["flash_sec"]:
+            pygame.draw.rect(canvas, (255, 255, 255), (x - 3, y - 3, bw + 6, bh + 6), 1)   # 퍼펙트: 흰 번쩍 테두리
     st = fight.brain.display_name()
     if fight.brain.state == "fake_tired":
         st = "지침"
     shift = p2 or getattr(fight, "p2_shift", False)   # 2페이즈 바의 마름모 · 점 2개 오른쪽으로 (컷신 폭발부터)
     text(canvas, st, (x + bw + (26 if shift else 6), y + 3), STATE_COLOR.get(st, (255, 200, 170)), 11, "midleft")
+
+
+def _stamina_fill(canvas, fight, x: int, y: int, bw: int, bh: int) -> None:
+    """체력 채움 + 연출 (CU4-2): 회복 = 초록으로 차오름(0.3초) · 퍼펙트 = 크게 뚝(흰 잔상) · 좋음 = 작게(옅은 잔상)."""
+    frac = fight.stamina_frac
+    fx = getattr(fight, "stam_fx", None)
+    bar = fight.atk["bar"] if hasattr(fight, "atk") else None
+    age = fight.elapsed - fx["t"] if fx else 99.0
+    if fx and fx["kind"] == "miss" and age < bar["heal_sec"]:
+        k = age / bar["heal_sec"]
+        base = fx["from"]
+        canvas.fill((235, 90, 80), (x, y, int(bw * base), bh))
+        grow = int(bw * (base + (frac - base) * k)) - int(bw * base)
+        canvas.fill((120, 220, 120), (x + int(bw * base), y, max(0, grow), bh))   # 회복: 초록으로 차오름
+        canvas.fill((255, 170, 150), (x, y, int(bw * base), 1))
+        return
+    canvas.fill((235, 90, 80), (x, y, int(bw * frac), bh))
+    canvas.fill((255, 170, 150), (x, y, int(bw * frac), 1))
+    if fx and fx["kind"] in ("perfect", "good") and age < bar["hit_sec"]:
+        lost = int(bw * fx["from"]) - int(bw * frac)
+        if lost > 0:
+            k = 1 - age / bar["hit_sec"]
+            col = (255, 255, 255) if fx["kind"] == "perfect" else (255, 200, 190)
+            g = pygame.Surface((lost, bh), pygame.SRCALPHA)
+            g.fill((*col, int(220 * k)))
+            canvas.blit(g, (x + int(bw * frac), y))   # 깎인 만큼 잔상이 사라짐
+
+
+def draw_sweat(canvas, p, t: float) -> None:
+    """틈 (CU4-3): 물고기 그림자 위 땀방울 2개 (하늘색 1px, 천천히 흘러내림)."""
+    if not p:
+        return
+    sx, sy, s = p
+    r = max(4, int(s * 0.25))
+    for i, dx in enumerate((-r, r)):
+        ph = (t * 1.6 + i * 0.5) % 1.0
+        px, py = int(sx + dx), int(sy - r - 3 + ph * 3)
+        canvas.fill((160, 220, 255), (px, py, 1, 2))
+        canvas.fill((220, 245, 255), (px, py - 1, 1, 1))
+
+
+def draw_side_wake(canvas, tip, side: int, t: float) -> None:
+    """측면 압박 (CU4-4): 낚싯대 끝에 작은 흰 물살 — 당기는 쪽으로 흘러가는 짧은 줄 3개 (그림자 1px 아래)."""
+    x, y = int(tip[0]), int(tip[1])
+    for i in range(3):
+        ph = (t * 2.5 + i / 3) % 1.0
+        ln = 4 + int(ph * 5)
+        yy = y + 1 + i * 2
+        a = int(255 * (1 - ph) ** 0.7)
+        x0 = x + 2 + int(ph * 4) if side > 0 else x - 2 - ln - int(ph * 4)
+        for col, dy, aa in ((SHADOW, 1, a // 2), ((255, 255, 255), 0, a)):
+            surf = pygame.Surface((ln, 1), pygame.SRCALPHA)
+            surf.fill((*col, aa))
+            canvas.blit(surf, (x0, yy + dy))
+
+
+def draw_gap_flash(canvas, k: float) -> None:
+    """틈 공략 성공: 화면 흰 금색 번쩍 (최대 10%)."""
+    w, h = canvas.get_size()
+    g = pygame.Surface((w, h), pygame.SRCALPHA)
+    g.fill((255, 236, 170, int(26 * max(0.0, min(1.0, k)))))
+    canvas.blit(g, (0, 0))
 
 
 def release_ready(fight) -> bool:
