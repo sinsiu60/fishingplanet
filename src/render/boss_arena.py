@@ -142,6 +142,8 @@ class BossArena:
         self.fish_pos = None
         self.flashes = 0            # 기록 (깜빡임 횟수 로그)
         self.flash_times: list = []  # 번쩍임 시각 (무대 시계) — 3초에 1번 검사
+        self.card_hold = None       # 전설 도약 (CU10): 카드가 올라가기 시작하는 시각 = 착수 (없으면 entrance 값)
+        self.card_end = None
 
     # ───────────────────────── 수명 ─────────────────────────
     def start(self, fish: dict) -> bool:
@@ -203,7 +205,7 @@ class BossArena:
 
     @property
     def card_on(self) -> bool:
-        return self.active and self.end_t is None and self.t < cfg()["entrance"]["card_end"]
+        return self.active and self.end_t is None and self.t < (self.card_end or cfg()["entrance"]["card_end"])
 
     def wave_mult(self) -> float:
         return lerp(1.0, self.lv("wave"), self.entrance_k()) if self.active else 1.0
@@ -621,7 +623,9 @@ class BossArena:
         light = tuple(phantom.COLOR_LIGHT) if self.phantom else (255, 236, 170)
         name = "???" if self.phantom else self.fish.get("name", "")
         sub = self.e.get("title_sub", "")
-        rise = clamp((self.t - en["card_hold_until"]) / (en["card_end"] - en["card_hold_until"]), 0, 1)
+        hold = self.card_hold if self.card_hold is not None else en["card_hold_until"]
+        end = self.card_end if self.card_end is not None else en["card_end"]
+        rise = clamp((self.t - hold) / (end - hold), 0, 1)
         y = int(lerp(en["card_y"], 20, rise * rise))
         alpha = int(255 * clamp(t / 0.15, 0, 1) * (1 - rise))
         key = (name, sub, light)

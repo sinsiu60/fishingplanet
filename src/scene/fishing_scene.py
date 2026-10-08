@@ -131,6 +131,7 @@ class FishingScene(Scene):
         self.signs = SurfaceSigns(random.Random(int(_time.time() * 1000) + 7))
         self.sign_fx_t = 0.0
         self.school: dict | None = None    # 물고기 떼 지나감 (CU9): {"x", "z", "t", "life"}
+        self.breach = None                 # 전설 등장 도약 (CU10, LEGEND_BREACH): 동안 파이팅 정지
         self.school_next = random.uniform(*load_json("core.json")["variety"]["school_interval_sec"])
         self.popups = fight_fx.JudgePopups()
         self.gather = fight_fx.GatherFX()
@@ -662,6 +663,12 @@ class FishingScene(Scene):
                 self.card = None
             return
         if self.training is not None and self.training.handle(a):
+            return
+        if self.breach is not None and self.breach.blocking and a.name != "back":
+            # 전설 도약: 입력 무시, 그 전설을 두 번째부터는 0.5초 뒤 탭 = 착수 순간으로
+            if a.name in ("primary", "confirm", "reel_tap") and self.breach.can_skip():
+                self.breach.skip()
+                self.arena.t = self.breach.t
             return
         if self.p2 is not None and self.p2.blocking and a.name != "back":
             # 2페이즈 컷신: 입력 무시, 0.5초 이후 탭 = 건너뛰기 (마지막 단계 → 다음 박에서 재개)
@@ -1413,6 +1420,9 @@ class FishingScene(Scene):
             self.phantom_fx.to_fight()
             self.game.haptics.vibrate("bite", 0.6)
         arena_on = not train and not ex and self.arena.start(fish)   # 전설 · 환상: 무대 (이름 카드가 '전설!' 글자 대신)
+        self.breach = None
+        if arena_on and fish["rarity"] == "legend":
+            self._breach_start(fish)   # 전설 등장 도약 (CU10): 이름 카드가 떠 있는 동안 하늘로 솟구쳤다 착수
         if fish["rarity"] == "legend":
             if not arena_on:
                 self.toasts.show("전설!", (255, 214, 90), 3.0)
@@ -1532,6 +1542,7 @@ class FishingScene(Scene):
             self.fight.log.spot = self.spot_id
             self.fight.log.save(str(save_dir() / "fight_logs"))
         self.fight = None
+        self.breach = None
         self._p2_clear()
         self.landing = None
         self.dragon_fx = None
@@ -2236,6 +2247,8 @@ class FishingScene(Scene):
                 if news.get("chest"):
                     self.game.guide.event("chest_card")   # TG-10
             return
+        if self._breach_tick(dt):
+            return   # 전설 도약: 파이팅 완전 정지 (두뇌 · 체력 · 장력 · 줄 · 팔 힘 · 패턴 시계, CU10)
         if self._p2_tick(dt):
             return   # 2페이즈 컷신: 파이팅 완전 정지 (물고기 · 장력 · 줄 · 바늘 · 꼬임 · 패턴 시계)
         reeling = self.game.input.held("reel") and f.phase == "fight"
@@ -2959,6 +2972,64 @@ class FishingScene(Scene):
             self.toasts.show(TIPS[key], INFO, 2.2, 11)
 
     # ───────────────────────── 환상 2페이즈 컷신 (PHANTOM_PHASE2.md) ─────────────────────────
+    # ───────────────────────── 전설 등장 도약 (CU10, LEGEND_BREACH.md) ─────────────────────────
+    def _breach_start(self, fish: dict) -> None:
+        from src.render.legend_breach import LegendBreach, cfg as bcfg
+        p = self.cam.project(self.cast.bx, self.cast.bz)
+        bob = (p[0], p[1]) if p else (self.cam.width / 2, self.cam.horizon + 30)
+        seen = self.save.data.setdefault("breach_seen", [])
+        bc = bcfg()
+        impact = None
+        suno = self.game.boss.suno
+        if suno.active:   # SUNO 마디 첫 박이 착수 예정 ±0.35초 안이면 착수를 그 박에
+            tb = suno.until_bar_after(max(0.0, bc["impact_at"] - bc["beat_window"]))
+            if tb is not None and abs(tb - bc["impact_at"]) <= bc["beat_window"]:
+                impact = tb
+        self.breach = LegendBreach(fish, bob, (self.cam.width, self.cam.height), bool(self.settings.get("reduce_fx")),
+                                   fish["id"] in seen, self.arena.color if self.arena.active else None, impact)
+        self.arena.card_hold = self.breach.impact_at                 # 카드는 착수 순간 올라가기 시작
+        self.arena.card_end = self.breach.impact_at + bc["card_rise_sec"]
+
+    def _breach_tick(self, dt: float) -> bool:
+        """True = 이번 틱 파이팅을 멈춤."""
+        br = self.breach
+        if br is None:
+            return False
+        if not br.blocking:
+            self.breach = None
+            return False
+        for ev in br.update(dt):
+            if ev[0] == "sfx":
+                self.sfx.play(ev[1], ev[2])
+            elif ev[0] == "reel":
+                self.fight_audio.reel.rush_begin()   # 줄이 끌려 나가는 릴 소리
+            elif ev[0] == "duck":
+                self.sfx.duck_levels({"amb": ev[1], "sfx": ev[1]}, hold=ev[2], release=0.2)   # 정점: 짧은 정적
+            elif ev[0] == "impact":
+                self.game.haptics.vibrate("legend", 1.0)
+                self._boss_accent()
+            elif ev[0] == "done":
+                self._breach_end()
+        self.fight_audio.stop()
+        return True
+
+    def _breach_end(self) -> None:
+        """끝: 파이팅 시작 (첫 신호는 grace_sec 뒤부터) · 그 전설 도약을 본 기록."""
+        from src.render.legend_breach import cfg as bcfg
+        f = self.fight
+        seen = self.save.data.setdefault("breach_seen", [])
+        if f is not None:
+            if f.fish["id"] not in seen:
+                seen.append(f.fish["id"])
+            b = f.brain
+            g = bcfg()["grace_sec"]
+            if b.state == "idle":
+                b.timer = max(b.timer, g)
+            else:
+                b._enter("idle", g)
+        self.arena.card_hold = self.arena.card_end = None
+        self.breach = None
+
     def _p2_values(self) -> dict:
         """컷신 전후 비교용 파이팅 수치 (체력만 바뀌어야 함)."""
         f = self.fight
@@ -3770,6 +3841,8 @@ class FishingScene(Scene):
                     known = self.save.caught(fish["id"]) if not phantom.is_phantom(fish) else phantom.caught(self.save, fish["id"])
                     name = fish["name"] if known else "???"
                     hud.text(canvas, name, (p[0], p[1] - 10), (190, 170, 255), anchor="center")
+        elif f.phase == "fight" and self.breach is not None and self.breach.t < self.breach.impact_at:
+            pass   # 전설 도약 중: 물고기는 하늘에 (그림자 없음)
         elif f.phase == "fight":
             if self.ink_t > 0:
                 x, z = f.fish_xz()
@@ -3809,6 +3882,8 @@ class FishingScene(Scene):
 
         geo = self._rod_geo()
         tip = geo["tip"]
+        if self.breach is not None:
+            self.breach.draw_world(canvas, tip)   # 전설 도약: 수면 솟음 · 물기둥 · 하늘로 팽팽한 줄 · 전설 · 물방울 · 금빛 고리
 
         if c.state == CastState.CHARGING:
             ang = c.aim_angle(cam.yaw)
@@ -3817,7 +3892,7 @@ class FishingScene(Scene):
 
         hanging = c.state in (CastState.READY, CastState.CHARGING, CastState.SWING)
         p2_cam = self.p2 is not None and self.p2.blocking and f is not None
-        if f is not None and f.phase in ("fight", "net") and not p2_cam:
+        if f is not None and f.phase in ("fight", "net") and not p2_cam and self.breach is None:
             self._draw_fight_line(canvas, pal, tip)
         elif not hanging and f is None:
             self._draw_line_and_bobber(canvas, pal, tip)
@@ -3892,6 +3967,8 @@ class FishingScene(Scene):
         self.map_fx.draw_screen(canvas)           # 계곡: 위에서 떨어지는 물방울 (DT3)
         self.legend_fx.draw_screen(canvas, pal)   # ② 전설 고유 연출 (DT5)
         self.phantom_hfx.draw_screen(canvas, pal)  # ② 환상 고유 연출 (DT6)
+        if self.breach is not None:
+            self.breach.compose(canvas)   # 전설 도약: 1.7배 확대가 전설을 따라감 · 착수 흔들림 · 노란 번쩍 (카드 · HUD 는 이 뒤 — 확대 안 함)
         if p2_cam:
             # 2페이즈 컷신: 카메라(고개 숙임 · 수면 · 물속 · 솟구침) · 폭발 · 흔들림 — HUD 는 이 뒤에 (흔들지 않음)
             self._p2_pal = pal
@@ -4004,6 +4081,8 @@ class FishingScene(Scene):
         ac = self.core_arm
         wk = 0.8 + 0.15 * f.weight   # 무게 단서 (CU5-2): 큰 물고기일수록 크게 휨
         bend = 5 + tension * 0.24 * wk + (math.sin(self.t * 31) * tension / 40 if tension > 60 else 0)
+        if self.breach is not None:
+            bend = max(bend, self.breach.rod_bend())   # 전설 도약: 줄이 하늘로 팽팽 → 최대 휨
         if f.hook_kick_t > 0:   # 큰 물고기 챔질 순간 '훅' 한 번 크게 꺾임 (0.2초)
             bend += 16 * math.sin(math.pi * (1 - f.hook_kick_t / ac["hook_kick_sec"]))
         pull_x = f.fish_side() * tension * 0.25
