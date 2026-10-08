@@ -595,8 +595,9 @@ class Sim:
         s = self.s
         sp = self.spots[self.spot]
         leg = next((f for f in all_fish() if f["spot"] == self.spot and f["rarity"] == "legend"), None)
+        from src.scene.map_scene import gear_ok
         hunting = leg is not None and (not s.caught(leg["id"]) or getattr(self, "rehunt", None) == leg["id"]) \
-            and self.legend_bait_owned(leg)
+            and self.legend_bait_owned(leg) and gear_ok(s, sp)   # 미리 맛보기 낚시터 (CU8-⑤): 장비 조건 전엔 전설 없음
         bait = None
         fish = None
         if hunting:

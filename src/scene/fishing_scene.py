@@ -137,6 +137,10 @@ class FishingScene(Scene):
         self.crisis_now = False
         self.fish_cfg = load_json("fishing_config.json")
         self.core_arm = load_json("core.json")["arm"]   # 팔 힘 · 무게 단서 (CU5)
+        from src.ui.progress_line import EarnRate
+        self.earn_rate = EarnRate()        # 진행 막대 (CU8-②): 최근 30분 시간당 수입
+        self.prog_rect = None
+        self.prog_open_t = 0.0
         self.spots = {sp["id"]: sp for sp in load_json("spots.json")["spots"]}
         self.spot_ids = list(self.spots)
         self.force_i = -1          # F3 테스트: 고정할 물고기 인덱스 (-1 = 없음)
@@ -319,6 +323,21 @@ class FishingScene(Scene):
             if start > h + 0.01:
                 return start, name
         return starts[0][0] + 24.0, starts[0][1]
+
+    def _draw_progress(self, canvas, x: int, y: int) -> None:
+        """진행 막대 (CU8-②): "다음: 시험 자격 2/3 · 장비까지 12,400원 (약 25분)", 누르면 4초 동안 자격 · 장비 목록."""
+        self.prog_rect = None
+        if not self.settings.get("progress_line") or self.training is not None or self.exam_run is not None:
+            return
+        from src.ui.progress_line import summary
+        info = summary(self.save, self.earn_rate.per_hour())
+        if info is None:
+            return
+        line, more = info
+        self.prog_rect = hud.text(canvas, line, (x, y), (205, 210, 225), anchor="topleft")
+        if self.prog_open_t > 0:
+            for i, ln in enumerate(more):
+                hud.text(canvas, ln, (x + 6, y + 12 + i * 11), (175, 182, 200), anchor="topleft")
 
     def _draw_tide(self, canvas, clock_rect, t: float) -> None:
         """시계 옆 소라 아이콘 + 남은 실제 시간 9:41 (끝나기 blink_sec 전부터 깜빡)."""
@@ -765,6 +784,11 @@ class FishingScene(Scene):
             if not self.touch and f is not None and f.phase == "fight":
                 self.ctl.tap(self.t)  # PC: 파이팅 중 좌클릭 하나하나가 연타
             if self._grandpa_click(a.pos):
+                return
+            if (f is None and a.pos is not None and self.prog_rect is not None
+                    and self.prog_rect.inflate(4, 6).collidepoint(a.pos)):
+                self.prog_open_t = 0.0 if self.prog_open_t > 0 else 4.0   # 진행 막대: 자격 · 장비 목록 펼치기
+                self.game.sfx.play("ui_click")
                 return
             self._left_click()
         elif n == "secondary":
@@ -1556,6 +1580,8 @@ class FishingScene(Scene):
         if not self._side_menu_on():
             self.collect_open = False
         self.ctl.begin_tick()
+        self.earn_rate.update(self.save)   # 진행 막대 (CU8-②)
+        self.prog_open_t = max(0.0, self.prog_open_t - dt)
         if not self._tide_tick():   # 물때 멈춤 소라 (CU1-4): 효과 중엔 게임 시계가 멈춤
             self.clock.update(dt)
         self.clouds.update(dt)
@@ -1961,6 +1987,8 @@ class FishingScene(Scene):
         from src.fishing import live_bait
         live = live_bait.bait_dict(self.save, self.spot_id) if self.training is None and self.exam_fish is None else None
         self.bite.bait = live or self.save.equipped("bait")   # 생미끼 (CU7-2): 끼우면 영구 미끼 효과는 꺼짐
+        from src.scene.map_scene import gear_ok
+        self.bite.legend_block = not gear_ok(self.save, self.spot)   # 미리 맛보기 (CU8-⑤): 장비 조건 전엔 전설 없음
         self.bite.force_fish = self.exam_fish if self.exam_fish is not None else \
             (self.all_fish[self.force_i] if self.force_i >= 0 else None)
         landed = self.cast.state == CastState.LANDED   # 대기 = 기다리기만 (루어 액션 저킹 · 리트리브는 삭제, DESIGN 47장)
@@ -3791,8 +3819,10 @@ class FishingScene(Scene):
                 label += f" · {KO[g]}"
             cr = hud.draw_clock(canvas, pal, label, self.clock.fast, self.clock.fast_mult, 6 + inset)
             self._draw_tide(canvas, cr, t)
-            if phantom.blessing_active(self.save):
+            bless = phantom.blessing_active(self.save)
+            if bless:
                 hud.draw_blessing(canvas, 12 + inset, 32, phantom.blessing_left(self.save), t)
+            self._draw_progress(canvas, 6 + inset, 44 if bless else (29 if warn else 17))
             if c.state == CastState.CHARGING:
                 hud.draw_power_gauge(canvas, pal, c.power, c.distance_for_power(c.power))
             if c.state == CastState.LANDED:

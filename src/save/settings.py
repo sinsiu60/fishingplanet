@@ -31,7 +31,8 @@ DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": N
             "vol_boss": 1.0,         # 전설·환상 전용 곡 음량 0~1 (음악 음량과 곱, DESIGN.md 43)
             "catch_scene": "normal",
             "drag_manual": False,
-            "fight_name_show": False}   # 파이팅 중 이름 보기 (CORE_UPDATE CU6-1): 끔 = '???' → 건져 올릴 때 공개    # 드랙 직접 조절 (CORE_UPDATE CU3): 끔 = 자동 드랙 + 돌진 '풀기'(Q), 켬 = 예전 5단계 Q/E + 감기 +10%  # 포획 장면 계측판 (DESIGN.md 45장 DT7): normal 1.6초 · short 0.6초 · off
+            "fight_name_show": False,
+            "progress_line": True}   # 진행 막대 (CU8-②): 왼쪽 위 "다음: 시험 자격 · 장비까지"   # 파이팅 중 이름 보기 (CORE_UPDATE CU6-1): 끔 = '???' → 건져 올릴 때 공개    # 드랙 직접 조절 (CORE_UPDATE CU3): 끔 = 자동 드랙 + 돌진 '풀기'(Q), 켬 = 예전 5단계 Q/E + 감기 +10%  # 포획 장면 계측판 (DESIGN.md 45장 DT7): normal 1.6초 · short 0.6초 · off
 
 TELE_MULTS = (1.0, 1.25, 1.5)
 

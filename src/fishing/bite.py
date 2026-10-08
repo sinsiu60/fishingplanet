@@ -346,6 +346,8 @@ class BiteController:
             if self.timer <= 0:
                 self.legend = False
                 legend = legend_candidate(self.spot, self.period, self.weather, self.cast_distance, self.bait)
+                if getattr(self, "legend_block", False):
+                    legend = None   # 미리 맛보기 낚시터 (CU8-⑤): 장비 조건을 채워야 전설
                 if self.script:
                     from src.save.save_game import fish_by_id
                     self.fish = fish_by_id(self.script["fish"])

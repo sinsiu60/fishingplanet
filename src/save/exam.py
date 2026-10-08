@@ -119,8 +119,9 @@ def spot_names(tier: int) -> list[str]:
 
 
 def base_spots(save) -> list[str]:
-    """지금 합격 티어 낚시터 = 시험 자격 기준 · 시험을 볼 수 있는 곳."""
-    return spots_of_tier(passed(save))
+    """지금 합격 티어 낚시터 = 시험 자격 기준 · 시험을 볼 수 있는 곳 (CU8-③: T5 는 먼바다만 — base_exclude)."""
+    skip = set(cfg().get("base_exclude", {}).get(str(next_tier(save) or 0), []))
+    return [s for s in spots_of_tier(passed(save)) if s not in skip]
 
 
 def on_exam_spot(save, spot_id: str) -> bool:

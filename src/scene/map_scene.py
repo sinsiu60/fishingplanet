@@ -82,7 +82,45 @@ def unlock_status(save, spot: dict) -> tuple[bool, list[tuple[str, bool]]]:
                      n >= cond["perfects"]))
     if cond.get("cost"):
         rows.append((f"비용 {ui.money_text(cond['cost'])}", save.money >= cond["cost"]))
+    if preview_ok(save, spot):   # 다음 티어 미리 맛보기 (CU8-⑤): 장비 조건은 '권장' — 막지 않음
+        rows = [(f"{label} — 권장", True) if _is_gear_row(label) and not ok else (label, ok) for label, ok in rows]
     return all(ok for _, ok in rows), rows
+
+
+GEAR_ROWS = ("낚싯대 T", "장비 ", "낚싯줄 T")
+
+
+def _is_gear_row(label: str) -> bool:
+    return label.startswith(GEAR_ROWS)
+
+
+def preview_ok(save, spot: dict) -> bool:
+    """다음 티어 낚시터 1곳 (CU8-⑤): 열린 낚시터 중 가장 높은 장비 티어 + 1 까지는 장비가 모자라도 들어갈 수 있음."""
+    top = max((s.get("gear_tier", 1) for s in load_json("spots.json")["spots"] if s["id"] in save.data["unlocked_spots"]),
+              default=1)
+    return spot.get("gear_tier", 1) <= top + 1
+
+
+def gear_ok(save, spot: dict) -> bool:
+    """그 낚시터의 장비 조건을 다 채웠나 — 전설은 이게 참일 때만 (CU8-⑤). 장비 조건이 없으면 권장 티어 낚싯대."""
+    cond = spot.get("unlock", {})
+    tiers = [save.gear_tier(k) for k in ("rod", "reel", "line", "net", "bait")]
+    if "rod_tier" in cond and save.gear_tier("rod") < cond["rod_tier"]:
+        return False
+    if "all_gear_tier" in cond and min(tiers) < cond["all_gear_tier"]:
+        return False
+    if "gear_count_tier" in cond:
+        n, t = cond["gear_count_tier"]
+        if sum(1 for x in tiers if x >= t) < n:
+            return False
+    return save.gear_tier("rod") >= spot.get("gear_tier", 1)
+
+
+def gear_warning(save, spot: dict) -> str | None:
+    """지도 · 낚시터 도착: 장비가 권장보다 약하면 "장비가 약해요 (T4 권장)"."""
+    if save.gear_tier("rod") >= spot.get("gear_tier", 1):
+        return None
+    return f"장비가 약해요 (T{spot.get('gear_tier', 1)} 권장)"
 
 
 def can_unlock_soon(save, spot: dict) -> bool:
@@ -486,8 +524,9 @@ class MapScene(Scene):
             # 권장 낚싯대: 이보다 낮으면 희귀·전설이 크게 날뛰어 버티기 어렵다 (fight.heave_amp)
             need = sp.get("gear_tier", 1)
             have = self.save.gear_tier("rod")
-            text(canvas, f"권장 낚싯대 T{need}+ · 전설 T{min(8, need + 1)}+", (x, yy),
-                 ui.TEXT if have >= need else ui.BAD, 11, "midleft")  # 지금 낚싯대보다 높으면 빨강
+            label = f"권장 낚싯대 T{need}+ · 전설 T{min(8, need + 1)}+" if have >= need else \
+                f"장비가 약해요 (T{need} 권장) · 전설은 장비 조건 후"   # 미리 맛보기 (CU8-⑤)
+            text(canvas, label, (x, yy), ui.TEXT if have >= need else ui.BAD, 11, "midleft")  # 지금 낚싯대보다 높으면 빨강
             yy += 14
         self.go_btn.rect.topleft = (box.x + 2, box.bottom - 20)
         self.go_btn.rect.size = (box.w - 4, 17)
