@@ -336,6 +336,8 @@ class Sim:
         self.skill = skill
         self.rnd = rnd
         self.use_chests = use_chests
+        self.rare_stock: list[int] = []   # 전설용 희귀 생미끼 (판매가)
+        self.live_used = 0
         self.s = SaveGame(1)
         self.t = 0.0          # 실제 시간(초)
         self.hour = 7.0
@@ -631,7 +633,13 @@ class Sim:
                 self.rest_until(leg["times"], leg["weathers"])   # 달력에서 맞는 3시간 칸을 골라 한 번에 쉼 (CU1)
             if self.weather in leg["weathers"]:
                 bait = next(b for b in load_json("baits.json")["baits"] if b["id"] == leg["bait"])
-                if self.rnd.random() < load_json("fishing_config.json")["legend"]["chance"]:
+                lc = load_json("fishing_config.json")["legend"]
+                chance = lc["chance"]
+                if self.rare_stock:   # 사람은 거의 항상 희귀 생미끼를 덧붙여 10% 로 노림 (사용자 2026-10-08) — 1마리 = 입질 1번
+                    self.rare_stock.pop()
+                    self.live_used += 1
+                    chance = lc.get("chance_live_rare", chance)
+                if self.rnd.random() < chance:
                     fish = leg
         if fish is None and not hunting:
             # 아직 못 잡은 종이 지금 시간대에 안 나오면 텐트에서 쉬어 그 시간대로 (실제 플레이어처럼)
@@ -669,7 +677,14 @@ class Sim:
         first = not s.caught(fish["id"])
         s.record_catch({"fish": fish, "size": size, "rank": rank, "price": price,
                         "perfects": self.rnd.randint(0, 6 if fish["rarity"] == "legend" else 3)})
-        price = s.data["keepnet"].pop()["price"]   # 대물 +30% (CU8-④) 반영된 값, 첫 만남 보너스는 record_catch 가 돈에 더함
+        item = s.data["keepnet"].pop()
+        price = item["price"]   # 대물 +30% (CU8-④) 반영된 값, 첫 만남 보너스는 record_catch 가 돈에 더함
+        if fish["rarity"] == "rare" and not item.get("record") and self.wants_live() and len(self.rare_stock) < self.RARE_STOCK_MAX:
+            self.rare_stock.append(price)   # 전설용 희귀 생미끼로 남겨 둠 (팔지 않음)
+            price = 0
+        elif self.rare_stock and not self.wants_live():   # 노릴 전설이 없으면 남은 생미끼는 판다
+            price += sum(self.rare_stock)
+            self.rare_stock.clear()
         s.data["money"] += price
         s.data["stats"]["earned"] += price
         st = self.spot_stats.setdefault(self.spot, [0, 0.0, 0])
@@ -687,6 +702,12 @@ class Sim:
             if g:
                 self.chests_by_cont[sp.get("continent", "sharmion")][0] += 1
                 treasure.open_chest(s, g, self.spot, self.rnd)  # 바로 연다 (골드·소재만 반영, 아이템 효과는 없음)
+
+    RARE_STOCK_MAX = 6
+
+    def wants_live(self) -> bool:
+        """전용 미끼를 가진 아직 못 잡은 전설이 있으면 희귀를 생미끼로 모아 둠."""
+        return any(f["rarity"] == "legend" and not self.s.caught(f["id"]) and self.legend_bait_owned(f) for f in all_fish())
 
     def take_exam(self) -> None:
         """백 노인의 시험 (49-3): 자격을 채우면 마을에 들러 시험 찌를 받고 (이동 1분) 시험 물고기와 한 판 (빌린 장비, 봇 실력).
