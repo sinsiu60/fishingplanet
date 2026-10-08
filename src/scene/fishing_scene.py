@@ -132,6 +132,7 @@ class FishingScene(Scene):
         self.sign_fx_t = 0.0
         self.school: dict | None = None    # 물고기 떼 지나감 (CU9): {"x", "z", "t", "life"}
         self.breach = None                 # 전설 등장 도약 (CU10, LEGEND_BREACH): 동안 파이팅 정지
+        self.p3 = None                     # 전설 3페이즈 컷신 (CU11): 눈빛 대치 + 각자의 필살
         self.school_next = random.uniform(*load_json("core.json")["variety"]["school_interval_sec"])
         self.popups = fight_fx.JudgePopups()
         self.gather = fight_fx.GatherFX()
@@ -663,6 +664,13 @@ class FishingScene(Scene):
                 self.card = None
             return
         if self.training is not None and self.training.handle(a):
+            return
+        if self.p3 is not None and self.p3.blocking and a.name != "back":
+            # 전설 3페이즈 컷신: 입력 무시, 그 전설 3페이즈를 두 번째부터 0.5초 뒤 탭 = 마지막 0.3초(체력 바)로
+            if a.name in ("primary", "confirm", "reel_tap") and self.p3.can_skip():
+                self.p3.skip()
+                if self.dragon_fx is not None and self.fight is not None and self.fight.brain.dragon:
+                    self.dragon_fx = None
             return
         if self.breach is not None and self.breach.blocking and a.name != "back":
             # 전설 도약: 입력 무시, 그 전설을 두 번째부터는 0.5초 뒤 탭 = 착수 순간으로
@@ -1543,6 +1551,7 @@ class FishingScene(Scene):
             self.fight.log.save(str(save_dir() / "fight_logs"))
         self.fight = None
         self.breach = None
+        self.p3 = None
         self._p2_clear()
         self.landing = None
         self.dragon_fx = None
@@ -2249,6 +2258,8 @@ class FishingScene(Scene):
             return
         if self._breach_tick(dt):
             return   # 전설 도약: 파이팅 완전 정지 (두뇌 · 체력 · 장력 · 줄 · 팔 힘 · 패턴 시계, CU10)
+        if self._p3_tick(dt):
+            return   # 전설 3페이즈 컷신: 파이팅 완전 정지 (CU11)
         if self._p2_tick(dt):
             return   # 2페이즈 컷신: 파이팅 완전 정지 (물고기 · 장력 · 줄 · 바늘 · 꼬임 · 패턴 시계)
         reeling = self.game.input.held("reel") and f.phase == "fight"
@@ -3030,6 +3041,64 @@ class FishingScene(Scene):
         self.arena.card_hold = self.arena.card_end = None
         self.breach = None
 
+    # ───────────────────────── 전설 3페이즈 컷신 (CU11) ─────────────────────────
+    def _p3_start(self) -> None:
+        from src.render.legend_phase3 import Phase3Cine
+        f = self.fight
+        seen = self.save.data.setdefault("p3_seen", [])
+        pos = self.screen_fx.map(self._fish_screen())
+        self.p3 = Phase3Cine(f.fish, pos, (self.cam.width, self.cam.height), self.cam.horizon,
+                             self.arena.color if self.arena.active else None, bool(self.settings.get("reduce_fx")),
+                             f.fish["id"] in seen)
+        ph = f.fish.get("phase_at", self.fish_cfg["legend"]["phase_at"])
+        self.p3_before = min(f.stamina_frac, ph[min(1, len(ph) - 1)])   # 진입 직전 체력 (바가 여기서 차오름)
+        self.toasts.items.clear()
+        self.fight_audio.stop()
+        self.signal_audio.stop()
+
+    def _p3_tick(self, dt: float) -> bool:
+        """True = 이번 틱 파이팅을 멈춤."""
+        cine, f = self.p3, self.fight
+        if cine is None or f is None:
+            return False
+        from src.audio import theme_sfx
+        for ev in cine.update(dt):
+            if ev[0] == "sfx":
+                self.sfx.play(ev[1], ev[2])
+            elif ev[0] == "theme":
+                theme_sfx.play(self.sfx, ev[1], ev[2], ev[3])
+            elif ev[0] == "mus":
+                self.sfx.duck_levels({"mus": ev[1]}, hold=ev[2], release=0.3)   # 보스 곡 −6dB → 마지막에 원래대로
+            elif ev[0] == "dragon":   # 등용: 기존 용 변신이 ② (2.4초)
+                pos = self._fish_screen()
+                self.dragon_fx = DragonTransform(self.screen_fx.map(pos))
+            elif ev[0] == "done":
+                self._p3_end()
+                return True
+        f.bar_override = cine.bar_value(self.p3_before, f.stamina_frac)
+        self.fight_audio.stop()
+        return True
+
+    def _p3_end(self) -> None:
+        """끝: 체력 바 50% · 무대 강도 3 (페이즈로 자동) · 신호는 grace_sec 뒤부터 · 본 기록."""
+        from src.render.legend_phase3 import cfg as p3cfg
+        f = self.fight
+        self.p3 = None
+        if f is None:
+            return
+        f.bar_override = None
+        seen = self.save.data.setdefault("p3_seen", [])
+        if f.fish["id"] not in seen:
+            seen.append(f.fish["id"])
+        b = f.brain
+        g = p3cfg()["grace_sec"]
+        if b.state == "idle":
+            b.timer = max(b.timer, g)
+        else:
+            b._enter("idle", g)
+        if not b.dragon:
+            self.toasts.show(f"기운을 되찾았다! 체력 {f.stamina_frac * 100:.0f}%", (255, 140, 120), 2.6, 11)
+
     def _p2_values(self) -> dict:
         """컷신 전후 비교용 파이팅 수치 (체력만 바뀌어야 함)."""
         f = self.fight
@@ -3355,6 +3424,10 @@ class FishingScene(Scene):
                 self.lightning.strike(self.cam.horizon, self.cam.width)
         elif ev.startswith("phase:"):
             n = int(ev.split(":")[1])
+            if (f.fish.get("rarity") == "legend" and n == 3   # 3페이즈 진입 (오르시엘은 4페이즈까지 — 4페이즈 전환은 공통 연출)
+                    and self.training is None and self.exam_run is None):
+                self._p3_start()   # 전설 3페이즈: 공통 페이즈 연출 대신 눈빛 대치 + 각자의 필살 (CU11)
+                return
             if f.fish.get("theme") == "ilseom" and n == len(f.fish.get("phases", [])):
                 theme_sfx.play(self.sfx, "ilseom", "jing", 0.9)   # 일섬 3페이즈: 징 + 가장자리 0.3초 어둡게
                 if not self.settings.get("reduce_fx"):
@@ -3381,8 +3454,8 @@ class FishingScene(Scene):
                 self.dragon_fx = DragonTransform(self.screen_fx.map(pos))
                 self.game.slowmo(1.2, 0.4)
         elif ev == "phase_heal":
-            # 전설 3페이즈: 기운을 되찾는다 (체력 50%, 등용 100%) — 용 변신은 배너가 대신 알림
-            if not f.brain.dragon:
+            # 전설 3페이즈: 기운을 되찾는다 (체력 50%, 등용 100%) — 용 변신은 배너가 대신 알림 · 3페이즈 컷신은 끝에 (CU11)
+            if not f.brain.dragon and self.p3 is None:
                 self.toasts.show(f"기운을 되찾았다! 체력 {f.stamina_frac * 100:.0f}%", (255, 140, 120), 2.6, 11)
         elif ev == "telegraph:turn":
             self.sfx.play("sfx_scrape", 0.8)
@@ -3969,6 +4042,11 @@ class FishingScene(Scene):
         self.phantom_hfx.draw_screen(canvas, pal)  # ② 환상 고유 연출 (DT6)
         if self.breach is not None:
             self.breach.compose(canvas)   # 전설 도약: 1.7배 확대가 전설을 따라감 · 착수 흔들림 · 노란 번쩍 (카드 · HUD 는 이 뒤 — 확대 안 함)
+        if self.p3 is not None:
+            self.p3.compose(canvas)       # 전설 3페이즈: 눈빛 대치 · 각자의 필살 (HUD · 체력 바는 이 뒤)
+            dx, dy = self.p3.shake()
+            if dx or dy:
+                canvas.scroll(dx, dy)
         if p2_cam:
             # 2페이즈 컷신: 카메라(고개 숙임 · 수면 · 물속 · 솟구침) · 폭발 · 흔들림 — HUD 는 이 뒤에 (흔들지 않음)
             self._p2_pal = pal

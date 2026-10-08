@@ -214,6 +214,11 @@ def _hand_icon(canvas, x: int, y: int, col) -> None:
 def _stamina_fill(canvas, fight, x: int, y: int, bw: int, bh: int) -> None:
     """체력 채움 + 연출 (CU4-2): 회복 = 초록으로 차오름(0.3초) · 퍼펙트 = 크게 뚝(흰 잔상) · 좋음 = 작게(옅은 잔상)."""
     frac = fight.stamina_frac
+    ov = getattr(fight, "bar_override", None)
+    if ov is not None:   # 전설 3페이즈 컷신 (CU11): 진입 전 값 → 마지막 0.3초에 50% 까지 차오름
+        canvas.fill((235, 90, 80), (x, y, int(bw * ov), bh))
+        canvas.fill((255, 170, 150), (x, y, int(bw * ov), 1))
+        return
     fx = getattr(fight, "stam_fx", None)
     bar = fight.atk["bar"] if hasattr(fight, "atk") else None
     age = fight.elapsed - fx["t"] if fx else 99.0

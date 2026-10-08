@@ -1,0 +1,35 @@
+{
+ "_설명": "전설 3페이즈 컷신 (CORE_UPDATE CU11). 3페이즈 진입 순간 공통 페이즈 연출(거세짐! · 포효 · 번쩍 · 슬로모션) 대신: ① 눈빛 대치 eye_sec (12종 공통: 0.25초에 물고기 머리로 2.2배 확대 → 눈 클로즈업 · 동공이 칼날로 · 무대 색 테두리 → 0.9초 무대 색 번쩍 20% 1프레임) → ② 각자의 필살 fin_sec (등용은 기존 용 변신 dragon_sec) → 체력 바가 phase3_heal 까지 차오름 bar_sec. 동안 파이팅 정지 · 입력 무시, 끝나고 grace_sec 뒤 신호. 두 번째부터 skip_after 뒤 탭 = 마지막 bar_sec 으로. 흔들림 최대 5px, 번쩍 1번 (① 번쩍), 환상 전용 표현(정적 · 멈춘 물방울 · 오로라) 없음.",
+ "eye_sec": 1.2,
+ "fin_sec": 1.5,
+ "dragon_sec": 2.4,
+ "bar_sec": 0.3,
+ "grace_sec": 0.5,
+ "skip_after": 0.5,
+ "zoom_eye": 2.2,
+ "zoom_in_sec": 0.25,
+ "eye_px": 40,
+ "flash_at": 0.9,
+ "flash_alpha": 0.2,
+ "shake_max": 5,
+ "music_db": -6.0,
+ "heart_sfx": [["sfx_legend_appear", 0.55, 0.0]],
+ "eye_colors": {
+  "golden_carp": [255, 200, 60], "tiger_mandarin": [255, 150, 40], "silver_bass": [190, 230, 255], "marlin": [230, 60, 60],
+  "coelacanth": [90, 140, 255], "dragon_carp": [255, 90, 60], "silva": [200, 230, 150], "prisia": [180, 120, 255],
+  "aeris": [170, 240, 255], "ignis": [255, 110, 40], "borealis": [150, 230, 255], "orsiel": [255, 220, 120]
+ },
+ "fin_sfx": {
+  "golden_carp": [["sfx_splash", 0.9, 0.35]],
+  "tiger_mandarin": [["sfx_roar", 1.0, 0.25], ["sfx_accent_roar", 0.6, 0.3]],
+  "silver_bass": [["amb_thunder_near", 1.0, 0.1], ["sfx_impact", 0.6, 0.15]],
+  "marlin": [["theme:ilseom:jing", 0.9, 0.2], ["sfx_whip", 0.8, 0.0]],
+  "coelacanth": [["amb_rumble", 1.0, 0.0], ["sfx_accent_wave", 0.5, 0.6]],
+  "silva": [["amb_wind_cold", 0.9, 0.0], ["sfx_splash_small", 0.6, 0.5]],
+  "prisia": [["sfx_accent_ice", 0.9, 0.35], ["sfx_line_crack", 0.6, 0.35]],
+  "aeris": [["amb_wind_cold", 1.0, 0.0], ["sfx_whip", 0.6, 0.4]],
+  "ignis": [["amb_lava_blub", 1.0, 0.0], ["sfx_impact", 0.8, 0.3]],
+  "borealis": [["amb_ice_crack", 1.0, 0.0], ["sfx_accent_ice", 0.7, 0.9]],
+  "orsiel": [["amb_wave_crash", 1.0, 0.2], ["sfx_accent_wave", 0.7, 1.0]]
+ }
+}
