@@ -30,6 +30,7 @@ HEAVY_GAIN = 10 ** (2 / 20)
 RUN_PAYOUT = 0.3      # 돌진이 아니어도 줄이 이만큼 빨리 풀리면 loop_fast (줄이 계속 풀리는 소리)
 MAX_LOOPS = 2
 RELEASE_HOLD = 0.15   # 손을 이만큼 떼고 있어야 '멈춤' (짧게 끊었다 감는 것은 계속 감는 것으로 — 루프·'시작' 반복 방지)
+LOW_SEMIS = -3          # 무게 단서: 큰 물고기 감기 루프 피치 (core.json arm.reel_semitones 와 같은 값)
 RESTART_GAP = 0.25    # 이만큼 쉬었다 다시 감을 때만 reel_start
 
 _man: dict | None = None
@@ -105,6 +106,7 @@ class ReelPlayer:
         self.band: str | None = None    # 지금 감기 구간 (또는 'run' = 줄 풀림 loop_fast, 'tease')
         self.ab = 0                     # normal 번갈이 (0 = A, 1 = B)
         self.heavy = False
+        self.low = False                # 무게 단서 (CORE_UPDATE CU5-2): 큰 물고기 = 감기 루프를 낮게 (피치 −3반음)
         self.reeling_t = 0.0
         self.idle_t = 9.0               # 손 뗀 뒤 시간
         self.last_reel = 0.0
@@ -190,6 +192,12 @@ class ReelPlayer:
 
     # ── 루프 ──
     def _loop_key(self, band: str) -> str:
+        key = self._loop_key_base(band)
+        if self.low and band in BANDS:
+            return self._pitched(key)
+        return key
+
+    def _loop_key_base(self, band: str) -> str:
         if band == "normal":
             return f"normal_{self.ab}" if f"normal_{self.ab}" in self.snd else "normal_0"
         if band == "run":
@@ -197,6 +205,23 @@ class ReelPlayer:
         if band == "tease":
             return "slow_0"
         return f"{band}_0"
+
+    def _pitched(self, key: str, semis: float = LOW_SEMIS) -> str:
+        """감기 루프를 semis 반음 낮춘 사본 (처음 한 번 리샘플해서 둠 — 느리고 낮아짐). 실패하면 원래 소리."""
+        lk = key + "_low"
+        if lk not in self.snd and key in self.snd:
+            try:
+                import numpy as np
+                arr = pygame.sndarray.array(self.snd[key])
+                step = 2 ** (semis / 12)
+                pos = np.arange(0, len(arr) - 1, step)
+                i0 = pos.astype(np.int64)
+                fr = (pos - i0)[:, None] if arr.ndim == 2 else pos - i0
+                out = arr[i0] * (1 - fr) + arr[i0 + 1] * fr
+                self.snd[lk] = pygame.sndarray.make_sound(np.ascontiguousarray(out.astype(arr.dtype)))
+            except Exception:   # 믹서 · numpy 가 없는 환경
+                self.snd[lk] = self.snd[key]
+        return lk if lk in self.snd else key
 
     def _start_voice(self, band: str, goal: float, fade_in: float):
         key = self._loop_key(band)

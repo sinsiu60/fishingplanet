@@ -71,5 +71,28 @@
       "drain_frac": 0.004,
       "hazard_lateral_mult": 0.7
     }
+  },
+  "arm": {
+    "_설명": "팔 힘 (CU5-1). 무게 = (크기 ÷ size_ref_cm)^weight_exp × 그 종의 힘, weight_min~weight_max 로 자름, 전설 · 환상 = weight_big, 시험 물고기 = 그 종 평균 크기. 잘못된 타이밍 감기(날뛸 때 · 돌진 · 장력 빨강) 초당 wrong_per_weight × 무게, 맞는 타이밍(쉼 · 지침 · 회복 · 틈) 초당 right_per_sqrt × √무게, 손 놓으면 초당 rest_recover 회복. 바닥나면 out_sec 동안 감기 ×out_reel_mult. 낚싯대 티어마다 소모 −rod_tier_cut. 무게 단서: light_below 미만 = 작은 물고기, heavy_above 초과 = 큰 물고기 (떨림 최대 shake_px · 낮은 릴 · 줄 긁힘 scrape_vol · 챔질 꺾임 hook_kick_sec). 대물 배지 = 크기 상위 trophy_top.",
+    "size_ref_cm": 50,
+    "weight_exp": 1.5,
+    "weight_min": 0.4,
+    "weight_max": 3.0,
+    "weight_big": 3.0,
+    "wrong_per_weight": 12,
+    "right_per_sqrt": 3,
+    "rest_recover": 20,
+    "out_sec": 2.0,
+    "out_reel_mult": 0.3,
+    "rod_tier_cut": 0.04,
+    "light_below": 0.8,
+    "heavy_above": 1.8,
+    "shake_px": 2,
+    "reel_semitones": -3,
+    "scrape_vol": 0.3,
+    "hook_kick_sec": 0.2,
+    "heavy_text_sec": 1.5,
+    "trophy_top": 0.1,
+    "scalestone_candidate": {"id": "arm_regen", "name": "팔 힘 회복", "stat": "arm_recover_mult", "per_step": 0.06, "cap": 0.3, "_설명": "비늘석 옵션 후보 (데이터만, 옵션 추가는 아직 안 함)"}
   }
 }

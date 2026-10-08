@@ -32,9 +32,9 @@ OUT = os.path.join(ROOT, "build")
 DT = 1 / 60
 SKILLS = {
     "skilled": dict(sigma=0.05, react=0.25, miss_jump=0.0, turn_sigma=0.06, taps=5.0, turns=1.6, miss_pattern=0.05,
-                    beat_sigma=0.04, see_fake=0.9),
+                    beat_sigma=0.04, see_fake=0.9, arm_stop=35, arm_resume=70),
     "average": dict(sigma=0.10, react=0.40, miss_jump=0.10, turn_sigma=0.11, taps=4.0, turns=1.15, miss_pattern=0.15,
-                    beat_sigma=0.07, see_fake=0.7),
+                    beat_sigma=0.07, see_fake=0.7, arm_stop=12, arm_resume=45),
 }
 # '드랙만' 봇 (CORE_UPDATE CU2 측정 방법): '보통'과 같은 손이지만 패턴 입력(PatternInput) 늘 None · 풀기(CU3) 안 누름 ·
 # 틈(CU4)엔 감지 않음. 점프 숙이기 · 꺾기 · 몸털기(dip/flick)와 감기 · 낚싯대 방향(측면)은 그대로 — CU2 기준과 같은 정의 (DESIGN 52-1 질문 1)
@@ -90,6 +90,7 @@ class BotPlayer:
         self.plan_rel = None       # 풀기: 돌진 시작 기준 누를 시각 오차 (− 이르게 / + 늦게), "skip" = 놓침
         self.rel_seen = 0.0
         self.rel_done = False
+        self.arm_rest = False      # 팔 힘 (CU5): 바닥 근처면 잘못된 타이밍 감기를 쉬고 회복을 기다림
 
     def _release(self, f, b) -> None:
         skill, rnd = self.skill, self.rnd
@@ -230,6 +231,14 @@ class BotPlayer:
                 self.turn_acc += skill["turns"] * DT
                 if self.turn_acc >= 1:
                     inp.turns, self.turn_acc = 1, self.turn_acc - 1
+        # 팔 힘 (CU5): arm_stop 아래로 떨어지면 arm_resume 까지 잘못된 타이밍(날뛸 때 · 빨강)엔 안 감음
+        arm = getattr(f, "arm", 100.0)
+        if arm < skill.get("arm_stop", 0):
+            self.arm_rest = True
+        elif arm >= skill.get("arm_resume", 0):
+            self.arm_rest = False
+        if self.arm_rest and reeling and getattr(f, "gap_t", 0) <= 0 and (b.is_active or f.zone() == "red"):
+            reeling = False
         if skill.get("no_patterns"):   # '드랙만' 봇
             return reeling, self.aim, None
         return reeling, self.aim, inp
@@ -272,7 +281,9 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
             if ev.startswith("action:"):
                 acts[ev[7:]] = acts.get(ev[7:], 0) + 1
         probe["sec"] = probe.get("sec", 0.0) + f.elapsed
-    res = {"ok": f.phase == "caught", "t": round(f.elapsed, 1), "reason": f.lose_reason}
+    lo, hi = fish["size_cm"]
+    res = {"ok": f.phase == "caught", "t": round(f.elapsed, 1), "reason": f.lose_reason,
+           "size_u": round((size - lo) / max(1e-6, hi - lo), 3), "weight": round(getattr(f, "weight", 1.0), 2)}
     if f.result:
         res.update(rank=f.result["rank"], size=f.result["size"], perfects=f.result["perfects"], opp=f.result.get("opp"))
     return res

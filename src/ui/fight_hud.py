@@ -37,8 +37,8 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
 
     # 장력·줄·바늘을 한 묶음으로 (31장 C6): 옅은 받침 하나 — 걸림·기믹 게이지는 그 오른쪽에 따로
     back = _GAUGE_BACK.get(h)
-    if back is None:   # 매 프레임 새 반투명 표면을 만들지 않게 (폰, DESIGN.md 44)
-        back = _GAUGE_BACK[h] = pygame.Surface((72, h + 30), pygame.SRCALPHA)
+    if back is None:   # 매 프레임 새 반투명 표면을 만들지 않게 (폰, DESIGN.md 44) — 아래 10px = 팔 힘 막대 (CU5)
+        back = _GAUGE_BACK[h] = pygame.Surface((72, h + 40), pygame.SRCALPHA)
         pygame.draw.rect(back, (10, 14, 28, 90), back.get_rect(), border_radius=6)
     canvas.blit(back, (x - 6, y - 6))
 
@@ -86,6 +86,7 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
     for k in (1, 2):
         canvas.fill((14, 16, 26), (59, y + h - h * k // 3, 7, 1))
     icons.hook(canvas, 62, y + h + 10, pal["text"])
+    _draw_arm(canvas, fight, x, y + h + 19, t)
     # 줄 걸림 (위협 구역이 있는 낚시터만)
     if fight.hazards:
         sf = fight.snag / 100
@@ -178,6 +179,33 @@ def draw_boss_bar(canvas, pal, fight) -> None:
         st = "지침"
     shift = p2 or getattr(fight, "p2_shift", False)   # 2페이즈 바의 마름모 · 점 2개 오른쪽으로 (컷신 폭발부터)
     text(canvas, st, (x + bw + (26 if shift else 6), y + 3), STATE_COLOR.get(st, (255, 200, 170)), 11, "midleft")
+
+
+ARM_COL = (0xE8, 0xA0, 0x40)
+
+
+def _draw_arm(canvas, fight, x: int, y: int, t: float) -> None:
+    """팔 힘 (CU5-1): 장력 게이지 아래 주황 가로 막대 + 손 아이콘. 바닥나면 빨강 깜빡, 처음 무거우면 "무겁다…!"."""
+    if not hasattr(fight, "arm"):
+        return
+    bx, bw, bh = x + 8, 50, 4
+    out = fight.arm_out_t > 0
+    col = (255, 60, 50) if out and int(t * 8) % 2 == 0 else ARM_COL
+    _hand_icon(canvas, x + 1, y + 2, col)
+    canvas.fill(SHADOW, (bx - 1, y - 1, bw + 2, bh + 2))
+    canvas.fill((50, 36, 24), (bx, y, bw, bh))
+    canvas.fill(col, (bx, y, int(bw * fight.arm / 100), bh))
+    canvas.fill(lerp_color(col, (255, 255, 255), 0.4), (bx, y, int(bw * fight.arm / 100), 1))
+    if getattr(fight, "heavy_text_t", 0) > 0:
+        text(canvas, "무겁다…!", (bx + bw + 6, y + 2), (255, 200, 140), 11, "midleft")
+
+
+def _hand_icon(canvas, x: int, y: int, col) -> None:
+    """작은 주먹 (5×5): 손등 + 엄지."""
+    canvas.fill(SHADOW, (x - 2, y - 1, 6, 5))
+    canvas.fill(col, (x - 3, y - 2, 6, 4))
+    canvas.fill(lerp_color(col, (0, 0, 0), 0.35), (x - 3, y - 1, 1, 3))
+    canvas.fill(col, (x - 4, y - 1, 1, 2))
 
 
 def _stamina_fill(canvas, fight, x: int, y: int, bw: int, bh: int) -> None:
@@ -304,6 +332,8 @@ def catch_badges(news: dict | None) -> list:
         badges.append(("최대 크기 경신!", (140, 240, 150)))
     if news.get("gold"):
         badges.append(("도감 금테 획득!", RANK_COLORS["S"]))
+    if news.get("heavy"):   # 대물 (크기 상위 10%, CU5-2)
+        badges.append(("묵직한 손맛!", (255, 190, 120)))
     if news.get("hint"):
         badges.append((f"힌트 해금 ({news['hint']}회) - 도감 확인", (150, 220, 255)))
     if news.get("phantom_new"):

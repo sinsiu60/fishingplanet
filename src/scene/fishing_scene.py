@@ -72,6 +72,7 @@ TIPS = {
     "telegraph:lure": "등불만 번쩍 = 가짜 신호! 기포·판정 원이 없으면 속지 마세요",
     "gap_open": "땀방울 = 틈! 지금 꾹 감으면 크게 지쳐요",            # CU4-3
     "overtime": "너무 오래 끌었다 — 줄이 닳기 시작! 신호를 받아내 지치게 하세요",   # CU4-2
+    "arm_out": "팔 힘이 바닥! 날뛸 땐 손을 놓고 쉬다가, 쉬거나 지칠 때 감으세요",   # CU5-1
 }
 # 소리 자막 (설정 '소리 자막'): 예고 소리를 글자로도 보여준다
 CAPTIONS = {"telegraph:rush": "웅— 줄이 울린다 (돌진)", "telegraph:jump": "보글보글 — 기포 (점프)",
@@ -135,6 +136,7 @@ class FishingScene(Scene):
         self.arena = BossArena(canvas.get_width(), canvas.get_height())   # 보스전 무대 (BOSS_ARENA.md, 51-2)
         self.crisis_now = False
         self.fish_cfg = load_json("fishing_config.json")
+        self.core_arm = load_json("core.json")["arm"]   # 팔 힘 · 무게 단서 (CU5)
         self.spots = {sp["id"]: sp for sp in load_json("spots.json")["spots"]}
         self.spot_ids = list(self.spots)
         self.force_i = -1          # F3 테스트: 고정할 물고기 인덱스 (-1 = 없음)
@@ -2380,6 +2382,18 @@ class FishingScene(Scene):
         """파이팅 연속음: 릴 클릭·드랙 풀림·장력 삐걱임·줄 실금·드랙 딸깍·몸부림 (src/audio/fight_audio.py)."""
         f = self.fight
         fa = self.fight_audio
+        ac = self.core_arm
+        fighting = f is not None and f.phase == "fight"
+        # 무게 단서 (CU5-2): 큰 물고기 = 낮은 릴 소리 + 줄 긁힘, 진동 세기 (작은 물고기 약하게 · 큰 물고기 세게)
+        heavy = fighting and f.weight > ac["heavy_above"]
+        fa.reel.low = heavy
+        self.game.haptics.weight_k = (0.6 if f.weight < ac["light_below"] else 1.4 if heavy else 1.0) if fighting else 1.0
+        if fighting:
+            f.heavy_text_t = max(0.0, getattr(f, "heavy_text_t", 0.0) - dt)
+            self.scrape_t = getattr(self, "scrape_t", 0.0) - dt
+            if heavy and f.arm_wrong and self.scrape_t <= 0:
+                self.scrape_t = 1.1
+                self.sfx.play("sfx_scrape", ac["scrape_vol"])   # 잘못 감으면 줄이 긁히는 소리
         if self.p2 is not None and self.p2.blocking:
             fa.stop()   # 컷신 동안 파이팅 연속음 없음
         elif f is not None and f.phase == "fight":
@@ -2389,7 +2403,7 @@ class FishingScene(Scene):
                 zone = "yellow"  # 소리용 노란 구간: 초록 위쪽 끝 (N3 연속음 주인공)
             fa.update(dt, {"reel": f.reel_speed_now if f.reeling else 0.0,
                            "payout": min(1.0, f.payout_now / self.fish_cfg["fight"]["payout_max_speed"]),
-                           "tension": f.tension, "line": f.line_frac, "drag": f.drag - 1,
+                           "tension": f.tension, "line": f.line_frac, "drag": (f.drag - 1) if f.manual_drag else None,   # 자동 드랙(CU3): 단계 딸깍 없음
                            "near": max(0.0, 1 - f.distance / far), "zone": zone},
                       red_at=f.green_high, active=f.brain.is_active and not f.brain.sound_only)
         elif self.cast.state == CastState.RETRIEVE:
@@ -3046,6 +3060,13 @@ class FishingScene(Scene):
         self.sfx.boost = 2 if "clear" in f.mutations and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
         if ev in SUCC_RESET or ev.startswith(("pattern_fail", "lost:")):
             self.succ_streak = 0  # 연속 성공 끊김
+        if ev == "arm_heavy":   # 처음 한 번 "무겁다…!" (세이브당, CU5-2)
+            seen = self.save.data.setdefault("flags", {})
+            if not seen.get("arm_heavy_seen"):
+                seen["arm_heavy_seen"] = True
+                f.heavy_text_t = self.core_arm["heavy_text_sec"]
+        if ev == "arm_out":   # 팔 힘 바닥 (CU5-1): 진동 한 번 (게이지 빨강 깜빡 · 손 떨림은 그리기에서)
+            self.game.haptics.vibrate("tension", 0.6)
         if ev == "gap_hit":   # 틈 공략 성공 (CU4-3): 흰 금색 짧은 번쩍 + 작은 반짝
             self.gap_flash = 0.18
             p = self._fish_screen()
@@ -3831,12 +3852,25 @@ class FishingScene(Scene):
         # 파이팅: 장력만큼 휘고, 끝이 물고기 쪽으로 끌려감. 우클릭이면 숙임.
         tension = f.tension
         dip = math.sin(math.pi * (f.dip_t / 0.35)) if f.dip_t > 0 else 0.0
-        bend = 5 + tension * 0.24 + (math.sin(self.t * 31) * tension / 40 if tension > 60 else 0)
+        ac = self.core_arm
+        wk = 0.8 + 0.15 * f.weight   # 무게 단서 (CU5-2): 큰 물고기일수록 크게 휨
+        bend = 5 + tension * 0.24 * wk + (math.sin(self.t * 31) * tension / 40 if tension > 60 else 0)
+        if f.hook_kick_t > 0:   # 큰 물고기 챔질 순간 '훅' 한 번 크게 꺾임 (0.2초)
+            bend += 16 * math.sin(math.pi * (1 - f.hook_kick_t / ac["hook_kick_sec"]))
         pull_x = f.fish_side() * tension * 0.25
         swing = 10 - 24 * dip
+        hand = [0.0, 2 * dip]
         if f.phase == "fight":
             swing += self.ctl.pitch * self.ctl.cfg["rod_pitch_deg"]  # 낚싯대 상하 (+ = 끝이 위로)
-        return rod_geometry(c.aim, swing + c.jerk_offset(), bend, (0, 2 * dip), pull_x=pull_x)
+            amp = 0.0
+            if f.arm_out_t > 0:
+                amp = ac["shake_px"]                                         # 팔 힘 바닥: 부들부들 2px
+            elif f.reeling and f.weight > ac["light_below"]:
+                amp = ac["shake_px"] * min(1.0, f.weight / ac["weight_max"]) * (1.0 if f.arm_wrong else 0.5)
+            if amp > 0 and not self.settings.get("reduce_fx"):              # 화면 효과 줄이기: 떨림 끔
+                hand[0] += math.sin(self.t * 47) * amp
+                hand[1] += math.sin(self.t * 39 + 1.3) * amp * 0.6
+        return rod_geometry(c.aim, swing + c.jerk_offset(), bend, tuple(hand), pull_x=pull_x)
 
     def _fight_shadow(self) -> dict:
         f = self.fight

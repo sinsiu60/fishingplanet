@@ -106,6 +106,15 @@ def main():
         print(f"{bot:10} | " + " | ".join(cells))
     for bot in cb.BOTS:
         print(bot, "실패", {rar: v["fails"] for rar, v in now[bot].items()})
+    # 이중 벌 확인 (CU5-2): '보통' 대물(크기 상위 10%) 성공률 vs 평균 크기(가운데 40~60%)
+    for bot in cb.BOTS:
+        rr = [r for r in rows[bot] if r.get("rarity") in RARS and "size_u" in r]
+        big = [r for r in rr if r["size_u"] >= 0.9]
+        mid = [r for r in rr if 0.4 <= r["size_u"] <= 0.6]
+        heavy = [r for r in rr if r.get("weight", 1) > 1.8]
+        def pct(x):
+            return round(sum(r["ok"] for r in x) / max(1, len(x)) * 100, 1)
+        print(f"{bot:10} 대물 {pct(big)}% ({len(big)}판) · 평균 크기 {pct(mid)}% ({len(mid)}판) · 무게>1.8 {pct(heavy)}% ({len(heavy)}판)")
     print("전설별 (보통/숙련/드랙만):", {k: tuple(v.get(b) for b in cb.BOTS) for k, v in per_leg.items()})
     if os.environ.get("CU4_TUNE_OUT"):
         json.dump({"base": base, "now": now, "legends": per_leg, "n": n, "nl": nl},

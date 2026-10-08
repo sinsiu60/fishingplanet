@@ -27,6 +27,17 @@ LOSE_REASONS = {
 }
 
 
+def arm_weight(fish: dict, size_cm: float, ac: dict) -> float:
+    """팔 힘 무게 (CU5-1): (크기 ÷ 50cm)^1.5 × 종의 힘, 0.4~3.0. 전설 · 환상 3.0, 시험 물고기는 그 종 평균 크기 (공정)."""
+    if fish.get("rarity") in ("legend", "phantom"):
+        return float(ac["weight_big"])
+    if fish.get("exam"):
+        lo, hi = fish.get("size_cm", (size_cm, size_cm))
+        size_cm = (lo + hi) / 2
+    w = (max(1.0, size_cm) / ac["size_ref_cm"]) ** ac["weight_exp"] * fish.get("power", 1.0)
+    return clamp(w, ac["weight_min"], ac["weight_max"])
+
+
 def fish_gear_tier(fish: dict) -> int:
     """이 물고기에 맞는 낚싯대 티어 = 그 낚시터 gear_tier (전설 +1, 최대 8)."""
     spot = next((sp for sp in load_json("spots.json")["spots"] if sp["id"] == fish.get("spot")), {})
@@ -57,6 +68,8 @@ class Fight:
         self.rnd = rnd or random.Random()
         # 크기 → 파이팅 난이도 (BAEK_EXAM 🅰-7): 일반 · 고급 · 희귀만, 같은 종이면 큰 놈이 더 세고 오래 버팀 (랭크 점수엔 안 넣음)
         self.size_k = 1.0
+        self.arm_cfg = load_json("core.json")["arm"]
+        self.weight = arm_weight(fish, size_cm, self.arm_cfg)   # 팔 힘 무게 (CU5-1) — 크기 → 힘 보정 전 그 종의 힘
         if fish.get("rarity") in ("common", "uncommon", "rare") and not fish.get("exam"):
             lo, hi = fish.get("size_cm", (size_cm, size_cm))
             u = clamp((size_cm - lo) / max(1e-6, hi - lo), 0.0, 1.0)   # 변이 '거대'는 1로 자름
@@ -112,6 +125,12 @@ class Fight:
         self.gap_hits = 0
         self._gap_prev = None
         self.overtime = False
+        # 팔 힘 (CU5-1): 0~100, 잘못된 타이밍에 감으면 무게만큼 빠짐
+        self.arm = 100.0
+        self.arm_out_t = 0.0                   # 바닥난 뒤 감기 30% 남은 초
+        self.arm_wrong = False                 # 지금 잘못된 타이밍에 감는 중 (손 떨림 · 낮은 릴 소리)
+        self.arm_heavy_said = False
+        self.hook_kick_t = self.arm_cfg["hook_kick_sec"] if self.weight > self.arm_cfg["heavy_above"] else 0.0
         self.ctl = None  # 추가 조작 상태 (src/platform/gesture.Controls, 낚시 씬이 넣어 줌)
         # 신규 패턴 (U3): 진행 중 판정, 꼬임 게이지, 연쇄 콤보
         self.inp = PatternInput()
@@ -274,6 +293,34 @@ class Fight:
             if d < best_d and hz["dist"][0] - 3 <= self.distance <= hz["dist"][1] + 3:
                 best, best_d = (1 if center > self.angle else -1), d
         return best
+
+    def _arm_tick(self, dt: float, reeling: bool) -> float:
+        """팔 힘 (CU5-1). 돌려줌: 감기 배율 (바닥난 동안 out_reel_mult)."""
+        a = self.arm_cfg
+        b = self.brain
+        self.hook_kick_t = max(0.0, self.hook_kick_t - dt)
+        self.arm_wrong = False
+        if reeling:
+            rod = max(0.0, 1 - a["rod_tier_cut"] * (self.gear.get("rod_tier", 1) - 1))   # 낚싯대 티어마다 −4%
+            right = self.gap_t > 0 or (self.zone() != "red" and not b.is_active)
+            if right:
+                self.arm -= a["right_per_sqrt"] * math.sqrt(self.weight) * rod * dt
+            else:
+                self.arm_wrong = True
+                self.arm -= a["wrong_per_weight"] * self.weight * rod * dt
+                if self.weight > a["heavy_above"] and not self.arm_heavy_said:
+                    self.arm_heavy_said = True
+                    self.events.append("arm_heavy")   # 처음 한 번 "무겁다…!" (장면이 세이브당 한 번)
+        else:
+            self.arm += a["rest_recover"] * self.gear.get("arm_recover_mult", 1.0) * dt
+        self.arm = clamp(self.arm, 0.0, 100.0)
+        if self.arm <= 0 and self.arm_out_t <= 0:
+            self.arm_out_t = a["out_sec"]
+            self.events.append("arm_out")
+        if self.arm_out_t > 0:
+            self.arm_out_t -= dt
+            return a["out_reel_mult"]
+        return 1.0
 
     def _gap_tick(self, dt: float, reeling: bool) -> float:
         """틈 공략 (CU4-3): 큰 행동이 끝난 직후 gap.sec 동안 꾹 감으면 체력 −6%/초 + 릴 티어별 당김. 돌려줌: 추가 소모(초당)."""
@@ -917,6 +964,7 @@ class Fight:
         if self.stagger_t > 0:
             self.stagger_t -= dt
             reel_in *= self.atk["stagger_reel_mult"]   # 퍼펙트 뒤 휘청 (CU4-2)
+        reel_in *= self._arm_tick(dt, reeling)          # 팔 힘 (CU5-1): 바닥나면 2초 동안 30%
         if self.manual_drag:
             reel_in *= 1 + self.rel_cfg["manual_reel_bonus"]   # '드랙 직접 조절' 수고 보상 (CU3-3)
         if any(p.hold_payout for p in self.pats):

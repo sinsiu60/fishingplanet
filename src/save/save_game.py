@@ -687,6 +687,10 @@ class SaveGame:
                 else entry["best_rank"]
         if entry["count"] in (3, 10):
             news["hint"] = entry["count"]
+        if fish["rarity"] in ("common", "uncommon", "rare"):   # 대물 = 크기 상위 10% (CU5-2) → "묵직한 손맛!"
+            lo, hi = fish["size_cm"]
+            top = load_json("core.json")["arm"]["trophy_top"]
+            news["heavy"] = result["size"] >= hi - (hi - lo) * top
         self.data["keepnet"].append({"id": fid, "size": result["size"], "rank": result["rank"],
                                      "price": result["price"]})
         if news["record"]:

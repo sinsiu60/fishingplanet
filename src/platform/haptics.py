@@ -57,6 +57,8 @@ class Haptics:
     def level(self) -> float:
         return LEVELS[self.settings.get("vibration")] if self.settings else 1.0
 
+    weight_k = 1.0   # 무게 단서 (CORE_UPDATE CU5-2): 파이팅 중 작은 물고기 약하게 · 큰 물고기 세게 (패턴은 그대로, 세기만)
+
     def vibrate(self, kind: str, strength: float = 1.0, delay: float = 0.0) -> None:
         """delay초 뒤에 진동 (Sfx.play(haptic=)가 출력 지연 + 소리 어택 시각만큼 늦춘다)."""
         if not self.enabled or kind not in KINDS:
@@ -75,4 +77,4 @@ class Haptics:
             self.log = self.log[-4:]
         if IS_ANDROID:
             from src.platform import android
-            android.vibrate(pattern, power * strength * level)
+            android.vibrate(pattern, min(1.0, power * strength * level * self.weight_k))
