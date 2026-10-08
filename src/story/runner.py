@@ -85,6 +85,15 @@ def _world_snapshot(game, fishing):
     return surf
 
 
+def rock_scene(game, fishing):
+    """C3-02 전용 컷신 그림 (STORY_ROCK.md): 낚시 화면 스냅샷 대신 폭포 · 바위 · 손을 따로 그림. 손 = 낚시 화면 손 색 + 계절 장갑."""
+    from src.render.palette import Palette
+    from src.render.story_rock import StoryRock
+    w, h = game.screen.canvas.get_size()
+    look = fishing._hand_look() if hasattr(fishing, "_hand_look") else None
+    return StoryRock(w, h, Palette().sample(13.0), look, reduce=bool(game.settings.get("reduce_fx")))
+
+
 def after_travel(game, fishing, spot_id: str) -> bool:
     """첫 방문 이동 컷신(타이틀까지) 바로 뒤. 장면을 띄웠으면 True."""
     save = game.save
@@ -92,8 +101,7 @@ def after_travel(game, fishing, spot_id: str) -> bool:
         return False
     if spot_id == "secret" and not story.seen(save, "C3-02"):
         from src.story.cutscene import CutsceneScene
-        world = _world_snapshot(game, fishing)
-        game.scenes.push(CutsceneScene(game, "C3-02", world=world,
+        game.scenes.push(CutsceneScene(game, "C3-02", world=rock_scene(game, fishing),
                                        on_done=lambda: (story.complete(game, "C3-02"), game.fade_in(0.6))))
         return True
     if spot_id == "world_tree" and not story.seen(save, "C5-04"):
@@ -211,6 +219,6 @@ def replay(game, fishing, sid: str) -> None:
         from src.story.cutscene import SubtitleScene
         game.scenes.push(SubtitleScene(game, sc["subs"][0], 3.0))
     elif sid == "C3-02":
-        game.scenes.push(CutsceneScene(game, "C3-02", world=_world_snapshot(game, fishing)))
+        game.scenes.push(CutsceneScene(game, "C3-02", world=rock_scene(game, fishing)))
     else:
         game.scenes.push(CutsceneScene(game, sid))

@@ -172,31 +172,13 @@ def draw_closeup(canvas, t: float, sc: dict) -> None:
 
 
 def draw_c302(canvas, t: float, sc: dict, world=None) -> None:
-    """용문 폭포 바위: 배경 그대로 시점 오른쪽 이동(2초) → 바위 #6E6E78 80x50 + 받침대 2개 #5A3D2A → 새긴 글자 클로즈업."""
-    f = Frame(canvas)
-    if t < 3.0:
-        pan = int(min(1.0, t / 2.0) * 40)
-        if world is not None:
-            canvas.blit(world, (-pan, 0))
-            canvas.blit(world, (canvas.get_width() - pan, 0), (0, 0, pan, canvas.get_height()))
-        if t >= 2.0:
-            rock = f.r(300, 170, 380, 220)
-            pygame.draw.ellipse(canvas, _c("#6E6E78"), rock)
-            pygame.draw.ellipse(canvas, lerp(_c("#6E6E78"), (255, 255, 255), 0.15), rock.inflate(-30, -30).move(-8, -8))
-            for x in (290, 384):
-                canvas.fill(_c("#5A3D2A"), f.r(x, 196, x + 4, 224))
+    """용문 폭포의 바위: 전용 컷신 15초 (STORY_ROCK.md — src/render/story_rock.StoryRock, 낚시 화면 스냅샷 안 씀). world = StoryRock."""
+    if world is None:
+        canvas.fill((0, 0, 0))
         return
-    canvas.fill(_c("#6E6E78"))                                                  # 바위 표면 클로즈업
-    rnd = random.Random(3)
-    w, h = canvas.get_size()
-    for _ in range(140):
-        canvas.fill(lerp(_c("#6E6E78"), (40, 40, 48), rnd.random() * 0.5), (rnd.randrange(w), rnd.randrange(h), 2, 1))
-    cx, cy = w // 2 - 30, h // 2 - 20
-    text(canvas, sc["carved"][0], (cx, cy), _c("#3A3A44"), 16, "center")
-    fx = cx + 40                                                                # 선 3개로 된 물고기
-    pygame.draw.line(canvas, _c("#3A3A44"), (fx, cy - 6), (fx + 16, cy), 1)
-    pygame.draw.line(canvas, _c("#3A3A44"), (fx, cy + 6), (fx + 16, cy), 1)
-    pygame.draw.line(canvas, _c("#3A3A44"), (fx - 6, cy - 6), (fx - 6, cy + 6), 1)
+    if world.w != canvas.get_width() or world.h != canvas.get_height():   # 창 크기가 바뀜 → 같은 손 · 설정으로 다시 굽기
+        world.__init__(canvas.get_width(), canvas.get_height(), world.hand_pal, world.look, world.reduce)
+    world.draw(canvas, t)
 
 
 def draw_c504(canvas, t: float, sc: dict, world=None) -> None:
@@ -230,7 +212,14 @@ SPECS = {
     "P-04": (draw_p04, 8.5, [(6.0, 8.0, 0)], [(0.0, "st_envelope", 0.5), (1.5, "loop:st_bus", 0.3), (5.5, "loop:amb_bed_ocean", 0.4),
                                             (5.5, "music:sharmion", 0)], ("white", 8.0, 0.5)),
     "CLOSEUP": (draw_closeup, 2.0, [], [], None),
-    "C3-02": (draw_c302, 6.5, [(4.0, 6.0, 0)], [(0.0, "loop:amb_bed_mist", 0.3)], ("black", 6.0, 0.5)),
+    # C3-02 (STORY_ROCK.md 🅲 — 기존 소리만): 폭포 바탕 A 0.8 → B 0.6 → C · D 0.45 → E 0.6, 발소리 0.5초마다, 이끼 쓸기 · 물방울 · 낚싯대 놓는 나무 소리.
+    # 자막은 그림이 아래 시네마 띠 위에 직접 (12.8~14.6), 14.4~15.0 검은 화면으로.
+    "C3-02": (draw_c302, 15.0, [], [(0.0, "loop:amb_bed_falls", 0.8), (1.6, "amb_gust", 0.35), (3.0, "loop:amb_bed_falls", 0.6),
+                                     (3.0, "amb_step0", 0.35), (3.5, "amb_step1", 0.35), (4.0, "amb_step0", 0.35),
+                                     (4.5, "amb_step1", 0.35), (5.0, "amb_step0", 0.3), (5.5, "loop:amb_bed_falls", 0.45),
+                                     (6.3, "sfx_scrape", 0.25), (7.2, "sfx_scrape", 0.25), (9.4, "amb_gust", 0.2),
+                                     (10.2, "amb_drop", 0.4), (11.0, "loop:amb_bed_falls", 0.6), (12.2, "amb_wood_step0", 0.3)],
+              ("black", 14.4, 0.6)),
     "C5-04": (draw_c504, 3.2, [], [(0.0, "loop:st_spring", 0.35), (3.0, "st_paper", 0.6)], None),
 }
 
@@ -244,7 +233,7 @@ class CutsceneScene(Scene):
         self.spec = SPECS[sid]
         self.sc = story.scenes().get(sid, {})
         self.on_done = on_done
-        self.world = world            # 배경 스냅샷 (C3-02: 용문 폭포 그대로)
+        self.world = world            # C3-02: 전용 그림 StoryRock (STORY_ROCK.md) · C5-04: 배경
         self.skippable = skippable
         self.t = 0.0
         self.mouse = (0, 0)
@@ -266,7 +255,7 @@ class CutsceneScene(Scene):
             sfx.play(name, vol)
 
     def _stop_loops(self) -> None:
-        for n in self.loops:
+        for n in dict.fromkeys(self.loops):   # 같은 반복을 음량만 바꿔 여러 번 켠 경우 (C3-02 폭포)
             self.game.sfx.loop(n, False)
         self.loops = []
 
