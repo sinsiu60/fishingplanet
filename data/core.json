@@ -114,6 +114,7 @@
     "school_radius_m": 3.5,
     "stray_chance": 0.015,
     "bottle_chance": 0.0085,
-    "bottle_title": "bottle_reader"
+    "bottle_title": "bottle_reader",
+    "bottle_seat": {"_설명": "12장 다 모으면 숨은 자리 '해강의 자리' (CU13): 동네 저수지 물가 말뚝 옆 낡은 낚시 의자 · 받침 · 빈 병. 누르면 모은 편지를 차례로 다시 읽음 (외형 · 이야기만, 경제 영향 없음). 좌표 = 480x270 전경 기준", "spot": "reservoir", "x": 46, "y": 246}
   }
 }

@@ -1112,7 +1112,14 @@ class FishingScene(Scene):
             return False
         if self.catch_show is not None or self.board is not None or self.release_scene is not None:
             return False
-        from src.render import grandpa_marks
+        from src.render import bottle_seat, grandpa_marks
+        if bottle_seat.hit(self.save, self.spot_id, pos, self.touch):   # 해강의 자리: 모은 편지 다시 읽기 (CU13)
+            from src.save import bottles
+            from src.story.ui import PaperScene
+            self.sfx.play("st_paper", 0.5)
+            self.toasts.show("해강의 자리 — 편지를 다시 읽는다", (240, 220, 170), 2.0, 11)
+            self.game.scenes.push(PaperScene(self.game, bottles.body(bottle_seat.next_letter(self.save)), backdrop=self.draw))
+            return True
         if not grandpa_marks.hit(self.spot_id, pos, self.touch):
             return False
         res = grandpa_marks.find(self.save, self.spot_id, self.clock.day, self.season)
@@ -1538,6 +1545,7 @@ class FishingScene(Scene):
         self.toasts.show(f"유리병을 건졌다! ({len(bottles.collected(self.save))}/12)", (190, 225, 255), 2.6)
         if done:
             self.toasts.show("칭호 '유리병을 읽는 자'", (255, 214, 90), 3.0, 11)
+            self.toasts.show("동네 저수지 물가에 '해강의 자리'가 생겼다", (240, 220, 170), 3.4, 11)
         self.game.scenes.push(PaperScene(self.game, bottles.body(b), backdrop=self.draw))
         self.game.save_now()
 
@@ -3994,6 +4002,8 @@ class FishingScene(Scene):
         if self.training is None:
             from src.render import grandpa_marks
             grandpa_marks.draw(canvas, self.spot_id, pal)   # 할아버지의 흔적 'ㅎ' (DT11)
+            from src.render import bottle_seat
+            bottle_seat.draw(canvas, self.save, self.spot_id, pal)   # 유리병 12장 → 해강의 자리 (CU13)
         from src.render.rod import gear_look
         from src.save.quests import skin_colors
         rod_l = gear_look("rod", self.save.gear_tier("rod"))       # 티어별 외형 (gear_looks.json)
