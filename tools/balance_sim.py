@@ -67,43 +67,39 @@ def _responses(f) -> tuple[int, int]:
     return slots, slots + classic
 
 
-def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Random, probe: dict | None = None) -> dict:
-    """probe가 있으면 동시 대응 수·행동 횟수를 모은다 (U8 점검)."""
-    cast = rnd.uniform(24, 34)
-    size = round(fish["size_cm"][0] + (fish["size_cm"][1] - fish["size_cm"][0]) * rnd.betavariate(2, 2.4), 1)
-    g = spot.get("gimmick")
-    if g == "cycle":
-        g = rnd.choice(["tangle", "dark", "current", "heat"])
-    f = Fight(fish, size, cast, rnd.uniform(-0.15, 0.15), 0.0, gear=gear, rnd=random.Random(rnd.random()),
-              hazards=spot.get("hazards", []), gimmick=g, float_need=0, float_tier=0)
-    aim = 0.0
-    plan_jump = plan_leap = plan_turn = None
-    react_t = 0.0
-    seen_turn = -1
-    steps = 0
-    pat_seen_t = 0.0      # 신규 패턴 예고를 본 뒤 지난 시간 (반응 시간 뒤에 대응 시작)
-    pat_id = None
-    pat_skip = False      # 이번 패턴은 놓침 (실수)
-    tap_acc = turn_acc = 0.0
-    plan_thrash = [None, None]
-    plan_bite = None
-    fake_fooled = None
-    while f.phase in ("fight", "net") and steps < 60 * 400:
+class BotPlayer:
+    """봇의 손 한 틱 (bot_fight 와 낚시 화면 봇 검증 tools/boss_arena_bot.py 가 같이 씀 — 난수를 쓰는 순서도 그대로).
+    act(f) → (감기, 낚싯대 방향, 패턴 입력). 뜰채 단계면 (False, 0.0, None)."""
+
+    def __init__(self, skill: dict, rnd: random.Random):
+        self.skill, self.rnd = skill, rnd
+        self.aim = 0.0
+        self.plan_jump = self.plan_leap = self.plan_turn = None
+        self.react_t = 0.0
+        self.seen_turn = -1
+        self.pat_seen_t = 0.0      # 신규 패턴 예고를 본 뒤 지난 시간 (반응 시간 뒤에 대응 시작)
+        self.pat_id = None
+        self.pat_skip = False      # 이번 패턴은 놓침 (실수)
+        self.tap_acc = self.turn_acc = 0.0
+        self.plan_thrash = [None, None]
+        self.plan_bite = None
+        self.fake_fooled = None
+
+    def act(self, f) -> tuple:
+        skill, rnd = self.skill, self.rnd
         b = f.brain
-        steps += 1
         if f.phase == "net":
             pose, still = f.net_pose()
             if still and rnd.random() < 0.08:  # 반응 지연
                 f.net_click()
-            f.update(DT, False, 0.0)
-            continue
+            return False, 0.0, None
         # 드랙: 돌진 예고를 반응 시간 뒤에 알아챔
         if b.signal == "rush" or b.state == "rush":
-            react_t += DT
-            if react_t >= skill["react"] or b.state == "rush":
+            self.react_t += DT
+            if self.react_t >= skill["react"] or b.state == "rush":
                 f.drag = 1 if f.drag_steps <= 6 else 2
         else:
-            react_t = 0.0
+            self.react_t = 0.0
             f.drag = f.drag_steps if b.is_calm else max(1, f.drag_steps // 2)
         # 감기: 초록 위쪽 끝 바로 아래까지 / 울렁이는 물고기가 날뛸 땐 초록 가운데를 노린다 (좋은 플레이어처럼)
         edge = f.green_high - 3 - (2 if skill is SKILLS["average"] else 0)
@@ -113,54 +109,54 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
         # 낚싯대: 물고기 반대쪽 (위협 구역·기믹 쪽이면 더 세게)
         target = -f.fish_side() * 0.9
         cur = b.pending if b.state == "telegraph" else b.state
-        if not (cur == "shake" and pat_id == "shake" and pat_seen_t >= skill["react"] and not pat_skip):
-            aim += (target - aim) * 0.08  # 머리 흔들기 대응 중엔 손을 멈춘다
+        if not (cur == "shake" and self.pat_id == "shake" and self.pat_seen_t >= skill["react"] and not self.pat_skip):
+            self.aim += (target - self.aim) * 0.08  # 머리 흔들기 대응 중엔 손을 멈춘다
         # 공중 몸부림: 정점 + 착수 직전
         if b.state == "jump" and b.jump_kind == "thrash" and not b.jump_judged:
             i = 0 if not b.thrash_judged[0] else 1
-            if plan_thrash[i] is None:
-                plan_thrash[i] = "skip" if rnd.random() < skill["miss_jump"] else rnd.gauss(0, skill["sigma"])
+            if self.plan_thrash[i] is None:
+                self.plan_thrash[i] = "skip" if rnd.random() < skill["miss_jump"] else rnd.gauss(0, skill["sigma"])
             tt = b.time_to_apex() if i == 0 else b.time_to_second()
-            if plan_thrash[i] != "skip" and tt <= plan_thrash[i]:
+            if self.plan_thrash[i] != "skip" and tt <= self.plan_thrash[i]:
                 f.dip()
         else:
-            plan_thrash = [None, None]
+            self.plan_thrash = [None, None]
         # 점프(우클릭)
         if b.state == "jump" and b.jump_kind == "dip" and not b.jump_judged:
-            if plan_jump is None:
-                plan_jump = None if rnd.random() < skill["miss_jump"] else rnd.gauss(0, skill["sigma"])
-            if plan_jump is not None and b.time_to_apex() <= plan_jump:
+            if self.plan_jump is None:
+                self.plan_jump = None if rnd.random() < skill["miss_jump"] else rnd.gauss(0, skill["sigma"])
+            if self.plan_jump is not None and b.time_to_apex() <= self.plan_jump:
                 f.dip()
         else:
-            plan_jump = None
+            self.plan_jump = None
         # 몸털기(슬라이드)
         if b.state == "jump" and b.jump_kind == "swipe" and not b.jump_judged:
-            if plan_leap is None:
-                plan_leap = None if rnd.random() < skill["miss_jump"] else rnd.gauss(0, skill["sigma"])
-            if plan_leap is not None and b.time_to_apex() <= plan_leap:
+            if self.plan_leap is None:
+                self.plan_leap = None if rnd.random() < skill["miss_jump"] else rnd.gauss(0, skill["sigma"])
+            if self.plan_leap is not None and b.time_to_apex() <= self.plan_leap:
                 f.flick(-b.leap_dir)
         else:
-            plan_leap = None
+            self.plan_leap = None
         # 방향 전환 꺾기
         off = b.turn_offset()
-        if off is not None and b.turn_count != seen_turn:
-            if plan_turn is None:
-                plan_turn = rnd.gauss(0, skill["turn_sigma"])
-            if off >= plan_turn:
+        if off is not None and b.turn_count != self.seen_turn:
+            if self.plan_turn is None:
+                self.plan_turn = rnd.gauss(0, skill["turn_sigma"])
+            if off >= self.plan_turn:
                 f.flick(-b.turn_dir)
-                seen_turn = b.turn_count
-                plan_turn = None
+                self.seen_turn = b.turn_count
+                self.plan_turn = None
         # 신규 패턴 (U3): 예고를 보고 반응 시간 뒤부터 대응
         inp = PatternInput()
         st = b.pending if b.state == "telegraph" else b.state
         if st in PATTERN_IDS or st == "dual":
-            if st != pat_id:
-                pat_id, pat_seen_t = st, 0.0
-                pat_skip = rnd.random() < skill["miss_pattern"]
-            pat_seen_t += DT
+            if st != self.pat_id:
+                self.pat_id, self.pat_seen_t = st, 0.0
+                self.pat_skip = rnd.random() < skill["miss_pattern"]
+            self.pat_seen_t += DT
         else:
-            pat_id = None
-        ready = pat_id is not None and pat_seen_t >= skill["react"] and not pat_skip
+            self.pat_id = None
+        ready = self.pat_id is not None and self.pat_seen_t >= skill["react"] and not self.pat_skip
 
         def on(pid):
             return ready and (b.doing(pid) or b.telegraphing(pid))
@@ -171,9 +167,9 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
         if on("surface"):
             inp.pitch = -1.0
         if on("reverse"):
-            tap_acc += skill["taps"] * DT
-            if tap_acc >= 1:
-                inp.taps, tap_acc = 1, tap_acc - 1
+            self.tap_acc += skill["taps"] * DT
+            if self.tap_acc >= 1:
+                inp.taps, self.tap_acc = 1, self.tap_acc - 1
         if on("hide"):
             j = f._judge("hide")
             reeling = bool(j and j.active and j.peeking and j.peek_t < j.c["peek_sec"] - skill["react"] * 0.6)
@@ -186,24 +182,45 @@ def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Rando
                 err = rnd.gauss(0, skill["beat_sigma"])
                 reeling = abs(ph - j.interval / 2 - err) < 0.06
         if b.telegraphing("bite") or b.doing("bite"):
-            if plan_bite is None:
-                plan_bite = "skip" if rnd.random() < skill["miss_pattern"] else rnd.gauss(0, skill["sigma"] * 1.5)
+            if self.plan_bite is None:
+                self.plan_bite = "skip" if rnd.random() < skill["miss_pattern"] else rnd.gauss(0, skill["sigma"] * 1.5)
             rem = b.timer if b.state == "telegraph" else -b.state_t
-            inp.drag_min = plan_bite != "skip" and rem <= plan_bite
+            inp.drag_min = self.plan_bite != "skip" and rem <= self.plan_bite
         else:
-            plan_bite = None
+            self.plan_bite = None
         if b.state == "fake_tired":
-            if fake_fooled is None:
-                fake_fooled = rnd.random() > skill["see_fake"]
-            if not fake_fooled:
+            if self.fake_fooled is None:
+                self.fake_fooled = rnd.random() > skill["see_fake"]
+            if not self.fake_fooled:
                 reeling = False
         else:
-            fake_fooled = None
-        if (f.twist.value > 0 or st == "twist" or b.doing("twist")) and not (pat_skip and pat_id in ("twist", "dual")):
-            if not (st in ("twist", "dual") or b.telegraphing("twist")) or pat_seen_t >= skill["react"]:
-                turn_acc += skill["turns"] * DT
-                if turn_acc >= 1:
-                    inp.turns, turn_acc = 1, turn_acc - 1
+            self.fake_fooled = None
+        if (f.twist.value > 0 or st == "twist" or b.doing("twist")) and not (self.pat_skip and self.pat_id in ("twist", "dual")):
+            if not (st in ("twist", "dual") or b.telegraphing("twist")) or self.pat_seen_t >= skill["react"]:
+                self.turn_acc += skill["turns"] * DT
+                if self.turn_acc >= 1:
+                    inp.turns, self.turn_acc = 1, self.turn_acc - 1
+        return reeling, self.aim, inp
+
+
+def bot_fight(fish: dict, spot: dict, gear: dict, skill: dict, rnd: random.Random, probe: dict | None = None) -> dict:
+    """probe가 있으면 동시 대응 수·행동 횟수를 모은다 (U8 점검)."""
+    cast = rnd.uniform(24, 34)
+    size = round(fish["size_cm"][0] + (fish["size_cm"][1] - fish["size_cm"][0]) * rnd.betavariate(2, 2.4), 1)
+    g = spot.get("gimmick")
+    if g == "cycle":
+        g = rnd.choice(["tangle", "dark", "current", "heat"])
+    f = Fight(fish, size, cast, rnd.uniform(-0.15, 0.15), 0.0, gear=gear, rnd=random.Random(rnd.random()),
+              hazards=spot.get("hazards", []), gimmick=g, float_need=0, float_tier=0)
+    bot = BotPlayer(skill, rnd)
+    steps = 0
+    while f.phase in ("fight", "net") and steps < 60 * 400:
+        steps += 1
+        if f.phase == "net":
+            bot.act(f)
+            f.update(DT, False, 0.0)
+            continue
+        reeling, aim, inp = bot.act(f)
         f.update(DT, reeling, aim, inp)
         if probe is not None:
             a, b2 = _responses(f)

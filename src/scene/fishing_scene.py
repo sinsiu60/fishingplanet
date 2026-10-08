@@ -247,6 +247,7 @@ class FishingScene(Scene):
                                         lambda: self.save.data.get("pattern_mastery", {}) if self.save else None,  # 신호 6계열 (S5, 모드 N2)
                                         boss=lambda fight: self.arena.active and self.arena.end_t is None,   # 보스 예고음 (51-3)
                                         on_hit=lambda kind: self._arena_event(kind) if self.arena.active else None)
+        self.signal_audio.accent = self._boss_accent   # 보스별 악센트 (BA4)
         self.cast_far = self.fish_cfg["cast"]["max_distance"]  # 소리 거리 감쇠 기준
         self.cast_loops: dict[str, str | None] = {"charge": None, "line": None}
         self.captions = None     # [글자, 남은 시간] 소리 자막
@@ -4051,6 +4052,25 @@ class FishingScene(Scene):
             self.arena.draw_card(canvas)   # 이름 카드 → 위로 올라가 체력 바가 됨
         else:
             fight_hud.draw_boss_bar(canvas, pal, f)
+
+    def _boss_accent(self) -> None:
+        """보스별 악센트 (BOSS_ARENA 🅱-3): 행동 순간('쾅' · '챙')에만 테마 소리 한 겹 0.35 — 기존 소리 재사용 우선."""
+        from src.render.boss_arena import cfg as arena_cfg
+        e = self.arena.e if self.arena.active else None
+        key = e.get("accent") if e else None
+        if not key or not self.settings.get("signal_sound"):
+            return
+        snd = arena_cfg()["sound"]
+        name = snd["accents"].get(key)
+        if not name:
+            return
+        vol = snd["accent_vol"]
+        self.signal_audio.log.append((round(self.signal_audio.clock, 4), "accent:" + key))
+        if name.startswith("theme:"):
+            _, theme, short = name.split(":")
+            theme_sfx.play(self.sfx, theme, short, vol)
+        else:
+            self.sfx.play(name, vol)
 
     def _arena_event(self, ev: str) -> None:
         """큰 행동 순간 임팩트 (🅰-4): 히트스톱 · 흔들림 · 충격파 · (강도 3) 색 갈라짐 · (착수 · 페이즈) 번쩍임."""

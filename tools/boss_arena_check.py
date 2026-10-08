@@ -139,6 +139,16 @@ def shots(g):
     check(sc.arena.crisis_k > 0.5, "위기 덧씌움")
     shot(g, "crisis_golden_carp")
     sc._end_fight()
+    # 화면 효과 줄이기 (BA4): 색 · 비네트 · 띠 · 이름 카드만
+    g.settings.set("reduce_fx", True)
+    sc = start(g, "golden_carp")
+    step(g, sc, 2.5)
+    to_level3(g, sc)
+    step(g, sc, 1.2)
+    check(not sc.arena.parts and sc.arena.shake_offset() == (0, 0), "줄이기 강도 3: 파티클 · 흔들림 없음")
+    shot(g, "reduce_golden_carp_3")
+    sc._end_fight()
+    g.settings.set("reduce_fx", False)
     # 일반 파이팅: 무대 없음
     sc = start(g, "lenok")
     step(g, sc, 1.0)

@@ -41,6 +41,7 @@ class SignalAudio:
         self.sfx = sfx
         self.boss = boss           # 이 파이팅이 보스전(전설 · 환상 무대)인가
         self.on_hit = on_hit       # 보스 '챙'(정점) 순간 장면에 알림 → 같은 틱 임팩트
+        self.accent = None         # 보스별 악센트 (BA4): '쾅' · '챙' 순간 장면이 테마 소리 한 겹
         self.log: list = []        # (게임 시각, 이름) — 보스 소리 · 임팩트 같은 틱 확인용 (tools/boss_signal_set.py)
         self.clock = 0.0
         self.sound_on = sound_on   # 접근성 '소리 신호' 끄면 소리 없이 진동만
@@ -201,6 +202,8 @@ class SignalAudio:
         """보스 '쾅!' (돌진은 장면 _rush_audio 가 행동 순간에 부름). 보스 곡 −5dB 0.2초."""
         self._bplay("sig_boss_release_go", haptic="bite")
         self.boss_duck("action")
+        if self.accent:
+            self.accent()
 
     def on_event(self, ev: str) -> None:
         """행동 시작(action:<a>) — 아직 '쉬익'을 안 냈으면 지금."""
@@ -279,6 +282,8 @@ class SignalAudio:
             if boss:   # '챙!' + 보스 곡 −5dB + 같은 틱 화면 임팩트
                 self._bplay("sig_boss_timing_apex")
                 self.boss_duck("action")
+                if self.accent:
+                    self.accent()
                 self._aux(c, "timing")
                 if self.on_hit:
                     self.on_hit("apex")

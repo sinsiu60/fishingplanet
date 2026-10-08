@@ -141,6 +141,7 @@ class BossArena:
         self.horizon = self.h // 2
         self.fish_pos = None
         self.flashes = 0            # 기록 (깜빡임 횟수 로그)
+        self.flash_times: list = []  # 번쩍임 시각 (무대 시계) — 3초에 1번 검사
 
     # ───────────────────────── 수명 ─────────────────────────
     def start(self, fish: dict) -> bool:
@@ -371,6 +372,7 @@ class BossArena:
             self.flash_t = 1e-3 + 1 / 60   # 1프레임
             self.last_flash = self.t
             self.flashes += 1
+            self.flash_times.append(round(self.t, 3))
         return {"hitstop": 0.0 if kind in ic.get("no_hitstop", ()) else ic["hitstop"]}
 
     def parry(self, pos=None) -> None:

@@ -82,6 +82,21 @@ def checks():
     imps = {t for t, n in alllog if n.startswith("impact:")}
     same = sum(1 for t, _ in hits if t in imps)
     check(hits and same == len(hits), f"'쾅' · '챙' {len(hits)}번 중 같은 틱 화면 임팩트 {same}번")
+    # 보스별 악센트 (BA4): '쾅' · '챙' 순간에만, 0.35
+    from src.render.boss_arena import cfg as acfg
+    acc = acfg()["sound"]
+    for fid, want in (("silver_bass", "sfx_accent_scratch"), ("dragon_carp", "sfx_accent_roar"), ("ignis", "sfx_accent_fire"),
+                      ("borealis", "sfx_accent_ice"), ("orsiel", "sfx_accent_wave"), ("marlin", "sfx_ilseom_jing"),
+                      ("golden_carp", None)):
+        played, log, _ = run_fight(g, fid, 30.0)
+        gos = [t for t, n in log if n in ("sig_boss_release_go", "sig_boss_timing_apex")]
+        accs = [t for t, n in log if n.startswith("accent:")]
+        names = [n for _, n in played if n.startswith(("sfx_accent_", "sfx_ilseom_jing"))]
+        if want is None:
+            check(not accs and not names, f"{fid}: 악센트 없음 (공통 세트만)")
+        else:
+            check(gos and accs == gos and set(names) <= {want} and len(names) == len(gos),
+                  f"{fid}: '쾅' · '챙' {len(gos)}번 = 악센트 {len(accs)}번 ({want}, {acc['accent_vol']})")
     # 일반 파이팅
     played, _, ducks = run_fight(g, "lenok", 30.0)
     check(not any(n.startswith("sig_boss_") for _, n in played) and min(ducks) == 0.0,
