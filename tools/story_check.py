@@ -22,6 +22,13 @@ NAMES = ("scenes", "journal", "phone", "goals", "letters", "chapters")
 BASE = sys.argv[1] if len(sys.argv) > 1 else "add4f6e"
 # 기준 커밋 뒤 사용자가 승인한 해금 조건 변경 (낚시터, 키): (전, 후)
 APPROVED_UNLOCK = {("deep", "s_total"): (15, 5), ("world_tree", "s_eldra"): (30, 10)}   # 랭크 개편 (DESIGN 49-2)
+APPROVED_PRICE = {"data/equipment.json": {   # CU8 진행 구조 T5~T8 장비 값 (DESIGN 52-7)
+    f".{slot}[{gid}].price": v for slot, row in {
+        "rod": {"master_rod": 17000, "crystal_rod": 192000, "nebula_rod": 204000, "abyss_rod": 840000},
+        "reel": {"artisan_reel": 19000, "crystal_reel": 216000, "nebula_reel": 230000, "abyss_reel": 940000},
+        "line": {"silk": 17500, "crystal_line": 200000, "nebula_line": 212000, "abyss_line": 875000},
+        "net": {"mithril_net": 17000, "crystal_net": 192000, "nebula_net": 204000, "abyss_net": 845000},
+    }.items() for gid, v in row.items()}}
 errors: list[str] = []
 
 
@@ -146,7 +153,7 @@ def check_unchanged() -> None:
     for p in ("data/equipment.json", "data/baits.json", "data/floats.json", "data/lure.json", "data/spots.json",
               "data/continents.json", "data/fish.json"):
         old, new = js(p)
-        if old is not None and prices(old, {}) != prices(new, {}):
+        if old is not None and {**prices(old, {}), **APPROVED_PRICE.get(p, {})} != prices(new, {}):
             errors.append(f"[안 바뀜] 가격이 바뀌었다 ({p})")
 
     def strings(path):

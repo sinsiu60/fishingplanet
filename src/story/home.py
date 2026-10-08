@@ -38,7 +38,9 @@ class HomeScene(InteriorScene):
         from src.render import interior as ir
         from src.render import village_life as vl
         if vl.affection(self.save) < vl.cfg()["cat"]["sleep_home_at"]:
-            return super().draw_room(canvas, px)
+            g = super().draw_room(canvas, px)
+            self._draw_cups(canvas, g)
+            return g
         g = self._geom(canvas)
         env = self.env(g["w"], g["top_h"])
         canvas.fill((0, 0, 0))
@@ -51,7 +53,23 @@ class HomeScene(InteriorScene):
         z = (self.t * 0.6) % 1.0   # z z
         text(canvas, "z", (cx + 96 - int(z * 6), by + 150 - int(z * 14)), tuple(int(v * (1 - z)) for v in (240, 236, 220)), 11, "center")
         ir.draw_light(canvas, self.nc["bg"], env)
+        self._draw_cups(canvas, g)
         return g
+
+    def _draw_cups(self, canvas, g: dict) -> None:
+        """주간 대회 트로피 (CU12): 벽 선반에 금 · 은 · 동 컵 (최근 6개)."""
+        from src.save import events_cal
+        tro = events_cal.st(self.save).get("trophies", [])[-6:]
+        if not tro:
+            return
+        x0, y0 = g["cx"] - 150, g["top_h"] - 178
+        canvas.fill((110, 80, 50), (x0 - 4, y0 + 14, 14 * len(tro) + 6, 3))   # 선반
+        for i, t in enumerate(tro):
+            col = ((255, 214, 90), (210, 214, 224), (205, 140, 90))[t["rank"] - 1]
+            x = x0 + i * 14
+            pygame.draw.polygon(canvas, col, [(x, y0), (x + 8, y0), (x + 6, y0 + 7), (x + 2, y0 + 7)])
+            canvas.fill(col, (x + 3, y0 + 7, 2, 4))
+            canvas.fill(col, (x + 1, y0 + 11, 6, 2))
 
     def _choose(self, item: str) -> None:
         self.game.sfx.play("ui_click")

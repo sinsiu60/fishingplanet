@@ -172,6 +172,7 @@ class CalendarScene(Scene):
         text(canvas, "달력", (14, 16), ui.ACCENT, 16, "midleft")
         text(canvas, f"지금 {f.clock.label()} · {f.clock.day}일째", (GRID.right, 16), ui.DIM, 11, "midright")
         self._draw_days(canvas)
+        self._draw_fest_band(canvas)
         self._draw_key(canvas)
         self._draw_detail(canvas)
         self.close_btn.draw(canvas, self.mouse)
@@ -203,11 +204,29 @@ class CalendarScene(Scene):
                 canvas.fill(GOLD, (r.right - 6, r.y + 3, 3, 3))
             if s["event"]:
                 canvas.fill((200, 170, 255), (r.right - 6, r.y + 8, 3, 2))
+            from src.save import events_cal
+            if events_cal.merchant_here(day):   # 떠돌이 상인이 오는 날 (CU12): 등롱 색 작은 점 2개
+                canvas.fill((220, 70, 60), (r.x + 3, r.y + 34, 3, 3))
+                canvas.fill((255, 214, 90), (r.x + 4, r.y + 32, 1, 2))
             pygame.draw.rect(canvas, ui.ACCENT if sel else ((255, 255, 255) if k == 0 else (60, 68, 96)), r, 1)
+
+    def _draw_fest_band(self, canvas) -> None:
+        """계절 축제 띠 (CU12): 실제 날짜로 14일 안에 열리는 축제 — 날짜 칸 아래 한 줄 + 상인 표시 설명."""
+        from src.save import events_cal
+        nf = events_cal.next_festival(14)
+        y = GRID.bottom + 2
+        if nf:
+            k, f, d0 = nf
+            on = events_cal.festival() is not None
+            band = pygame.Rect(GRID.x, y, GRID.w, 12)
+            canvas.fill(tuple(int(c * (0.55 if on else 0.3)) for c in f["color"]), band)
+            label = f"{f['name']} {'진행 중' if on else f'{d0.month}/{d0.day}부터'} (실제 날짜 {f['from'].replace('-', '/')}~{f['to'].replace('-', '/')})"
+            text(canvas, label, band.center, (255, 250, 240), 11, "center")
 
     def _draw_key(self, canvas) -> None:
         bars = fc.cfg()["bar_colors"]
-        x, y = GRID.x, GRID.bottom + 12
+        from src.save import events_cal
+        x, y = GRID.x, GRID.bottom + (21 if events_cal.next_festival(14) else 12)   # 축제 띠가 있으면 한 줄 아래 (CU12)
         text(canvas, "막대 = 아침 · 낮 · 저녁 · 밤", (x, y), ui.DIM, 11, "midleft")
         y += 14
         for w in ("clear", "rain", "storm", "fog"):
@@ -220,7 +239,10 @@ class CalendarScene(Scene):
         y += 14
         canvas.fill((200, 170, 255), (x + 1, y - 1, 3, 2))
         text(canvas, "특별한 날씨가 올지도", (x + 9, y), ui.DIM, 11, "midleft")
-        y += 18
+        y += 14
+        canvas.fill((220, 70, 60), (x + 1, y - 1, 3, 3))
+        text(canvas, "떠돌이 상인이 오는 날 (윤슬 마을)", (x + 9, y), ui.DIM, 11, "midleft")
+        y += 16
         text(canvas, "칸을 눌러 그 시각까지 쉬어 가요", (GRID.x, y), (170, 200, 240), 11, "midleft")
 
     def _draw_detail(self, canvas) -> None:

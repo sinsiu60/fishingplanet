@@ -112,10 +112,76 @@ class VillageScene(Scene):
             self.ox = max(0, self.cfg["npcs"][self.bubble["npc"]]["x"] - game.screen.canvas.get_width() // 2)
         if gr["gift"]:
             self.life_msg = (date_events.cfg()["birthday"]["gift_line"], 5.0, (255, 200, 220))
+        self._cal_init()   # 기다려지는 것 (CU12): 축제 · 떠돌이 상인 · 오렌의 도전장 · 주간 대회 결과
         game.guide.flags["season_changed"] = self.season_changed   # 아직 장면 스택에 올라가기 전이라 직접 알려 줌
         game.guide.event("village_enter")   # 가이드 TG-15 (계절이 바뀐 뒤 처음)
         if self.cat is not None and self.cat.greet > 0:   # 마중: 지금 보는 자리 가장자리에서 달려옴
             self.cat.x = clamp(self.ox + game.screen.canvas.get_width() / 2 + 90, 20, self.width - 20)
+
+    # ── 기다려지는 것 (CU12) ──
+    def _cal_init(self) -> None:
+        from src.save import events_cal as ec
+        from src.save.save_game import fish_by_id
+        day = int(self.save.data.get("day", 1))
+        self.cal_msgs: list = []
+        self.fest = ec.festival()
+        got = ec.festival_visit(self.save)
+        if got:
+            f = got[1]
+            self.cal_msgs.append((f"{f['name']} 주간! 축제 선물: '{ec.skin_name(f['skin'])}' · 칭호 '{ec.title_name(f['title'])}'",
+                                  tuple(f["color"])))
+        elif self.fest:
+            self.cal_msgs.append((f"{self.fest[1]['name']} 주간이에요", tuple(self.fest[1]["color"])))
+        for line in ec.weekly_settle(self.save) + ec.st(self.save).pop("pending_settle", []):
+            self.cal_msgs.append((line, (255, 214, 90)))
+        self.merchant = ec.merchant(self.save, day) if self.cont == "sharmion" else None
+        if self.merchant is not None:
+            left = ec.order_left(self.save, day, self.merchant["fish"])
+            self.cal_msgs.append((f"떠돌이 상인이 왔다! 오늘은 {fish_by_id(self.merchant['fish'])['name']}를 두 배 값에"
+                                  + (f" ({left}마리까지)" if left else " (오늘 주문 끝)"), (255, 200, 140)))
+        if self.cont == "eldrasion" and "oren" in self.cfg["npcs"]:
+            o = ec.oren(self.save)
+            if o is not None and o.get("react"):   # 넘었다: 오렌 반응 (다음에 들어올 때)
+                o["react"] = False
+                self.bubble_queue.insert(0, {"npc": "oren", "lines": [ec.oren_line(self.save, "react")], "i": 0, "t": 0.0,
+                                             "face": ec.cfg()["oren"]["react_face"]})
+            else:
+                new = o is None or o.get("done")
+                o = ec.oren_offer(self.save, day, self.rnd)
+                if o is not None and not o.get("done"):
+                    self.bubble_queue.append({"npc": "oren", "lines": [ec.oren_line(self.save, "offer" if new else "remind")],
+                                              "i": 0, "t": 0.0})
+            if self.bubble is None and self.bubble_queue:
+                self.bubble = self.bubble_queue.pop(0)
+                self.ox = max(0, self.cfg["npcs"][self.bubble["npc"]]["x"] - self.game.screen.canvas.get_width() // 2)
+        if self.life_msg is None and self.cal_msgs:
+            m, col = self.cal_msgs.pop(0)
+            self.life_msg = (m, 5.0, col)
+
+    def _merchant_open(self) -> None:
+        """떠돌이 상인: 그날 희귀 외형 하나 (소장 안 한 것) + 특별 주문 안내."""
+        from src.save import events_cal as ec
+        from src.save.save_game import fish_by_id
+        from src.scene.confirm import ConfirmScene
+        day = int(self.save.data.get("day", 1))
+        m = ec.merchant(self.save, day)
+        if m is None:
+            return
+        order = f"오늘은 {fish_by_id(m['fish'])['name']}를 두 배 값에 ({ec.order_left(self.save, day, m['fish'])}마리 남음)"
+        if not m["skin"] or m["bought"]:
+            self.life_msg = (f"떠돌이 상인: \"{order}. 다음 장날에 또 오지.\"", 4.0, (255, 200, 140))
+            return
+        price = ec.cfg()["merchant"]["skin_price"]
+
+        def yes():
+            r = ec.buy_skin(self.save, day)
+            self.life_msg = ({"ok": f"'{ec.skin_name(m['skin'])}' 을(를) 샀다 (가방 → 외형)", "money": "돈이 모자라요"}.get(r, ""),
+                             3.5, (140, 240, 150) if r == "ok" else (255, 140, 120))
+            if r == "ok":
+                self.game.sfx.play("ui_buy")
+                self.game.save_now()
+        self.game.scenes.push(ConfirmScene(self.game, f"떠돌이 상인: '{ec.skin_name(m['skin'])}' {price:,}원 — 살래요?\n{order}",
+                                           yes, yes="산다", no="구경만"))
 
     def tut_cond(self, name: str):
         if name == "season_changed":
@@ -142,6 +208,9 @@ class VillageScene(Scene):
 
     def _act(self, kind: str, pid: str) -> None:
         self.game.sfx.play("ui_click")
+        if kind == "merchant":
+            self._merchant_open()
+            return
         if kind == "npc":
             if pid in self.INTERIOR:
                 self.enter(pid)
@@ -399,7 +468,7 @@ class VillageScene(Scene):
         self.particles.update(dt, self.season, self.cont, self.game.screen.canvas.get_width(), self.game.screen.canvas.get_height(),
                               f.clock.period()[0], f.weather, mobile=self.game.input.kind == "touch")
         self.game.adaptive.set_context(self.cont, None)
-        self.game.adaptive.set("menu")
+        self.game.adaptive.set("menu", intensity=1.0 if getattr(self, "fest", None) else 0.0)   # 축제 주간: 타악 층 (CU12)
         self.mouse = self.game.input.pointer
         held = pygame.mouse.get_pressed()[0] if self.game.input.kind != "touch" else bool(getattr(self.game.input, "fingers", None))
         if self.press is not None and held:
@@ -423,6 +492,9 @@ class VillageScene(Scene):
         if self.life_msg is not None:
             m, left, col = self.life_msg
             self.life_msg = (m, left - dt, col) if left - dt > 0 else None
+        elif getattr(self, "cal_msgs", None):
+            m, col = self.cal_msgs.pop(0)
+            self.life_msg = (m, 5.0, col)
         if self.siwoo_door is not None:
             self.siwoo_door -= dt
             if self.siwoo_door <= 0:
@@ -508,6 +580,9 @@ class VillageScene(Scene):
         draw_village_decor(canvas, self.cfg["places"], ox, self.season, night, self.t, vr.GROUND)   # 계절 장식
         if "christmas" in ev:   # 크리스마스: 처마 전구 (DT11)
             date_events.draw_bulbs(canvas, self.cfg["places"], ox, w, self.t, vr.GROUND, night)
+        from src.render import festival_fx
+        if getattr(self, "fest", None):   # 계절 축제 장식 (CU12)
+            festival_fx.draw_festival(canvas, self.fest[1]["decor"], self.cfg["places"], ox, w, self.t, night, vr.GROUND, vr.HORIZON)
         vr.draw_lamps(canvas, ox, w, style, night, self.t, self.width)
         for nid, n in self.cfg["npcs"].items():
             sx = n["x"] - ox
@@ -515,6 +590,12 @@ class VillageScene(Scene):
                 r = vr.draw_npc(canvas, sx, n, self.t, self.season, self.hover == ("npc", nid), night,
                                 rain=wet and self.cont in lc["rain"]["umbrella_villages"])
                 hits.append(("npc", nid, r))
+        if getattr(self, "merchant", None) is not None:   # 떠돌이 상인 (CU12)
+            from src.save import events_cal as _ec
+            mx = _ec.cfg()["merchant"]["x"] - ox
+            if -40 < mx < w + 40:
+                hits.append(("merchant", "merchant", festival_fx.draw_merchant(canvas, mx, vr.FEET, self.t, night,
+                                                                             self.hover == ("merchant", "merchant"))))
         if self.cat is not None:
             self.cat.draw(canvas, ox, vr.FEET + 8, night)
         if style == "stone":

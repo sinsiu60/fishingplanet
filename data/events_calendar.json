@@ -1,0 +1,36 @@
+{
+ "_설명": "기다려지는 것 (CORE_UPDATE CU12). 확률 · 판매에 영향 없는 것(외형 · 칭호 · 대사) 위주 — 떠돌이 상인 특별 주문만 소액. 축제 · 주간 대회는 기기 실제 날짜(date_events.today), 상인 · 오렌은 게임 날짜.",
+ "festivals": {
+  "_설명": "실제 날짜 MM-DD 범위 (계절마다 1주). 마을 장식 · 축제 소리 · 그해 처음 마을에 오면 축제 찌 + 칭호 (외형만) · 달력 위 축제 띠",
+  "spring": {"name": "벚꽃 등불 축제", "from": "04-04", "to": "04-10", "decor": "lantern", "color": [255, 176, 200], "skin": "fest_spring_float", "title": "fest_spring"},
+  "summer": {"name": "여름 불꽃놀이", "from": "07-25", "to": "07-31", "decor": "fireworks", "color": [255, 214, 90], "skin": "fest_summer_float", "title": "fest_summer"},
+  "autumn": {"name": "가을 단풍 장터", "from": "10-05", "to": "10-11", "decor": "maple", "color": [230, 110, 50], "skin": "fest_autumn_float", "title": "fest_autumn"},
+  "winter": {"name": "겨울 얼음낚시 축제", "from": "01-10", "to": "01-16", "decor": "ice", "color": [170, 220, 255], "skin": "fest_winter_float", "title": "fest_winter"}
+ },
+ "merchant": {
+  "_설명": "게임 날짜 7일마다 하루 (day % every == offset) 윤슬 마을 선착장 옆에 떠돌이 상인. 희귀 외형 1종 (그날 하나, 소장 안 한 것) + 특별 주문 '오늘은 ○○를 두 배 값에' (그 마을 대륙 일반 · 고급 한 종, 3마리까지, 하루 상점 판매에서)",
+  "every_days": 7,
+  "offset": 3,
+  "x": 255,
+  "order_mult": 2.0,
+  "order_max": 3,
+  "skin_price": 12000,
+  "skins": ["merchant_lantern_float", "merchant_shell_float", "merchant_star_float"]
+ },
+ "oren": {
+  "_설명": "엘드라시온 오렌의 도전장: 그 마을에 들어올 때 게임 날짜당 한 번 chance 로 — 플레이어가 잡아 본 엘드라시온 일반 · 고급 · 희귀 중 하나, 크기 = 그 종 최대 크기 × size_k (도전장 하나만, 넘을 때까지 유지). 넘으면 결과 배지 · 오렌 반응 대사(다음에 말 걸 때) · 처음엔 칭호",
+  "chance": 0.5,
+  "size_k": [0.82, 0.95],
+  "title": "oren_rival",
+  "offer": "내가 잡은 {fish} {size}cm, 넘어 볼래?",
+  "remind": "아직이야? {fish} {size}cm. 기다리고 있을게.",
+  "react": ["…{size}cm? 하, 내 기록을 넘었네. 다음엔 안 져.", "흥, 운이 좋았던 거야. …그래도 멋졌어."],
+  "react_face": "surprised"
+ },
+ "weekly": {
+  "_설명": "주간 대회 (실제 ISO 주): 그 주의 종 하나 (윤슬 대륙 낚시터 일반 · 고급 중 주 번호로 고정), 가장 큰 크기로 NPC 기록과 겨룸 → 다음 주 처음 들어올 때 1~3등 칭호 · 집에 거는 트로피 (경제 영향 없음). NPC 기록 = 그 종 최대 크기 × k",
+  "npcs": [["하루", 0.97], ["소라", 0.91], ["백 노인", 0.85]],
+  "titles": ["weekly_cup_1", "weekly_cup_2", "weekly_cup_3"],
+  "pool_spots": ["reservoir", "valley", "breakwater", "offshore"]
+ }
+}

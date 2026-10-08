@@ -345,6 +345,11 @@ def catch_badges(news: dict | None) -> list:
     if news.get("excited"):   # 들뜬 물고기 (CU9) — 판매가 × core.json variety.excited_price
         k = load_json("core.json")["variety"]["excited_price"]
         badges.append((f"들뜬 녀석! 판매가 ×{k:g}", (255, 170, 120)))
+    if news.get("oren"):      # 오렌의 도전장 (CU12)
+        badges.append((f"오렌의 도전장 달성! {news['oren']['size']:g}cm", (190, 170, 255)))
+    if news.get("weekly"):    # 주간 대회 (CU12)
+        rk = news["weekly"].get("rank")
+        badges.append((f"주간 대회 기록 {news['weekly']['size']:g}cm" + (f" · 지금 {rk}등" if rk else ""), (255, 214, 90)))
     if news.get("stray"):     # 길을 잃은 손님 (CU9) — 다른 낚시터 물고기
         badges.append(("길을 잃은 손님", (170, 210, 255)))
     if news.get("first_bonus"):   # 첫 만남 보너스 (CU8-④)

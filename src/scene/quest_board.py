@@ -28,7 +28,7 @@ class QuestBoardScene(Scene):
         self.cont = quests.spot_cont(fishing.spot_id)
         self.mouse = (-100, -100)
         self.age = 0.0
-        self.tabs = ui.Tabs(14, 30, ["의뢰", "포인트 상점"], width=80)
+        self.tabs = ui.Tabs(14, 30, ["의뢰", "포인트 상점", "주간 대회"], width=78)
         self.refresh_btn = ui.Button((340, 30, 126, 16), "", self._refresh)
         self.close_btn = ui.Button((406, 250, 60, 15), "닫기", self._close)
         self.buy_btn = ui.Button((330, 226, 136, 18), "", self._buy)
@@ -118,6 +118,8 @@ class QuestBoardScene(Scene):
                 if self.refresh_btn.click(m):
                     self.game.sfx.play("ui_click")
                 return
+            if self.tabs.index == 2:
+                return
             if self.buy_btn.click(m):
                 self.game.sfx.play("ui_click")
                 return
@@ -142,8 +144,10 @@ class QuestBoardScene(Scene):
         self.tabs.draw(canvas, self.mouse)
         if self.tabs.index == 0:
             self._draw_quests(canvas)
-        else:
+        elif self.tabs.index == 1:
             self._draw_shop(canvas)
+        else:
+            self._draw_weekly(canvas)
         if self.msg_t > 0:
             text(canvas, self.msg, (240, 257), ui.GOOD, 11, "center")
         self.close_btn.draw(canvas, self.mouse)
@@ -158,6 +162,29 @@ class QuestBoardScene(Scene):
         if self.notes_open:
             self._draw_notes(canvas)
         draw_cursor(canvas, self.mouse)
+
+    def _draw_weekly(self, canvas) -> None:
+        """주간 대회 (CU12): 이번 주 종 · 기록판 (NPC 미리 정한 기록과 겨룸) · 지난 트로피."""
+        from src.save import events_cal as ec
+        from src.render.fish_draw import draw_fish_fit
+        fish, rows = ec.weekly_board(self.save)
+        box = pygame.Rect(14, 52, 452, 196)
+        canvas.fill((24, 28, 46), box)
+        pygame.draw.rect(canvas, (70, 78, 110), box, 1)
+        text(canvas, f"이번 주 대회 ({ec.week_key()}): 가장 큰 {fish['name']}", (box.x + 10, box.y + 12), ui.ACCENT, 11, "midleft")
+        text(canvas, "주가 바뀐 뒤 마을에 오면 1~3등 칭호 · 집에 거는 트로피", (box.x + 10, box.y + 26), ui.DIM, 11, "midleft")
+        draw_fish_fit(canvas, pygame.Rect(box.right - 118, box.y + 36, 108, 40), fish, 104)
+        for i, (name, size, me) in enumerate(rows):
+            y = box.y + 46 + i * 18
+            col = (255, 230, 140) if me else ui.TEXT
+            text(canvas, f"{i + 1}등", (box.x + 14, y), (255, 214, 90) if i == 0 else ui.DIM, 11, "midleft")
+            text(canvas, name, (box.x + 50, y), col, 11, "midleft")
+            text(canvas, f"{size:g}cm", (box.x + 190, y), col, 11, "midright")
+        if not any(r[2] for r in rows):
+            text(canvas, f"아직 기록이 없어요 — {fish['name']}를 낚아 보세요", (box.x + 14, box.y + 46 + len(rows) * 18), ui.DIM, 11, "midleft")
+        tro = ec.st(self.save).get("trophies", [])
+        if tro:
+            text(canvas, "트로피: " + " · ".join(f"{t['week']} {t['rank']}등" for t in tro[-4:]), (box.x + 10, box.bottom - 12), (255, 214, 90), 11, "midleft")
 
     def _draw_notes(self, canvas) -> None:
         """누렇게 바랜 쪽지들 (분위기 문장만 — 도감·공략 정보 없음)."""

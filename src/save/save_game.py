@@ -553,8 +553,12 @@ class SaveGame:
         return self.data["playtime"] < self.data["buffs"].get("lunch_until", 0.0)
 
     def sale_price(self, item: dict, nth: int = 0) -> int:
-        """판매가. 전설은 첫 포획 1마리 말고는 재판매 ×resell, 같은 종을 오늘 여러 번 팔면 감가 (nth = 이번 묶음에서 앞선 같은 종 수)."""
+        """판매가. 전설은 첫 포획 1마리 말고는 재판매 ×resell, 같은 종을 오늘 여러 번 팔면 감가 (nth = 이번 묶음에서 앞선 같은 종 수).
+        떠돌이 상인 특별 주문 (CU12): 그날 그 종은 남은 수량(nth 기준)까지 ×2."""
         k = 1.1 if self.lunch_active() else 1.0
+        from src.save import events_cal
+        if nth < events_cal.order_left(self, int(self.data.get("day", 1)), item["id"]):
+            k *= events_cal.cfg()["merchant"]["order_mult"]
         return int(round(item["price"] * k * self.legend_sale_mult(item, nth)))
 
     def legend_sale_mult(self, item: dict, nth: int = 0) -> float:
@@ -705,6 +709,9 @@ class SaveGame:
             news["excited"] = True   # 결과 배지 "들뜬 녀석!"
         if fish.get("stray"):
             news["stray"] = True     # 결과 배지 "길을 잃은 손님" (도감은 원래 낚시터)
+        if fish["rarity"] not in ("phantom",):
+            from src.save import events_cal
+            events_cal.on_catch(self, fish, result["size"], news)   # 오렌의 도전장 · 주간 대회 (CU12)
         self.data["keepnet"].append({"id": fid, "size": result["size"], "rank": result["rank"],
                                      "price": result["price"]})
         if news["record"]:
@@ -801,6 +808,9 @@ class SaveGame:
             return 0
         item = self.data["keepnet"].pop(index)
         price = self.sale_price(item)
+        from src.save import events_cal
+        if events_cal.order_left(self, int(self.data.get("day", 1)), item["id"]):
+            events_cal.order_sold(self, int(self.data.get("day", 1)))   # 떠돌이 상인 특별 주문 1마리 씀
         self._note_sale(item)
         self.data["money"] += price
         self.data["stats"]["earned"] += price
@@ -844,6 +854,12 @@ class SaveGame:
 
     def sell_all(self) -> int:
         total = sum(self.sale_prices(self.data["keepnet"]))
+        from src.save import events_cal
+        day = int(self.data.get("day", 1))
+        m = events_cal.merchant(self, day)
+        if m is not None:   # 떠돌이 상인 특별 주문: 이번 묶음에서 쓴 만큼 줄임 (sale_prices 가 nth 로 이미 ×2)
+            n = sum(1 for it in self.data["keepnet"] if it["id"] == m["fish"])
+            events_cal.order_sold(self, day, min(n, events_cal.order_left(self, day, m["fish"])))
         for it in self.data["keepnet"]:
             self._note_sale(it)
         self.data["money"] += total

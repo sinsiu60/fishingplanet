@@ -6,7 +6,7 @@
  "fade_sec": 0.8,
  "levels": {
   "_설명": "상황별 층 음량 (0~1). perc_hi 는 장력(초록 위쪽 끝 = 1)만큼, shimmer 는 낮 밝기만큼 곱한다. 입질은 대기 층을 낮추기만. Z4 파이팅 음악: fight = 대륙 파이팅 기본 층, fight_big(100cm+) = 무거운 기본 층, tired(지침·뜰채) = 필터 열린 밝은 기본 층 — 층 하나 + 위기 층(crisis) = 최대 2개. fight_calm = 설정 '파이팅 음악' 끔 (예전 N4처럼 대기 층 낮추기만, 대기 정적이면 조용). 장력 타악(perc_hi)은 전설만.",
-  "menu": {"theme": 1.0},
+  "menu": {"theme": 1.0, "perc_hi": 0.75},
   "idle": {"pad": 1.0, "shimmer": 0.7},
   "bite": {"pad": 0.6, "shimmer": 0.4},
   "fight": {"fight": 1.0},
