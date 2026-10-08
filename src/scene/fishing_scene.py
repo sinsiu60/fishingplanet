@@ -1134,6 +1134,10 @@ class FishingScene(Scene):
         result = self.bite.hookset()
         if result == "hooked":
             self.tutorial.mark("guide_wait")
+            if (self.bite.bait or {}).get("live"):   # 생미끼: 물렸을 때만 한 번 줄어듦, 다 쓰면 원래 미끼로
+                from src.fishing import live_bait
+                if live_bait.consume(self.save):
+                    self.toasts.show(f"생미끼를 다 썼다 — {self.save.equipped('bait')['name']}(으)로", INFO, 2.0)
             c.hooked()
             heavy = sum(self.bite.fish["size_cm"]) / 2 >= 100 if self.bite.fish else False
             self.sfx.play("sfx_hook_heavy" if heavy else "sfx_hook_success")  # 딱 + 쿵 + 팅 + 물보라 (큰 물고기는 더 깊게)
@@ -1954,7 +1958,9 @@ class FishingScene(Scene):
                 and self._exam_float_on()):
             self.game.guide.event("exam_spot")   # TG-24 첫 시험 (시험 찌를 받고 시험 낚시터에 섬, 49-6)
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
-        self.bite.bait = self.save.equipped("bait")
+        from src.fishing import live_bait
+        live = live_bait.bait_dict(self.save, self.spot_id) if self.training is None and self.exam_fish is None else None
+        self.bite.bait = live or self.save.equipped("bait")   # 생미끼 (CU7-2): 끼우면 영구 미끼 효과는 꺼짐
         self.bite.force_fish = self.exam_fish if self.exam_fish is not None else \
             (self.all_fish[self.force_i] if self.force_i >= 0 else None)
         landed = self.cast.state == CastState.LANDED   # 대기 = 기다리기만 (루어 액션 저킹 · 리트리브는 삭제, DESIGN 47장)
@@ -3794,7 +3800,8 @@ class FishingScene(Scene):
                          anchor="topright")
             sv = self.save.data
             hud.text(canvas, f"{ui_w.money_anim(sv['money']):,}원", (cam.width - 6 - inset, 4), (255, 228, 140), anchor="topright")
-            bait = self.save.equipped("bait")["name"]
+            from src.fishing import live_bait
+            bait = live_bait.label(self.save) or self.save.equipped("bait")["name"]   # 생미끼: "피라미 ×2"
             hud.text(canvas, f"살림망 {len(sv['keepnet'])} · 미끼 {bait}", (cam.width - 6 - inset, 17), pal["text"],
                      anchor="topright")
             hint = HINTS[c.state]

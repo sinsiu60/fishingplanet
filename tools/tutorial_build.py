@@ -211,6 +211,9 @@ OTHER = {
     # TG-26 자동 드랙 (CORE_UPDATE CU3-4): 옛 세이브만, 업데이트 뒤 첫 파이팅 — 장력 게이지 한 줄
     "TG-26": {"title": "자동 드랙", "who": "haru", "start": "event:fight_start", "need_cond": "drag_legacy",
               "steps": [("freeze", "fight.gauge.tension", "tap")]},
+    # TG-27 생미끼 (CORE_UPDATE CU7-2): 살림망에 쓸 수 있는 일반이 3마리 넘게 모였을 때 포획 카드에서 한 번
+    "TG-27": {"title": "생미끼", "who": "haru", "start": "event:catch_shown", "need_cond": "live_bait_tg", "after": ["TG-03"],
+              "steps": [("freeze", "catch.card", "tap")]},
     "TG-PH": {"title": "환상의 물고기", "who": "baek", "start": "event:phantom_caught", "script": "phantom",
               "steps": [("info", "catch.card", "tap"), ("info", "catch.card", "tap", {"on_done": "close_catch"}),
                         ("spotlight", "dex.open", "scene:DexScene", {"allow_keys": ["menu:dex"]}),

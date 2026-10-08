@@ -80,6 +80,12 @@ def check(game, name: str, run) -> bool:
     if name == "drag_legacy":   # TG-26 자동 드랙 (CU3): 예전 드랙으로 낚아 본 세이브 + '드랙 직접 조절' 꺼짐
         st = getattr(game, "settings", None)
         return bool(d.get("drag_auto", {}).get("legacy")) and not (st is not None and st.get("drag_manual"))
+    if name == "live_bait_tg":   # TG-27 생미끼 (CU7-2): 생미끼로 쓸 수 있는 일반이 3마리 넘게
+        from src.fishing import live_bait
+        from src.save.save_game import fish_by_id
+        n = sum(1 for en in d["keepnet"] if fish_by_id(en["id"])["rarity"] == "common"
+                and not live_bait.usable(en, fish_by_id(en["id"])))
+        return n > 3 and check(game, "catch_card", run)
     if name == "float_owned":
         return bool(d.get("float", {}).get("owned"))
     if name == "float_equipped":

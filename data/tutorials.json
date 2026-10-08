@@ -1767,6 +1767,25 @@
     }
    ]
   },
+  "TG-27": {
+   "title": "생미끼",
+   "who": "haru",
+   "start": "event:catch_shown",
+   "need_cond": "live_bait_tg",
+   "after": [
+    "TG-03"
+   ],
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "catch.card",
+     "text": "작은 놈을 미끼로 끼워 봐. 큰 녀석이 좋아하거든. 가방 → 미끼 → [생미끼로]!",
+     "expr": null,
+     "until": "tap",
+     "src_text": "작은 물고기를 미끼로 끼워 보세요. 큰 녀석이 좋아하거든요. 가방 → 미끼 → [생미끼로]"
+    }
+   ]
+  },
   "TG-PH": {
    "title": "환상의 물고기",
    "who": "baek",

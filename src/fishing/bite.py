@@ -60,7 +60,9 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
     sw = load_json("seasons.json") if season else None
     if mods:
         from src.fishing.lure import profile_of
-    candidates, weights = [], []
+    candidates, weights, bases = [], [], []
+    srm = cfg.get("spot_rarity_mult", {}).get(spot, {})   # 확률 개편 (CU7-1): 낚시터별 고급 · 희귀 배율
+    from src.fishing import live_bait
     pool = [(f, None) for f in load_json("fish.json")["fish"]] + [(dict(f, spot=spot, _limited=True), w0) for f, w0 in (extra or [])]
     for f, w0 in pool:
         if f["spot"] != spot or period not in f["times"] or weather not in f["weathers"]:
@@ -69,6 +71,10 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
         if sw is not None and f["id"] in sw["fish"]:
             sf = sw["fish"][f["id"]]
             w *= sw["mult"]["good"] if season in sf["good"] else sw["mult"]["bad"] if season in sf["bad"] else 1.0
+        if w0 is None:
+            w *= srm.get(f["rarity"], 1.0)
+        w *= live_bait.weight_mult(bait, f)   # 생미끼 (CU7-2): 노리는 희귀 ×3 · 희귀 생미끼 ×1.5
+        base = w   # 희귀 보정 상한의 기준 (아래 보정 전)
         if weather == "storm" and f["rarity"] in ("rare", "legend"):
             w *= cfg["storm_rare_mult"]  # 폭풍: 희귀어 증가
         if bait:
@@ -89,6 +95,7 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
         if w > 0:
             candidates.append(f)
             weights.append(w)
+            bases.append(base)
     if not candidates:
         return None
     if extra:
@@ -121,7 +128,34 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
             target = min(0.95, share + rare_pp / 100.0)
             k = target * (total - rare) / ((1 - target) * rare)
             weights = [w * k if f["rarity"] == "rare" else w for f, w in zip(candidates, weights)]
+    weights = _rare_cap(candidates, weights, bases, cfg.get("rare_boost_cap", 0.0))
     return rnd.choices(candidates, weights)[0]
+
+
+def _rare_cap(cands: list, weights: list, bases: list, cap: float) -> list:
+    """희귀 보정 상한 (CU7-1): 폭풍 · 원투 · 미끼 티어 · 징후 · 행운의 떡밥 · 축복 · 비늘석을 다 합쳐도
+    희귀 몫이 보정 전의 cap 배를 넘지 않게 (%p 보정도 몫으로 환산돼 같이 묶임)."""
+    if cap <= 0 or len(bases) != len(weights):
+        return weights
+    def share(ws):
+        tot = sum(ws)
+        return sum(w for f, w in zip(cands, ws) if f["rarity"] == "rare") / tot if tot else 0.0
+    s0, s1 = share(bases), share(weights)
+    limit = min(0.95, s0 * cap)
+    if s0 <= 0 or s1 <= limit:
+        return weights
+    rare = sum(w for f, w in zip(cands, weights) if f["rarity"] == "rare")
+    if rare >= sum(weights) - 1e-9:
+        return weights   # 후보가 희귀뿐 (비밀 낚시터 등): 몫을 바꿀 수 없음
+    k = limit * (sum(weights) - rare) / ((1 - limit) * rare)
+    return [w * k if f["rarity"] == "rare" else w for f, w in zip(cands, weights)]
+
+
+def legend_chance(bait: dict | None) -> float:
+    """입질당 전설 확률 (CU7-1): 기본 chance, 전설 미끼 위에 희귀 생미끼를 덧붙였으면 chance_live_rare."""
+    lg = load_json("fishing_config.json")["legend"]
+    live = (bait or {}).get("live")
+    return lg.get("chance_live_rare", lg["chance"]) if live and live["kind"] == "rare" else lg["chance"]
 
 
 def legend_candidate(spot: str, period: str, weather: str, cast_distance: float, bait: dict | None) -> dict | None:
@@ -318,7 +352,7 @@ class BiteController:
                     legend = None
                 elif self.force_fish is not None:
                     self.fish = self.force_fish
-                elif legend and self.rnd.random() < load_json("fishing_config.json")["legend"]["chance"]:
+                elif legend and self.rnd.random() < legend_chance(self.bait):
                     self.fish = legend
                 else:
                     self.fish = self._pick()

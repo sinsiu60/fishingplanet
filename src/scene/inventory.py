@@ -79,7 +79,7 @@ class InventoryScene(Scene):
         if self.kind == "bait":
             lst = [b for b in baits().values() if s.owns("bait", b["id"])]
             lst.sort(key=lambda b: (b.get("tier") is None, b.get("tier") or 0, b["price"]))
-            return [{"type": "gear", "kind": "bait", "item": b} for b in lst]
+            return [{"type": "gear", "kind": "bait", "item": b} for b in lst] + self._live_rows()
         if self.kind == "float":
             fl = {f["id"]: f for f in load_json("floats.json")["floats"]}
             return [{"type": "float", "item": fl[i]} for i in d["float"]["owned"] if i in fl]
@@ -108,6 +108,23 @@ class InventoryScene(Scene):
         rows.append({"type": "mat", "key": "keepnet", "name": "살림망 물고기", "n": len(d["keepnet"])})
         return rows
 
+    def _live_rows(self) -> list[dict]:
+        """생미끼 후보 (CU7-2): 살림망의 일반 · 희귀 (잠금 · 신기록 제외), 종마다 한 줄."""
+        from src.fishing import live_bait
+        from src.save.save_game import fish_by_id
+        rows, seen = [], {}
+        for i, en in enumerate(self.save.data["keepnet"]):
+            fish = fish_by_id(en["id"])
+            if live_bait.usable(en, fish):
+                continue
+            if en["id"] in seen:
+                seen[en["id"]]["n"] += 1
+                continue
+            row = {"type": "live", "item": {"id": en["id"], "name": f"{fish['name']} (생미끼)"}, "fish": fish, "index": i, "n": 1}
+            seen[en["id"]] = row
+            rows.append(row)
+        return rows
+
     def _name(self, e: dict) -> str:
         it = e.get("item")
         if e["type"] == "mat":
@@ -120,6 +137,9 @@ class InventoryScene(Scene):
             return d["gear"][e["kind"]] == e["item"]["id"]
         if e["type"] == "float":
             return d["float"]["equipped"] == e["item"]["id"]
+        if e["type"] == "live":
+            lb = d.get("live_bait")
+            return bool(lb and lb.get("left", 0) > 0 and lb["fish"] == e["item"]["id"])
         if e["type"] == "treasure":
             it = e["item"]
             return self.save.charm_on(it["id"]) if it["kind"] == "charm" else \
@@ -135,6 +155,8 @@ class InventoryScene(Scene):
             return (f"시험 필요 (T{t})", False) if t else ("장착하기", True)   # 상자 장비: 보관만 (49-3)
         if e["type"] == "exam":
             return "자동 장착 중", False
+        if e["type"] == "live":
+            return ("끼우는 중", False) if self._equipped(e) else ("생미끼로", True)
         if e["type"] == "float":
             return ("해제", True) if self._equipped(e) else ("장착하기", True)
         if e["type"] == "treasure":
@@ -158,6 +180,15 @@ class InventoryScene(Scene):
             s.equip(e["kind"], e["item"]["id"])
             sfx.play("ui_equip")
             self._say(f"{e['item']['name']} 장착", ui.GOOD)
+        elif e["type"] == "live":
+            from src.fishing import live_bait
+            r = live_bait.equip(s, e["index"])
+            if r == "ok":
+                sfx.play("ui_equip")
+                self._say(f"{live_bait.label(s)} — 물렸을 때만 줄어요", ui.GOOD)
+                self.game.guide.event("live_bait_on")
+            else:
+                self._say(r, ui.BAD)
         elif e["type"] == "float":
             fl = s.data["float"]
             fl["equipped"] = None if fl["equipped"] == e["item"]["id"] else e["item"]["id"]
@@ -198,7 +229,8 @@ class InventoryScene(Scene):
         out = []
         for k in GEAR_KINDS:
             out.append(("gear", KIND_KO[k], s.equipped(k)["name"]))
-        out.append(("bait", "미끼", s.equipped("bait")["name"]))
+        from src.fishing import live_bait
+        out.append(("bait", "미끼", live_bait.label(s) or s.equipped("bait")["name"]))   # 생미끼면 "피라미 ×2"
         fid = d["float"]["equipped"]
         fname = next((f["name"] for f in load_json("floats.json")["floats"] if f["id"] == fid), None)
         from src.save import exam
@@ -362,6 +394,25 @@ class InventoryScene(Scene):
             text(canvas, f"특수 찌 · {e['item']['tier']}단계", (x, y + 4), ui.DIM, 11, "midleft")
             y += 15
             lines = wrap_text(e["item"].get("desc", ""), w)
+        elif e["type"] == "live":
+            from src.fishing import live_bait
+            fish = e["fish"]
+            rare = fish["rarity"] == "rare"
+            text(canvas, f"생미끼 · 가진 것 {e['n']}마리", (x, y + 4), ui.DIM, 11, "midleft")
+            y += 15
+            lines = wrap_text(f"1마리 = 입질 {1 if rare else live_bait.cfg()['common_bites']}번 (물렸을 때만 줄어요). "
+                              "끼우는 동안 원래 미끼 효과는 꺼져요.", w)
+            if rare:
+                lines += wrap_text("전설 미끼 위에 덧붙이면 전설 확률 ×2, 아니면 이 물의 희귀 ×1.5", w)
+            else:
+                spot = getattr(self.fishing, "spot_id", fish["spot"])
+                tg = live_bait.targets(spot, fish["id"])
+                if tg:
+                    from src.save.save_game import fish_by_id
+                    names = [fish_by_id(t)["name"] if self.save.caught(t) else "???" for t in tg]
+                    lines += wrap_text("이 물에서 노리는 물고기: " + " · ".join(names) + " (×3)", w)
+                else:
+                    lines += wrap_text("이 물에는 이걸 노리는 물고기가 없어요", w)
         elif e["type"] == "exam":
             from src.save import exam
             t = e["item"]["tier"]

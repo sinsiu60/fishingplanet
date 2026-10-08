@@ -44,6 +44,22 @@
       "legend": 0
     },
     "storm_rare_mult": 1.5,
+    "rare_boost_cap": 2.5,
+    "_rare_boost_cap_설명": "희귀 보정 상한 (CORE_UPDATE CU7-1): 폭풍 · 원투 · 미끼 티어 · 징후 · 행운의 떡밥 · 축복 · 비늘석을 다 합쳐도 희귀 몫이 보정 전의 이 배를 넘지 않게",
+    "_spot_rarity_mult_설명": "확률 개편 (CU7-1): 낚시터별 고급 · 희귀 가중치 배율 — 시간 · 날씨 평균 + 그 티어 미끼로 고급 22.5% · 희귀 6.5% (tools/rarity_calib.py solve). 용문 폭포(희귀 전용) · 한정 물고기 · 환상 · 변이 제외",
+    "spot_rarity_mult": {
+      "reservoir": {"uncommon": 3.483, "rare": 0.347},
+      "valley": {"uncommon": 9.525, "rare": 0.464},
+      "breakwater": {"uncommon": 4.873, "rare": 1.735},
+      "offshore": {"uncommon": 0.511, "rare": 0.265},
+      "deep": {"uncommon": 0.346, "rare": 2.147},
+      "marsh": {"uncommon": 2.453, "rare": 2.492},
+      "crystal_cave": {"uncommon": 0.664, "rare": 0.813},
+      "sky_falls": {"uncommon": 2.734, "rare": 2.63},
+      "volcano": {"uncommon": 1.523, "rare": 0.424},
+      "ice_sea": {"uncommon": 1.304, "rare": 1.616},
+      "world_tree": {"uncommon": 2.41, "rare": 0.737}
+    },
     "limited_price_mult": {"uncommon": 1.3, "rare": 2.2},
     "limited_ref_pool": 250,
     "weather_bite_mult": {
@@ -221,7 +237,8 @@
   "_debug_설명": "debug_keys: F3 물고기 고정 / F4 낚시터 / F5 날씨 테스트 키 (배포 전 false). debug_force_fish: 항상 이 물고기.",
   "legend": {
     "_설명": "전설: 조건(시간·날씨·전용 미끼·거리)이 맞으면 캐스트당 chance 확률로 등장. phase_at = 페이즈 전환 체력 비율. phase3_heal = 3페이즈 진입 회복.",
-    "chance": 0.25,
+    "chance": 0.05,
+    "chance_live_rare": 0.10,
     "min_distance": 25,
     "approach_mult": 1.6,
     "shadow_scale": 2.2,

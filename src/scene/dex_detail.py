@@ -179,6 +179,20 @@ def draw(scene, canvas, d: pygame.Rect, f: dict, kind: str = "normal", border=No
     # ── 3. 내 기록 ──
     if e:
         text(canvas, "내 기록", (x, d.y + 90), SUB, 11, "midleft")
+        from src.fishing import live_bait   # 먹이사슬 (CU7-2): 잡아 본 종만 이름, 아니면 ???
+        from src.save.save_game import fish_by_id
+        eat, prey = live_bait.eaters(f["id"]), live_bait.prey(f["id"])
+        if eat or prey:
+            def nm(i):
+                return fish_by_id(i)["name"] if save.caught(i) else "???"
+            ch = []
+            if prey:
+                ch.append("노리는 물고기: " + " · ".join(nm(i) for i in prey))
+            if eat:
+                ch.append("먹는 물고기: " + " · ".join(nm(i) for i in eat))
+                ch.append("살림망에서 생미끼로 끼우면 먹는 물고기가 ×3")
+            r = fit_text(canvas, "먹이사슬", (right, d.y + 90), SUB, 60, "midright")
+            clicks.append((r.inflate(6, 4), "먹이사슬", ch))
         boxes = (("최대", f"{e['max_size']:.1f}cm", 56), ("최고", e["best_rank"], 42), ("잡은 수", str(e["count"]), 0))
         bx = x
         for i, (lab, val, w) in enumerate(boxes):

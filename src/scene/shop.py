@@ -183,7 +183,11 @@ class ShopScene(Scene):
         if self.kind == "sell":
             return self.save.data["keepnet"]
         if self.kind == "bait":
+            from src.fishing import live_bait
             lst = [b for b in baits().values() if b["price"] >= 0 or self.save.owns("bait", b["id"])]
+            # 전설 전용 미끼 (CU7-2): 사지 않고 '만들기' — 지정 희귀 1마리 + 지금 가격의 60%
+            lst = [dict(b, price=live_bait.craft_price(b), craft=live_bait.craft_need(b))
+                   if live_bait.craft_need(b) and not self.save.owns("bait", b["id"]) else b for b in lst]
             return sorted(lst, key=lambda b: (b.get("tier") is None, b.get("tier") or 0, b["price"]))  # 전설 미끼는 맨 뒤
         if self.kind == "float":
             return load_json("floats.json")["floats"]
@@ -379,11 +383,18 @@ class ShopScene(Scene):
             self.msg_t = 4.0
             return
         self.confirm = None
-        result = self.save.buy(self.kind, item)
+        if item.get("craft"):   # 전설 미끼 만들기 (CU7-2)
+            from src.fishing import live_bait
+            result = live_bait.craft(self.save, baits()[item["id"]])
+            if result == "material":
+                self._say(f"{self._craft_text(item)}가 필요해요", ui.BAD)
+                return
+        else:
+            result = self.save.buy(self.kind, item)
         if result == "ok":
             self.game.sfx.play("ui_buy")
             self._react("buy")
-            self._say(f"{item['name']} 구매 · 장착!", ui.GOOD)
+            self._say(f"{item['name']} {'만들기' if item.get('craft') else '구매'} · 장착!", ui.GOOD)
         elif result == "money":
             self._say("돈이 부족해요", ui.BAD)
         elif result == "scales":
@@ -780,7 +791,17 @@ class ShopScene(Scene):
                 return "owned"
             if self.save.gear_locked_reason(it) or (kind == "bait" and self.save.bait_locked_reason(it)):
                 return "locked"
+            if it.get("craft"):
+                from src.fishing import live_bait
+                if live_bait.craft_index(self.save, it) is None:
+                    return "locked"   # 재료 희귀가 살림망에 없음
         return "buy" if self.save.money >= it["price"] else "short"
+
+    def _craft_text(self, it: dict) -> str:
+        """전설 미끼 만들기 재료 "메기 1마리" (잡아 본 적 없으면 ??? — 스포일러 방지)."""
+        from src.save.save_game import fish_by_id
+        f = fish_by_id(it["craft"])
+        return f"{f['name'] if self.save.caught(f['id']) else '???'} 1마리"
 
     def _locked_label(self, it: dict) -> str:
         reason = None if self.kind == "float" else self.save.gear_locked_reason(it)
@@ -887,6 +908,7 @@ class ShopScene(Scene):
         warn = None
         if st == "locked":
             reason = (self.save.gear_locked_reason(it) or (kind == "bait" and self.save.bait_locked_reason(it))
+                      or (self._craft_text(it) + "가 필요해요" if it.get("craft") else None)
                       or "엘드라시온 대륙에서 판매")
             if reason.startswith("백 노인"):
                 reason += " 합격 필요"
@@ -934,6 +956,8 @@ class ShopScene(Scene):
             b.label, b.enabled, style = "장착 중", False, "dim"
         elif st == "owned":
             b.label, b.enabled, style = "장착하기", True, "outline"
+        elif st == "locked" and it.get("craft") and not self.save.bait_locked_reason(it):
+            b.label, b.enabled, style = f"{self._craft_text(it)} 필요", False, "dim"
         elif st == "locked":
             lab = self._locked_label(it)
             b.label = "엘드라시온에서 해금" if lab == "엘드라시온" else \
@@ -943,6 +967,8 @@ class ShopScene(Scene):
             b.label, b.enabled, style = f"소지금이 {it['price'] - self.save.money:,}원 부족해요", False, "dim"
         elif not scales_ok:
             b.label, b.enabled, style = "전설 비늘이 부족해요", False, "dim"
+        elif it.get("craft"):
+            b.label, b.enabled, style = f"만들기 ({self._craft_text(it)})", True, "fill"
         else:
             b.label, b.enabled, style = ("그래도 구매" if self.confirm == it["id"] else "구매하기"), True, "fill"
         if self.confirm and self.confirm != it["id"]:

@@ -1755,11 +1755,13 @@
    "times": [
     "morning",
     "day",
-    "evening"
+    "evening",
+    "night"
    ],
    "weathers": [
     "clear",
-    "rain"
+    "rain",
+    "storm"
    ],
    "rarity": "common",
    "size_cm": [
@@ -3389,11 +3391,14 @@
    "spot": "marsh",
    "times": [
     "morning",
-    "day"
+    "day",
+    "evening",
+    "night"
    ],
    "weathers": [
     "clear",
-    "rain"
+    "rain",
+    "storm"
    ],
    "rarity": "common",
    "size_cm": [
