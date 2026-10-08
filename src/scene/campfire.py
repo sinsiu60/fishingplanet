@@ -112,6 +112,12 @@ class CampfireScene(Scene):
             self.event = next((e for e in cf["events"] if e["id"] == force_event), None)
         else:
             self.event = pick_event(game.save, fishing, self.hours)
+        # 달력으로 하루 넘게 쉬면 (CORE_UPDATE CU1, 최대 14일): 앞부분은 장면이 열리기 전에 넘기고 마지막 24시간만 타임랩스 —
+        # 2초 안에 낮밤이 여러 번 바뀌며 화면이 깜빡이지 않게 (작은 일은 위에서 전체 구간으로 이미 골랐음)
+        jump = max(0.0, self.hours - 24.0)
+        if jump > 0:
+            fishing._advance_hours(jump)
+            self.hours -= jump
         self.ev_at = cf.get("at_sec", 1.2)
         self.ev_started = False
         self.ev_t = 0.0

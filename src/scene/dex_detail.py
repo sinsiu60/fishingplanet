@@ -218,7 +218,7 @@ def draw(scene, canvas, d: pygame.Rect, f: dict, kind: str = "normal", border=No
             prev = {"uncommon": None, "rare": "uncommon", "legend": "rare"}[f["rarity"]]
             if revealed:
                 if f["rarity"] == "legend":
-                    rows = [("info", "25m 이상 던지기", None, None), ("info", "지도에서 날씨 예보 확인", None, None)]
+                    rows = [("info", "25m 이상 던지기", None, None), ("info", "달력(K)에서 날씨 예보 확인", None, None)]
             else:
                 text(canvas, "이만큼 잡으면 단서가 보여요", (x, d.y + 114), SUB, 11, "midleft")
                 for t, h, n in clue_rows:

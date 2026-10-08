@@ -1,5 +1,5 @@
 """낚시 화면 오른쪽 가장자리 메뉴 버튼 (PC): 인벤토리·지도·상점·의뢰·수집·보물상자·도움말·설정.
-'수집'을 누르면 그 왼쪽으로 서랍이 열려 도감·업적(트로피)·어탁·수조(훈련 수조)가 나온다 (오른쪽 줄이 꽉 차서 묶음, v1.1).
+'수집'을 누르면 그 왼쪽으로 서랍이 열려 도감·업적(트로피)·어탁·수조(훈련 수조)·달력이 나온다 (오른쪽 줄이 꽉 차서 묶음, v1.1).
 
 단축키(I·M·B·J·Tab·C·H·Esc)는 그대로 — 버튼은 그림 아이콘, 마우스를 올리면 '이름 (키)' 말풍선.
 파이팅 중·던지는 중엔 숨긴다. 보물상자는 가진 개수 점, 의뢰는 받을 보상이 있으면 느낌표.
@@ -13,7 +13,8 @@ from src.ui.hud import SHADOW, text
 
 ITEMS = (("inventory", "인벤토리", "I"), ("map", "지도", "M"), ("shop", "상점", "B"), ("quests", "의뢰", "J"),
          ("collection", "수집", ""), ("chest", "보물상자", "C"), ("help", "도움말", "H"), ("settings", "설정", "Esc"))
-DRAWER = (("dex", "도감", "Tab"), ("achievements", "업적", "U"), ("prints", "어탁", ""), ("tank", "수조", ""))
+DRAWER = (("dex", "도감", "Tab"), ("achievements", "업적", "U"), ("prints", "어탁", ""), ("tank", "수조", ""),
+          ("calendar", "달력", "K"))   # 달력 (CORE_UPDATE CU1)
 SIZE = 22
 GAP = 4
 BG = (14, 18, 34)
@@ -256,5 +257,17 @@ def _tank(c, x, y, col, t):
         c.fill((200, 230, 255), (x + 4, y - 2, 1, 1))
 
 
-ICONS = {"inventory": _inventory, "map": _map, "shop": _shop, "quests": _quests, "dex": _dex, "chest": _chest, "help": _help,
+def _calendar(c, x, y, col, t):
+    """달력: 고리 2개 + 빨간 머리띠 + 칸 점, 오늘 칸 노랑."""
+    pygame.draw.rect(c, col, (x - 7, y - 5, 14, 12), 1)
+    c.fill((255, 110, 90), (x - 6, y - 4, 12, 3))
+    for gx in (x - 4, x + 3):
+        c.fill(col, (gx, y - 7, 1, 3))
+    for i in range(3):
+        for j in range(2):
+            c.fill(col, (x - 5 + i * 4, y + j * 3, 2, 2))
+    c.fill((255, 214, 90), (x + 3, y + 3, 2, 2))
+
+
+ICONS = {"calendar": _calendar, "inventory": _inventory, "map": _map, "shop": _shop, "quests": _quests, "dex": _dex, "chest": _chest, "help": _help,
          "settings": _settings, "collection": _collection, "achievements": _achievements, "prints": _prints, "tank": _tank}

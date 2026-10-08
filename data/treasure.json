@@ -29,7 +29,7 @@
     {"id": "warm_gloves", "name": "온기 장갑", "grade": "rare", "kind": "charm", "desc": "빨간 장력 구간에서 줄 내구도 감소 -10%."},
     {"id": "calm_charm", "name": "잔잔한 물 부적", "grade": "rare", "kind": "consumable", "desc": "다음 1회 파이팅 동안 줄 걸림 게이지가 50% 느리게 찬다.", "limit": "파이팅당 1개"},
     {"id": "hourglass", "name": "시간의 모래시계", "grade": "special", "kind": "consumable", "desc": "현재 낚시터의 시간대를 원하는 시간으로 바꾼다."},
-    {"id": "storm_conch", "name": "폭풍 부르는 소라", "grade": "special", "kind": "consumable", "desc": "현재 낚시터 날씨를 원하는 날씨로 바꾼다 (10분).", "limit": "안개는 부를 수 없음"},
+    {"id": "storm_conch", "name": "물때 멈춤 소라", "grade": "special", "kind": "consumable", "desc": "실제 10분 동안 게임 시계가 멈춘다 (지금 시간대 · 날씨 그대로). 원하면 날씨도 하나 골라 고정.", "limit": "안개는 부를 수 없음 · 쉬거나 이동하면 효과가 끝남"},
     {"id": "twin_hook", "name": "쌍둥이 바늘", "grade": "special", "kind": "charm", "desc": "5% 확률로 같은 물고기 1마리를 더 얻는다 (판매·소재용).", "limit": "도감·랭크 기록 없음, 전설 제외"},
     {"id": "moon_rod", "name": "달빛 낚싯대", "grade": "special", "kind": "rod", "desc": "밤에 장력 안전 구간 +10%.", "cost": "낮에는 -5%. 기본 성능 = 얻은 대륙 상점 최고 티어"},
     {"id": "dragon_scale_rod", "name": "용린 낚싯대", "grade": "legend", "kind": "rod", "desc": "퍼펙트 성공 시 줄 내구도 10% 회복.", "cost": "기본 성능이 대륙 최고 티어보다 5% 낮음"},

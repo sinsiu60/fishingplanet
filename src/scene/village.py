@@ -234,7 +234,7 @@ class VillageScene(Scene):
         elif a.name == "menu":
             if a.value == "map":
                 self._act("place", "dock")
-            elif a.value in ("dex", "inventory", "shop", "quests", "chest", "achievements"):
+            elif a.value in ("dex", "inventory", "shop", "quests", "chest", "achievements", "calendar"):
                 self.fishing.open_menu(a.value)
         elif a.name == "debug" and a.value == "F12":
             from src.core.config import load_json as _lj
@@ -384,7 +384,8 @@ class VillageScene(Scene):
         from src.ui import achv_toast
         achv_toast.update(self.game, dt, self.game.scenes.current is self and self.story_seq is None)
         f = self.fishing
-        f.clock.update(dt)      # 마을에서도 시간은 흐른다 (등불·창문 불빛)
+        if not f._tide_tick():   # 마을에서도 시간은 흐른다 (등불·창문 불빛) — 물때 멈춤 소라 효과 중엔 멈춤 (CU1-4)
+            f.clock.update(dt)
         f.ambience.update(dt, self.cfg["ambience"], f.clock.period()[0], f.weather, season=self.season)
         from src.fishing import weather_events
         new = weather_events.tick(self.save, f.clock.day, f.clock.hour, f.weather)
@@ -553,12 +554,12 @@ class VillageScene(Scene):
             b = ui.Button((w - 142 + i * 46, 4, 42, 14), lab, lambda k=key: self._menu(k))
             b.draw(canvas, self.mouse, selected=key == "collection" and self.collect_open)
             self.btns.append(b)
-        if self.collect_open:   # 수집 서랍: 수집 버튼 아래에서 왼쪽으로 (도감 · 업적 · 어탁 · 수조)
-            items = (("도감", "dex"), ("업적", "achievements"), ("어탁", "prints"), ("수조", "tank"))
+        if self.collect_open:   # 수집 서랍: 수집 버튼 아래에서 왼쪽으로 (도감 · 업적 · 어탁 · 수조 · 달력)
+            items = (("도감", "dex"), ("업적", "achievements"), ("어탁", "prints"), ("수조", "tank"), ("달력", "calendar"))
             x0 = w - 142 + 42
-            back = pygame.Surface((4 * 46 + 4, 20), pygame.SRCALPHA)
+            back = pygame.Surface((len(items) * 46 + 4, 20), pygame.SRCALPHA)
             back.fill((10, 12, 24, 190))
-            canvas.blit(back, (x0 - 4 * 46 - 2, 22))
+            canvas.blit(back, (x0 - len(items) * 46 - 2, 22))
             for i, (lab, key) in enumerate(items):
                 b = ui.Button((x0 - (i + 1) * 46 + 4, 25, 42, 14), lab, lambda k=key: self._menu(k))
                 b.draw(canvas, self.mouse)

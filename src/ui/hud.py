@@ -111,10 +111,21 @@ def wrap_text(s: str, max_w: int, size: int = 11) -> list[str]:
     return lines
 
 
-def draw_clock(canvas, pal, label: str, fast: bool, mult: int, x: int = 6) -> None:
+def draw_clock(canvas, pal, label: str, fast: bool, mult: int, x: int = 6) -> pygame.Rect:
     r = text(canvas, label, (x, 4), pal["text"])
     if fast:
-        text(canvas, f"▶▶ ×{mult}", (r.right + 6, 4), (255, 220, 120))
+        r = r.union(text(canvas, f"▶▶ ×{mult}", (r.right + 6, 4), (255, 220, 120)))
+    return r
+
+
+def draw_conch(canvas, x: int, y: int) -> None:
+    """물때 멈춤 소라 (CU1-4): 작은 소라 껍데기 (나선 + 뾰족한 끝)."""
+    shell, dark = (236, 214, 190), (150, 120, 96)
+    pygame.draw.polygon(canvas, SHADOW, [(x - 4, y + 3), (x + 4, y + 4), (x + 1, y - 4)])
+    pygame.draw.polygon(canvas, shell, [(x - 5, y + 2), (x + 3, y + 3), (x, y - 5)])
+    pygame.draw.line(canvas, dark, (x - 3, y + 1), (x + 1, y - 2), 1)
+    pygame.draw.line(canvas, dark, (x - 1, y + 2), (x + 2, y), 1)
+    canvas.set_at((x, y - 5), (255, 240, 220))
 
 
 def draw_hint(canvas, pal, s: str, center: bool = False) -> None:

@@ -316,18 +316,27 @@ class FishingScene(Scene):
                 return start, name
         return starts[0][0] + 24.0, starts[0][1]
 
-    def rest_options(self) -> list[dict]:
-        """골라 쉬기 (TIME_REST 🅱): [아침][낮][저녁][밤] 각각 다음 시작 시각 (지금 그 시간대 안이면 다음 날) · 넘길 시간(≤ 24) · 그때 날씨."""
-        h = self.clock.hour
-        now = self.weather_sys.abs_time(self.clock.day, h)
-        out = []
-        for start, pid, name in PERIODS:
-            hours = (start - h) % 24 or 24.0   # 다음 시작 시각 (지금 그 시간대 안이면 다음 날 — 늘 ≤ 24시간)
-            t = now + hours
-            tomorrow = int(t // 24) > self.clock.day
-            out.append({"pid": pid, "name": name, "start": start, "hours": hours, "tomorrow": tomorrow,
-                        "weather": self.weather_sys.at_time(t)})
-        return out
+    def _draw_tide(self, canvas, clock_rect, t: float) -> None:
+        """시계 옆 소라 아이콘 + 남은 실제 시간 9:41 (끝나기 blink_sec 전부터 깜빡)."""
+        from src.save import item_use
+        left = item_use.tide_left(self.save)
+        if left <= 0 or clock_rect is None:
+            return
+        if left < item_use.tide_cfg()["blink_sec"] and int(t * 3) % 2:
+            return
+        x, y = clock_rect.right + 8, clock_rect.centery
+        hud.draw_conch(canvas, x, y)
+        m, sec = divmod(int(left), 60)
+        hud.text(canvas, f"{m}:{sec:02d}", (x + 8, y), (170, 210, 255), 11, "midleft")
+
+    def _tide_tick(self) -> bool:
+        """물때 멈춤 소라가 켜져 있으면 True (시계 정지). 방금 끝났으면 덮어쓴 날씨를 지우고 False."""
+        from src.save import item_use
+        if item_use.tide_left(self.save) > 0:
+            return True
+        if "tide_until" in self.save.data.get("buffs", {}):
+            item_use.tide_end(self.game, self)
+        return False
 
     def can_rest(self) -> bool:
         """파이팅 중 · 환상 대기 연출 중엔 못 쉼."""
@@ -345,7 +354,7 @@ class FishingScene(Scene):
         return f"{self.clock.label()} · {WEATHER_KO[self.weather]}"
 
     def rest(self) -> str:
-        """(예전 호환) 다음 시간대로 바로 — 지금은 지도의 골라 쉬기 + 모닥불 장면을 씀."""
+        """(예전 호환) 다음 시간대로 바로 — 지금은 달력의 골라 쉬기 + 모닥불 장면을 씀 (CU1)."""
         self.rest_begin()
         start, name = self._next_period()
         self._advance_hours(start - self.clock.hour)
@@ -648,7 +657,7 @@ class FishingScene(Scene):
                     from src.scene.quick_menu import QuickMenuScene
                     self.sfx.play("ui_click")
                     self.game.scenes.push(QuickMenuScene(self.game, self))
-            elif a.value in ("dex", "quests", "achievements"):
+            elif a.value in ("dex", "quests", "achievements", "calendar"):
                 if self.fight is None:
                     self.open_menu(a.value)
             elif self.can_open_menus():
@@ -845,6 +854,11 @@ class FishingScene(Scene):
             self.game.scenes.push(PrintGalleryScene(self.game, self))
         elif which == "tank":
             self.start_training()
+        elif which == "calendar":   # 달력 (CU1): 14일 예보 · 3시간 칸 골라 쉬기
+            if self.fight is not None:
+                return
+            from src.scene.calendar_scene import CalendarScene
+            self.game.scenes.push(CalendarScene(self.game, self))
         self.fight_audio.stop()
         self.signal_audio.stop()
 
@@ -1519,7 +1533,8 @@ class FishingScene(Scene):
         if not self._side_menu_on():
             self.collect_open = False
         self.ctl.begin_tick()
-        self.clock.update(dt)
+        if not self._tide_tick():   # 물때 멈춤 소라 (CU1-4): 효과 중엔 게임 시계가 멈춤
+            self.clock.update(dt)
         self.clouds.update(dt)
         self._update_weather(dt)
         self.ripples.update(dt)
@@ -3714,7 +3729,8 @@ class FishingScene(Scene):
             if g:
                 from src.fishing.gimmick import KO
                 label += f" · {KO[g]}"
-            hud.draw_clock(canvas, pal, label, self.clock.fast, self.clock.fast_mult, 6 + inset)
+            cr = hud.draw_clock(canvas, pal, label, self.clock.fast, self.clock.fast_mult, 6 + inset)
+            self._draw_tide(canvas, cr, t)
             if phantom.blessing_active(self.save):
                 hud.draw_blessing(canvas, 12 + inset, 32, phantom.blessing_left(self.save), t)
             if c.state == CastState.CHARGING:

@@ -1,11 +1,11 @@
-"""낚시터 지도: 이동, 해금 조건·해금, 48시간 날씨 예보표, 골라 쉬기 (TIME_REST.md, DESIGN.md 48장)."""
+"""낚시터 지도: 이동(1시간 — 도착 시각 미리보기), 해금 조건·해금, 오늘 날씨 한 줄 + [달력] (CORE_UPDATE CU1: 예보표 · 쉬기 버튼은 달력으로, DESIGN 52-0)."""
 import math
 
 import pygame
 
 from src.core.config import load_json
 from src.core.game_clock import PERIODS
-from src.core.weather import CHANGE_EVERY, WEATHER_KO
+from src.core.weather import WEATHER_KO
 from src.save.save_game import all_fish
 from src.scene.base import Scene
 from src.ui import weather_icons
@@ -18,7 +18,7 @@ LAND_DARK = (66, 100, 64)
 SEA = (44, 84, 140)
 SEA_LIGHT = (70, 116, 170)
 PATH = (240, 226, 180)
-FC = pygame.Rect(298, 28, 168, 70)   # 예보표 상자 (그 아래 쉬기 버튼 줄 26, 그 아래 낚시터 정보)
+FC = pygame.Rect(298, 28, 168, 50)   # 오늘 날씨 한 줄 + [달력] 상자 (그 아래 낚시터 정보)
 
 
 def unlock_status(save, spot: dict) -> tuple[bool, list[tuple[str, bool]]]:
@@ -113,11 +113,7 @@ class MapScene(Scene):
         self.msg, self.msg_t, self.msg_col = "", 0.0, ui.TEXT
         self.close_btn = ui.Button((404, 250, 64, 15), "닫기 (M)", self._close)
         self.go_btn = ui.Button((300, 214, 164, 17), "", self._go)
-        # 골라 쉬기 [아침][낮][저녁][밤] (🅱) · 예보표 칸 고르기 (폰: 누르면 아래 한 줄 설명)
-        self.rest_btns = [ui.Button((FC.x + i * 42, FC.bottom + 3, 41, 26), "", (lambda i=i: self._rest_to(i)))
-                          for i in range(4)]
-        self.fc_sel: int | None = None
-        self.fc_cells: list = []   # [(Rect, 칸 번호, 날씨)] — 그릴 때 채움
+        self.cal_btn = ui.Button((FC.x + 4, FC.bottom - 20, FC.w - 8, 16), "달력 (K) · 14일 예보 · 골라 쉬기", self._calendar)
         self.train_btn = ui.Button((330, 250, 70, 15), "훈련 수조", self._train)
 
     @property
@@ -136,7 +132,6 @@ class MapScene(Scene):
         here = [i for i, s in enumerate(self.spots) if s["id"] == self.fishing.spot_id]
         self.sel = here[0] if here else 0
         self.town_sel = False
-        self.fc_sel = None
         self.game.sfx.play("ui_click")
 
     @property
@@ -154,8 +149,28 @@ class MapScene(Scene):
     def _close(self) -> None:
         self.game.scenes.pop()
 
+    def _calendar(self) -> None:
+        from src.scene.calendar_scene import CalendarScene
+        self.game.sfx.play("ui_click")
+        self.game.scenes.push(CalendarScene(self.game, self.fishing))
+
+    def _tide_confirm(self, then) -> bool:
+        """물때 멈춤 소라 효과 중 이동하면 끝 (CU1-4): 확인 창을 띄웠으면 True."""
+        from src.save import item_use
+        if item_use.tide_left(self.save) <= 0:
+            return False
+
+        def yes():
+            item_use.tide_end(self.game, self.fishing)
+            then()
+        from src.scene.confirm import ConfirmScene
+        self.game.scenes.push(ConfirmScene(self.game, "물때 멈춤이 끝나요. 갈까요?", yes, "가기", "그만두기"))
+        return True
+
     def _town(self) -> None:
         """마을로: 낚시터 → 마을 (보고 있는 대륙의 마을)."""
+        if not (self.village is not None and self.village.cont == self.cont) and self._tide_confirm(self._town):
+            return
         self.game.sfx.play("ui_click")
         if self.village is not None and self.village.cont == self.cont:
             self._close()   # 지금 그 마을 부두에서 열었으면 지도만 닫기
@@ -174,6 +189,8 @@ class MapScene(Scene):
         if sp["id"] == self.fishing.spot_id and self.village is None:
             return
         if self.unlocked(sp):
+            if self._tide_confirm(self._go):
+                return
             prev_cont = self.fishing.spot.get("continent", "sharmion") if self.village is None else self.village.cont
             if sp["id"] != self.fishing.spot_id:
                 self.fishing.travel(sp["id"])
@@ -198,19 +215,6 @@ class MapScene(Scene):
                 self._say(f"{sp['name']} 해금! {reward[1]}을(를) 얻었다", (255, 214, 90))
             self.game.save_now()
 
-    def _rest_to(self, i: int) -> None:
-        """골라 쉬기: 지도를 닫고 모닥불 타임랩스 (그 장면이 시계를 목표 시각까지 옮김)."""
-        f = self.fishing
-        if not f.can_rest():
-            self._say("지금은 쉴 수 없다", ui.BAD)
-            return
-        opt = f.rest_options()[i]
-        self.game.sfx.play("ui_click")
-        self.game.scenes.pop()
-        f.rest_begin()
-        from src.scene.campfire import CampfireScene
-        self.game.scenes.push(CampfireScene(self.game, f, opt["hours"]))
-
     def _train(self) -> None:
         """훈련 수조 (31장 C5): 해금 패턴 무한 반복, 보상·패널티 없음."""
         if self.fishing.fight is not None:
@@ -224,20 +228,16 @@ class MapScene(Scene):
     def handle_action(self, a) -> None:
         if a.name == "back" or a.is_("menu", "map"):
             self._close()
+        elif a.is_("menu", "calendar"):
+            self._calendar()
         elif a.name == "primary":
             m = a.pos
-            for b in (self.close_btn, self.go_btn, self.train_btn, *self.rest_btns) + tuple(self.cont_btns if self._multi() else ()):
+            for b in (self.close_btn, self.go_btn, self.train_btn, self.cal_btn) + tuple(self.cont_btns if self._multi() else ()):
                 if b.click(m):
-                    return
-            for k, (r, _, _) in enumerate(self.fc_cells):
-                if r.collidepoint(m):
-                    self.fc_sel = None if self.fc_sel == k else k
-                    self.game.sfx.play("ui_click")
                     return
             tx, ty = self._town_node()
             if math.hypot(m[0] - tx, m[1] - ty) < 13:
                 self.town_sel = True
-                self.fc_sel = None
                 self.game.sfx.play("ui_click")
                 return
             for i, sp in enumerate(self.spots):
@@ -245,7 +245,6 @@ class MapScene(Scene):
                 if math.hypot(m[0] - x, m[1] - y) < 13:
                     self.sel = i
                     self.town_sel = False
-                    self.fc_sel = None
                     self.game.sfx.play("ui_click")
 
     def _multi(self) -> bool:
@@ -283,8 +282,7 @@ class MapScene(Scene):
         got, total = self.save.continent_dex(self.cont)
         text(canvas, f"{ui.money_text(ui.money_anim(self.save.money))} · 도감 {got}/{total}", (466, 16), ui.ACCENT, 11, "midright")
         self._draw_map(canvas)
-        self._draw_forecast(canvas)
-        self._draw_rest(canvas)
+        self._draw_today(canvas)
         self._draw_info(canvas)
         if self.msg_t > 0:
             text(canvas, self.msg, (14, 256), self.msg_col, 11, "midleft")
@@ -411,115 +409,59 @@ class MapScene(Scene):
         pygame.draw.circle(canvas, (90, 160, 110), (132, 46), 12)
         canvas.fill((96, 72, 50), (130, 50, 5, 10))
 
-    # ── 예보표 (🅰): 고른 낚시터의 지금부터 48시간 = 2줄 × 8칸 ──
+    # ── 오늘 한 줄 + [달력] (CU1-2 ②: 예보표 · 쉬기 4버튼은 달력으로) ──
     def _fc_spot(self) -> dict:
-        """예보표를 보여 줄 낚시터 (마을 칸을 고르면 지금 낚시터)."""
+        """날씨를 보여 줄 낚시터 (마을 칸을 고르면 지금 낚시터)."""
         if self.town_sel:
             return next(s for s in self.all_spots if s["id"] == self.fishing.spot_id)
         return self.spot
 
-    def _legend_marks(self, sp: dict) -> list[dict]:
-        """그 낚시터 전설 중 전용 미끼를 가진 것 (없으면 표시 안 함 — 스포일러 방지)."""
-        return [fi for fi in all_fish() if fi["spot"] == sp["id"] and fi["rarity"] == "legend"
-                and fi.get("bait") and self.save.owns("bait", fi["bait"])]
-
-    @staticmethod
-    def _block_periods(block: int) -> set:
-        """칸(3시간)이 걸치는 시간대들."""
-        out = set()
-        for k in range(int(CHANGE_EVERY * 2)):
-            h = (block * CHANGE_EVERY + k * 0.5) % 24
-            pid = PERIODS[-1][1]
-            for start, p, _ in PERIODS:
-                if h >= start:
-                    pid = p
-            out.add(pid)
-        return out
-
-    @staticmethod
-    def _day_word(day: int, today: int) -> str:
-        return {0: "오늘", 1: "내일", 2: "모레"}.get(day - today, f"{day - today}일 뒤")
-
-    def _draw_forecast(self, canvas) -> None:
+    def _draw_today(self, canvas) -> None:
         f = self.fishing
         w = f.weather_sys
         box = FC
         ui.panel(canvas, box, fill=(16, 20, 36))
         sp = self._fc_spot()
         hidden = sp.get("secret") and not self.unlocked(sp) and not can_unlock_soon(self.save, sp)
-        text(canvas, f"예보 · {'???' if hidden else sp['short']}", (box.x + 6, box.y + 8), ui.ACCENT, 11, "midleft")
+        text(canvas, f"오늘 · {'???' if hidden else sp['short']}", (box.x + 6, box.y + 8), ui.ACCENT, 11, "midleft")
         text(canvas, f.clock.label(), (box.right - 5, box.y + 8), ui.DIM, 11, "midright")
-        self.fc_cells = []
         if hidden:
-            text(canvas, "알 수 없는 곳의 하늘", (box.centerx, box.y + 38), ui.DIM, 11, "center")
-            return
-        cells = w.forecast(f.clock.day, f.clock.hour, 48, sp["id"], sp["weather"])
-        legends = self._legend_marks(sp)
-        cw, ch = 19, 19
-        x0 = box.x + (box.w - (8 * (cw + 1) - 1)) // 2
-        hover = None
-        for k, (blk, wt) in enumerate(cells[:16]):
-            row, col = divmod(k, 8)
-            r = pygame.Rect(x0 + col * (cw + 1), box.y + 15 + row * (ch + 3), cw, ch)
-            self.fc_cells.append((r, blk, wt))
-            if r.collidepoint(self.mouse):
-                hover = k
-            start = int(blk * CHANGE_EVERY) % 24
-            night = start >= 20 or start < 6 or start + CHANGE_EVERY > 20
-            canvas.fill((22, 26, 44) if night else (40, 48, 74), r)
-            weather_icons.draw(canvas, wt, r.x + (cw - 9) // 2, r.y + 2)
-            weather_icons.digits(canvas, f"{start:02d}", r.x + (cw - 7) // 2, r.y + 12,
-                                 (150, 160, 190) if night else (210, 216, 236))
-            # 시간대 경계 (06 · 10 · 17 · 20시) 눈금: 칸 아래 1×2
-            for bnd, _, _ in PERIODS:
-                if start <= bnd < start + CHANGE_EVERY:
-                    tx = r.x + int((bnd - start) / CHANGE_EVERY * cw)
-                    canvas.fill((150, 200, 255), (tx, r.bottom, 1, 2))
-            leg = any(wt in fi.get("weathers", []) and self._block_periods(blk) & set(fi.get("times", []))
-                      for fi in legends)
-            if leg:
-                pygame.draw.rect(canvas, (255, 214, 90), r, 1)
-                canvas.fill((255, 214, 90), (r.centerx - 1, r.y - 2, 2, 2))
-            if k == 0:
-                pygame.draw.rect(canvas, (255, 255, 255), r.inflate(2, 2) if leg else r, 1)
-            if k == self.fc_sel:
-                pygame.draw.rect(canvas, ui.ACCENT, r.inflate(2, 2), 1)
-        k = hover if hover is not None else self.fc_sel
-        y = box.bottom - 8
-        if k is not None and k < len(self.fc_cells):
-            _, blk, wt = self.fc_cells[k]
-            t0 = blk * CHANGE_EVERY
-            day, h0 = int(t0 // 24), int(t0 % 24)
-            line = f"{self._day_word(day, f.clock.day)} {h0:02d}:00~{(h0 + 3) % 24:02d}:00 · {WEATHER_KO[wt]}"
-            text(canvas, line, (box.x + 6, y), ui.TEXT, 11, "midleft")
+            text(canvas, "알 수 없는 곳의 하늘", (box.x + 6, box.y + 21), ui.DIM, 11, "midleft")
         else:
-            nxt = next(((blk, wt) for blk, wt in cells[1:] if wt != cells[0][1]), None)
-            line = f"지금 {WEATHER_KO[cells[0][1]]}"
-            if nxt:
-                t0 = nxt[0] * CHANGE_EVERY
-                line += f" · {self._day_word(int(t0 // 24), f.clock.day)} {int(t0 % 24):02d}시부터 {WEATHER_KO[nxt[1]]}"
-            text(canvas, line, (box.x + 6, y), (150, 210, 255), 11, "midleft")
+            now = w.abs_time(f.clock.day, f.clock.hour)
+            h = f.clock.hour
+            cur = next((n for st, _, n in reversed(PERIODS) if h >= st), PERIODS[-1][2])
+            nxt_start, nxt_name = next(((st, n) for st, _, n in PERIODS if st > h + 0.01), (PERIODS[0][0] + 24, PERIODS[0][2]))
+            w0 = w.at_time(now, sp["id"], sp["weather"])
+            w1 = w.at_time(now + (nxt_start - h), sp["id"], sp["weather"])
+            x = box.x + 6
+            r = text(canvas, f"{cur} {WEATHER_KO[w0]}", (x, box.y + 21), ui.TEXT, 11, "midleft")
+            weather_icons.draw(canvas, w0, r.right + 3, box.y + 17)
+            r = text(canvas, "→", (r.right + 15, box.y + 21), ui.DIM, 11, "midleft")
+            r = text(canvas, f"{nxt_name} {WEATHER_KO[w1]}", (r.right + 4, box.y + 21), ui.TEXT, 11, "midleft")
+            weather_icons.draw(canvas, w1, r.right + 3, box.y + 17)
+        self.cal_btn.draw(canvas, self.mouse)
 
-    def _draw_rest(self, canvas) -> None:
-        """골라 쉬기 4버튼: 이름 + '오늘/내일' + 시작 시 + 그때 날씨 아이콘 (지금 낚시터 기준)."""
+    def _travel_preview(self, canvas, x: int, y: int) -> None:
+        """이동 미리보기 (CU1-3): '이동하면 1시간이 지나요' + 도착 시각, 시간대가 끝나면 노란색."""
         f = self.fishing
-        ok = f.can_rest()
-        for b, opt in zip(self.rest_btns, f.rest_options()):
-            b.enabled = ok
-            b.label = ""
-            b.draw(canvas, self.mouse)
-            hov = ok and b.hovered(self.mouse)
-            col = (ui.ACCENT if hov else ui.TEXT) if ok else ui.DIM
-            r = b.rect.move(0, ui.pressed_dy(b.rect))
-            text(canvas, opt["name"], (r.centerx, r.y + 7), col, 11, "center")
-            day = "내일" if opt["tomorrow"] else "오늘"
-            text(canvas, day, (r.x + 2, r.y + 19), ui.DIM if not ok else (180, 190, 214), 11, "midleft")
-            weather_icons.digits(canvas, f"{int(opt['start']):02d}", r.x + 24, r.y + 17, col)
-            weather_icons.draw(canvas, opt["weather"], r.x + 31, r.y + 15)
+        h0 = f.clock.hour
+        h1 = (h0 + 1.0) % 24
+        p0 = next((n for st, _, n in reversed(PERIODS) if h0 >= st), PERIODS[-1][2])
+        p1 = next((n for st, _, n in reversed(PERIODS) if h1 >= st), PERIODS[-1][2])
+
+        def hm(h):
+            return f"{int(h):02d}:{int((h - int(h)) * 60):02d}"
+        text(canvas, "이동하면 1시간이 지나요", (x, y), ui.DIM, 11, "midleft")
+        line = f"{p0} {hm(h0)} → {hm(h1)}"
+        if p1 != p0:
+            text(canvas, f"{line} · {p0}이 끝나요", (x, y + 12), (255, 214, 90), 11, "midleft")   # 아침 · 낮 · 저녁 · 밤 모두 받침
+        else:
+            text(canvas, line, (x, y + 12), ui.TEXT, 11, "midleft")
 
     def _draw_info(self, canvas) -> None:
         sp = self.spot
-        box = pygame.Rect(298, FC.bottom + 32, 168, 247 - FC.bottom - 32)
+        box = pygame.Rect(298, FC.bottom + 4, 168, 247 - FC.bottom - 4)
         ui.panel(canvas, box, fill=(16, 20, 36))
         if self.town_sel:
             self._draw_town_info(canvas, box)
@@ -530,7 +472,7 @@ class MapScene(Scene):
         yy = y + 18
         desc = "어딘가에 숨겨진 장소가 있다고 한다." if secret_hidden else sp["desc"]
         locked = not self.unlocked(sp)
-        if not locked or secret_hidden:   # 잠긴 곳은 설명 대신 해금 조건 (예보표 · 쉬기 줄 때문에 칸이 줄었음)
+        if not locked or secret_hidden:   # 잠긴 곳은 설명 대신 해금 조건 
             for ln in wrap_text(desc, box.w - 12)[:2]:
                 text(canvas, ln, (x, yy), ui.DIM, 11, "midleft")
                 yy += 12
@@ -555,6 +497,7 @@ class MapScene(Scene):
             self.go_btn.label, self.go_btn.enabled = "지금 여기 있어요", False
         elif self.unlocked(sp):
             self.go_btn.label, self.go_btn.enabled = "이동 (1시간)", self.fishing.fight is None
+            self._travel_preview(canvas, x, self.go_btn.rect.y - 20)
         else:
             ok, rows = unlock_status(self.save, sp)
             room = max(1, (self.go_btn.rect.y - yy + 4) // 12)

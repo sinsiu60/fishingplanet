@@ -24,12 +24,12 @@ class QuickMenuScene(Scene):
         y = 66 + 2 * (bh + gap)
         self.buttons.append(ui.Button((x0 + bw + gap, y, bw, bh), "도움말", self._help, size=16))
         self.buttons.append(ui.Button((240 - bw // 2, y + bh + gap, bw, 28), "닫기", self._close))
-        sub = [("도감", "dex"), ("업적", "achievements"), ("어탁", "prints"), ("수조", "tank")]
+        sub = [("도감", "dex"), ("업적", "achievements"), ("어탁", "prints"), ("수조", "tank"), ("달력", "calendar")]
         self.sub_buttons = []
         for i, (label, which) in enumerate(sub):
-            x, y2 = 240 - (bw * 2 + gap) // 2 + (i % 2) * (bw + gap), 66 + (i // 2) * (bh + gap)
+            x, y2 = x0 + (i % 3) * (bw + gap), 66 + (i // 3) * (bh + gap)
             self.sub_buttons.append(ui.Button((x, y2, bw, bh), label, lambda w=which: self._open(w), size=16))
-        self.sub_buttons.append(ui.Button((240 - bw // 2, 66 + 2 * (bh + gap) + bh + gap, bw, 28), "뒤로", self._back))
+        self.sub_buttons.append(ui.Button((x0 + 2 * (bw + gap), 66 + (bh + gap), bw, bh), "뒤로", self._back, size=16))
 
     def _back(self) -> None:
         self.collect = False

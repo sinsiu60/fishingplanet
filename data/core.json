@@ -1,0 +1,14 @@
+{
+  "_설명": "코어 업데이트 수치 (CORE_UPDATE.md, DESIGN.md 52장). CU1 = calendar · tide_conch, 뒤 Phase 가 팔 힘 · 틈 · 신호 공격 · 정체 숨김 · 변수 · 손님을 더함.",
+  "calendar": {
+    "_설명": "달력 (CU1-2): days = 오늘부터 며칠, bar_colors = 시간대 막대 색 (날씨별), rest_max_hours 는 game_config time 쪽.",
+    "days": 14,
+    "bar_colors": {"clear": [240, 200, 80], "rain": [90, 150, 230], "storm": [120, 124, 136], "fog": [204, 208, 216]}
+  },
+  "tide_conch": {
+    "_설명": "물때 멈춤 소라 (CU1-4, storm_conch): 실제 real_sec 초 동안 게임 시계 정지 + 고른 날씨(안개 금지) 고정, 끝나기 blink_sec 초 전부터 아이콘 깜빡. 쉬기 · 이동하면 끝 (확인 창).",
+    "real_sec": 600,
+    "blink_sec": 30,
+    "weathers": ["clear", "rain", "storm"]
+  }
+}
