@@ -58,7 +58,7 @@ def start(g, fid: str):
 def keep(sc):
     sc.card = None
     sc.help = False
-    sc.game.guide.run = None
+    sc.game.guide.abort()   # run 만 지우면 패턴 튜토리얼이 비운 물고기 행동 목록이 안 돌아옴
     f = sc.fight
     if f is not None:
         f.line = float(f.line_max)
@@ -193,8 +193,6 @@ def rules(g):
     # 히트스톱: 슬로우모션을 덮어쓰지 않음
     g.slowmo(0.6, 0.35)
     g.hitstop(0.06)
-    t0 = sc.fight.t if hasattr(sc.fight, "t") else None
-    acc0 = g._acc
     step(g, sc, 0.05, draw=False)
     check(g.time_scale == 0.35 and g.slow_timer > 0.5, "히트스톱 뒤 슬로우모션 이어감")
     step(g, sc, 0.8)

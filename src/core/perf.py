@@ -224,7 +224,7 @@ class BenchRunner:
         self._guide = (g.guide.enabled, g.guide.frozen)
         g.guide.enabled = lambda: False
         g.guide.frozen = lambda: False
-        g.guide.run = None
+        g.guide.abort()   # 진행 중 튜토리얼을 '중단'으로 (run 만 지우면 패턴 튜토리얼이 비워 둔 물고기 행동 목록이 안 돌아옴)
         # 파이팅의 '감기' 는 장면이 매 틱 입력(input.held)에서 읽으므로, 벤치마크 동안은 입력을 대신한다
         self._held = g.input.held
         self._reel = False
@@ -269,7 +269,7 @@ class BenchRunner:
         if self.done:
             return
         self.t += dt
-        self.game.guide.run = None   # 대본 중 튜토리얼(환상 첫 만남 등)이 떠서 화면을 어둡게 하지 않게
+        self.game.guide.abort()   # 대본 중 튜토리얼(환상 첫 만남 등)이 떠서 화면을 어둡게 하지 않게 — abort 는 비워 둔 행동 목록도 되돌림
         try:
             self._step(dt)
         except Exception:   # 벤치마크 대본이 깨져도 게임은 계속 — 그 장면은 건너뜀

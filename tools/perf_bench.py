@@ -103,7 +103,7 @@ def scenarios():
         def pre():
             sc.card = None
             sc.help = False
-            g.guide.run = None   # 가이드 튜토리얼 화면은 빼고 잼
+            g.guide.abort()   # 가이드 튜토리얼 화면은 빼고 잼 (abort = 패턴 튜토리얼이 비운 물고기 행동 목록도 되돌림)
         return pre
 
     for spot, hour, w in (("reservoir", 12.0, "clear"), ("reservoir", 21.0, "rain"), ("valley", 2.0, "storm"),
