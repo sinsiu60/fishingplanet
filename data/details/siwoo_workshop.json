@@ -1,7 +1,11 @@
 {
-  "_설명": "시우 공방 간판 (DETAILS.md H-4, DESIGN.md 45장 DT11). 윤슬 마을 파노라마 오른쪽 끝 작은 가게. 등용(dragon_carp)을 잡기 전 = 문에 팻말, 잡은 뒤 = 문이 열리고 제작자 한마디 + 크레딧.",
+  "_설명": "시우 공방 간판 (DETAILS.md H-4, DESIGN.md 45장 DT11). 윤슬 마을 파노라마 오른쪽 끝 작은 가게. 등용(dragon_carp)을 잡기 전 = 문에 팻말, 잡은 뒤 = 문이 열리고 제작자 한마디 + 크레딧. egg = 간판을 egg_taps번 연달아(간격 egg_gap_sec 안) 누르면 나오는 숨은 한마디 — 문이 열린 뒤엔 door_delay_sec 만큼 기다렸다 크레딧으로 (그 사이 연타를 셈).",
   "unlock_fish": "dragon_carp",
   "closed": "오늘은 쉽니다 — 시우 공방",
+  "egg": "신시우 잘생김",
+  "egg_taps": 5,
+  "egg_gap_sec": 0.8,
+  "door_delay_sec": 0.45,
   "thanks": "이 게임을 끝까지 즐겨 주셔서 고맙습니다. — 시우 공방",
   "credits": [
     ["미니 피싱", ""],

@@ -46,6 +46,9 @@ class VillageScene(Scene):
         self.bubble = None         # {"npc", "lines", "i", "t"}
         self.panel = None          # 계절 알림판 {"t"}
         self.sign_panel = None     # 시우 공방 문 팻말 {"t"} (DT11)
+        self.siwoo_taps = (0, -9.0)   # 시우 공방 연타 (횟수, 마지막 시각) — 5번이면 숨은 한마디
+        self.siwoo_door = None     # 문이 열린 공방: 크레딧까지 남은 초 (그 사이 연타를 셈)
+        self.siwoo_egg = None      # {"t"} '신시우 잘생김'
         fishing.backdrop = self.draw_world
         fishing._tut_spot = None   # 마을에서 다시 낚시터로 가면 '낚시터 입장' (가이드 튜토리얼)
         fishing.bite.stop()
@@ -170,12 +173,34 @@ class VillageScene(Scene):
         elif a == "season":
             self.panel = {"t": 0.0}
         elif a == "siwoo":   # 시우 공방 (DT11): 등용을 잡았으면 제작자 한마디 + 크레딧, 아니면 문에 걸린 팻말
-            if self._siwoo_open():
-                from src.scene.credits import CreditsScene
-                self.game.sfx.play("ui_door", 0.6)
-                self.game.scenes.push(CreditsScene(self.game))
+            if self._siwoo_open():   # 잠깐 뒤 크레딧 (그 사이 연타 → 숨은 한마디)
+                self.siwoo_door = load_json("details/siwoo_workshop.json")["door_delay_sec"]
             else:
                 self.sign_panel = {"t": 0.0}
+
+    def _siwoo_tap(self, pos) -> bool:
+        """시우 공방을 연달아 누르면 셈 → egg_taps번째에 숨은 한마디. True = 이 누름은 여기서 끝."""
+        r = next((r for k, pid, r in self.hits if k == "place" and pid == "siwoo"), None)
+        if r is None or not r.collidepoint(pos) or self.panel or self.bubble or self.cat_pop:
+            return False
+        c = load_json("details/siwoo_workshop.json")
+        n, last = self.siwoo_taps
+        n = n + 1 if self.t - last <= c["egg_gap_sec"] else 1
+        self.siwoo_taps = (n, self.t)
+        if n >= c["egg_taps"]:
+            self.siwoo_taps = (0, -9.0)
+            self.sign_panel = self.siwoo_door = None
+            self.siwoo_egg = {"t": 0.0}
+            self.game.sfx.play("ui_star", 0.7)
+            return True
+        if n == 1:
+            return False   # 첫 누름은 평소대로 (팻말 / 문)
+        self.game.sfx.play("ui_click")
+        if self.siwoo_door is not None:
+            self.siwoo_door = c["door_delay_sec"]
+        elif not self._siwoo_open() and self.sign_panel is None:
+            self.sign_panel = {"t": 0.0}
+        return True
 
     def _siwoo_open(self) -> bool:
         from src.save.save_game import fish_by_id
@@ -242,6 +267,8 @@ class VillageScene(Scene):
             if pygame.Rect(w - 146, h - 66, 140, 60).collidepoint(pos):
                 self._close_phone()
                 return
+        if self._siwoo_tap(pos):
+            return
         if self.panel is not None:
             self.panel = None
             return
@@ -395,6 +422,17 @@ class VillageScene(Scene):
         if self.life_msg is not None:
             m, left, col = self.life_msg
             self.life_msg = (m, left - dt, col) if left - dt > 0 else None
+        if self.siwoo_door is not None:
+            self.siwoo_door -= dt
+            if self.siwoo_door <= 0:
+                self.siwoo_door = None
+                from src.scene.credits import CreditsScene
+                self.game.sfx.play("ui_door", 0.6)
+                self.game.scenes.push(CreditsScene(self.game))
+        if self.siwoo_egg is not None:
+            self.siwoo_egg["t"] += dt
+            if self.siwoo_egg["t"] > 2.8:
+                self.siwoo_egg = None
         from src.render import village_life as vl
         if self.cont in vl.cfg()["rain"]["puddle_villages"]:
             self.ripples = vl.tick_ripples(self.ripples, dt, self.fishing.weather, self.rnd)
@@ -581,7 +619,28 @@ class VillageScene(Scene):
             pygame.draw.rect(canvas, (120, 88, 56), r, 2)
             text(canvas, msg, r.center, (70, 50, 30), 16, "center")
             text(canvas, "누르면 닫기", (w // 2, r.bottom + 12), (230, 225, 210), 11, "center", shadow=True)
+        if self.siwoo_egg is not None:
+            self._draw_siwoo_egg(canvas)
         draw_cursor(canvas, self.mouse)
+
+    def _draw_siwoo_egg(self, canvas) -> None:
+        """숨은 한마디: 공방 위에서 통 튀어 오르는 금빛 글자 + 반짝이 (2.8초)."""
+        w, h = canvas.get_size()
+        t = self.siwoo_egg["t"]
+        r = next((r for k, pid, r in self.hits if k == "place" and pid == "siwoo"), None)
+        cx = int(clamp(r.centerx, 70, w - 70)) if r is not None else w // 2
+        pop = min(1.0, t / 0.25)
+        y = int((r.top - 18 if r is not None else h // 3) - 14 * math.sin(pop * math.pi / 2))
+        fade = clamp((2.8 - t) / 0.5, 0.0, 1.0)
+        size = 18 if t > 0.25 else 12 + int(10 * math.sin(t / 0.25 * math.pi))   # 살짝 커졌다 제자리
+        col = tuple(int(v * fade) for v in (255, 214, 90))
+        text(canvas, load_json("details/siwoo_workshop.json")["egg"], (cx, y), col, size, "center", shadow=True)
+        for i in range(6):   # 글자 둘레 반짝이
+            a = t * 2.2 + i * math.tau / 6
+            px, py = cx + int(math.cos(a) * 62), y + int(math.sin(a) * 16)
+            if (int(t * 12) + i) % 3 and fade > 0.2:
+                canvas.fill((255, 246, 200), (px - 1, py, 3, 1))
+                canvas.fill((255, 246, 200), (px, py - 1, 1, 3))
 
     def _draw_story(self, canvas) -> None:
         """다음 목표 (왼쪽 위 한 줄 + 찌 아이콘) · 휴대폰 알림 · C4-01 자막."""
