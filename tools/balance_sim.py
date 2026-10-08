@@ -95,7 +95,7 @@ class BotPlayer:
         skill, rnd = self.skill, self.rnd
         if b.state == "telegraph" and b.pending == "rush":
             if self.plan_rel is None:
-                self.plan_rel = "skip" if rnd.random() < skill["miss_pattern"] else rnd.gauss(0, skill["sigma"])
+                self.plan_rel = "skip" if rnd.random() < skill["miss_jump"] else rnd.gauss(0, skill["sigma"])   # 돌진 = 점프와 같은 기본 동작 놓침률
                 self.rel_seen, self.rel_done = 0.0, False
             self.rel_seen += DT
             if self.plan_rel != "skip" and not self.rel_done and self.rel_seen >= skill["react"] \

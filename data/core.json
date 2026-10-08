@@ -37,10 +37,11 @@
     ]
   },
   "release": {
-    "_설명": "자동 드랙 + 돌진 '풀기' 신호 (CU3). 자동 드랙: 쉼 · 지침 = 최고 / 날뛰는 중 = active_frac (최저 0 ~ 최고 1) / 돌진 = 풀기 판정에 따라 — 퍼펙트 1단계 · 좋음 good_drag 단계 · 놓침 날뛰는 중 단계. 퍼펙트 = 돌진 시작 ±perfect_sec, 좋음 = 그 앞 good_sec 안. 돌진이 끝나도 return_sec 동안 풀어 둔 단계 유지. 고대 어부의 릴: 판정 구간 ×ancient_window_mult · 복귀 ancient_return_sec. '드랙 직접 조절' 설정 = 예전 방식 + 감기 ×(1+manual_reel_bonus).",
+    "_설명": "자동 드랙 + 돌진 '풀기' 신호 (CU3). 자동 드랙: 쉼 · 지침 = 최고 / 날뛰는 중 = floor(단계 수 × active_frac) (5단계 → 2) / 돌진 = 풀기 판정에 따라 — 퍼펙트 1단계 · 좋음 처음 good_spike_sec 동안 good_drag 단계 뒤 1단계 · 늦게 누름(판정은 놓침) 누른 순간부터 1단계 · 안 누름 날뛰는 중 단계. 퍼펙트 = 돌진 시작 ±perfect_sec, 좋음 = 그 앞 good_sec 안. 돌진이 끝나도 return_sec 동안 풀어 둔 단계 유지. 고대 어부의 릴: 판정 구간 ×ancient_window_mult · 복귀 ancient_return_sec. '드랙 직접 조절' 설정 = 예전 방식 + 감기 ×(1+manual_reel_bonus).",
     "perfect_sec": 0.12,
     "good_sec": 0.5,
     "good_drag": 2,
+    "good_spike_sec": 0.3,
     "active_frac": 0.5,
     "return_sec": 0.5,
     "ancient_window_mult": 1.5,

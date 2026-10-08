@@ -176,11 +176,14 @@ def draw_boss_bar(canvas, pal, fight) -> None:
 
 
 def release_ready(fight) -> bool:
-    """돌진 예고 중 (아직 풀기 판정 전) — 'Q' · '풀기' 버튼 깜빡 (CU3)."""
+    """돌진 예고 중 · 아직 안 풀린 돌진 중 — 'Q' · '풀기' 버튼 깜빡 (CU3). 늦게라도 누르면 그때부터 풀림."""
     b = fight.brain
-    return not fight.manual_drag and fight.rel_grade is None and (
-        (b.state == "telegraph" and b.pending == "rush") or (b.state == "rush" and fight.rush_start_t is not None
-                                                            and fight.elapsed - fight.rush_start_t <= 0.12))
+    if fight.manual_drag:
+        return False
+    if b.state == "telegraph" and b.pending == "rush":
+        return fight.rel_press is None   # 지난 돌진 판정과 상관없이, 이번 예고에서 아직 안 눌렀으면
+    return b.state == "rush" and fight.rush_start_t is not None and (
+        fight.rel_grade is None or (fight.rel_grade == "miss" and not fight.rel_late))
 
 
 def draw_drag(canvas, pal, fight, need: bool = False, t: float = 0.0) -> None:

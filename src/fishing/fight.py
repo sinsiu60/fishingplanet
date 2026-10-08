@@ -98,6 +98,7 @@ class Fight:
         self.rush_start_t: float | None = None
         self.rel_hold = 0.0                   # 돌진이 끝난 뒤 풀어 둔 단계를 유지하는 남은 초
         self.rel_hold_drag = 1
+        self.rel_late = False                  # 돌진이 시작된 뒤 늦게 누름 (놓침 판정 + 그때부터 최저)
         self.ctl = None  # 추가 조작 상태 (src/platform/gesture.Controls, 낚시 씬이 넣어 줌)
         # 신규 패턴 (U3): 진행 중 판정, 꼬임 게이지, 연쇄 콤보
         self.inp = PatternInput()
@@ -291,8 +292,11 @@ class Fight:
             if self.rel_grade is None:   # 돌진이 시작된 뒤에 누름: 퍼펙트 구간 안이면 퍼펙트, 아니면 늦음
                 late = self.elapsed - self.rush_start_t
                 self._rel_judge("perfect" if late <= self._rel_windows()[0] else "miss")
+            if self.rel_grade == "miss":
+                self.rel_late = True   # 늦은 풀기: 판정은 놓침 그대로, 드랙은 지금부터 최저 (이미 튄 장력 · 줄 손상은 그대로)
             return
-        self.rel_press = self.elapsed   # 예고 중(또는 그 전): 돌진이 시작될 때 판정
+        if b.state == "telegraph" and b.pending == "rush":
+            self.rel_press = self.elapsed   # 예고 중: 돌진이 시작될 때 판정 (예고 밖에서 누른 건 아무 일 없음)
 
     def _rel_judge(self, grade: str) -> None:
         self.rel_grade = grade
@@ -314,6 +318,7 @@ class Fight:
     def _rush_started(self) -> None:
         self.rush_start_t = self.elapsed
         self.rel_grade = None
+        self.rel_late = False
         if self.manual_drag:
             return
         if self.rel_press is not None:
@@ -329,13 +334,21 @@ class Fight:
         """릴이 물고기 상태를 보고 드랙을 맞춤: 쉼 · 지침 = 최고 / 날뛰는 중 = 중간 / 돌진 = 풀기 판정대로."""
         b = self.brain
         top = self.drag_steps
-        mid = max(1, int(round(1 + (top - 1) * self.rel_cfg["active_frac"])))
+        mid = max(1, int(top * self.rel_cfg["active_frac"]))   # 5단계 → 2 (예전 봇 · CU2 기준과 같은 '절반 내림')
+        if b.state not in ("telegraph", "rush"):
+            self.rel_press = None   # 예고가 돌진 없이 끝났으면 누른 기록도 버림
         if b.state == "rush" and self.rush_start_t is not None:
             if self.rel_grade is None and self.elapsed - self.rush_start_t > self._rel_windows()[0]:
                 self._rel_judge("miss")
             g = self.rel_grade
-            want = 1 if g == "perfect" else (min(top, int(self.rel_cfg["good_drag"])) if g == "good" else mid)
-            if g in ("perfect", "good"):
+            since = self.elapsed - self.rush_start_t
+            if g == "perfect" or self.rel_late:
+                want = 1   # 늦은 풀기도 누른 순간부터 풀림 (판정은 놓침 — 그 사이 튄 장력이 벌)
+            elif g == "good":   # 좋음: 처음 잠깐만 한 단계 덜 풀림 = 장력 조금 튐
+                want = min(top, int(self.rel_cfg["good_drag"])) if since < self.rel_cfg["good_spike_sec"] else 1
+            else:
+                want = mid   # 놓침: 날뛰는 중 단계 그대로 = 장력 크게 튐
+            if g in ("perfect", "good") or self.rel_late:
                 self.rel_hold_drag = want
                 self.rel_hold = self.rel_cfg["ancient_return_sec"] if self.gear.get("auto_drag") else self.rel_cfg["return_sec"]
         elif self.rel_hold > 0:
