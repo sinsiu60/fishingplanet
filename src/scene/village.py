@@ -682,8 +682,8 @@ class VillageScene(Scene):
             a = min(1.0, left / 0.4)
             band = pygame.Surface((w, 18), pygame.SRCALPHA)
             band.fill((10, 12, 24, int(150 * a)))
-            canvas.blit(band, (0, 24))   # 위쪽 (고양이 · 사람 발치를 가리지 않게)
-            text(canvas, m, (w // 2, 33), tuple(int(v * a) for v in col), 11, "center", shadow=True)
+            canvas.blit(band, (0, 40))   # 위쪽 (고양이 · 사람 발치를 가리지 않게, 다음 목표 줄 y30 아래)
+            text(canvas, m, (w // 2, 49), tuple(int(v * a) for v in col), 11, "center", shadow=True)
         if self.bubble is not None and self.bubble["t"] >= 0:
             self._draw_bubble(canvas)
         if self.panel is not None:
