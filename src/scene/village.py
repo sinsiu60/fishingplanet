@@ -350,6 +350,10 @@ class VillageScene(Scene):
     def update(self, dt: float) -> None:
         self.t += dt
         self._story_update(dt)
+        if self.game.scenes.current is self and self.story_seq is None and self.game.guide.run is None:
+            from src.scene.exam_scene import ExamNoticeScene, notice_ready
+            if notice_ready(self.game):   # 미뤄 둔 백 노인 시험 변경 공지 (이야기 튜토리얼이 끝난 뒤 마을에서, 🅲-1)
+                self.game.scenes.push(ExamNoticeScene(self.game))
         from src.ui import achv_toast
         achv_toast.update(self.game, dt, self.game.scenes.current is self and self.story_seq is None)
         f = self.fishing

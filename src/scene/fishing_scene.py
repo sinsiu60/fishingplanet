@@ -1471,6 +1471,10 @@ class FishingScene(Scene):
         self.bite.stop()
         self.cast.reset()
         self.game.screen.shake = (0, 0)
+        if getattr(self, "exam_ready_toast", False):
+            self.exam_ready_toast = False
+            from src.save import exam
+            self.toasts.show(exam.cfg()["ready_toast"], (242, 196, 107), 3.5, 11)   # 하루 목소리 (🅲-3)
         if self.exam_run is not None or self.exam_fish is not None:
             self._exam_end(exam_res)
 
@@ -1902,6 +1906,9 @@ class FishingScene(Scene):
             self.screen_weather.add_drops(random.randint(*A["thrash_drops"]))
 
     def _update_waiting(self, dt: float) -> None:
+        if (self.cast.state == CastState.READY and self.training is None and self.game.scenes.current is self
+                and self._exam_float_on()):
+            self.game.guide.event("exam_spot")   # TG-24 첫 시험 (시험 찌를 받고 시험 낚시터에 섬, 49-6)
         self.bite.set_conditions(self.clock.period()[0], self.weather, self.spot_id)
         self.bite.bait = self.save.equipped("bait")
         self.bite.force_fish = self.exam_fish if self.exam_fish is not None else \
@@ -3240,6 +3247,7 @@ class FishingScene(Scene):
             f.result["fish"] = shown
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
+            self._check_exam_ready()
             hc = load_json("details/hands_catch.json")
             self.release_item = (self.save.data["keepnet"][-1] if f.fish.get("rarity") in hc["release"]["for"]
                                  and self.training is None and self.save.data["keepnet"] else None)
@@ -3352,6 +3360,16 @@ class FishingScene(Scene):
         self.end_t = 0.0
         self.shake_kick = 4.0 if ev == "lost:snap" else 0.0
 
+    def _check_exam_ready(self) -> None:
+        """자격을 처음 다 채운 순간 (시험 안내 TG-22 를 본 세이브): 파이팅이 끝나면 토스트 '백 노인이 자네를 찾던데?' (티어마다 한 번)."""
+        from src.save import exam
+        t = exam.next_tier(self.save)
+        st = exam.state(self.save)
+        if t is None or t in st["goal_toast"] or not self.game.guide.done("TG-22") or not exam.eligible(self.save):
+            return
+        st["goal_toast"].append(t)
+        self.exam_ready_toast = True
+
     def _exam_end(self, res: dict | None) -> None:
         """시험 판 결과 화면을 닫은 뒤: 백 노인 대사 (T6 부터는 편지)."""
         self.exam_run = None
@@ -3359,8 +3377,7 @@ class FishingScene(Scene):
         if not res:
             return
         from src.scene.exam_scene import ExamResultScene
-        self.game.scenes.push(ExamResultScene(self.game, self, res))
-        self.game.guide.event("exam_end")
+        self.game.scenes.push(ExamResultScene(self.game, self, res))   # 닫히면 가이드 'exam_end' (TG-24)
 
     # ───────────────────────── 그리기 ─────────────────────────
     WATER_MARGIN = 6   # 물결 마루가 수평선 위로 올라올 수 있는 최대 픽셀 (진폭 2 × 폭풍 1.9 × 바다 1.3)
@@ -4021,6 +4038,10 @@ class FishingScene(Scene):
         mp = self.screen_fx.map
         if f is None:
             T.mark("fish.water", (0, hz, W, H - hz))
+            T.mark("fish.clock", (6 + (self.hud_inset if self.touch else 0), 1, 150, 14))   # TG-24 불합격: 시계
+            if self._exam_float_on() and c.state == CastState.READY:
+                tx, ty = self._rod_geo()["tip"]
+                T.mark("fish.exam_float", (int(tx) - 14, int(ty) - 6, 28, 30))   # TG-24: 끼워진 시험 찌
             if c.state not in (CastState.READY, CastState.CHARGING, CastState.SWING):
                 p = cam.project(c.bx, c.bz, c.bh)
                 if p:
@@ -4104,6 +4125,16 @@ class FishingScene(Scene):
             T.mark("catch.card", (W // 2 - 110, 12, 220, 60))
             T.mark("catch.size", (W // 2 - 40, 36, 80, 16))
             T.mark("catch.rank", (W - 70 - 22, 54 - 22, 44, 50))
+            if "signal_pts" in (f.result.get("score") or {}):   # TG-25 새 랭크 (49-6): 막대 4개 · 가장 모자란 막대
+                bars = fight_hud.rank_bars_rect(W - 70, 54 + 36)
+                T.mark("catch.rank_bars", bars.inflate(12, 6))
+                ratios = fight_hud.rank_ratios(f.result)
+                weak = min(fight_hud.BAR_KEYS, key=lambda k: ratios[k])
+                if f.result["rank"] != "S" and ratios[weak] < 0.999:
+                    i = fight_hud.BAR_KEYS.index(weak)
+                    T.mark("catch.rank_bars.weak", (bars.x - 2, bars.y + i * 8 - 2, bars.w + 4, 9))
+                else:
+                    T.mark("catch.rank_bars.weak", bars.inflate(12, 6))
             from src.core.fonts import get_font
             for i, (label, _) in enumerate(fight_hud.catch_badges(self.catch_news)):
                 r = (8, 24 + i * 15 - 8, get_font(11).size(label)[0] + 8, 16)

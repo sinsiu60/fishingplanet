@@ -401,7 +401,11 @@ class Guide:
         return s.get("target")
 
     def who(self) -> str:
-        return self.data[self.run["id"]].get("who", "haru") if self.run else "haru"
+        """안내 인물 (단계마다 바뀔 수 있음 — TG-24 첫 시험: 백 노인 → 하루)."""
+        if not self.run:
+            return "haru"
+        s = self.step
+        return (s or {}).get("who") or self.data[self.run["id"]].get("who", "haru")
 
     def draw(self, canvas) -> None:
         from src.tutorial import overlay

@@ -19,7 +19,8 @@ def cfg() -> dict:
 
 
 def default_state() -> dict:
-    return {"passed": 1, "fails": {}, "retry_day": {}, "active": None, "notice_seen": False, "missed": {}, "ready_seen": []}
+    return {"passed": 1, "fails": {}, "retry_day": {}, "active": None, "notice_seen": False, "missed": {}, "ready_seen": [],
+            "legacy": False, "goal_toast": []}
 
 
 def state(save) -> dict:
@@ -68,7 +69,12 @@ def migrate(data: dict) -> None:
     st = default_state()
     st["passed"] = legacy_passed(data)
     st["notice_seen"] = st["passed"] <= 1
+    st["legacy"] = st["passed"] >= 2   # 이미 진행한 세이브 (🅲-1): 변경 공지 · TG-21 잠긴 장비 건너뜀
     data["exam"] = st
+    if st["legacy"]:
+        done = data.setdefault("tutorial", {}).setdefault("done", [])
+        skip = ["TG-21"] + (["TG-22", "TG-23", "TG-24"] if st["passed"] >= MAX_TIER else [])   # T8: 볼 시험이 없음
+        done += [t for t in skip if t not in done]
     titles = data.setdefault("cosmetics", {}).setdefault("titles", [])
     for t, tid in cfg()["titles"].items():   # 자동 합격한 티어의 칭호도 (T4 · T8)
         if int(t) <= st["passed"] and tid not in titles:
@@ -78,7 +84,9 @@ def migrate(data: dict) -> None:
 def legacy_notice(save) -> int | None:
     """옛 세이브 안내를 아직 안 봤으면 자동 합격 티어 (보면 mark_notice)."""
     st = state(save)
-    return None if st["notice_seen"] else st["passed"]
+    if st["notice_seen"] or not st.get("legacy") or st["passed"] < 2:   # 새 세이브 · T1 세이브는 공지 없음 (🅲-1)
+        return None
+    return st["passed"]
 
 
 def mark_notice(save) -> None:
@@ -239,6 +247,7 @@ def finish(save, ok: bool, day: int, missed: dict | None = None) -> dict:
     t = int(act["tier"])
     st["active"] = None
     st["missed"] = dict(missed or {})
+    st["last_pass"] = bool(ok)   # TG-24 첫 시험 ③ (합격 / 불합격 안내)
     titles = []
     if ok:
         st["passed"] = max(st["passed"], t)

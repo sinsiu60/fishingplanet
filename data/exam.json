@@ -17,5 +17,7 @@
  "hint_after_fails": 3,
  "letter_from": 6,
  "titles": {"4": "exam_water", "8": "exam_heir"},
- "_lines": "대사는 data/dialogue.json kind exam_* (DESIGN 49-5)"
+ "_lines": "대사는 data/dialogue.json kind exam_* (DESIGN 49-5)",
+ "goal_text": "백 노인에게 시험을 보러 가자 (T{tier})",
+ "ready_toast": "백 노인이 자네를 찾던데?"
 }

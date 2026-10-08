@@ -6687,3 +6687,49 @@ drag_floor 물고기와 첫 파이팅 시작 (`guide.event("first:heavy_fish")`,
 
 **문서**: DESIGN 17장 · 2-5 머리에 '(→ 49장)' 꼬리표, RELEASE_NOTES '📜 다음 버전 (준비 중)' 에 공지 한 줄. MASTER.md 는 저장소에 없음.
 **확인**: `tools/exam_check.py` (칭호 확인 4개 추가, 39개) · compat_smoke · fight_text_check · tutorial_check · story_check · sound_audit --strict 통과. 빌드 = 푸시 CI (exe · APK · 웹).
+
+### 49-6. EX5: 튜토리얼 · 변경 공지 · 백 노인 웃는 얼굴
+
+**🅳 웃는 얼굴**: `baek_smile_pack.zip` 의 `npc_baek_smile*.png` 4장으로 교체 (눈 = 평소 neutral 그대로, 입만 웃음 · 말할 때 웃으며 벌린 입). 다른 인물 그림 그대로, zip 삭제.
+실내 대화 · 변경 공지 · 시험 결과에서 깜빡임 · 말하기 프레임이 같은 눈으로 이어짐 (스크린샷 `build/exam_tut/smile_*.png`).
+
+**🅲-1 세이브 판정** (`exam` 필드 · `exam.legacy`):
+
+| 세이브 | 처리 |
+|---|---|
+| 새 세이브 · 장비 T1 옛 세이브 | 공지 없음 (`legacy` false). TG-21 → 22 → 23 → 24 → 25 |
+| 장비 T2 ~ T7 옛 세이브 | `legacy` true, 자동 합격 + TG-21 완료 처리 → 변경 공지 4쪽 → 백 노인 오두막에서 TG-22 부터 |
+| 장비 T8 옛 세이브 | 자동 합격 T8 · 목패 Ⅱ ~ Ⅷ · 칭호 2개 · TG-21 ~ 24 완료 처리 → 변경 공지 3쪽 (T8 판) → TG-25 만 |
+| 이야기 튜토리얼 진행 중 (TG-07 구매 전) | 공지 · 시험 튜토리얼 미룸 — 공지는 TG-07 이 끝난 뒤 마을에 있을 때 (`exam_scene.notice_ready`, 가이드가 쉬고 있을 때), 시험 튜토리얼은 `after: TG-07` |
+
+**🅲-2 변경 공지** (`ExamNoticeScene` 다시 만듦, ScalestoneNoticeScene 방식): 왼쪽 백 노인 초상화 (쪽마다 표정 neutral → smile → sharp → neutral), 오른쪽 글, [다음] / [확인], 쪽 번호.
+문구는 `dialogue.json exam_notice_1 ~ 4 · exam_notice_t8` (원문 그대로, `**…**` = 금색). 2쪽 아래 '합격 Ⅱ Ⅲ …' · 칭호, T8 판은 '오두막 벽에 목패 Ⅱ ~ Ⅷ' · 칭호 2개. 닫으면 `exam.notice_seen`.
+(EX3 의 한 줄 안내는 이것으로 바뀜 — EX3 안내는 새 세이브에도 'T1' 로 뜨던 버그가 있었음, 이번에 `legacy` 판정으로 고침.)
+
+**🅲-3 튜토리얼 TG-21 ~ 25** (TUTORIAL.md 다른 시스템 표 원문 존댓말 → `tutorial_voice.json` 하루 말투 / **백 노인 말투 표 새로**, `tutorial_build.py` · `tutorial_check.py` 가 백 노인 표 · 단계별 인물 · 다른 경우 문구까지 검사):
+
+| ID (문서 이름) | 시작 | 단계 (강조 대상) |
+|---|---|---|
+| TG-21 잠긴 장비 (EX1) | 상점 장비 탭에서 처음 시험 잠금 줄이 보일 때 (`exam_lock_seen`, 새 세이브만 `exam_fresh`) | 정지 · 잠긴 줄 `shop.row.examlock` / 정지 · 자물쇠 글자 `shop.row.examlock.label` (하루) |
+| TG-22 시험 안내 (EX2) | 백 노인 메뉴가 뜰 때 (새 = TG-21 뒤, 옛 = 공지 뒤 `exam_tg22`, 다 합격이면 없음) | 강조 · `interior.menu.exam` → 시험 화면이 열리면 (백 노인) |
+| TG-23 자격 읽기 (EX3) | 시험 화면 첫 열림 (`exam_open`) | 정지 · `exam.qual.dex` / `exam.qual.stars` / `exam.qual.owner` (T2 면 건너뜀, 대본 `exam_quals`) / `exam.fish` (백 노인) |
+| TG-24 첫 시험 (EX4) | 시험 찌를 받고 시험 낚시터에 섰을 때 (`exam_spot`) | 정지 · 끼워진 시험 찌 `fish.exam_float` (백 노인) / 대기 · 찌 → 결과 화면을 닫으면 (`exam_end`) / 정지 · 합격 = 상점 버튼 `fish.menu.shop` · 불합격 = 시계 `fish.clock` + '내일 다시' (대본 `exam_first`, 하루) |
+| TG-25 새 랭크 (EX5) | 포획 카드 (`catch_shown`, TG-03 뒤) — 모든 세이브 | 정지 · 막대 4개 `catch.rank_bars` / 정지 · 가장 모자란 막대 `catch.rank_bars.weak` (S 거나 다 찼으면 막대 전체) |
+
+- 가이드: 단계마다 안내 인물 (`step.who`), 파이팅 중 시작은 그대로 TG-02 · P · 19 · 20 만.
+- 다시 보기 목록: '백 노인의 시험' (TG-21 ~ 24 한 줄, 누르면 넷 다) · '새 랭크'.
+- 다음 목표: 자격을 다 채웠고 이야기가 할 일을 정해 준 목표(튜토리얼 · NPC 장면 대기 — goals 0 1 2 4 6 8 10 13 15)가 아니면 "백 노인에게 시험을 보러 가자 (T n)" (`exam.json goal_text`), 합격하면 빠짐.
+- 토스트: TG-22 를 본 세이브가 자격을 처음 다 채운 포획 뒤 "백 노인이 자네를 찾던데?" (티어마다 한 번, `exam.goal_toast`).
+
+**세이브 5종 처음부터** (`tools/exam_tut_check.py`, 실제 장면 코드 · 스크린샷 `build/exam_tut/`):
+
+| 세이브 | 나온 순서 |
+|---|---|
+| 새 세이브 | 공지 없음 → 상점 TG-21 (2단계) → 백 노인 TG-22 → TG-23 (①②④, T2 라 ③ 건너뜀) → 낚시터 TG-24 ① 시험 찌 · ② 대기 → 시험 결과 → ③ 상점 버튼 → 포획 카드 TG-25 (2단계) |
+| 장비 T3 | 공지 4쪽 (T3 · 다음 T4) → TG-22 → TG-23 (①②③④) → 포획 카드 TG-25 |
+| 장비 T5 | 공지 4쪽 (T5 · 다음 T6) → TG-22 → TG-23 (4단계) → TG-25 |
+| 장비 T8 | 공지 3쪽 (T8 판, 목패 · 칭호 줄) → 오두막 목패 Ⅱ ~ Ⅷ · 시험 튜토리얼 없음 → TG-25 |
+| 이야기 튜토리얼 중 (TG-06 전, 장비 T3) | 시작 · 마을에서 공지 없음 → TG-06 · 07 끝난 뒤 마을에서 공지 4쪽 |
+
+불합격 분기 (TG-24 ③ 시계 + '내일 다시') · 목표 끼어들기 / 이야기 목표 우선 · 토스트 따로 확인.
+**확인**: exam_tut_check (5종) · exam_check · compat_smoke · fight_text_check · tutorial_check (문구 170 · 튜토리얼 45) · story_check · sound_audit --strict 통과. 빌드 = 푸시 CI.

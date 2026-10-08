@@ -546,3 +546,37 @@ class _Phantom:
 
 
 script("phantom")(_Phantom)
+
+
+# ───────────────────────── 백 노인의 시험 (TG-23 · TG-24, DESIGN 49-6) ─────────────────────────
+class _ExamQuals:
+    """TG-23 자격 읽기: 자격 ③ 이 없는 시험(T2)이면 ③ 단계를 건너뜀."""
+
+    @staticmethod
+    def on_step(game, run) -> None:
+        if run["i"] != 2:
+            return
+        from src.save import exam
+        if not any(q["key"] == "owner" for q in exam.quals(game.save)):
+            game.guide._next()
+
+
+script("exam_quals")(_ExamQuals)
+
+
+class _ExamFirst:
+    """TG-24 첫 시험 ③: 합격이면 상점 버튼, 불합격이면 시계 + '내일 다시' (exam.missed 와 passed 로 판단)."""
+
+    @staticmethod
+    def on_step(game, run) -> None:
+        if run["i"] != 2:
+            return
+        from src.save import exam
+        st = exam.state(game.save)
+        if not st.get("last_pass", True):
+            step = game.guide.data[run["id"]]["steps"][2]
+            run["ctx"]["text"] = step["alt_text"]
+            run["ctx"]["target"] = step["alt_target"]
+
+
+script("exam_first")(_ExamFirst)

@@ -3064,16 +3064,6 @@
    "expr": "smile"
   },
   {
-   "id": "exam_legacy",
-   "npc": "baek",
-   "kind": "exam_legacy",
-   "text": "자네 솜씨는 이미 들었네. T{tier} 까지는 시험 안 봐도 되네.",
-   "cond": {},
-   "once": false,
-   "prio": 1,
-   "expr": "smile"
-  },
-  {
    "id": "exam_letter_open",
    "npc": "ella",
    "kind": "exam_letter_open",
@@ -3119,6 +3109,56 @@
    "cond": {},
    "once": false,
    "prio": 1
+  },
+  {
+   "id": "exam_notice_1",
+   "npc": "baek",
+   "kind": "exam_notice_1",
+   "text": "자네, 요즘 장비를 돈으로만 사더군. 이제부턴 내 시험을 봐야 다음 장비를 팔도록 하루에게 일러 뒀네.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "neutral"
+  },
+  {
+   "id": "exam_notice_2",
+   "npc": "baek",
+   "kind": "exam_notice_2",
+   "text": "물론 자네가 이미 쓰던 건 그대로일세. **T{tier} 까지는 합격으로 쳐 두지.**",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "smile"
+  },
+  {
+   "id": "exam_notice_3",
+   "npc": "baek",
+   "kind": "exam_notice_3",
+   "text": "다음 시험(T{next})은 그 물을 다 알아야 볼 수 있네. 오두막에 들르면 알려 주지.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "sharp"
+  },
+  {
+   "id": "exam_notice_4",
+   "npc": "baek",
+   "kind": "exam_notice_4",
+   "text": "그리고… 요즘 S 를 너무 쉽게 받더군. 이제 S 는 신호를 제대로 받아낸 판에만 주겠네. 대신 값은 더 쳐 주지.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "neutral"
+  },
+  {
+   "id": "exam_notice_t8",
+   "npc": "baek",
+   "kind": "exam_notice_t8",
+   "text": "자네는 볼 시험이 없구먼. …해강이도 못 간 데까지 갔으니.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "smile"
   }
  ]
 }

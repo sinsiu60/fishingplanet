@@ -9,6 +9,9 @@ from src.ui.hud import draw_cursor, text
 PER_PAGE = 8
 
 
+GROUP_TITLES = {"exam": "백 노인의 시험", "rank": "새 랭크"}   # 다시 보기 목록 묶음 이름 (BAEK_EXAM 🅲-3)
+
+
 class TutorialReplayScene(Scene):
     UI_FRAME = True
 
@@ -23,7 +26,17 @@ class TutorialReplayScene(Scene):
         g = game.guide
         st = g.st()
         # 환상 비밀: 환상 튜토리얼은 본 뒤에만 목록에
-        self.ids = [tid for tid in g.data if not (tid == "TG-PH" and tid not in st["done"])]
+        self.ids = []
+        seen_groups = set()
+        for tid in g.data:
+            if tid == "TG-PH" and tid not in st["done"]:
+                continue
+            grp = g.data[tid].get("group")
+            if grp:   # 묶음 (백 노인의 시험 = TG-21 ~ 24) 은 한 줄로 (49-6)
+                if grp in seen_groups:
+                    continue
+                seen_groups.add(grp)
+            self.ids.append(tid)
         self._build()
 
     def _build(self) -> None:
@@ -54,10 +67,20 @@ class TutorialReplayScene(Scene):
     def _step(self, d: int) -> None:
         self.step = max(0, min(20, self.step + d))
 
+    def _members(self, tid: str) -> list[str]:
+        g = self.game.guide
+        grp = g.data[tid].get("group")
+        return [t for t in g.data if g.data[t].get("group") == grp] if grp else [tid]
+
+    def _title(self, tid: str) -> str:
+        grp = self.game.guide.data[tid].get("group")
+        return GROUP_TITLES.get(grp) or self.game.guide.data[tid]["title"]
+
     def _replay(self, tid: str) -> None:
         st = self.game.guide.st()
-        if tid not in st["replay"]:
-            st["replay"].append(tid)
+        for t in self._members(tid):
+            if t not in st["replay"]:
+                st["replay"].append(t)
         self.msg, self.msg_t = "다음에 그 화면에서 다시 보여드려요 (낚시는 다음 낚시 때)", 2.5
 
     def _now(self, tid: str) -> None:
@@ -108,9 +131,10 @@ class TutorialReplayScene(Scene):
         g = self.game.guide
         st = g.st()
         for tid, y, b, d in self.rows:
-            done = tid in st["done"]
-            mark = "↻" if tid in st["replay"] else ("✓" if done else "·")
-            text(canvas, f"{mark} {g.data[tid]['title']}", (self.x0, y), ui.TEXT if done else (150, 156, 175), 11,
+            mem = self._members(tid)
+            done = all(t in st["done"] for t in mem)
+            mark = "↻" if any(t in st["replay"] for t in mem) else ("✓" if done else "·")
+            text(canvas, f"{mark} {self._title(tid)}", (self.x0, y), ui.TEXT if done else (150, 156, 175), 11,
                  "midleft")
             b.draw(canvas, self.mouse)
             if d is not None:

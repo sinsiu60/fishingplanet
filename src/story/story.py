@@ -252,8 +252,24 @@ def chapter(save) -> int:
     return 0
 
 
+# 이야기가 다음 할 일을 정해 주는 목표 (튜토리얼 · NPC 장면 대기) — 시험 목표보다 먼저 (BAEK_EXAM 🅲-3)
+_STORY_GOALS = {0, 1, 2, 4, 6, 8, 10, 13, 15}
+
+
 def goal(save) -> str | None:
-    """다음 목표 한 줄 (마을 왼쪽 위). goals.json 표 순서 그대로, 지금 구간의 문구."""
+    """다음 목표 한 줄 (마을 왼쪽 위). 자격을 다 채웠고 이야기 목표가 진행 중이 아니면 '백 노인에게 시험을 보러 가자 (T n)'."""
+    g = _story_goal(save)
+    if g is None:
+        return None
+    from src.save import exam
+    t = exam.next_tier(save)
+    texts = [x["text"] for x in load_json("story/goals.json")["goals"]]
+    if t is not None and exam.eligible(save) and texts.index(g) not in _STORY_GOALS:
+        return exam.cfg()["goal_text"].format(tier=t)
+    return g
+
+
+def _story_goal(save) -> str | None:
     if not active(save):
         return None
     g = [x["text"] for x in load_json("story/goals.json")["goals"]]

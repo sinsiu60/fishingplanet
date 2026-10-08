@@ -38,9 +38,17 @@ def main() -> int:
                 continue
             texts.append((f"{tid} {i + 1}단계", s.get("src_text", s["text"])))
             shown.append((f"{tid} {i + 1}단계", s["text"]))
-            if s.get("src_text") and hv.get(s["src_text"]) != s["text"]:
-                print(f"[하루 말투 표와 다름] {tid} {i + 1}단계")
+            who = s.get("who") or t.get("who")
+            table = voice.get("baek", {}) if who == "baek" else hv   # 백 노인 말투 (시험 튜토리얼, 49-6)
+            if s.get("src_text") and table.get(s["src_text"]) != s["text"]:
+                print(f"[{'백 노인' if who == 'baek' else '하루'} 말투 표와 다름] {tid} {i + 1}단계")
                 bad += 1
+            if s.get("alt_text"):
+                texts.append((f"{tid} {i + 1}단계 (다른 경우)", s.get("src_alt_text", s["alt_text"])))
+                shown.append((f"{tid} {i + 1}단계 (다른 경우)", s["alt_text"]))
+                if hv.get(s.get("src_alt_text")) != s["alt_text"]:
+                    print(f"[하루 말투 표와 다름] {tid} {i + 1}단계 (다른 경우)")
+                    bad += 1
         texts += [(f"{tid} 콤보", x) for x in t.get("src_chain_texts", t.get("chain_texts", []))]
         texts += [(f"{tid} {k}", t.get("src_" + k, t[k])) for k in ("hold_text", "again_text") if k in t]
         texts += [(f"{tid} 돈 부족", s.get("src_short_text", s["short_text"])) for s in t["steps"] if s.get("short_text")]

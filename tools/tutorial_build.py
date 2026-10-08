@@ -190,6 +190,24 @@ OTHER = {
     "TG-20": {"title": "대형 물고기", "who": "haru", "start": "event:first:heavy_fish",
               "steps": [("freeze", "fight.gauge.line", "tap"), ("freeze", "fight.gauge.tension", "tap"),
                         ("freeze", "fight.gauge.line", "tap")]},
+    # 백 노인의 시험 (BAEK_EXAM 🅲-3, DESIGN 49-6): TG-EX1 ~ EX5 → TG-21 ~ 25. 이야기 튜토리얼(TG-07) 뒤로.
+    "TG-21": {"title": "잠긴 장비", "who": "haru", "start": "event:exam_lock_seen", "need_cond": "exam_fresh",
+              "after": ["TG-07"], "group": "exam",
+              "steps": [("freeze", "shop.row.examlock", "tap"), ("freeze", "shop.row.examlock.label", "tap")]},
+    "TG-22": {"title": "시험 안내", "who": "baek", "start": "event:interior_ready:baek", "need_cond": "exam_tg22",
+              "after": ["TG-07"], "group": "exam",
+              "steps": [("spotlight", "interior.menu.exam", "scene:ExamScene")]},
+    "TG-23": {"title": "자격 읽기", "who": "baek", "start": "event:exam_open", "after": ["TG-07"], "script": "exam_quals",
+              "group": "exam",
+              "steps": [("freeze", "exam.qual.dex", "tap"), ("freeze", "exam.qual.stars", "tap"),
+                        ("freeze", "exam.qual.owner", "tap"), ("freeze", "exam.fish", "tap")]},
+    "TG-24": {"title": "첫 시험", "who": "haru", "start": "event:exam_spot", "after": ["TG-07"], "script": "exam_first",
+              "group": "exam",
+              "steps": [("freeze", "fish.exam_float", "tap", {"who": "baek"}), ("wait", "fish.bobber", "event:exam_end"),
+                        ("freeze", "fish.menu.shop", "tap", {"alt_text": 3, "alt_target": "fish.clock"})]},
+    "TG-25": {"title": "새 랭크", "who": "haru", "start": "event:catch_shown", "need_cond": "catch_card", "after": ["TG-03"],
+              "group": "rank",
+              "steps": [("freeze", "catch.rank_bars", "tap"), ("freeze", "catch.rank_bars.weak", "tap")]},
     "TG-PH": {"title": "환상의 물고기", "who": "baek", "start": "event:phantom_caught", "script": "phantom",
               "steps": [("info", "catch.card", "tap"), ("info", "catch.card", "tap", {"on_done": "close_catch"}),
                         ("spotlight", "dex.open", "scene:DexScene", {"allow_keys": ["menu:dex"]}),
@@ -268,6 +286,11 @@ def build() -> tuple[dict, dict]:
             # ③ 돈이 모자랄 때 문구는 따로 (short_text)
             qs = qs[:3] + qs[4:]
             short = quoted(cells[3])[3]
+        alt = None
+        if tid == "TG-24":
+            # ③ 불합격일 때 문구는 따로 (alt_text, 강조 대상 alt_target)
+            alt = qs[3]
+            qs = qs[:3]
         if len(qs) != len(sp["steps"]):
             raise SystemExit(f"{tid}: 문구 {len(qs)}개 ≠ 단계 {len(sp['steps'])} — {qs}")
         steps = []
@@ -277,6 +300,8 @@ def build() -> tuple[dict, dict]:
                 step.update(st[3])
             if step.get("short_text"):
                 step["short_text"] = short
+            if step.get("alt_text"):
+                step["alt_text"] = alt
             steps.append(step)
         tuts[tid] = {k: v for k, v in sp.items() if k != "steps"} | {"steps": steps}
     # TG-19 환경 기믹 5종: "이름 "문구"" 짝
@@ -312,11 +337,20 @@ def apply_voice(tuts: dict) -> None:
     + 사용자 요청으로 넣은 단계 (TG-02 뜰채 설명: 물고기가 퍼덕이는 동안 → 멈추는 순간 '지금이야!')."""
     v = json.load(open(os.path.join(ROOT, "data", "tutorial_voice.json"), encoding="utf-8"))
     hv = v["haru"]
+    bv = v.get("baek", {})   # 백 노인 말투 (시험 튜토리얼 TG-22 ~ 24, 49-6) — 표에 있는 문구만 (TG-PH 는 PHANTOM_FISH.md 원문 그대로)
     for tid, t in tuts.items():
+        for s in t["steps"]:
+            who = s.get("who") or t.get("who")
+            if who == "baek":
+                for key in ("text",):
+                    if key in s and s[key] in bv:
+                        s["src_" + key], s[key] = s[key], bv[s[key]]
         if t.get("who") != "haru":
             continue
         for s in t["steps"]:
-            for key in ("text", "short_text"):
+            if (s.get("who") or "haru") != "haru":
+                continue
+            for key in ("text", "short_text", "alt_text"):
                 if key in s:
                     if s[key] not in hv:
                         raise SystemExit(f"{tid}: 하루 말투 표에 없음: {s[key]}")

@@ -179,6 +179,7 @@ def legacy() -> None:
             d["items"]["origin"] = {treasure: "sharmion"}
             d["gear"]["rod"] = treasure
         d["unlocked_spots"] = ["reservoir", "valley"]
+        d["tutorial"] = {"done": ["TG-0" + str(i) for i in range(1, 8)], "active": None, "enabled": True, "replay": []}
         d["dex"] = {"carp": {"count": 3}}
         d["stats"]["catches"] = 3
         with open(os.path.join(os.environ["FISHING_SAVE_DIR"], f"slot{slot}.json"), "w", encoding="utf-8") as fp:
@@ -199,7 +200,9 @@ def legacy() -> None:
         for _ in range(40):
             top_sc.update(1 / 60)
         _shot(g, f"legacy_{slot}")
-        top_sc._close()
+        while type(g.scenes.current).__name__ == "ExamNoticeScene":
+            top_sc.t = 1.0
+            top_sc._next()
         check(exam.legacy_notice(SaveGame.load(slot)) is None, f"{label}: 안내는 한 번만")
 
 

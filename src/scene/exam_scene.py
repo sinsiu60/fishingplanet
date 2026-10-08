@@ -38,6 +38,7 @@ class ExamScene(Scene):
         self.close_btn = ui.Button((fr.right - 66, fr.bottom - 21, 58, 16), "닫기", self._close)
         self.msg, self.msg_col, self.msg_t = "", ui.TEXT, 0.0
         self._open_line()
+        game.guide.event("exam_open")   # TG-23 자격 읽기 (49-6)
 
     # ── 대사 (host 왼쪽 창) ──
     def _speak(self, key: str, **kw) -> None:
@@ -217,7 +218,9 @@ class ExamScene(Scene):
         text(canvas, f"T{t - 1} 낚시터 기준", (R.right - 6, R.y + 9), su.GRAY, 11, "midright")
         marks = ("①", "②", "③")
         y = R.y + 26
+        from src.tutorial import targets as T
         for i, q in enumerate(exam.quals(self.save)):
+            T.mark_ui(self, f"exam.qual.{q['key']}", (R.x + 2, y - 7, R.w - 4, 36))   # TG-23 자격 막대 ①②③
             text(canvas, f"{marks[i]} {q['label']}", (x, y), su.WHITE, 11, "midleft")
             num = f"{min(q['have'], q['need'])} / {q['need']}" if not q.get("legend") else "전설 포획"
             text(canvas, num, (R.right - 18, y), GREEN if q["ok"] else su.WHITE, 11, "midright")
@@ -258,7 +261,8 @@ class ExamScene(Scene):
 
 
 class ExamNoticeScene(Scene):
-    """옛 세이브 안내 (🅱-5): 가진 장비 최고 티어까지 자동 합격 — 백 노인 초상화 (smile) + 한 줄, 한 번만."""
+    """변경 공지 (BAEK_EXAM 🅲-2, 이미 진행한 세이브 한 번): 왼쪽 백 노인 초상화 (쪽마다 표정), 오른쪽 글, [다음] / [확인].
+    4쪽 = 장비는 시험으로 · T n 까지 합격 · 다음 시험 · 새 랭크. T8 세이브는 2 · 3쪽 대신 '볼 시험이 없구먼' + 목패 · 칭호 줄."""
     UI_FRAME = True
 
     def __init__(self, game):
@@ -266,19 +270,32 @@ class ExamNoticeScene(Scene):
         self.mouse = (-100, -100)
         self.t = 0.0
         self.tier = exam.passed(game.save)
-        self.expr, self.line = exam.line("legacy", tier=self.tier)
-        self.button = ui.Button((240 - 50, 206, 100, 22), "확인", self._close, size=13)
+        keys = ["notice_1", "notice_t8", "notice_4"] if self.tier >= exam.MAX_TIER else \
+            ["notice_1", "notice_2", "notice_3", "notice_4"]
+        self.pages = [exam.line(k, tier=self.tier, next=self.tier + 1) for k in keys]
+        self.keys = keys
+        self.page = 0
+        self.button = ui.Button((240 + 70, 206, 80, 20), "", self._next, size=11)
+        game.sfx.play("st_paper", 0.5)
 
-    def _close(self) -> None:
+    def _next(self) -> None:
+        if self.t < 0.3:
+            return
+        if self.page < len(self.pages) - 1:
+            self.page += 1
+            self.t = 0.0
+            self.game.sfx.play("ui_click", 0.6)
+            return
         exam.mark_notice(self.game.save)
         self.game.save.save()
-        self.game.scenes.pop()
+        if self in self.game.scenes.stack:
+            self.game.scenes.stack.remove(self)
 
     def handle_action(self, a) -> None:
         if a.name in ("back", "confirm"):
-            self._close()
-        elif a.name == "primary" and self.button.click(a.pos):
-            self.game.sfx.play("ui_click")
+            self._next()
+        elif a.name == "primary":
+            self.button.click(a.pos)
 
     def update(self, dt: float) -> None:
         self.t += dt
@@ -292,22 +309,40 @@ class ExamNoticeScene(Scene):
         canvas = self.ui_canvas(canvas)
         ui.panel(canvas, (240 - 170, 40, 340, 196))
         from src.scene.interior import portrait
-        blink = (self.t % 4.0) < 0.13
-        talk = self.t < 1.6 and int(self.t / 0.09) % 2 == 0
-        img = pygame.transform.scale(portrait("baek", self.expr or "smile", blink, talk), (96, 96))
-        canvas.blit(img, (240 - 160, 52))
-        text(canvas, "백 노인", (240 - 54, 62), (242, 196, 107), 11, "midleft")
-        y = 82
-        for ln in wrap_text(self.line, 210):
-            text(canvas, ln, (240 - 54, y), ui.TEXT, 11, "midleft")
+        from src.ui.hud import rich_text
+        expr, line = self.pages[self.page]
+        blink = (self.t % 4.0) > 3.87
+        talk = self.t < 1.4 and int(self.t / 0.09) % 2 == 0
+        img = pygame.transform.scale(portrait("baek", expr or "neutral", blink, talk), (96, 96))
+        canvas.blit(img, (240 - 162, 50))
+        text(canvas, "백 노인", (240 - 56, 58), (242, 196, 107), 11, "midleft")
+        text(canvas, f"{self.page + 1} / {len(self.pages)}", (240 + 160, 58), ui.DIM, 11, "midright")
+        y = 78
+        import re
+        rich = re.sub(r"\*\*(.+?)\*\*", r"{gold}\1{/}", line)
+        from src.ui import hud
+        for ln in hud.wrap_rich(rich, 206):
+            rich_text(canvas, ln, (240 - 56, y), ui.TEXT, 11, "midleft")
             y += 16
-        text(canvas, "장비 구매 · 장착은 합격한 티어까지 — 다음 티어는 백 노인의 시험", (240, 162), ui.DIM, 11, "center")
-        tiers = " ".join(exam.ROMAN[i] for i in range(2, self.tier + 1))
-        su.btext(canvas, f"합격  {tiers}", (240, 177), GREEN, 11, "center")
-        names = [n for t, n in ((4, "물을 아는 자"), (8, "해강의 뒤를 이은 자")) if self.tier >= t]
-        if names:
-            text(canvas, "  ".join(f"칭호 「{n}」" for n in names), (240, 192), (255, 214, 90), 11, "center")
+        if self.keys[self.page] in ("notice_2", "notice_t8"):
+            tiers = " ".join(exam.ROMAN[i] for i in range(2, self.tier + 1))
+            su.btext(canvas, f"합격  {tiers}", (240 + 32, 168), GREEN, 11, "center")
+            names = [n for t, n in ((4, "물을 아는 자"), (8, "해강의 뒤를 이은 자")) if self.tier >= t]
+            if names:
+                text(canvas, "  ".join(f"칭호 「{n}」" for n in names), (240 + 32, 184), (255, 214, 90), 11, "center")
+            if self.tier >= exam.MAX_TIER:
+                text(canvas, "오두막 벽에 목패 Ⅱ ~ Ⅷ", (240 + 32, 152), ui.DIM, 11, "center")
+        self.button.label = "다음" if self.page < len(self.pages) - 1 else "확인"
         self.button.draw(canvas, self.mouse)
+
+
+def notice_ready(game) -> bool:
+    """변경 공지를 지금 보여도 되는지: 아직 안 봤고, 이야기 튜토리얼(판매 · 구매 TG-07)이 끝났거나 튜토리얼을 껐을 때 (🅲-1)."""
+    save = game.save
+    if save is None or exam.legacy_notice(save) is None:
+        return False
+    tut = save.data.get("tutorial", {})
+    return "TG-07" in tut.get("done", []) or not tut.get("enabled", True)
 
 
 class ExamResultScene(Scene):
@@ -348,6 +383,7 @@ class ExamResultScene(Scene):
         if self in self.game.scenes.stack:
             self.game.scenes.stack.remove(self)
         self.game.save_now()
+        self.game.guide.event("exam_end")   # TG-24 첫 시험 ③ (결과를 본 뒤 낚시 화면에서)
 
     def handle_action(self, a) -> None:
         if self.t < 0.5:

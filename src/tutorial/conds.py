@@ -70,6 +70,13 @@ def check(game, name: str, run) -> bool:
     if name == "catch_card":   # 포획 카드가 아직 떠 있음 (카드 위 튜토리얼은 카드가 닫히면 이번엔 넘김)
         fs = _fishing(game)
         return fs is not None and fs.fight is not None and fs.fight.phase == "caught" and fs.landing is None
+    if name == "exam_fresh":   # TG-21 잠긴 장비: 새 세이브만 (옛 세이브 자동 합격은 건너뜀, 49-6)
+        return not d.get("exam", {}).get("legacy")
+    if name == "exam_tg22":   # TG-22 시험 안내: 새 세이브 = TG-21 뒤, 옛 세이브 = 변경 공지 뒤, 다 합격했으면 없음
+        ex = d.get("exam", {})
+        if ex.get("passed", 1) >= 8:
+            return False
+        return ("TG-21" in d.get("tutorial", {}).get("done", [])) if not ex.get("legacy") else bool(ex.get("notice_seen"))
     if name == "float_owned":
         return bool(d.get("float", {}).get("owned"))
     if name == "float_equipped":

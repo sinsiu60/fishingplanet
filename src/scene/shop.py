@@ -685,6 +685,15 @@ class ShopScene(Scene):
                 continue
             rid = self._row_id(row)
             T.mark_ui(self, f"shop.row.{rid}", r)
+            if (self.kind in ("rod", "reel", "line", "net") and not T.has("shop.row.examlock") and isinstance(row, dict)
+                    and (self.save.gear_locked_reason(row) or "").startswith("백 노인")):
+                # TG-21 잠긴 장비 (49-6): 처음 보이는 시험 잠금 줄 · 오른쪽 자물쇠 글자
+                T.mark_ui(self, "shop.row.examlock", r)
+                lw = su.width(self._locked_label(row)) + 12
+                T.mark_ui(self, "shop.row.examlock.label", (r.right - 4 - lw, r.y, lw + 2, r.h))
+                if not getattr(self, "_exam_lock_ev", False):
+                    self._exam_lock_ev = True
+                    self.game.guide.event("exam_lock_seen")
             if self.kind == "sell" and rid == first:
                 T.mark_ui(self, "shop.row.first", r)
             if self.kind not in ("sell", "scalestone"):

@@ -1591,6 +1591,166 @@
     }
    ]
   },
+  "TG-21": {
+   "title": "잠긴 장비",
+   "who": "haru",
+   "start": "event:exam_lock_seen",
+   "need_cond": "exam_fresh",
+   "after": [
+    "TG-07"
+   ],
+   "group": "exam",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "shop.row.examlock",
+     "text": "그건 아직 못 판다네. 백 노인 시험을 통과해야 하거든.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "그건 아직 못 팔아요. 백 노인의 시험을 통과해야 하거든요."
+    },
+    {
+     "kind": "freeze",
+     "target": "shop.row.examlock.label",
+     "text": "저 노인네, 실력 없는 사람한텐 낚싯대를 안 맡겨.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "백 노인은 실력 없는 사람한텐 낚싯대를 안 맡겨요."
+    }
+   ]
+  },
+  "TG-22": {
+   "title": "시험 안내",
+   "who": "baek",
+   "start": "event:interior_ready:baek",
+   "need_cond": "exam_tg22",
+   "after": [
+    "TG-07"
+   ],
+   "group": "exam",
+   "steps": [
+    {
+     "kind": "spotlight",
+     "target": "interior.menu.exam",
+     "text": "자네 실력을 보는 시험일세. 눌러 보게.",
+     "expr": null,
+     "until": "scene:ExamScene",
+     "src_text": "당신 실력을 보는 시험이에요. 눌러 보세요."
+    }
+   ]
+  },
+  "TG-23": {
+   "title": "자격 읽기",
+   "who": "baek",
+   "start": "event:exam_open",
+   "after": [
+    "TG-07"
+   ],
+   "script": "exam_quals",
+   "group": "exam",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "exam.qual.dex",
+     "text": "그 물의 고기를 거의 다 만나 봐야 하네.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "그 물의 고기를 거의 다 만나 봐야 해요."
+    },
+    {
+     "kind": "freeze",
+     "target": "exam.qual.stars",
+     "text": "도감 별도 모아 오게. S 나 대물을 잡아야 별이 늘지.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "도감 별도 모아 오세요. S 나 대물을 잡아야 별이 늘어요."
+    },
+    {
+     "kind": "freeze",
+     "target": "exam.qual.owner",
+     "text": "그 물의 주인을 잡든가, 희귀한 놈들을 다 보고 오든가.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "그 물의 주인을 잡거나, 희귀한 물고기를 다 보고 오세요."
+    },
+    {
+     "kind": "freeze",
+     "target": "exam.fish",
+     "text": "다 채우면 저놈을 잡아 오게. 내 낚싯대를 빌려주지 — 자네 비늘석은 못 쓰네.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "다 채우면 저 물고기를 잡아 오세요. 낚싯대를 빌려줄게요 — 비늘석은 못 써요."
+    }
+   ]
+  },
+  "TG-24": {
+   "title": "첫 시험",
+   "who": "haru",
+   "start": "event:exam_spot",
+   "after": [
+    "TG-07"
+   ],
+   "script": "exam_first",
+   "group": "exam",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fish.exam_float",
+     "text": "이 찌를 끼우고 던지게. 그놈이 올 걸세.",
+     "expr": null,
+     "until": "tap",
+     "who": "baek",
+     "src_text": "이 찌를 끼우고 던지세요. 그 물고기가 올 거예요."
+    },
+    {
+     "kind": "wait",
+     "target": "fish.bobber",
+     "text": "합격 랭크는 카드에 적혀 있으니 침착하게!",
+     "expr": null,
+     "until": "event:exam_end",
+     "src_text": "합격 랭크는 카드에 적혀 있으니 침착하게요!"
+    },
+    {
+     "kind": "freeze",
+     "target": "fish.menu.shop",
+     "text": "축하해! 이제 다음 장비를 팔 수 있어.",
+     "expr": null,
+     "until": "tap",
+     "alt_text": "내일 다시 볼 수 있어. 모닥불에서 쉬어도 되고.",
+     "alt_target": "fish.clock",
+     "src_text": "축하해요! 이제 다음 장비를 살 수 있어요.",
+     "src_alt_text": "내일 다시 볼 수 있어요. 모닥불에서 쉬어도 돼요."
+    }
+   ]
+  },
+  "TG-25": {
+   "title": "새 랭크",
+   "who": "haru",
+   "start": "event:catch_shown",
+   "need_cond": "catch_card",
+   "after": [
+    "TG-03"
+   ],
+   "group": "rank",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "catch.rank_bars",
+     "text": "랭크 옆 막대 보이지? 줄 · 시간 · 신호 · 실수야.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "랭크 옆 막대 보이죠? 줄 · 시간 · 신호 · 실수예요."
+    },
+    {
+     "kind": "freeze",
+     "target": "catch.rank_bars.weak",
+     "text": "깜빡이는 게 제일 아쉬운 거야. S 는 신호를 잘 받아야 나와.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "깜빡이는 게 제일 아쉬운 거예요. S 는 신호를 잘 받아야 나와요."
+    }
+   ]
+  },
   "TG-PH": {
    "title": "환상의 물고기",
    "who": "baek",
