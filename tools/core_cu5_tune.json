@@ -1,0 +1,239 @@
+{
+ "base": {
+  "average": {
+   "common": {
+    "success": 100.0,
+    "t": 33.1
+   },
+   "uncommon": {
+    "success": 98.8,
+    "t": 52.0
+   },
+   "rare": {
+    "success": 94.3,
+    "t": 54.2
+   },
+   "legend": {
+    "success": 94.0,
+    "t": 208.3
+   }
+  },
+  "skilled": {
+   "common": {
+    "success": 100.0,
+    "t": 31.9
+   },
+   "uncommon": {
+    "success": 99.6,
+    "t": 51.1
+   },
+   "rare": {
+    "success": 98.9,
+    "t": 51.0
+   },
+   "legend": {
+    "success": 97.3,
+    "t": 203.6
+   }
+  },
+  "drag_only": {
+   "common": {
+    "success": 100.0,
+    "t": 33.0
+   },
+   "uncommon": {
+    "success": 97.6,
+    "t": 51.0
+   },
+   "rare": {
+    "success": 87.0,
+    "t": 55.7
+   },
+   "legend": {
+    "success": 88.5,
+    "t": 205.7
+   }
+  }
+ },
+ "now": {
+  "average": {
+   "common": {
+    "n": 1496,
+    "success": 100.0,
+    "t": 25.7,
+    "fails": {}
+   },
+   "uncommon": {
+    "n": 497,
+    "success": 99.8,
+    "t": 34.2,
+    "fails": {
+     "worn": 1
+    }
+   },
+   "rare": {
+    "n": 407,
+    "success": 96.8,
+    "t": 37.2,
+    "fails": {
+     "worn": 2,
+     "snap": 4,
+     "slack": 1,
+     "reverse": 6
+    }
+   },
+   "legend": {
+    "n": 288,
+    "success": 93.8,
+    "t": 109.2,
+    "fails": {
+     "worn": 1,
+     "snap": 17
+    }
+   }
+  },
+  "skilled": {
+   "common": {
+    "n": 1504,
+    "success": 100.0,
+    "t": 23.6,
+    "fails": {}
+   },
+   "uncommon": {
+    "n": 503,
+    "success": 100.0,
+    "t": 30.8,
+    "fails": {}
+   },
+   "rare": {
+    "n": 393,
+    "success": 99.7,
+    "t": 33.6,
+    "fails": {
+     "snap": 1
+    }
+   },
+   "legend": {
+    "n": 288,
+    "success": 100.0,
+    "t": 93.7,
+    "fails": {}
+   }
+  },
+  "drag_only": {
+   "common": {
+    "n": 1535,
+    "success": 66.3,
+    "t": 136.2,
+    "fails": {
+     "null": 226,
+     "snap": 196,
+     "overtime": 96
+    }
+   },
+   "uncommon": {
+    "n": 489,
+    "success": 47.0,
+    "t": 222.1,
+    "fails": {
+     "reverse": 1,
+     "snap": 48,
+     "overtime": 59,
+     "slack": 2,
+     "null": 143,
+     "snag": 5,
+     "shake": 1
+    }
+   },
+   "rare": {
+    "n": 376,
+    "success": 26.1,
+    "t": 219.4,
+    "fails": {
+     "reverse": 28,
+     "snap": 67,
+     "overtime": 16,
+     "slack": 4,
+     "worn": 2,
+     "dive": 7,
+     "null": 153,
+     "twist": 1
+    }
+   },
+   "legend": {
+    "n": 288,
+    "success": 8.0,
+    "t": 351.6,
+    "fails": {
+     "null": 200,
+     "snap": 61,
+     "slack": 4
+    }
+   }
+  }
+ },
+ "legends": {
+  "golden_carp": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 46
+  },
+  "tiger_mandarin": {
+   "average": 96,
+   "skilled": 100,
+   "drag_only": 50
+  },
+  "silver_bass": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 0
+  },
+  "marlin": {
+   "average": 29,
+   "skilled": 100,
+   "drag_only": 0
+  },
+  "coelacanth": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 0
+  },
+  "dragon_carp": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 0
+  },
+  "silva": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 0
+  },
+  "prisia": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 0
+  },
+  "aeris": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 0
+  },
+  "ignis": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 0
+  },
+  "borealis": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 0
+  },
+  "orsiel": {
+   "average": 100,
+   "skilled": 100,
+   "drag_only": 0
+  }
+ },
+ "n": 200,
+ "nl": 24
+}
