@@ -1,0 +1,2117 @@
+{
+ "n": 300,
+ "n_legend": 24,
+ "overhead_sec": 16.0,
+ "spots": {
+  "reservoir": {
+   "average": {
+    "n": 300,
+    "success": 99.7,
+    "t_mean": 22.5,
+    "ranks": {
+     "S": 6,
+     "A": 68,
+     "B": 24,
+     "C": 1
+    },
+    "fails": {
+     "jump": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 210,
+      "success": 100.0,
+      "t": 17.6
+     },
+     "uncommon": {
+      "n": 74,
+      "success": 98.6,
+      "t": 30.4
+     },
+     "rare": {
+      "n": 16,
+      "success": 100.0,
+      "t": 50.9
+     }
+    },
+    "catch_per_h": 93.2,
+    "gold_per_h": 7237,
+    "share": {
+     "common": 70.0,
+     "uncommon": 24.7,
+     "rare": 5.3
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 20.5,
+    "ranks": {
+     "S": 21,
+     "A": 78,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 215,
+      "success": 100.0,
+      "t": 16.3
+     },
+     "uncommon": {
+      "n": 64,
+      "success": 100.0,
+      "t": 27.4
+     },
+     "rare": {
+      "n": 21,
+      "success": 100.0,
+      "t": 42.2
+     }
+    },
+    "catch_per_h": 98.7,
+    "gold_per_h": 9650,
+    "share": {
+     "common": 71.7,
+     "uncommon": 21.3,
+     "rare": 7.0
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 71.0,
+    "t_mean": 56.9,
+    "ranks": {
+     "S": 1,
+     "A": 4,
+     "B": 18,
+     "C": 77
+    },
+    "fails": {
+     "slack": 71,
+     "snap": 16
+    },
+    "by_rarity": {
+     "common": {
+      "n": 224,
+      "success": 68.3,
+      "t": 57.2
+     },
+     "uncommon": {
+      "n": 59,
+      "success": 98.3,
+      "t": 54.6
+     },
+     "rare": {
+      "n": 17,
+      "success": 11.8,
+      "t": 60.5
+     }
+    },
+    "catch_per_h": 35.1,
+    "gold_per_h": 1308,
+    "share": {
+     "common": 74.7,
+     "uncommon": 19.7,
+     "rare": 5.7
+    }
+   }
+  },
+  "valley": {
+   "average": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 19.0,
+    "ranks": {
+     "S": 26,
+     "A": 63,
+     "B": 11,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 233,
+      "success": 100.0,
+      "t": 17.0
+     },
+     "uncommon": {
+      "n": 53,
+      "success": 100.0,
+      "t": 23.5
+     },
+     "rare": {
+      "n": 14,
+      "success": 100.0,
+      "t": 34.7
+     }
+    },
+    "catch_per_h": 102.9,
+    "gold_per_h": 16192,
+    "share": {
+     "common": 77.7,
+     "uncommon": 17.7,
+     "rare": 4.7
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 18.2,
+    "ranks": {
+     "S": 56,
+     "A": 43,
+     "B": 1,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 213,
+      "success": 100.0,
+      "t": 15.7
+     },
+     "uncommon": {
+      "n": 65,
+      "success": 100.0,
+      "t": 22.2
+     },
+     "rare": {
+      "n": 22,
+      "success": 100.0,
+      "t": 31.3
+     }
+    },
+    "catch_per_h": 105.2,
+    "gold_per_h": 22758,
+    "share": {
+     "common": 71.0,
+     "uncommon": 21.7,
+     "rare": 7.3
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 83.7,
+    "t_mean": 36.6,
+    "ranks": {
+     "S": 8,
+     "A": 17,
+     "B": 33,
+     "C": 42
+    },
+    "fails": {
+     "slack": 46,
+     "shake": 3
+    },
+    "by_rarity": {
+     "common": {
+      "n": 197,
+      "success": 87.3,
+      "t": 37.0
+     },
+     "uncommon": {
+      "n": 75,
+      "success": 70.7,
+      "t": 29.9
+     },
+     "rare": {
+      "n": 28,
+      "success": 92.9,
+      "t": 51.9
+     }
+    },
+    "catch_per_h": 57.3,
+    "gold_per_h": 9236,
+    "share": {
+     "common": 65.7,
+     "uncommon": 25.0,
+     "rare": 9.3
+    }
+   }
+  },
+  "breakwater": {
+   "average": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 19.3,
+    "ranks": {
+     "S": 6,
+     "A": 67,
+     "B": 26,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 206,
+      "success": 100.0,
+      "t": 14.6
+     },
+     "uncommon": {
+      "n": 64,
+      "success": 100.0,
+      "t": 27.0
+     },
+     "rare": {
+      "n": 30,
+      "success": 100.0,
+      "t": 34.8
+     }
+    },
+    "catch_per_h": 102.1,
+    "gold_per_h": 17419,
+    "share": {
+     "common": 68.7,
+     "uncommon": 21.3,
+     "rare": 10.0
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 16.9,
+    "ranks": {
+     "S": 9,
+     "A": 90,
+     "B": 1,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 223,
+      "success": 100.0,
+      "t": 13.6
+     },
+     "uncommon": {
+      "n": 64,
+      "success": 100.0,
+      "t": 25.3
+     },
+     "rare": {
+      "n": 13,
+      "success": 100.0,
+      "t": 32.5
+     }
+    },
+    "catch_per_h": 109.3,
+    "gold_per_h": 15738,
+    "share": {
+     "common": 74.3,
+     "uncommon": 21.3,
+     "rare": 4.3
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 51.0,
+    "t_mean": 157.3,
+    "ranks": {
+     "S": 1,
+     "A": 5,
+     "B": 7,
+     "C": 88
+    },
+    "fails": {
+     "slack": 51,
+     "overtime": 77,
+     "snag": 19
+    },
+    "by_rarity": {
+     "common": {
+      "n": 221,
+      "success": 50.2,
+      "t": 162.6
+     },
+     "uncommon": {
+      "n": 64,
+      "success": 45.3,
+      "t": 151.0
+     },
+     "rare": {
+      "n": 15,
+      "success": 86.7,
+      "t": 105.1
+     }
+    },
+    "catch_per_h": 10.6,
+    "gold_per_h": 969,
+    "share": {
+     "common": 73.7,
+     "uncommon": 21.3,
+     "rare": 5.0
+    }
+   }
+  },
+  "offshore": {
+   "average": {
+    "n": 300,
+    "success": 99.7,
+    "t_mean": 19.8,
+    "ranks": {
+     "S": 13,
+     "A": 71,
+     "B": 15,
+     "C": 1
+    },
+    "fails": {
+     "reverse": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 217,
+      "success": 100.0,
+      "t": 14.8
+     },
+     "uncommon": {
+      "n": 63,
+      "success": 98.4,
+      "t": 32.7
+     },
+     "rare": {
+      "n": 20,
+      "success": 100.0,
+      "t": 34.6
+     }
+    },
+    "catch_per_h": 100.1,
+    "gold_per_h": 44532,
+    "share": {
+     "common": 72.3,
+     "uncommon": 21.0,
+     "rare": 6.7
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 99.7,
+    "t_mean": 18.6,
+    "ranks": {
+     "S": 44,
+     "A": 56,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "snap": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 210,
+      "success": 100.0,
+      "t": 13.7
+     },
+     "uncommon": {
+      "n": 71,
+      "success": 100.0,
+      "t": 29.4
+     },
+     "rare": {
+      "n": 19,
+      "success": 94.7,
+      "t": 31.9
+     }
+    },
+    "catch_per_h": 103.8,
+    "gold_per_h": 52307,
+    "share": {
+     "common": 70.0,
+     "uncommon": 23.7,
+     "rare": 6.3
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 59.7,
+    "t_mean": 148.2,
+    "ranks": {
+     "S": 1,
+     "A": 5,
+     "B": 11,
+     "C": 83
+    },
+    "fails": {
+     "reverse": 4,
+     "snap": 5,
+     "slack": 18,
+     "overtime": 89,
+     "null": 4,
+     "dive": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 226,
+      "success": 63.3,
+      "t": 126.3
+     },
+     "uncommon": {
+      "n": 60,
+      "success": 55.0,
+      "t": 244.5
+     },
+     "rare": {
+      "n": 14,
+      "success": 21.4,
+      "t": 89.3
+     }
+    },
+    "catch_per_h": 13.1,
+    "gold_per_h": 1952,
+    "share": {
+     "common": 75.3,
+     "uncommon": 20.0,
+     "rare": 4.7
+    }
+   }
+  },
+  "deep": {
+   "average": {
+    "n": 300,
+    "success": 99.3,
+    "t_mean": 21.1,
+    "ranks": {
+     "S": 20,
+     "A": 62,
+     "B": 17,
+     "C": 1
+    },
+    "fails": {
+     "worn": 1,
+     "reverse": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 214,
+      "success": 100.0,
+      "t": 16.9
+     },
+     "uncommon": {
+      "n": 59,
+      "success": 98.3,
+      "t": 25.9
+     },
+     "rare": {
+      "n": 27,
+      "success": 96.3,
+      "t": 43.9
+     }
+    },
+    "catch_per_h": 96.4,
+    "gold_per_h": 79782,
+    "share": {
+     "common": 71.3,
+     "uncommon": 19.7,
+     "rare": 9.0
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 19.7,
+    "ranks": {
+     "S": 51,
+     "A": 49,
+     "B": 1,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 214,
+      "success": 100.0,
+      "t": 16.3
+     },
+     "uncommon": {
+      "n": 71,
+      "success": 100.0,
+      "t": 24.5
+     },
+     "rare": {
+      "n": 15,
+      "success": 100.0,
+      "t": 45.4
+     }
+    },
+    "catch_per_h": 100.9,
+    "gold_per_h": 82980,
+    "share": {
+     "common": 71.3,
+     "uncommon": 23.7,
+     "rare": 5.0
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 35.3,
+    "t_mean": 225.2,
+    "ranks": {
+     "S": 6,
+     "A": 9,
+     "B": 27,
+     "C": 58
+    },
+    "fails": {
+     "null": 30,
+     "overtime": 158,
+     "twist": 4,
+     "snap": 1,
+     "reverse": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 217,
+      "success": 42.4,
+      "t": 196.0
+     },
+     "uncommon": {
+      "n": 66,
+      "success": 9.1,
+      "t": 350.0
+     },
+     "rare": {
+      "n": 17,
+      "success": 47.1,
+      "t": 113.6
+     }
+    },
+    "catch_per_h": 5.3,
+    "gold_per_h": 2307,
+    "share": {
+     "common": 72.3,
+     "uncommon": 22.0,
+     "rare": 5.7
+    }
+   }
+  },
+  "secret": {
+   "average": {
+    "n": 300,
+    "success": 97.0,
+    "t_mean": 37.4,
+    "ranks": {
+     "S": 2,
+     "A": 64,
+     "B": 30,
+     "C": 4
+    },
+    "fails": {
+     "reverse": 8,
+     "worn": 1
+    },
+    "by_rarity": {
+     "rare": {
+      "n": 300,
+      "success": 97.0,
+      "t": 37.4
+     }
+    },
+    "catch_per_h": 65.3,
+    "gold_per_h": 379550,
+    "share": {
+     "common": 0.0,
+     "uncommon": 0.0,
+     "rare": 100.0
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 33.7,
+    "ranks": {
+     "S": 16,
+     "A": 78,
+     "B": 5,
+     "C": 1
+    },
+    "fails": {},
+    "by_rarity": {
+     "rare": {
+      "n": 300,
+      "success": 100.0,
+      "t": 33.7
+     }
+    },
+    "catch_per_h": 72.4,
+    "gold_per_h": 482936,
+    "share": {
+     "common": 0.0,
+     "uncommon": 0.0,
+     "rare": 100.0
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 23.7,
+    "t_mean": 274.6,
+    "ranks": {
+     "S": 0,
+     "A": 11,
+     "B": 27,
+     "C": 62
+    },
+    "fails": {
+     "reverse": 25,
+     "dive": 11,
+     "null": 179,
+     "overtime": 8,
+     "snap": 4,
+     "worn": 1,
+     "slack": 1
+    },
+    "by_rarity": {
+     "rare": {
+      "n": 300,
+      "success": 23.7,
+      "t": 274.6
+     }
+    },
+    "catch_per_h": 2.9,
+    "gold_per_h": 11739,
+    "share": {
+     "common": 0.0,
+     "uncommon": 0.0,
+     "rare": 100.0
+    }
+   }
+  },
+  "marsh": {
+   "average": {
+    "n": 300,
+    "success": 99.7,
+    "t_mean": 23.6,
+    "ranks": {
+     "S": 34,
+     "A": 54,
+     "B": 11,
+     "C": 1
+    },
+    "fails": {
+     "reverse": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 199,
+      "success": 100.0,
+      "t": 20.0
+     },
+     "uncommon": {
+      "n": 72,
+      "success": 100.0,
+      "t": 29.2
+     },
+     "rare": {
+      "n": 29,
+      "success": 96.6,
+      "t": 34.6
+     }
+    },
+    "catch_per_h": 90.5,
+    "gold_per_h": 182130,
+    "share": {
+     "common": 66.3,
+     "uncommon": 24.0,
+     "rare": 9.7
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 21.3,
+    "ranks": {
+     "S": 74,
+     "A": 25,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 208,
+      "success": 100.0,
+      "t": 18.4
+     },
+     "uncommon": {
+      "n": 66,
+      "success": 100.0,
+      "t": 26.9
+     },
+     "rare": {
+      "n": 26,
+      "success": 100.0,
+      "t": 30.1
+     }
+    },
+    "catch_per_h": 96.6,
+    "gold_per_h": 234786,
+    "share": {
+     "common": 69.3,
+     "uncommon": 22.0,
+     "rare": 8.7
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 61.3,
+    "t_mean": 157.5,
+    "ranks": {
+     "S": 9,
+     "A": 14,
+     "B": 25,
+     "C": 52
+    },
+    "fails": {
+     "overtime": 87,
+     "snap": 12,
+     "reverse": 3,
+     "null": 14
+    },
+    "by_rarity": {
+     "common": {
+      "n": 216,
+      "success": 62.5,
+      "t": 160.6
+     },
+     "uncommon": {
+      "n": 61,
+      "success": 80.3,
+      "t": 110.8
+     },
+     "rare": {
+      "n": 23,
+      "success": 0.0,
+      "t": 252.9
+     }
+    },
+    "catch_per_h": 12.7,
+    "gold_per_h": 11252,
+    "share": {
+     "common": 72.0,
+     "uncommon": 20.3,
+     "rare": 7.7
+    }
+   }
+  },
+  "crystal_cave": {
+   "average": {
+    "n": 300,
+    "success": 99.7,
+    "t_mean": 22.3,
+    "ranks": {
+     "S": 27,
+     "A": 59,
+     "B": 12,
+     "C": 2
+    },
+    "fails": {
+     "worn": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 201,
+      "success": 100.0,
+      "t": 18.2
+     },
+     "uncommon": {
+      "n": 77,
+      "success": 100.0,
+      "t": 29.2
+     },
+     "rare": {
+      "n": 22,
+      "success": 95.5,
+      "t": 35.4
+     }
+    },
+    "catch_per_h": 93.7,
+    "gold_per_h": 265370,
+    "share": {
+     "common": 67.0,
+     "uncommon": 25.7,
+     "rare": 7.3
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 20.1,
+    "ranks": {
+     "S": 64,
+     "A": 36,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 201,
+      "success": 100.0,
+      "t": 16.5
+     },
+     "uncommon": {
+      "n": 76,
+      "success": 100.0,
+      "t": 26.5
+     },
+     "rare": {
+      "n": 23,
+      "success": 100.0,
+      "t": 30.4
+     }
+    },
+    "catch_per_h": 99.6,
+    "gold_per_h": 340291,
+    "share": {
+     "common": 67.0,
+     "uncommon": 25.3,
+     "rare": 7.7
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 49.0,
+    "t_mean": 207.8,
+    "ranks": {
+     "S": 1,
+     "A": 12,
+     "B": 21,
+     "C": 65
+    },
+    "fails": {
+     "overtime": 104,
+     "null": 49
+    },
+    "by_rarity": {
+     "common": {
+      "n": 213,
+      "success": 51.2,
+      "t": 193.5
+     },
+     "uncommon": {
+      "n": 66,
+      "success": 53.0,
+      "t": 208.7
+     },
+     "rare": {
+      "n": 21,
+      "success": 14.3,
+      "t": 349.8
+     }
+    },
+    "catch_per_h": 7.9,
+    "gold_per_h": 11046,
+    "share": {
+     "common": 71.0,
+     "uncommon": 22.0,
+     "rare": 7.0
+    }
+   }
+  },
+  "sky_falls": {
+   "average": {
+    "n": 300,
+    "success": 98.7,
+    "t_mean": 21.7,
+    "ranks": {
+     "S": 21,
+     "A": 68,
+     "B": 11,
+     "C": 0
+    },
+    "fails": {
+     "worn": 3,
+     "reverse": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 223,
+      "success": 100.0,
+      "t": 19.5
+     },
+     "uncommon": {
+      "n": 63,
+      "success": 95.2,
+      "t": 26.8
+     },
+     "rare": {
+      "n": 14,
+      "success": 92.9,
+      "t": 34.0
+     }
+    },
+    "catch_per_h": 94.2,
+    "gold_per_h": 250829,
+    "share": {
+     "common": 74.3,
+     "uncommon": 21.0,
+     "rare": 4.7
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 19.1,
+    "ranks": {
+     "S": 59,
+     "A": 41,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 216,
+      "success": 100.0,
+      "t": 17.2
+     },
+     "uncommon": {
+      "n": 62,
+      "success": 100.0,
+      "t": 22.1
+     },
+     "rare": {
+      "n": 22,
+      "success": 100.0,
+      "t": 28.9
+     }
+    },
+    "catch_per_h": 102.7,
+    "gold_per_h": 372008,
+    "share": {
+     "common": 72.0,
+     "uncommon": 20.7,
+     "rare": 7.3
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 40.0,
+    "t_mean": 206.0,
+    "ranks": {
+     "S": 10,
+     "A": 29,
+     "B": 34,
+     "C": 27
+    },
+    "fails": {
+     "snap": 38,
+     "overtime": 132,
+     "reverse": 2,
+     "null": 3,
+     "worn": 4,
+     "slack": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 199,
+      "success": 32.7,
+      "t": 245.7
+     },
+     "uncommon": {
+      "n": 74,
+      "success": 63.5,
+      "t": 126.0
+     },
+     "rare": {
+      "n": 27,
+      "success": 29.6,
+      "t": 132.4
+     }
+    },
+    "catch_per_h": 6.5,
+    "gold_per_h": 18464,
+    "share": {
+     "common": 66.3,
+     "uncommon": 24.7,
+     "rare": 9.0
+    }
+   }
+  },
+  "volcano": {
+   "average": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 21.2,
+    "ranks": {
+     "S": 15,
+     "A": 63,
+     "B": 20,
+     "C": 3
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 205,
+      "success": 100.0,
+      "t": 18.4
+     },
+     "uncommon": {
+      "n": 77,
+      "success": 100.0,
+      "t": 25.7
+     },
+     "rare": {
+      "n": 18,
+      "success": 100.0,
+      "t": 32.8
+     }
+    },
+    "catch_per_h": 96.9,
+    "gold_per_h": 363158,
+    "share": {
+     "common": 68.3,
+     "uncommon": 25.7,
+     "rare": 6.0
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 18.5,
+    "ranks": {
+     "S": 43,
+     "A": 55,
+     "B": 2,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 206,
+      "success": 100.0,
+      "t": 16.4
+     },
+     "uncommon": {
+      "n": 72,
+      "success": 100.0,
+      "t": 22.0
+     },
+     "rare": {
+      "n": 22,
+      "success": 100.0,
+      "t": 27.5
+     }
+    },
+    "catch_per_h": 104.2,
+    "gold_per_h": 542960,
+    "share": {
+     "common": 68.7,
+     "uncommon": 24.0,
+     "rare": 7.3
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 3.3,
+    "t_mean": 120.3,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 30,
+     "C": 70
+    },
+    "fails": {
+     "snap": 290
+    },
+    "by_rarity": {
+     "common": {
+      "n": 194,
+      "success": 5.2,
+      "t": 132.5
+     },
+     "uncommon": {
+      "n": 88,
+      "success": 0.0,
+      "t": 98.6
+     },
+     "rare": {
+      "n": 18,
+      "success": 0.0,
+      "t": 95.2
+     }
+    },
+    "catch_per_h": 0.9,
+    "gold_per_h": 975,
+    "share": {
+     "common": 64.7,
+     "uncommon": 29.3,
+     "rare": 6.0
+    }
+   }
+  },
+  "ice_sea": {
+   "average": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 20.8,
+    "ranks": {
+     "S": 24,
+     "A": 64,
+     "B": 12,
+     "C": 1
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 203,
+      "success": 100.0,
+      "t": 17.4
+     },
+     "uncommon": {
+      "n": 77,
+      "success": 100.0,
+      "t": 25.8
+     },
+     "rare": {
+      "n": 20,
+      "success": 100.0,
+      "t": 36.0
+     }
+    },
+    "catch_per_h": 97.8,
+    "gold_per_h": 545188,
+    "share": {
+     "common": 67.7,
+     "uncommon": 25.7,
+     "rare": 6.7
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 18.9,
+    "ranks": {
+     "S": 58,
+     "A": 41,
+     "B": 1,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 206,
+      "success": 100.0,
+      "t": 16.1
+     },
+     "uncommon": {
+      "n": 73,
+      "success": 100.0,
+      "t": 24.1
+     },
+     "rare": {
+      "n": 21,
+      "success": 100.0,
+      "t": 27.6
+     }
+    },
+    "catch_per_h": 103.3,
+    "gold_per_h": 669952,
+    "share": {
+     "common": 68.7,
+     "uncommon": 24.3,
+     "rare": 7.0
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 16.7,
+    "t_mean": 323.3,
+    "ranks": {
+     "S": 4,
+     "A": 8,
+     "B": 28,
+     "C": 60
+    },
+    "fails": {
+     "null": 121,
+     "overtime": 124,
+     "snap": 4,
+     "slack": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 206,
+      "success": 18.9,
+      "t": 315.8
+     },
+     "uncommon": {
+      "n": 75,
+      "success": 10.7,
+      "t": 357.0
+     },
+     "rare": {
+      "n": 19,
+      "success": 15.8,
+      "t": 272.1
+     }
+    },
+    "catch_per_h": 1.8,
+    "gold_per_h": 5573,
+    "share": {
+     "common": 68.7,
+     "uncommon": 25.0,
+     "rare": 6.3
+    }
+   }
+  },
+  "world_tree": {
+   "average": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 22.3,
+    "ranks": {
+     "S": 26,
+     "A": 64,
+     "B": 9,
+     "C": 1
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 213,
+      "success": 100.0,
+      "t": 19.8
+     },
+     "uncommon": {
+      "n": 64,
+      "success": 100.0,
+      "t": 26.2
+     },
+     "rare": {
+      "n": 23,
+      "success": 100.0,
+      "t": 33.9
+     }
+    },
+    "catch_per_h": 94.1,
+    "gold_per_h": 795348,
+    "share": {
+     "common": 71.0,
+     "uncommon": 21.3,
+     "rare": 7.7
+    }
+   },
+   "skilled": {
+    "n": 300,
+    "success": 100.0,
+    "t_mean": 19.2,
+    "ranks": {
+     "S": 61,
+     "A": 39,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {},
+    "by_rarity": {
+     "common": {
+      "n": 222,
+      "success": 100.0,
+      "t": 17.6
+     },
+     "uncommon": {
+      "n": 63,
+      "success": 100.0,
+      "t": 21.5
+     },
+     "rare": {
+      "n": 15,
+      "success": 100.0,
+      "t": 33.9
+     }
+    },
+    "catch_per_h": 102.1,
+    "gold_per_h": 846967,
+    "share": {
+     "common": 74.0,
+     "uncommon": 21.0,
+     "rare": 5.0
+    }
+   },
+   "drag_only": {
+    "n": 300,
+    "success": 54.3,
+    "t_mean": 166.9,
+    "ranks": {
+     "S": 17,
+     "A": 26,
+     "B": 35,
+     "C": 21
+    },
+    "fails": {
+     "snap": 35,
+     "overtime": 11,
+     "null": 90,
+     "dive": 1
+    },
+    "by_rarity": {
+     "common": {
+      "n": 210,
+      "success": 75.7,
+      "t": 106.2
+     },
+     "uncommon": {
+      "n": 69,
+      "success": 5.8,
+      "t": 310.6
+     },
+     "rare": {
+      "n": 21,
+      "success": 0.0,
+      "t": 302.2
+     }
+    },
+    "catch_per_h": 10.7,
+    "gold_per_h": 34996,
+    "share": {
+     "common": 70.0,
+     "uncommon": 23.0,
+     "rare": 7.0
+    }
+   }
+  }
+ },
+ "legends": {
+  "golden_carp": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 100.8,
+    "ranks": {
+     "S": 4,
+     "A": 46,
+     "B": 33,
+     "C": 17
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 86.1,
+    "ranks": {
+     "S": 92,
+     "A": 8,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 45.8,
+    "t_mean": 312.3,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 100
+    },
+    "fails": {
+     "snap": 10,
+     "slack": 3
+    }
+   }
+  },
+  "tiger_mandarin": {
+   "average": {
+    "success": 95.8,
+    "t_mean": 96.0,
+    "ranks": {
+     "S": 0,
+     "A": 57,
+     "B": 39,
+     "C": 4
+    },
+    "fails": {
+     "worn": 1
+    }
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 84.8,
+    "ranks": {
+     "S": 96,
+     "A": 4,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 50.0,
+    "t_mean": 362.2,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 100
+    },
+    "fails": {
+     "null": 12
+    }
+   }
+  },
+  "silver_bass": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 96.4,
+    "ranks": {
+     "S": 0,
+     "A": 21,
+     "B": 62,
+     "C": 17
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 82.4,
+    "ranks": {
+     "S": 88,
+     "A": 12,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 400.0,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "null": 24
+    }
+   }
+  },
+  "marlin": {
+   "average": {
+    "success": 83.3,
+    "t_mean": 118.8,
+    "ranks": {
+     "S": 0,
+     "A": 15,
+     "B": 70,
+     "C": 15
+    },
+    "fails": {
+     "snap": 3,
+     "slack": 1
+    }
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 102.9,
+    "ranks": {
+     "S": 83,
+     "A": 17,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 60.9,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "snap": 24
+    }
+   }
+  },
+  "coelacanth": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 103.7,
+    "ranks": {
+     "S": 0,
+     "A": 12,
+     "B": 75,
+     "C": 12
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 90.2,
+    "ranks": {
+     "S": 83,
+     "A": 17,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 400.0,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "null": 24
+    }
+   }
+  },
+  "dragon_carp": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 153.5,
+    "ranks": {
+     "S": 0,
+     "A": 4,
+     "B": 38,
+     "C": 58
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 130.3,
+    "ranks": {
+     "S": 62,
+     "A": 38,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 397.8,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "null": 23,
+     "slack": 1
+    }
+   }
+  },
+  "silva": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 106.5,
+    "ranks": {
+     "S": 0,
+     "A": 33,
+     "B": 54,
+     "C": 12
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 93.1,
+    "ranks": {
+     "S": 54,
+     "A": 46,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 400.0,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "null": 24
+    }
+   }
+  },
+  "prisia": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 107.4,
+    "ranks": {
+     "S": 0,
+     "A": 17,
+     "B": 62,
+     "C": 21
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 90.6,
+    "ranks": {
+     "S": 83,
+     "A": 17,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 400.0,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "null": 24
+    }
+   }
+  },
+  "aeris": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 107.9,
+    "ranks": {
+     "S": 0,
+     "A": 4,
+     "B": 33,
+     "C": 62
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 86.6,
+    "ranks": {
+     "S": 0,
+     "A": 100,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 397.9,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "null": 21,
+     "snap": 3
+    }
+   }
+  },
+  "ignis": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 115.1,
+    "ranks": {
+     "S": 0,
+     "A": 25,
+     "B": 58,
+     "C": 17
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 98.0,
+    "ranks": {
+     "S": 83,
+     "A": 17,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 303.3,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "snap": 24
+    }
+   }
+  },
+  "borealis": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 108.7,
+    "ranks": {
+     "S": 0,
+     "A": 33,
+     "B": 46,
+     "C": 21
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 92.7,
+    "ranks": {
+     "S": 92,
+     "A": 8,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 400.0,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "null": 24
+    }
+   }
+  },
+  "orsiel": {
+   "average": {
+    "success": 100.0,
+    "t_mean": 105.9,
+    "ranks": {
+     "S": 0,
+     "A": 17,
+     "B": 54,
+     "C": 29
+    },
+    "fails": {}
+   },
+   "skilled": {
+    "success": 100.0,
+    "t_mean": 87.4,
+    "ranks": {
+     "S": 83,
+     "A": 17,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {}
+   },
+   "drag_only": {
+    "success": 0.0,
+    "t_mean": 400.0,
+    "ranks": {
+     "S": 0,
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    "fails": {
+     "null": 24
+    }
+   }
+  }
+ },
+ "rarity": {
+  "reservoir": {
+   "avg": {
+    "common": 70.5,
+    "rare": 6.9,
+    "uncommon": 22.6
+   },
+   "day_clear_worm": {
+    "common": 75.6,
+    "uncommon": 24.4
+   },
+   "bait": "worm"
+  },
+  "valley": {
+   "avg": {
+    "common": 72.4,
+    "rare": 6.2,
+    "uncommon": 21.4
+   },
+   "day_clear_worm": {
+    "common": 100.0
+   },
+   "bait": "paste"
+  },
+  "breakwater": {
+   "avg": {
+    "common": 70.8,
+    "rare": 6.4,
+    "uncommon": 22.8
+   },
+   "day_clear_worm": {
+    "common": 100.0
+   },
+   "bait": "spinner"
+  },
+  "offshore": {
+   "avg": {
+    "common": 70.9,
+    "rare": 6.5,
+    "uncommon": 22.6
+   },
+   "day_clear_worm": {
+    "common": 70.6,
+    "rare": 14.3,
+    "uncommon": 15.1
+   },
+   "bait": "jig"
+  },
+  "deep": {
+   "avg": {
+    "common": 71.1,
+    "rare": 6.5,
+    "uncommon": 22.4
+   },
+   "day_clear_worm": {
+    "common": 77.5,
+    "uncommon": 22.5
+   },
+   "bait": "jig"
+  },
+  "secret": {
+   "avg": {
+    "rare": 100.0
+   },
+   "day_clear_worm": {},
+   "bait": "squid_bait"
+  },
+  "marsh": {
+   "avg": {
+    "common": 70.5,
+    "rare": 6.9,
+    "uncommon": 22.5
+   },
+   "day_clear_worm": {
+    "common": 49.4,
+    "uncommon": 50.6
+   },
+   "bait": "squid_bait"
+  },
+  "crystal_cave": {
+   "avg": {
+    "common": 71.0,
+    "rare": 6.5,
+    "uncommon": 22.6
+   },
+   "day_clear_worm": {
+    "common": 88.0,
+    "uncommon": 12.0
+   },
+   "bait": "crystal_bait"
+  },
+  "sky_falls": {
+   "avg": {
+    "common": 71.0,
+    "rare": 6.7,
+    "uncommon": 22.3
+   },
+   "day_clear_worm": {
+    "common": 38.7,
+    "rare": 17.2,
+    "uncommon": 44.2
+   },
+   "bait": "crystal_bait"
+  },
+  "volcano": {
+   "avg": {
+    "common": 70.2,
+    "rare": 7.0,
+    "uncommon": 22.8
+   },
+   "day_clear_worm": {
+    "common": 60.8,
+    "uncommon": 39.2
+   },
+   "bait": "crystal_bait"
+  },
+  "ice_sea": {
+   "avg": {
+    "common": 69.8,
+    "rare": 6.6,
+    "uncommon": 23.6
+   },
+   "day_clear_worm": {
+    "common": 78.6,
+    "uncommon": 21.4
+   },
+   "bait": "nebula_bait"
+  },
+  "world_tree": {
+   "avg": {
+    "common": 72.4,
+    "rare": 6.2,
+    "uncommon": 21.5
+   },
+   "day_clear_worm": {
+    "common": 94.1,
+    "rare": 5.9
+   },
+   "bait": "nebula_bait"
+  }
+ },
+ "legend_meet": {
+  "golden_carp": {
+   "meet_min": 12.5,
+   "window_real_min": 2.5
+  },
+  "tiger_mandarin": {
+   "meet_min": 11.3,
+   "window_real_min": 8.3
+  },
+  "silver_bass": {
+   "meet_min": 11.4,
+   "window_real_min": 8.3
+  },
+  "marlin": {
+   "meet_min": 11.6,
+   "window_real_min": 5.8
+  },
+  "coelacanth": {
+   "meet_min": 12.0,
+   "window_real_min": 8.3
+  },
+  "dragon_carp": {
+   "meet_min": 17.2,
+   "window_real_min": 2.5
+  },
+  "silva": {
+   "meet_min": 12.8,
+   "window_real_min": 2.5
+  },
+  "prisia": {
+   "meet_min": 12.4,
+   "window_real_min": 8.3
+  },
+  "aeris": {
+   "meet_min": 12.2,
+   "window_real_min": 5.8
+  },
+  "ignis": {
+   "meet_min": 12.0,
+   "window_real_min": 8.3
+  },
+  "borealis": {
+   "meet_min": 11.9,
+   "window_real_min": 8.3
+  },
+  "orsiel": {
+   "meet_min": 12.4,
+   "window_real_min": 8.3
+  }
+ },
+ "progress": {
+  "average": {
+   "runs": [
+    {
+     "minutes": 987,
+     "finished": true,
+     "passes": [
+      [
+       31.9,
+       2
+      ],
+      [
+       108.3,
+       3
+      ],
+      [
+       126.2,
+       4
+      ],
+      [
+       217.8,
+       5
+      ],
+      [
+       510.3,
+       6
+      ],
+      [
+       626.4,
+       7
+      ],
+      [
+       984.0,
+       8
+      ]
+     ],
+     "fails": 3
+    }
+   ],
+   "pass_min_mean": {
+    "T2": 32,
+    "T3": 108,
+    "T4": 126,
+    "T5": 218,
+    "T6": 510,
+    "T7": 626,
+    "T8": 984
+   }
+  },
+  "skilled": {
+   "runs": [
+    {
+     "minutes": 809,
+     "finished": true,
+     "passes": [
+      [
+       77.3,
+       2
+      ],
+      [
+       103.4,
+       3
+      ],
+      [
+       129.3,
+       4
+      ],
+      [
+       179.4,
+       5
+      ],
+      [
+       462.5,
+       6
+      ],
+      [
+       620.7,
+       7
+      ],
+      [
+       786.0,
+       8
+      ]
+     ],
+     "fails": 0
+    }
+   ],
+   "pass_min_mean": {
+    "T2": 77,
+    "T3": 103,
+    "T4": 129,
+    "T5": 179,
+    "T6": 462,
+    "T7": 621,
+    "T8": 786
+   }
+  }
+ }
+}
