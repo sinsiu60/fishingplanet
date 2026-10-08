@@ -36,6 +36,9 @@ SKILLS = {
     "average": dict(sigma=0.10, react=0.40, miss_jump=0.10, turn_sigma=0.11, taps=4.0, turns=1.15, miss_pattern=0.15,
                     beat_sigma=0.07, see_fake=0.7),
 }
+# '드랙만' 봇 (CORE_UPDATE CU2): '보통'과 같은 손이지만 패턴 입력(PatternInput)을 늘 None — 신호 대응 · 틈 공략을 하지 않음.
+# (점프 · 방향 전환 · 몸털기 직접 대응(dip/flick)과 드랙 · 감기 · 낚싯대 방향은 그대로 — 문서의 측정 방법 그대로)
+SKILLS_ALL = dict(SKILLS, drag_only=dict(SKILLS["average"], no_patterns=True))
 # 그 낚시터에 처음 도착할 무렵의 장비 티어 (진행 경로 가정)
 SPOT_TIER = {s["id"]: s.get("gear_tier", 1) for s in load_json("spots.json")["spots"]}  # spots.json gear_tier
 # 낚싯대가 그 물고기 티어보다 낮을 때 성공률 배율 (울렁임 ×1.5/티어 — tools 벤치 측정값을 반올림)
@@ -200,6 +203,8 @@ class BotPlayer:
                 self.turn_acc += skill["turns"] * DT
                 if self.turn_acc >= 1:
                     inp.turns, self.turn_acc = 1, self.turn_acc - 1
+        if skill.get("no_patterns"):   # '드랙만' 봇
+            return reeling, self.aim, None
         return reeling, self.aim, inp
 
 
