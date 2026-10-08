@@ -5272,6 +5272,7 @@
    "telegraph_sec": 0.55,
    "power": 1.8,
    "stamina": 440,
+   "heat_start_per_stamina": 0.3,
    "actions": {
     "rush": 55,
     "turn": 25,

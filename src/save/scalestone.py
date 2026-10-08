@@ -185,6 +185,7 @@ def apply_fight(gear: dict, eff: dict) -> dict:
     g["rod_green"] = green
     g["pull_mult"] = g.get("pull_mult", 1.0) * (1 - f("pull_relief"))   # 보스 장력 완화: 전설 · 환상이 당기는 힘 × (1−%) (Fight 목표 장력, 일반 물고기엔 안 씀)
     g["reel_speed"] = g["reel_speed"] * (1 + f("reel_speed"))
+    g["line_base"] = g.get("line_base", g["line_max"])   # 열 손상 기준 (줄 내구도 보너스 전, DESIGN 46-10)
     g["line_max"] = round(g["line_max"] * (1 + f("line_durability")))
     g["line_red_mult"] = g.get("line_red_mult", 1.0) * (1 - f("line_wear"))
     g["perfect_mult"] = 1 + f("perfect_window")

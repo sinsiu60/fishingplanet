@@ -55,9 +55,10 @@ class Gimmicks:
         return ((0.25 - phase) % 1.0) * p
 
     def heat_start(self, fight) -> float:
-        """열 손상 시작 시각: 기본 45초, 체력이 많은 물고기(전설)는 그만큼 늦게."""
+        """열 손상 시작 시각: 기본 45초, 체력이 많은 물고기(전설)는 그만큼 늦게. 물고기가 체력당 값을 따로 가질 수 있음 (이그니스, DESIGN 46-10)."""
         c = self.cfg
-        return max(c["heat_start"], fight.stamina_max * c["heat_start_per_stamina"])
+        per = fight.fish.get("heat_start_per_stamina", c["heat_start_per_stamina"])
+        return max(c["heat_start"], fight.stamina_max * per)
 
     def update(self, fight, dt: float) -> None:
         c = self.cfg
@@ -89,7 +90,8 @@ class Gimmicks:
         if "heat" in kinds and fight.elapsed > start:
             steps = int((fight.elapsed - start) // c["heat_step_sec"])
             self.heat_dmg = min(c["heat_rate_max"], c["heat_rate"] + c["heat_rate_step"] * steps) * m
-            fight.line -= fight.line_max * self.heat_dmg / 100 * dt
+            # 비늘석 '줄 내구도' 전 줄 기준 (line_base) → 내구도를 올리면 열에 버티는 시간이 그만큼 늘어남
+            fight.line -= fight.gear.get("line_base", fight.line_max) * self.heat_dmg / 100 * dt
         # 얼음 구멍
         self.ice_out = "ice" in kinds and abs(rel) > c["ice_hole"]
         if self.ice_out:
