@@ -18,9 +18,10 @@ import boss_arena_check as bc  # noqa: E402  (모바일 미리보기 · 더미 �
 import balance_sim as bs  # noqa: E402
 
 BOSSES = [("golden_carp", "여우비"), ("silver_bass", "일렉트로"), ("dragon_carp", "등용"), ("phantom:moon_shadow_carp", "환상 달그림자")]
-# 장비 = 그 낚시터 티어 (balance_sim.gear_for_tier — 화면 없는 봇과 같게). 등용은 T5 로는 봇 '보통'이 매번 줄이 끊겨(화면 없는 봇도 0/8)
-# 켬/끔 비교가 안 되므로 T6.
-GEAR_BONUS = {"dragon_carp": 1}
+# 장비 = 그 낚시터 티어 (balance_sim.gear_for_tier — 화면 없는 봇과 같게). 켬/끔 둘 다 매번 줄이 끊겨 비교가 안 되는 보스는 +1:
+# 등용 T5 (화면 없는 봇도 0/8) → T6, 일렉트로 T3 (화면 없는 봇 12/12 인데 낚시 화면 안에선 무대 켬 · 끔 모두 0/12 — 무대와 무관한
+# 기존 차이, DESIGN 51-4) → T4.
+GEAR_BONUS = {"dragon_carp": 1, "silver_bass": 1}
 
 
 def _fish(fid: str) -> dict:
@@ -117,7 +118,7 @@ def pure(fid: str, runs: int) -> tuple[int, str]:
 def main():
     runs = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 12
     g = bc.pb.make_game()
-    print(f"봇 '보통' · 판 {runs} · 무대 켬 / 끔 (같은 씨앗들) · 장비 = 낚시터 티어 (등용 +1)")
+    print(f"봇 '보통' · 판 {runs} · 무대 켬 / 끔 (같은 씨앗들) · 장비 = 낚시터 티어 (등용 · 일렉트로 +1)")
     print(f"{'보스':12} | 성공 켬 | 성공 끔 | 화면 없는 봇 | 랭크 켬 / 끔 / 화면 없음 | 히트스톱 프레임 | 깜빡임")
     flash_bad = 0
     worse = 0
