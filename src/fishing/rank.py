@@ -57,7 +57,10 @@ def final_size(size_cm: float, rank: str) -> float:
 
 
 def sell_price(fish: dict, size_cm: float, rank: str) -> int:
-    r = load_json("fishing_config.json")["rank"]
+    cfg = load_json("fishing_config.json")
+    r = cfg["rank"]
     lo, hi = fish["size_cm"]
     avg = (lo + hi) / 2
-    return max(1, round(fish["base_price"] * (size_cm / avg) * r["price_mult"][rank]))
+    eco = cfg.get("economy", {})   # 경제 맞춤 (CORE_UPDATE CU7-3): 등급 배율 × 낚시터 배율
+    k = eco.get("rarity_price_mult", {}).get(fish.get("rarity"), 1.0) * eco.get("spot_price_mult", {}).get(fish.get("spot"), 1.0)
+    return max(1, round(fish["base_price"] * k * (size_cm / avg) * r["price_mult"][rank]))
