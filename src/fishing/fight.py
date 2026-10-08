@@ -93,7 +93,10 @@ class Fight:
         self.heave_amp = heave_amp(fish, self.cfg, self.gear.get("rod_tier"))
         self.heave_phase = self.rnd.uniform(0, math.tau)
         self.stamina_max = float(fish.get("stamina", 100)) * self.size_k
-        self.stamina_max *= load_json("core.json")["fight_length"]["stamina_mult"].get(fish.get("rarity"), 1.0)   # 판 길이 (CU6-2)
+        fl = load_json("core.json")["fight_length"]   # 판 길이 (CU6-2)
+        self.stamina_max *= fl["stamina_mult"].get(fish.get("rarity"), 1.0)
+        self.passive_k = fl["passive_mult"].get(fish.get("rarity"), 1.0)
+        self.hit_k = fl["hit_mult"].get(fish.get("rarity"), 1.0)
         self.is_legend = fish.get("rarity") == "legend"
         if self.is_legend:   # 전설은 최소 2분 싸우게 (fishing_config legend_stamina_mult, 줄 손상은 legend_line_damage_mult 로 보정)
             self.stamina_max *= self.cfg.get("legend_stamina_mult", 1.0)
@@ -117,7 +120,7 @@ class Fight:
         # 신호가 중요하게 (CU4): 체력은 최대 체력 비율로 · 휘청 · 틈 공략 · 측면 압박 · 오래 끌기
         self.atk = load_json("core.json")["attack"]
         # 전설 · 환상: 신호 하나의 비율을 줄여 긴 싸움 유지 (atk.big_mult — 등급 안에서는 크기 상관없이 같은 무게)
-        self.atk_k = self.atk["big_mult"] if fish.get("rarity") in ("legend", "phantom") else 1.0
+        self.atk_k = self.atk["big_mult"] if fish.get("rarity") in ("legend", "phantom") else self.hit_k
         self.stagger_t = 0.0                   # 퍼펙트 뒤 휘청 (감기 빠름 · 그림자 비틀)
         self.stam_fx: dict | None = None       # 체력 바 연출 {kind, t, from, to}
         self.gap_t = 0.0                       # 틈 (큰 행동 직후) 남은 초
@@ -1052,6 +1055,7 @@ class Fight:
             drain += cfg["stamina_drain_active"] + self.tension / 100 * cfg["stamina_drain_per_tension"]
         elif reeling and b.is_calm:
             drain += cfg["stamina_drain_reel_calm"]
+        drain *= self.passive_k   # 판 길이 (CU6-2): 줄인 체력만큼 고정 소모도
         drain += self._gap_tick(dt, reeling)
         if self.align < 0:   # 측면 압박 (CU4-4): 반대쪽으로 당기는 만큼
             drain += self.stamina_max * self.atk["side"]["drain_frac"] * min(1.0, -self.align)

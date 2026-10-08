@@ -1,0 +1,33 @@
+{
+  "_설명": "먹이사슬 (CORE_UPDATE CU7-2, DESIGN 52-1 초안 그대로). 일반 생미끼: 살림망 일반 1마리 = 입질 common_bites 번, 물렸을 때만 1번 줄어듦, chain 의 노리는 희귀 가중치 ×common_target_mult. 희귀 생미끼: 희귀 1마리 = 입질 1번, 전설 조건 칸 안이면 전설 확률 legend.chance_live_rare, 밖이면 그 낚시터 희귀 가중치 ×rare_spot_mult. 전설 전용 미끼 만들기: craft 의 희귀 1마리 + 지금 가격 × craft_price_frac (영구). 비밀 낚시터(용문 폭포)는 일반이 없어 다른 낚시터 일반을 씀 — 그 일반을 끼우고 용문 폭포에서 던지면 해당 희귀 ×3.",
+  "common_bites": 3,
+  "common_target_mult": 3.0,
+  "rare_spot_mult": 1.5,
+  "craft_price_frac": 0.6,
+  "chain": {
+    "reservoir": {"minnow": ["snakehead", "catfish"], "crucian": ["catfish"], "bluegill": ["snakehead"], "kkuri": ["catfish", "snakehead"]},
+    "valley": {"pale_chub": ["mandarin_fish", "lenok"], "aucha_perch": ["mandarin_fish", "tunggari"]},
+    "breakwater": {"goby": ["sea_bass", "black_porgy"], "mackerel": ["sea_bass"], "rockfish_bollak": ["black_porgy", "sea_bass"]},
+    "offshore": {"jack_mackerel": ["yellowtail", "bluefin"]},
+    "deep": {"blackthroat": ["oarfish", "giant_squid"]},
+    "secret": {"pale_chub": ["galaxy_trout", "ghost_catfish"], "minnow": ["fog_carp", "scale_king"]},
+    "marsh": {"silver_crucian": ["silver_snakehead"], "firefly_minnow": ["mist_catfish"]},
+    "crystal_cave": {"crystal_minnow": ["amethyst_bass"], "blind_cavefish": ["prism_carp", "amethyst_bass"]},
+    "sky_falls": {"cloud_trout": ["wind_cutter"], "cloud_carp": ["thunder_flyer"]},
+    "volcano": {"obsidian_bream": ["magma_moray"], "ash_rockfish": ["flame_manta", "magma_moray"]},
+    "ice_sea": {"frost_cod": ["frostfang_shark"], "snow_smelt": ["aurora_salmon", "frostfang_shark"]},
+    "world_tree": {"root_eel": ["spirit_fish"], "dew_carp": ["petal_flyer"]}
+  },
+  "craft": {
+    "golden_paste": "catfish",
+    "golden_spinner": "mandarin_fish",
+    "glow_worm": "sea_bass",
+    "trolling_lure": "sailfish",
+    "glow_bait": "oarfish",
+    "silver_spike": "silver_snakehead",
+    "crystal_orb": "prism_carp",
+    "cloud_feather": "wind_cutter",
+    "lava_stone": "flame_manta",
+    "aurora_crystal": "aurora_salmon"
+  }
+}
