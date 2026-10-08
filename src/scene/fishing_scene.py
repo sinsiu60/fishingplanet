@@ -1326,6 +1326,12 @@ class FishingScene(Scene):
                            float_need=fneed, float_tier=self.save.float_tier(),
                            touch_lead=load_json("mobile_config.json")["touch_lead_sec"] if self.touch else 0.0)
         self.fight.manual_drag = bool(self.settings.get("drag_manual"))   # 설정 '드랙 직접 조절' (CU3, 기본 끔 = 자동 드랙 + 풀기)
+        # 정체 숨김 (CU6-1): 일반~희귀는 건져 올릴 때까지 '???' — 전설 · 환상 · 시험 · 훈련 · 설정 '파이팅 중 이름 보기' 는 그대로
+        hide = (fish.get("rarity") in ("common", "uncommon", "rare") and not ex and not train
+                and not self.settings.get("fight_name_show"))
+        self.fight.name_hidden = hide
+        from src.save import dexbook
+        self.fight.name_hint = fish["name"] if hide and dexbook.mastery(self.save, fish) >= 3 else None   # 숙련 3: "…○○ 같다?"
         self.toasts.items.clear()
         self.toasts.sink = self._say  # 파이팅 중 글자 슬롯 하나 (31장)
         # 패턴 숙련도·연속 실패 보조 (31장 C5) — 세이브 값을 두뇌가 바로 쓴다
@@ -2389,6 +2395,9 @@ class FishingScene(Scene):
         fa.reel.low = heavy
         self.game.haptics.weight_k = (0.6 if f.weight < ac["light_below"] else 1.4 if heavy else 1.0) if fighting else 1.0
         if fighting:
+            if f.name_hint and f.elapsed >= 3.0:   # 숙련 3 (CU6-1): 3초 뒤 체력 바 아래 글자 슬롯에 2초 "…쏘가리 같다?"
+                self.toasts.show(f"…{f.name_hint} 같다?", (170, 172, 182), 2.0, 11)
+                f.name_hint = None
             f.heavy_text_t = max(0.0, getattr(f, "heavy_text_t", 0.0) - dt)
             self.scrape_t = getattr(self, "scrape_t", 0.0) - dt
             if heavy and f.arm_wrong and self.scrape_t <= 0:
@@ -3312,6 +3321,9 @@ class FishingScene(Scene):
             if not phantom.is_phantom(f.fish):  # 환상어는 전용 포획 연출 (아래 PhantomShow)
                 self.landing = LandingCinematic(shown, f.result["size"], 240 + pose * 46, chest=self.chest_drop,
                                                 golden=golden)
+                if getattr(f, "name_hidden", False):   # 정체 공개 (CU6-1): 물 밖으로 나오는 순간 이름 '쾅' + 처음이면 NEW!
+                    self.landing.reveal = {"name": shown["name"], "color": fight_hud.RARITY_COLOR.get(shown["rarity"]),
+                                           "new": not self.save.caught(shown["id"])}
                 # 전설: 뜰채로 끌어올린 뒤 그물에서 튀어 오르는 순간(launch) 전설 포획 연출로 넘어감 (34장)
                 self.landing.legend_handoff = f.fish["rarity"] == "legend"
             f.result["fish"] = shown

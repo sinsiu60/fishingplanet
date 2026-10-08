@@ -99,6 +99,7 @@ class LandingCinematic:
         self.rain = [[random.uniform(0, 480), random.uniform(-270, 0), random.uniform(40, 110), random.uniform(0, 6)]
                      for _ in range(70)] if self.tier >= 3 else []
         self.rings: list[float] = []
+        self.reveal: dict | None = None   # 정체 공개 (CORE_UPDATE CU6-1): {name, color, new} — 물 밖으로 나오는 순간 '쾅'
 
     @property
     def done(self) -> bool:
@@ -377,6 +378,13 @@ class LandingCinematic:
                 kk = age / 0.6
                 pygame.draw.circle(canvas, lerp_color(self.glow, (255, 255, 255), 1 - kk), (int(fx), int(fy)),
                                    int(10 + kk * 160), max(1, int(3 * (1 - kk))))
+        # 정체 공개 (CU6-1): 물 밖으로 나오는 순간(퍼 담기 끝) 이름 '쾅' — 1.3배 → 1배 0.2초, 희귀도 색 + 처음이면 NEW!
+        if self.reveal and t >= self.t_scoop:
+            rk = clamp((t - self.t_scoop) / 0.2, 0.0, 1.0)
+            big_text(canvas, self.reveal["name"], (w // 2, 46), self.reveal["color"] or (255, 255, 255),
+                     2.0 * (1.3 - 0.3 * _ease_out(rk)), outline=True)
+            if self.reveal["new"] and rk >= 1.0:
+                big_text(canvas, "NEW!", (w // 2, 72), (255, 230, 120), 1.2, outline=True)
         # 희귀 이상: 정점에서 배너
         if tier >= 2 and t > self.t_apex:
             bk = t - self.t_apex

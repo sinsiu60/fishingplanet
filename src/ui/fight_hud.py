@@ -147,8 +147,11 @@ def draw_boss_bar(canvas, pal, fight) -> None:
     fish = fight.fish
     name = fish["name"] if not fight.brain.dragon else "용 '등용'"
     rc = RARITY_COLOR.get(fish["rarity"], (255, 255, 255))
+    if getattr(fight, "name_hidden", False):   # 정체 숨김 (CU6-1): 이름 · 희귀도 색 숨김
+        name, rc = "???", (235, 235, 240)
     if fish.get("rarity") != "phantom":  # 환상어: 파이팅 중 이름·등급명 표시 안 함 (33장)
         text(canvas, name, (x - 6, y + 3), rc, 11, "midright")
+
     phases = fight.brain.phases
     if phases:
         # 페이즈 표시: ◆◆◇
