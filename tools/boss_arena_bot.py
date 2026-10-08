@@ -18,6 +18,22 @@ import boss_arena_check as bc  # noqa: E402  (모바일 미리보기 · 더미 �
 import balance_sim as bs  # noqa: E402
 
 BOSSES = [("golden_carp", "여우비"), ("silver_bass", "일렉트로"), ("dragon_carp", "등용"), ("phantom:moon_shadow_carp", "환상 달그림자")]
+# 장비 = 그 낚시터 티어 (balance_sim.gear_for_tier — 화면 없는 봇과 같게). 등용은 T5 로는 봇 '보통'이 매번 줄이 끊겨(화면 없는 봇도 0/8)
+# 켬/끔 비교가 안 되므로 T6.
+GEAR_BONUS = {"dragon_carp": 1}
+
+
+def _fish(fid: str) -> dict:
+    from src.core.config import load_json
+    if fid.startswith("phantom:"):
+        return dict(next(f for f in load_json("phantom.json")["fish"] if f["id"] == fid.split(":", 1)[1]), rarity="phantom")
+    return next(f for f in load_json("fish.json")["fish"] if f["id"] == fid)
+
+
+def _tier(fid: str) -> int:
+    from src.core.config import load_json
+    spot = next(s for s in load_json("spots.json")["spots"] if s["id"] == _fish(fid)["spot"])
+    return spot.get("gear_tier", 1) + GEAR_BONUS.get(fid.split(":")[-1], 0)
 DT = 1 / 60
 
 
@@ -34,10 +50,14 @@ def one(g, fid: str, seed: int, arena: bool) -> dict:
         def Random(x=None):
             return real_random.Random(seed * 7919 + 1 if x is None else x)
     fight_mod.random = _Seeded()
+    gear = bs.gear_for_tier(_tier(fid))
+    real_gear = g.save.fight_gear
+    g.save.fight_gear = lambda period="day": dict(gear)
     try:
         sc = bc.start(g, fid)
     finally:
         fight_mod.random = real_random
+        g.save.fight_gear = real_gear
     f = sc.fight
     f.line = float(f.line_max)
     del f._lose   # bc.start 의 '놓치지 않게' 를 되돌림 — 진짜 승부
@@ -87,13 +107,9 @@ def one(g, fid: str, seed: int, arena: bool) -> dict:
 
 def pure(fid: str, runs: int) -> tuple[int, str]:
     from src.core.config import load_json
-    if fid.startswith("phantom:"):
-        fish = next(f for f in load_json("phantom.json")["fish"] if f["id"] == fid.split(":", 1)[1])
-        fish = dict(fish, rarity="phantom")
-    else:
-        fish = next(f for f in load_json("fish.json")["fish"] if f["id"] == fid)
+    fish = _fish(fid)
     spot = next(s for s in load_json("spots.json")["spots"] if s["id"] == fish["spot"])
-    gear = bs.gear_for_tier(spot.get("gear_tier", 1))
+    gear = bs.gear_for_tier(_tier(fid))
     rows = [bs.bot_fight(fish, spot, gear, bs.SKILLS["average"], random.Random(s)) for s in range(runs)]
     return sum(r["ok"] for r in rows), "".join(sorted(r.get("rank") or "-" for r in rows))
 
@@ -101,7 +117,7 @@ def pure(fid: str, runs: int) -> tuple[int, str]:
 def main():
     runs = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 12
     g = bc.pb.make_game()
-    print(f"봇 '보통' · 판 {runs} · 무대 켬 / 끔 (같은 씨앗들)")
+    print(f"봇 '보통' · 판 {runs} · 무대 켬 / 끔 (같은 씨앗들) · 장비 = 낚시터 티어 (등용 +1)")
     print(f"{'보스':12} | 성공 켬 | 성공 끔 | 화면 없는 봇 | 랭크 켬 / 끔 / 화면 없음 | 히트스톱 프레임 | 깜빡임")
     flash_bad = 0
     worse = 0
