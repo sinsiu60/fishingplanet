@@ -485,7 +485,8 @@ class SunoBoss:
     def _bus(self) -> float:
         g = self.gains.get(self.song or "", {}).get("gain", 1.0)
         vb = self.sfx.settings_boss_vol if hasattr(self.sfx, "settings_boss_vol") else 1.0
-        return min(1.0, self.SUNO_GAIN * g * self.sfx.bus_gain("mus") * vb * self.am.zone_gain)
+        return min(1.0, self.SUNO_GAIN * g * self.sfx.bus_gain("mus") * vb * self.am.zone_gain
+                   * (self.sfx.boss_duck_gain() if hasattr(self.sfx, "boss_duck_gain") else 1.0))   # 보스 예고음 덕킹 (51-3)
 
     def _apply_volumes(self) -> None:
         bus = self._bus()

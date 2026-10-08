@@ -1157,6 +1157,80 @@
    {"wave": "triangle", "freq": [600, 900, 600], "len": 0.09, "env": {"a": 0.003, "d": 0.04, "s": 0, "r": 0.03}, "gain": 0.8}
   ]
  },
+ "sig_boss_release_hum": {"_소리": "보스 풀기 빌드업 한 박 '두-둥' (BOSS_ARENA 🅱-2): 60Hz 사인 킥 + 짧은 노이즈 꼬리, 단계 #0~7 = 한 단계마다 +1반음 (간격은 예고 진행에 따라 짧아짐)", "len": 0.14, "steps": {"n": 8, "pitch": [1.0, 1.498], "gain_db": [-3, 0]}, "layers": [
+   {"wave": "sine", "freq": [120, 58], "len": 0.13, "env": {"a": 0.001, "d": 0.06, "s": 0.15, "r": 0.04}, "dist": 0.6, "gain": 1.0},
+   {"wave": "triangle", "freq": [240, 120], "len": 0.03, "env": {"a": 0.0005, "d": 0.012, "s": 0, "r": 0.01}, "gain": 0.3},
+   {"wave": "noise", "len": 0.07, "filter": {"type": "lp", "f": 700, "track": false}, "env": {"a": 0.001, "d": 0.03, "s": 0, "r": 0.02}, "gain": 0.5}
+  ]
+ },
+ "sig_boss_release_go": {"_소리": "보스 풀기 행동 순간 '쾅!': 킥 + 금속성 노이즈 버스트(고역 3kHz, 0.15초) + 낮은 꼬리 0.4초", "len": 0.62, "reverb": {"mix": 0.1, "time": 0.4}, "layers": [
+   {"wave": "sine", "freq": [150, 42], "len": 0.4, "env": {"a": 0.001, "d": 0.12, "s": 0.25, "r": 0.15}, "dist": 0.65, "gain": 1.0},
+   {"wave": "noise", "len": 0.15, "filter": {"type": "hp", "f": 3000, "track": false}, "env": {"a": 0.0005, "d": 0.05, "s": 0.1, "r": 0.05}, "gain": 0.75},
+   {"wave": "square", "freq": [1800, 900], "len": 0.12, "filter": {"type": "bp", "f": 2600, "q": 3, "track": false}, "env": {"a": 0.0005, "d": 0.04, "s": 0, "r": 0.04}, "gain": 0.25},
+   {"wave": "sine", "freq": 48, "start": 0.06, "len": 0.5, "env": {"a": 0.02, "d": 0.2, "s": 0.3, "r": 0.2}, "gain": 0.55}
+  ]
+ },
+ "sig_boss_reel": {"_소리": "보스 감기 '차르르륵': 짧은 금속 클릭 7개(밴드패스 2~4kHz, 간격 빨라지며 높아짐) + 50Hz 저음", "len": 0.56, "layers": [
+   {"wave": "noise", "start": 0.0, "len": 0.028, "filter": {"type": "bp", "f": 2000, "q": 6, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.008}, "gain": 0.9},
+   {"wave": "square", "freq": 1800.0, "start": 0.0, "len": 0.03, "env": {"a": 0.0005, "d": 0.008, "s": 0, "r": 0.01}, "gain": 0.22},
+   {"wave": "noise", "start": 0.1, "len": 0.028, "filter": {"type": "bp", "f": 2330, "q": 6, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.008}, "gain": 0.9},
+   {"wave": "square", "freq": 2097.0, "start": 0.1, "len": 0.03, "env": {"a": 0.0005, "d": 0.008, "s": 0, "r": 0.01}, "gain": 0.22},
+   {"wave": "noise", "start": 0.19, "len": 0.028, "filter": {"type": "bp", "f": 2660, "q": 6, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.008}, "gain": 0.9},
+   {"wave": "square", "freq": 2394.0, "start": 0.19, "len": 0.03, "env": {"a": 0.0005, "d": 0.008, "s": 0, "r": 0.01}, "gain": 0.22},
+   {"wave": "noise", "start": 0.27, "len": 0.028, "filter": {"type": "bp", "f": 2990, "q": 6, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.008}, "gain": 0.9},
+   {"wave": "square", "freq": 2691.0, "start": 0.27, "len": 0.03, "env": {"a": 0.0005, "d": 0.008, "s": 0, "r": 0.01}, "gain": 0.22},
+   {"wave": "noise", "start": 0.34, "len": 0.028, "filter": {"type": "bp", "f": 3320, "q": 6, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.008}, "gain": 0.9},
+   {"wave": "square", "freq": 2988.0, "start": 0.34, "len": 0.03, "env": {"a": 0.0005, "d": 0.008, "s": 0, "r": 0.01}, "gain": 0.22},
+   {"wave": "noise", "start": 0.4, "len": 0.028, "filter": {"type": "bp", "f": 3650, "q": 6, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.008}, "gain": 0.9},
+   {"wave": "square", "freq": 3285.0, "start": 0.4, "len": 0.03, "env": {"a": 0.0005, "d": 0.008, "s": 0, "r": 0.01}, "gain": 0.22},
+   {"wave": "noise", "start": 0.45, "len": 0.028, "filter": {"type": "bp", "f": 3980, "q": 6, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.008}, "gain": 0.9},
+   {"wave": "square", "freq": 3582.0, "start": 0.45, "len": 0.03, "env": {"a": 0.0005, "d": 0.008, "s": 0, "r": 0.01}, "gain": 0.22},
+   {"wave": "sine", "freq": 50, "len": 0.54, "env": {"a": 0.03, "d": 0.3, "s": 0.6, "r": 0.12}, "dist": 0.25, "gain": 0.7}
+  ]
+ },
+ "sig_boss_timing_tick": {"_소리": "보스 타이밍 틱: 금속 링 (사각파 + 빠른 감쇠, 1.2kHz → 2.4kHz 단계 #0~5)", "len": 0.05, "steps": {"n": 6, "pitch": [1.0, 2.0], "gain_db": [-4, 0]}, "layers": [
+   {"wave": "square", "freq": 1200, "len": 0.045, "filter": {"type": "bp", "f": 1500, "q": 2}, "env": {"a": 0.0005, "d": 0.015, "s": 0, "r": 0.015}, "gain": 0.8, "dist": 0.5},
+   {"wave": "sine", "freq": 2410, "len": 0.04, "env": {"a": 0.0005, "d": 0.02, "s": 0, "r": 0.015}, "gain": 0.35},
+   {"wave": "noise", "len": 0.012, "filter": {"type": "bp", "f": 3500, "q": 1.5, "track": false}, "env": {"a": 0.0003, "d": 0.005, "s": 0, "r": 0.004}, "gain": 0.5}
+  ]
+ },
+ "sig_boss_timing_apex": {"_소리": "보스 타이밍 정점 '챙!': 심벌 같은 노이즈 크래시 0.25초 + 높은 사인 핑", "len": 0.26, "layers": [
+   {"wave": "noise", "len": 0.24, "filter": {"type": "hp", "f": 3200, "track": false}, "env": {"a": 0.0005, "d": 0.12, "s": 0.25, "r": 0.08}, "gain": 0.9},
+   {"wave": "noise", "len": 0.1, "filter": {"type": "bp", "f": 2200, "q": 1.2, "track": false}, "env": {"a": 0.0005, "d": 0.04, "s": 0.2, "r": 0.04}, "gain": 0.7},
+   {"wave": "square", "freq": 3100, "len": 0.22, "filter": {"type": "bp", "f": 3100, "q": 4, "track": false}, "env": {"a": 0.0005, "d": 0.07, "s": 0.15, "r": 0.08}, "dist": 0.4, "gain": 0.35},
+   {"wave": "sine", "freq": 4650, "len": 0.12, "env": {"a": 0.0005, "d": 0.04, "s": 0, "r": 0.05}, "gain": 0.18}
+  ]
+ },
+ "sig_boss_direction": {"_소리": "보스 방향 '휘익—' 칼바람 (노이즈 스윕 400Hz → 3kHz, 0.3초, 꺾는 쪽으로 패닝) + 80Hz 짧은 '웅'", "len": 0.42, "layers": [
+   {"wave": "noise", "len": 0.32, "filter": {"type": "bp", "f": [400, 3000], "q": 2.2, "track": false}, "env": {"a": 0.04, "d": 0.2, "s": 0.3, "r": 0.08}, "gain": 1.0},
+   {"wave": "sine", "freq": [90, 72], "len": 0.22, "env": {"a": 0.01, "d": 0.1, "s": 0.2, "r": 0.08}, "dist": 0.25, "gain": 0.6}
+  ]
+ },
+ "sig_boss_endure": {"_소리": "보스 참기 '두두두두둥': 저음 북 연타 0.06초 간격 점점 세게 → 마지막 큰 북", "len": 0.38, "layers": [
+   {"wave": "sine", "freq": [130, 60], "start": 0.0, "len": 0.07, "env": {"a": 0.001, "d": 0.03, "s": 0.2, "r": 0.02}, "dist": 0.6, "gain": 0.45},
+   {"wave": "noise", "start": 0.0, "len": 0.025, "filter": {"type": "bp", "f": 1800, "q": 1.2, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.01}, "gain": 0.375},
+   {"wave": "sine", "freq": [130, 60], "start": 0.06, "len": 0.07, "env": {"a": 0.001, "d": 0.03, "s": 0.2, "r": 0.02}, "dist": 0.6, "gain": 0.55},
+   {"wave": "noise", "start": 0.06, "len": 0.025, "filter": {"type": "bp", "f": 1800, "q": 1.2, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.01}, "gain": 0.45},
+   {"wave": "sine", "freq": [130, 60], "start": 0.12, "len": 0.07, "env": {"a": 0.001, "d": 0.03, "s": 0.2, "r": 0.02}, "dist": 0.6, "gain": 0.65},
+   {"wave": "noise", "start": 0.12, "len": 0.025, "filter": {"type": "bp", "f": 1800, "q": 1.2, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.01}, "gain": 0.525},
+   {"wave": "sine", "freq": [130, 60], "start": 0.18, "len": 0.07, "env": {"a": 0.001, "d": 0.03, "s": 0.2, "r": 0.02}, "dist": 0.6, "gain": 0.75},
+   {"wave": "noise", "start": 0.18, "len": 0.025, "filter": {"type": "bp", "f": 1800, "q": 1.2, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.01}, "gain": 0.6},
+   {"wave": "sine", "freq": [130, 60], "start": 0.24, "len": 0.07, "env": {"a": 0.001, "d": 0.03, "s": 0.2, "r": 0.02}, "dist": 0.6, "gain": 0.8500000000000001},
+   {"wave": "noise", "start": 0.24, "len": 0.025, "filter": {"type": "bp", "f": 1800, "q": 1.2, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.01}, "gain": 0.675},
+   {"wave": "sine", "freq": [150, 48], "start": 0.3, "len": 0.08, "env": {"a": 0.001, "d": 0.04, "s": 0.2, "r": 0.03}, "dist": 0.6, "gain": 1.0},
+   {"wave": "noise", "start": 0.3, "len": 0.06, "filter": {"type": "lp", "f": 900}, "env": {"a": 0.001, "d": 0.03, "s": 0, "r": 0.02}, "gain": 0.75}
+  ]
+ },
+ "sig_boss_gesture": {"_소리": "보스 제스처 '끼이이익': 톱니파 마찰(필터 흔들림 8Hz) + 40Hz 럼블", "len": 0.46, "layers": [
+   {"wave": "saw", "freq": [620, 540], "len": 0.42, "filter": {"type": "bp", "f": 1300, "q": 3, "track": false}, "trem": [8, 0.6], "vib": [8, 0.03], "env": {"a": 0.02, "d": 0.2, "s": 0.5, "r": 0.08}, "dist": 0.2, "gain": 0.8},
+   {"wave": "sine", "freq": 40, "len": 0.44, "env": {"a": 0.03, "d": 0.2, "s": 0.6, "r": 0.1}, "dist": 0.3, "gain": 0.7}
+  ]
+ },
+ "sig_boss_drum": {"_소리": "보스 펌핑 박자 '둥' (판정 박자와 같은 틱) — 보스 세트의 북", "len": 0.22, "layers": [
+   {"wave": "sine", "freq": [140, 55], "len": 0.2, "env": {"a": 0.001, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.4, "gain": 1.0},
+   {"wave": "noise", "len": 0.03, "filter": {"type": "bp", "f": 2500, "q": 1.2, "track": false}, "env": {"a": 0.0005, "d": 0.01, "s": 0, "r": 0.01}, "gain": 0.4}
+  ]
+ },
  "sfx_legend_fanfare": {"_소리": "전설 뜰채 팡파르: 팀파니 롤 → 금관 '빠바밤' → D장조 큰 화음 + 쿵 + 심벌 → 반짝 아르페지오 (전설을 건져 올리는 순간)", "len": 2.6, "reverb": {"mix": 0.28, "time": 1.5}, "layers": [{"wave": "sine", "freq": [96, 62], "start": 0.0, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.18}, {"wave": "sine", "freq": [96, 62], "start": 0.03, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.23}, {"wave": "sine", "freq": [96, 62], "start": 0.06, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.28}, {"wave": "sine", "freq": [96, 62], "start": 0.09, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.33}, {"wave": "sine", "freq": [96, 62], "start": 0.12, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.38}, {"wave": "sine", "freq": [96, 62], "start": 0.15, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.43}, {"wave": "sine", "freq": [96, 62], "start": 0.18, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.48}, {"wave": "sine", "freq": [96, 62], "start": 0.21, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.53}, {"wave": "sine", "freq": [96, 62], "start": 0.24, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.58}, {"wave": "sine", "freq": [96, 62], "start": 0.27, "len": 0.16, "env": {"a": 0.002, "d": 0.07, "s": 0, "r": 0.05}, "dist": 0.15, "gain": 0.63}, {"wave": "saw", "freq": 293.7, "start": 0.06, "len": 0.1, "harm": [[1.006, 0.6]], "filter": {"type": "lp", "f": [900, 2800], "q": 1.1, "track": false}, "env": {"a": 0.01, "d": 0.05, "s": 0.7, "r": 0.04}, "gain": 0.42}, {"wave": "saw", "freq": 370.0, "start": 0.17, "len": 0.1, "harm": [[1.006, 0.6]], "filter": {"type": "lp", "f": [900, 2800], "q": 1.1, "track": false}, "env": {"a": 0.01, "d": 0.05, "s": 0.7, "r": 0.04}, "gain": 0.42}, {"wave": "saw", "freq": 440.0, "start": 0.28, "len": 0.1, "harm": [[1.006, 0.6]], "filter": {"type": "lp", "f": [900, 2800], "q": 1.1, "track": false}, "env": {"a": 0.01, "d": 0.05, "s": 0.7, "r": 0.04}, "gain": 0.42}, {"wave": "saw", "freq": 146.8, "start": 0.4, "len": 1.5, "harm": [[1.006, 0.7]], "filter": {"type": "lp", "f": [700, 3200, 1600], "q": 1.2, "track": false}, "env": {"a": 0.04, "d": 0.5, "s": 0.6, "r": 0.9}, "gain": 0.34, "pan": -0.35}, {"wave": "triangle", "freq": 293.6, "start": 0.42, "len": 1.4, "env": {"a": 0.2, "d": 0.6, "s": 0.4, "r": 0.9}, "gain": 0.08}, {"wave": "saw", "freq": 220.0, "start": 0.412, "len": 1.5, "harm": [[1.006, 0.7]], "filter": {"type": "lp", "f": [700, 3200, 1600], "q": 1.2, "track": false}, "env": {"a": 0.04, "d": 0.5, "s": 0.6, "r": 0.9}, "gain": 0.34, "pan": -0.21}, {"wave": "triangle", "freq": 440.0, "start": 0.42, "len": 1.4, "env": {"a": 0.2, "d": 0.6, "s": 0.4, "r": 0.9}, "gain": 0.08}, {"wave": "saw", "freq": 293.7, "start": 0.424, "len": 1.5, "harm": [[1.006, 0.7]], "filter": {"type": "lp", "f": [700, 3200, 1600], "q": 1.2, "track": false}, "env": {"a": 0.04, "d": 0.5, "s": 0.6, "r": 0.9}, "gain": 0.34, "pan": -0.07}, {"wave": "triangle", "freq": 587.4, "start": 0.42, "len": 1.4, "env": {"a": 0.2, "d": 0.6, "s": 0.4, "r": 0.9}, "gain": 0.08}, {"wave": "saw", "freq": 370.0, "start": 0.436, "len": 1.5, "harm": [[1.006, 0.7]], "filter": {"type": "lp", "f": [700, 3200, 1600], "q": 1.2, "track": false}, "env": {"a": 0.04, "d": 0.5, "s": 0.6, "r": 0.9}, "gain": 0.34, "pan": 0.07}, {"wave": "triangle", "freq": 740.0, "start": 0.42, "len": 1.4, "env": {"a": 0.2, "d": 0.6, "s": 0.4, "r": 0.9}, "gain": 0.08}, {"wave": "saw", "freq": 440.0, "start": 0.448, "len": 1.5, "harm": [[1.006, 0.7]], "filter": {"type": "lp", "f": [700, 3200, 1600], "q": 1.2, "track": false}, "env": {"a": 0.04, "d": 0.5, "s": 0.6, "r": 0.9}, "gain": 0.34, "pan": 0.21}, {"wave": "triangle", "freq": 880.0, "start": 0.42, "len": 1.4, "env": {"a": 0.2, "d": 0.6, "s": 0.4, "r": 0.9}, "gain": 0.08}, {"wave": "saw", "freq": 587.3, "start": 0.46, "len": 1.5, "harm": [[1.006, 0.7]], "filter": {"type": "lp", "f": [700, 3200, 1600], "q": 1.2, "track": false}, "env": {"a": 0.04, "d": 0.5, "s": 0.6, "r": 0.9}, "gain": 0.34, "pan": 0.35}, {"wave": "triangle", "freq": 1174.6, "start": 0.42, "len": 1.4, "env": {"a": 0.2, "d": 0.6, "s": 0.4, "r": 0.9}, "gain": 0.08}, {"wave": "sine", "freq": [120, 38], "start": 0.4, "len": 0.7, "env": {"a": 0.002, "d": 0.3, "s": 0, "r": 0.2}, "dist": 0.35, "gain": 1.0}, {"wave": "noise", "start": 0.4, "len": 1.8, "filter": {"type": "hp", "f": 3800, "track": false}, "env": {"a": 0.003, "d": 0.9, "s": 0.1, "r": 0.8}, "gain": 0.32}, {"wave": "sine", "freq": 1174.7, "start": 0.54, "len": 0.5, "harm": [[2.0, 0.3], [3.0, 0.12]], "env": {"a": 0.002, "d": 0.3, "s": 0.05, "r": 0.3}, "gain": 0.2}, {"wave": "sine", "freq": 1480.0, "start": 0.64, "len": 0.5, "harm": [[2.0, 0.3], [3.0, 0.12]], "env": {"a": 0.002, "d": 0.3, "s": 0.05, "r": 0.3}, "gain": 0.2}, {"wave": "sine", "freq": 1760.0, "start": 0.74, "len": 0.5, "harm": [[2.0, 0.3], [3.0, 0.12]], "env": {"a": 0.002, "d": 0.3, "s": 0.05, "r": 0.3}, "gain": 0.2}, {"wave": "sine", "freq": 2349.3, "start": 0.84, "len": 0.5, "harm": [[2.0, 0.3], [3.0, 0.12]], "env": {"a": 0.002, "d": 0.3, "s": 0.05, "r": 0.3}, "gain": 0.2}, {"wave": "sine", "freq": 2349.3, "start": 1.0, "len": 1.2, "harm": [[2.76, 0.35]], "env": {"a": 0.002, "d": 0.6, "s": 0.1, "r": 0.6}, "trem": [7, 0.4], "gain": 0.12}]},
  "sfx_rush_charge": {"_소리": "돌진 예고 '힘 모으는 소리': 낮은 울림·떨리는 저음·바람이 점점 커지며 올라감 + 줄이 버티는 떨림 (줄 펄스 동안, 돌진 순간 끊김)", "len": 1.3, "layers": [{"wave": "saw", "freq": [48, 96], "len": 1.25, "filter": {"type": "lp", "f": [220, 520], "q": 1.4, "track": false}, "env": {"a": 0.9, "d": 0.2, "s": 0.9, "r": 0.12}, "gain": 0.55}, {"wave": "sine", "freq": [55, 110], "len": 1.25, "env": {"a": 0.8, "d": 0.2, "s": 0.9, "r": 0.12}, "trem": [9, 0.35], "gain": 0.5}, {"wave": "noise", "len": 1.25, "filter": {"type": "bp", "f": [350, 2600], "q": 1.6, "track": false}, "env": {"a": 1.0, "d": 0.15, "s": 0.9, "r": 0.1}, "gain": 0.55}, {"wave": "triangle", "freq": [260, 620], "len": 1.2, "vib": [11, 0.012], "env": {"a": 0.9, "d": 0.2, "s": 0.8, "r": 0.1}, "gain": 0.16}, {"wave": "sine", "freq": [880, 1760], "start": 0.6, "len": 0.62, "trem": [18, 0.6], "env": {"a": 0.5, "d": 0.05, "s": 0.9, "r": 0.06}, "gain": 0.06}]},
  "amb_step0": {"_소리": "이동 컷신: 흙길 발소리 (1/3)", "len": 0.25, "layers": [{"wave": "noise", "len": 0.14, "filter": {"type": "lp", "f": [900, 300], "q": 0.8, "track": false}, "env": {"a": 0.004, "d": 0.06, "s": 0.2, "r": 0.06}, "gain": 0.55}, {"wave": "sine", "freq": [90, 60], "len": 0.08, "env": {"a": 0.002, "d": 0.05, "s": 0, "r": 0.03}, "gain": 0.3}]},

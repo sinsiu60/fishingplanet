@@ -161,6 +161,9 @@ class Sfx:
         self.sig_boost = False
         self.duck_db = {b: 0.0 for b in c["priority"]}  # 지금 낮춘 양 (dB, 음수)
         self.boss_mode = False        # 전설·환상 전용 곡 파이팅 중 (덕킹·릴 음량 규칙, DESIGN.md 43)
+        self.boss_duck_db = 0.0       # 보스 곡에만 거는 덕킹 (보스 예고음, BOSS_ARENA 🅱-1 · 51-3) — SunoBoss · BossMusic._bus 가 곱함
+        self.boss_duck_hold = 0.0
+        self.boss_duck_rate = 30.0
         self.settings_boss_vol = 1.0  # 설정 '전설·환상 음악 음량'
         self.duck_hold: dict[str, float] = {}
         self.duck_rate: dict[str, float] = {}   # 복귀 속도 dB/초
@@ -344,7 +347,7 @@ class Sfx:
             g *= self.limiter
         return g
 
-    def duck(self, kind: str, hold: float | None = None, release: float | None = None) -> None:
+    def duck(self, kind: str, hold: float | None = None, release: float | None = None, skip_mus: bool = False) -> None:
         """순간 덕킹: 신호·챔질·퍼펙트 때 음악·환경음을 잠깐 낮춘다 (sec 동안 유지 후 복귀).
         hold = 유지 시간(없으면 config sec), release = 복귀에 걸리는 초 (없으면 초당 30dB)."""
         if not self.enabled:
@@ -355,13 +358,24 @@ class Sfx:
         if not d:
             return
         for bus, db in d.items():
-            if bus == "sec":
+            if bus == "sec" or (bus == "mus" and skip_mus):
                 continue
             if bus == "mus" and self.boss_mode:
                 db = max(db, self.cfg.get("boss", {}).get("duck_mus", -2))   # 전설·환상 전용 곡: 음악은 −2dB 만 (DESIGN.md 43)
             self.duck_db[bus] = min(self.duck_db.get(bus, 0.0), db)
             self.duck_hold[bus] = max(self.duck_hold.get(bus, 0.0), hold if hold is not None else d.get("sec", 0.3))
             self.duck_rate[bus] = 30.0 if not release else max(1.0, -db / release)
+
+    def boss_duck(self, db: float, hold: float, release: float = 0.15) -> None:
+        """보스 곡 버스만 db 만큼 hold 초 낮춤 (효과음 · 환경음 · 신호 · 다른 음악 그대로). 겹치면 더 깊은 쪽 · 긴 쪽."""
+        if not self.enabled:
+            return
+        self.boss_duck_db = min(self.boss_duck_db, db)
+        self.boss_duck_hold = max(self.boss_duck_hold, hold)
+        self.boss_duck_rate = max(1.0, -db / max(0.02, release))
+
+    def boss_duck_gain(self) -> float:
+        return 10 ** (self.boss_duck_db / 20) if self.boss_duck_db < 0 else 1.0
 
     def duck_levels(self, levels: dict, hold: float = 0.3, release: float = 1.0) -> None:
         """버스별 dB 를 직접 (환상 파장처럼 서서히 잦아드는 덕킹 — 매 틱 부른다)."""
@@ -552,7 +566,7 @@ class Sfx:
         self.last_play[name] = self.clock
         self._apply(e)
         if bus == "sig":
-            self.duck("sig")
+            self.duck("sig", skip_mus=name.startswith("sig_boss_"))   # 보스 예고음: 음악은 boss_duck 이 따로 (51-3)
         return ch
 
     def _apply(self, e: dict) -> None:
@@ -586,6 +600,10 @@ class Sfx:
             return
         self.clock += dt
         self.slow = slow
+        if self.boss_duck_hold > 0:
+            self.boss_duck_hold -= dt
+        elif self.boss_duck_db < 0:
+            self.boss_duck_db = min(0.0, self.boss_duck_db + dt * self.boss_duck_rate)
         for bus in list(self.duck_db):
             if self.duck_hold.get(bus, 0) > 0:
                 self.duck_hold[bus] -= dt

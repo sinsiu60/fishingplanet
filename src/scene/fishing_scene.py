@@ -244,7 +244,9 @@ class FishingScene(Scene):
         from src.audio.signal_audio import SignalAudio
         self.signal_audio = SignalAudio(self.sfx, lambda: self.settings.get("signal_sound"),
                                         lambda: self.settings.get("signal_mode"),
-                                        lambda: self.save.data.get("pattern_mastery", {}) if self.save else None)  # 신호 6계열 (S5, 모드 N2)
+                                        lambda: self.save.data.get("pattern_mastery", {}) if self.save else None,  # 신호 6계열 (S5, 모드 N2)
+                                        boss=lambda fight: self.arena.active and self.arena.end_t is None,   # 보스 예고음 (51-3)
+                                        on_hit=lambda kind: self._arena_event(kind) if self.arena.active else None)
         self.cast_far = self.fish_cfg["cast"]["max_distance"]  # 소리 거리 감쇠 기준
         self.cast_loops: dict[str, str | None] = {"charge": None, "line": None}
         self.captions = None     # [글자, 남은 시간] 소리 자막
@@ -3121,7 +3123,9 @@ class FishingScene(Scene):
             # 펄스가 손에 닿음 = 돌진: zing_rise(C·A·B 무작위) → 줄이 풀리는 동안 loop_fast → 정점 drag_fast → 끝 reel_stop
             # (오디오 최종 팩). 신호음 '강조' 모드만 예전 '쉬익'(legacy_rush_go)도 같이.
             self.fight_audio.reel.rush_begin()
-            if self.settings.get("signal_mode") == 2:
+            if self.signal_audio.boss(f):
+                self.signal_audio.boss_go()   # 보스 '쾅!' — 화면 임팩트(_arena_event, 같은 이벤트)와 같은 틱
+            elif self.settings.get("signal_mode") == 2:
                 self.sfx.play("legacy_rush_go", 1.0)
             self.sfx.play("legacy_splash_small", 0.8)
             self.game.haptics.vibrate("bite", 1.0)
@@ -3894,11 +3898,14 @@ class FishingScene(Scene):
             if ph is None or ph["stage"] != "pulse":
                 self.rush_charge_idx = -1
             return
+        boss = self.signal_audio.boss(f)
         if ph["idx"] != getattr(self, "rush_charge_idx", -1):   # 펄스마다 (대형은 2번)
             self.rush_charge_idx = ph["idx"]
             if ch is not None:
                 ch.fadeout(40)
-            if self.settings.get("signal_sound"):   # 펄스 길이에 맞는 것 (짧으면 0.55초에 다 올라가는 버전)
+            if boss:   # 보스전: '힘 모으는 소리' 대신 보스 빌드업 '두-둥' (아래 단계마다)
+                self.rush_charge_ch = None
+            elif self.settings.get("signal_sound"):   # 펄스 길이에 맞는 것 (짧으면 0.55초에 다 올라가는 버전)
                 pulse_left = ph["left"] / max(1, ph["n"] - ph["idx"])
                 self.rush_charge_ch = self.sfx.play("sfx_rush_charge" if pulse_left >= 0.8 else "sfx_rush_charge_short", 0.85)
             else:
@@ -3907,7 +3914,9 @@ class FishingScene(Scene):
         i = min(steps - 1, int(ph["q"] * steps))
         if i > getattr(self, "rush_hum_i", -1):
             self.rush_hum_i = i
-            if self.settings.get("signal_sound") and self.settings.get("signal_mode") == 2:
+            if boss:
+                self.signal_audio._bplay(f"sig_boss_release_hum#{i}", 0.8 + 0.2 * ph["q"])
+            elif self.settings.get("signal_sound") and self.settings.get("signal_mode") == 2:
                 self.sfx.play(f"legacy_rush_hum{i}", 0.55 + 0.35 * ph["q"])
             self.game.haptics.vibrate("pump", c["haptic_min"] + (c["haptic_max"] - c["haptic_min"]) * ph["q"])
 
@@ -4055,6 +4064,7 @@ class FishingScene(Scene):
         pos = self.screen_fx.map(self._fish_screen())
         d = 1.0 if pos[0] >= self.cam.width / 2 else -1.0
         res = self.arena.impact(kind, pos, d)
+        self.signal_audio.log.append((round(self.signal_audio.clock, 4), "impact:" + kind))
         if res["hitstop"] > 0:
             self.game.hitstop(res["hitstop"])
 

@@ -319,7 +319,8 @@ class BossMusic:
         from src.audio.adaptive_music import GAIN
         st = self.cfg.get("state_gain", {})
         vb = self.sfx.settings_boss_vol if hasattr(self.sfx, "settings_boss_vol") else 1.0
-        return min(1.0, GAIN * st.get("boss", 1.0) * self.sfx.bus_gain("mus") * vb * self.am.zone_gain)
+        return min(1.0, GAIN * st.get("boss", 1.0) * self.sfx.bus_gain("mus") * vb * self.am.zone_gain
+                   * (self.sfx.boss_duck_gain() if hasattr(self.sfx, "boss_duck_gain") else 1.0))   # 보스 예고음 덕킹 (51-3)
 
     def _next_bar(self) -> float:
         import math

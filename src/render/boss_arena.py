@@ -371,7 +371,7 @@ class BossArena:
             self.flash_t = 1e-3 + 1 / 60   # 1프레임
             self.last_flash = self.t
             self.flashes += 1
-        return {"hitstop": ic["hitstop"]}
+        return {"hitstop": 0.0 if kind in ic.get("no_hitstop", ()) else ic["hitstop"]}
 
     def parry(self, pos=None) -> None:
         if not self.active or self.reduce or self.end_t is not None:
