@@ -548,8 +548,12 @@ class Sim:
         s = self.s
         self.rehunt = None
         if self.scales_short() or self.need_legend_s():
-            # 비늘이 모자라면 이미 잡은 엘드라시온 전설을 다시 사냥 (+2)
-            for f in all_fish():
+            # 비늘이 모자라면 이미 잡은 엘드라시온 전설을 다시 사냥 (+2) — 조건 칸이 가장 자주 열리는 전설부터 (사람처럼)
+            hours = {"morning": 4, "day": 7, "evening": 3, "night": 10}
+            def openness(f):
+                w = self.spots[f["spot"]]["weather"]
+                return sum(hours[t] for t in f["times"]) * sum(w.get(x, 0) for x in f["weathers"]) / max(1, sum(w.values()))
+            for f in sorted(all_fish(), key=lambda f: -openness(f) if f["rarity"] == "legend" else 0):
                 if (f["rarity"] == "legend" and s.caught(f["id"]) and f["spot"] in s.data["unlocked_spots"]
                         and self.spots[f["spot"]].get("continent") == "eldrasion" and self.legend_bait_owned(f)
                         and self.can_hold(f["spot"], True)):
@@ -745,7 +749,8 @@ class Sim:
             self.fish_once()
             if int(self.t) // 300 != int(self.t - 1) // 300:
                 self.money_curve.append((round(self.t / 60), self.s.data["money"]))
-            if self.s.caught("orsiel"):
+            from src.save import exam
+            if self.s.caught("orsiel") and exam.next_tier(self.s) is None:   # 마지막 시험(T8)까지 보고 끝 (CU8)
                 self.note("오르시엘 포획 — 끝")
                 break
         return self.summary()
