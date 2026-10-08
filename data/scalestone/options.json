@@ -1,9 +1,10 @@
 {
- "_설명": "비늘석 부옵션 13종 (SCALESTONE.md). range = 희귀 기준 (붙을 때 균등 무작위 × 등급 배율), cap = 장착한 4개 합계 상한, weight = 뽑기 비중 (파이팅 10 · 입질/포획 8 · 수확 6), unit = pct(%, 소수 1자리) · sec(초, 소수 2자리) · pp(%p, 소수 2자리). sign -1 = '줄어드는' 옵션 (표시는 -n%, 값은 양수로 저장).",
- "order": ["tension_limit", "line_durability", "line_wear", "reel_speed", "perfect_window", "hook_hold", "twist_resist", "warning_lead",
+ "_설명": "비늘석 부옵션 14종 (SCALESTONE.md, 보스 장력 완화는 v1.6.2 추가 — DESIGN 46-9). range = 희귀 기준 (붙을 때 균등 무작위 × 등급 배율), cap = 장착한 4개 합계 상한, weight = 뽑기 비중 (파이팅 10 · 입질/포획 8 · 수확 6), unit = pct(%, 소수 1자리) · sec(초, 소수 2자리) · pp(%p, 소수 2자리). sign -1 = '줄어드는' 옵션 (표시는 -n%, 값은 양수로 저장).",
+ "order": ["tension_limit", "pull_relief", "line_durability", "line_wear", "reel_speed", "perfect_window", "hook_hold", "twist_resist", "warning_lead",
            "hook_window", "trophy_chance", "rare_chance", "sell_price", "material_gain"],
  "options": {
   "tension_limit":   {"name": "장력 한계",       "group": "fight",   "range": [2, 4],      "unit": "pct", "cap": 12,   "weight": 10, "sign": 1, "desc": "초록 구간 위쪽 끝을 초록 폭의 %만큼 올림 (빨강이 늦게 시작)"},
+  "pull_relief":     {"name": "보스 장력 완화",  "group": "fight",   "range": [2, 4],      "unit": "pct", "cap": 10,   "weight": 10, "sign": -1, "desc": "전설 · 환상 물고기가 당기는 힘을 %만큼 줄임 (평소 · 돌진 장력과 울렁임의 중심이 내려감). 일반 물고기엔 효과 없음"},
   "line_durability": {"name": "줄 내구도",       "group": "fight",   "range": [3, 6],      "unit": "pct", "cap": 18,   "weight": 10, "sign": 1},
   "line_wear":       {"name": "줄 마모 감소",    "group": "fight",   "range": [3, 6],      "unit": "pct", "cap": 18,   "weight": 10, "sign": -1, "desc": "빨간 칸에서 줄이 닳는 속도"},
   "reel_speed":      {"name": "감기 속도",       "group": "fight",   "range": [2, 4],      "unit": "pct", "cap": 12,   "weight": 10, "sign": 1},

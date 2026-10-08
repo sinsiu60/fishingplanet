@@ -39,7 +39,7 @@ STAGE = {"reservoir": "샤르미온 초반", "valley": "샤르미온 초반", "b
          "deep": "샤르미온 후반", "secret": "샤르미온 후반"}
 FISH_PER_H = 50
 RANKS = {"S": 0.37, "A": 0.57, "B": 0.05, "C": 0.01}   # 새 랭크 (DESIGN 49-2): 봇 잘함 실측 분포
-FIGHT_OPTS = ["tension_limit", "line_durability", "line_wear", "reel_speed", "perfect_window", "hook_hold", "twist_resist",
+FIGHT_OPTS = ["tension_limit", "pull_relief", "line_durability", "line_wear", "reel_speed", "perfect_window", "hook_hold", "twist_resist",
               "warning_lead"]
 
 

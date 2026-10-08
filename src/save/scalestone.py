@@ -175,7 +175,7 @@ def frac(save, oid: str) -> float:
 
 def apply_fight(gear: dict, eff: dict) -> dict:
     """장비 수치(Fight 에 넘길 dict) + 비늘석 합계 효과 {옵션 id: 상한 적용 값} → 새 dict (SaveGame.fight_gear · 시뮬이 같이 씀).
-    장력 한계 = 초록 위쪽 끝 + 초록 폭 × % (S6 승인: '위쪽 끝 × %'는 티어 한 단계를 넘어서 폭 기준으로) · 줄 내구도 × (1+%) · 줄 마모 = 빨강 손상 × (1−%) · 감기 × (1+%) · 퍼펙트 창 × (1+%) ·
+    보스 장력 완화 = 전설 · 환상이 당기는 힘 × (1−%) · 장력 한계 = 초록 위쪽 끝 + 초록 폭 × % (S6 승인: '위쪽 끝 × %'는 티어 한 단계를 넘어서 폭 기준으로) · 줄 내구도 × (1+%) · 줄 마모 = 빨강 손상 × (1−%) · 감기 × (1+%) · 퍼펙트 창 × (1+%) ·
     바늘 빠짐 / 꼬임 = 차는 속도 × (1−%) · 예고 여유 = +초."""
     def f(oid):
         return eff.get(oid, 0.0) / 100.0
@@ -183,6 +183,7 @@ def apply_fight(gear: dict, eff: dict) -> dict:
     green = list(g["rod_green"])
     green[1] = round(green[1] + (green[1] - green[0]) * f("tension_limit"), 2)
     g["rod_green"] = green
+    g["pull_mult"] = g.get("pull_mult", 1.0) * (1 - f("pull_relief"))   # 보스 장력 완화: 전설 · 환상이 당기는 힘 × (1−%) (Fight 목표 장력, 일반 물고기엔 안 씀)
     g["reel_speed"] = g["reel_speed"] * (1 + f("reel_speed"))
     g["line_max"] = round(g["line_max"] * (1 + f("line_durability")))
     g["line_red_mult"] = g.get("line_red_mult", 1.0) * (1 - f("line_wear"))
