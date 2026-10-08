@@ -94,5 +94,9 @@
     "heavy_text_sec": 1.5,
     "trophy_top": 0.1,
     "scalestone_candidate": {"id": "arm_regen", "name": "팔 힘 회복", "stat": "arm_recover_mult", "per_step": 0.06, "cap": 0.3, "_설명": "비늘석 옵션 후보 (데이터만, 옵션 추가는 아직 안 함)"}
+  },
+  "fight_length": {
+    "_설명": "판 길이 들쭉날쭉 (CU6-2): 등급별 최대 체력 배율 — 일반 판은 짧고 시원하게 (봇 '보통' 일반 평균 10~15초 목표), 희귀 · 전설은 그대로. 크기 · 무게(CU5) 와 곱해져 작은 일반 10초 · 큰 희귀는 길게.",
+    "stamina_mult": {"common": 0.7, "uncommon": 0.9}
   }
 }
