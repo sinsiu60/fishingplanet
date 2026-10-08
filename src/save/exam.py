@@ -144,7 +144,7 @@ def quals(save) -> list[dict]:
     fs = [f for f in allf if f["rarity"] != "legend"]
     dex = save.data.get("dex", {})
     caught = [f for f in fs if dex.get(f["id"], {}).get("count", 0) > 0]
-    need1 = math.ceil(c["dex_ratio"] * len(fs) - 1e-9)
+    need1 = math.ceil(c.get("dex_ratio_tier", {}).get(str(tier), c["dex_ratio"]) * len(fs) - 1e-9)   # 티어별 덮어쓰기 (CU8-③)
     stars = sum(dexbook.star_count(save, f) for f in fs)
     need2 = math.ceil(c["star_ratio"] * 5 * len(fs) - 1e-9)
     out = [{"key": "dex", "label": "도감", "have": len(caught), "need": need1, "ok": len(caught) >= need1},

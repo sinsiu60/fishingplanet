@@ -1,6 +1,8 @@
 {
  "_설명": "백 노인의 등급 시험 (BAEK_EXAM.md 🅱, DESIGN.md 49-3). 시험 하나 = 장비 티어 하나 (T2~T8). 합격 = 그 티어 장비 4종 구매 · 장착 가능. 자격 기준 = 지금 합격 티어 낚시터 전체 (spots.json gear_tier), 전설은 ① ② 에서 뺌, 변이 · 한정은 세지 않음 (fish.json 기준).",
  "dex_ratio": 0.8,
+ "dex_ratio_tier": {"8": 0.75},
+ "_dex_ratio_tier": "티어별 자격 ① 비율 (CORE_UPDATE CU8-③): 봇 '보통' 진행 시뮬에서 티어당 3시간을 넘는 시험만 80% → 75%",
  "star_ratio": 0.25,
  "base_exclude": {"5": ["deep"]},
  "_base_exclude": "자격 · 시험 낚시터에서 뺄 곳 (CORE_UPDATE CU8-③): T5 시험은 먼바다만 (심해 제외)",
@@ -11,7 +13,8 @@
  "_mult": "시험 물고기 조정 (DESIGN 49-5, 봇 '보통' 합격률 목표 40~70% 쪽으로): 체력 · 힘 · 예고 시간 배율. T8 체력 1.3 = '백 노인이 고른 큰 놈'",
  "stamina_mult": {"4": 0.8, "5": 0.8, "8": 1.3},
  "power_mult": {"5": 0.9},
- "telegraph_mult": {"4": 1.4, "5": 1.5, "7": 1.2},
+ "telegraph_mult": {"7": 1.2},
+ "_telegraph_cu8": "CU8: 랭크 기준을 CU2 분포로 다시 맞춘 뒤 (fishing_config rank _cu8) T4 · T5 예고 보조(×1.4 · ×1.5)는 빼도 보통 57 · 67% 라 뺌",
  "pass": {"2": {"rank": "B"}, "3": {"rank": "B"}, "4": {"rank": "A"}, "5": {"rank": "A"},
           "6": {"rank": "A", "perfects": 3}, "7": {"rank": "A", "perfects": 3}, "8": {"rank": "A", "perfects": 3}},
  "retry_days": 1,
