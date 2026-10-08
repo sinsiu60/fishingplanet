@@ -912,7 +912,8 @@ class Fight:
         self.phase = "caught"
         damage = clamp(self.line_damage / self.line_max, 0, 1)
         score = rank_mod.compute_score(self.opp, self.misses, damage, self.elapsed, self.par,
-                                       legend=self.fish.get("rarity") in ("legend", "phantom"))
+                                       legend=self.fish.get("rarity") in ("legend", "phantom"),
+                                       allow=rank_mod.line_allow(self.fish))   # 대형 물고기 줄 손상 예외 (49-4)
         size = rank_mod.final_size(self.size_cm, score["rank"])
         price = rank_mod.sell_price(self.fish, size, score["rank"])
         if self.mutations:

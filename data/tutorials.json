@@ -1560,6 +1560,37 @@
     }
    ]
   },
+  "TG-20": {
+   "title": "대형 물고기",
+   "who": "haru",
+   "start": "event:first:heavy_fish",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fight.gauge.line",
+     "text": "**대형 물고기**야! 드랙을 다 풀어도 줄이 조금씩 닳거든.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "**대형 물고기**예요! 드랙을 다 풀어도 줄이 조금씩 닳아요."
+    },
+    {
+     "kind": "freeze",
+     "target": "fight.gauge.tension",
+     "text": "돌진하면 드랙 내리고, 감기 멈추고, 낚싯대는 반대로! 끊기지만 않게 버텨.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "돌진하면 드랙을 내리고, 감기를 멈추고, 낚싯대는 반대로! 끊기지만 않게 버텨요."
+    },
+    {
+     "kind": "freeze",
+     "target": "fight.gauge.line",
+     "text": "이런 놈은 줄이 닳아도 **랭크에서 봐주니까** 걱정 마.",
+     "expr": null,
+     "until": "tap",
+     "src_text": "이런 물고기는 줄이 닳아도 **랭크에서 봐줘요**."
+    }
+   ]
+  },
   "TG-PH": {
    "title": "환상의 물고기",
    "who": "baek",

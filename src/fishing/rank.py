@@ -9,12 +9,25 @@ def par_time(cast_distance: float, stamina: float, power: float = 1.0) -> float:
     return f["par_base_sec"] + (f["par_per_meter"] * cast_distance + f["par_per_stamina"] * stamina) * power_k
 
 
-def compute_score(opp: dict, misses: int, line_damage: float, elapsed: float, par: float, legend: bool = False) -> dict:
+def line_allow(fish: dict) -> float:
+    """대형 물고기 예외 (49-4): 드랙을 다 풀어도 남는 무게(drag_floor)가 있는 물고기는 그만큼 줄이 닳는 게 당연 → 봐주는 줄 손상 비율."""
+    floor = fish.get("drag_floor", 0.0)
+    if floor <= 0:
+        return 0.0
+    r = load_json("fishing_config.json")["rank"]
+    return min(r["heavy_line_allow_max"], floor * r["heavy_line_allow_per_floor"])
+
+
+def compute_score(opp: dict, misses: int, line_damage: float, elapsed: float, par: float, legend: bool = False,
+                  allow: float = 0.0) -> dict:
     """새 랭크 (BAEK_EXAM 🅰-2, DESIGN.md 49-2): 줄 관리 + 시간 + 신호 대응 − 실수, 기본 점수 없음.
     opp = 응답 기회의 {"P": 퍼펙트, "G": 좋음, "M": 놓침}. 신호 대응 = (퍼펙트 + 좋음 × good_credit) / 기회 × signal_max,
     기회가 0번이면 signal_none. S 는 점수 + 퍼펙트 S_min_perfects 번 이상. 전설 · 환상은 좋음을 legend_good_credit 으로 (길게 싸우는 만큼)."""
     r = load_json("fishing_config.json")["rank"]
-    line_pts = (1.0 - max(0.0, min(1.0, line_damage))) * r["line_max"]
+    dmg = max(0.0, min(1.0, line_damage))
+    if allow > 0:   # 대형 물고기: 봐주는 몫을 넘은 손상만 남은 폭에 비례해 (끊기지만 않으면 거의 만점)
+        dmg = max(0.0, dmg - allow) / (1.0 - allow)
+    line_pts = (1.0 - dmg) * r["line_max"]
     if elapsed <= par:
         time_pts = r["time_max"]
     else:
@@ -34,7 +47,7 @@ def compute_score(opp: dict, misses: int, line_damage: float, elapsed: float, pa
     else:
         rank = "C"
     return {"score": score, "rank": rank, "line_pts": line_pts, "time_pts": time_pts, "signal_pts": signal_pts,
-            "miss_pts": miss_pts, "opps": n, "perfects": P,
+            "miss_pts": miss_pts, "opps": n, "perfects": P, "line_allow": allow,
             "s_blocked": score >= r["S"] and P < r["S_min_perfects"]}   # 점수는 S 인데 퍼펙트가 모자라 A
 
 

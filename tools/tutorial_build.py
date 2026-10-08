@@ -186,6 +186,10 @@ OTHER = {
                                                                                    "cond:shop_sel_paralysis"),
                         ("spotlight", "shop.btn.action", "cond:float_owned", {"short_text": 4}),
                         ("spotlight", "shop.btn.action", "cond:float_equipped"), ("wait", None, "auto:3")]},
+    # TG-20 대형 물고기 (DESIGN 49-4): drag_floor 물고기 첫 파이팅 시작 — 줄이 반드시 닳는다 · 랭크 예외
+    "TG-20": {"title": "대형 물고기", "who": "haru", "start": "event:first:heavy_fish",
+              "steps": [("freeze", "fight.gauge.line", "tap"), ("freeze", "fight.gauge.tension", "tap"),
+                        ("freeze", "fight.gauge.line", "tap")]},
     "TG-PH": {"title": "환상의 물고기", "who": "baek", "start": "event:phantom_caught", "script": "phantom",
               "steps": [("info", "catch.card", "tap"), ("info", "catch.card", "tap", {"on_done": "close_catch"}),
                         ("spotlight", "dex.open", "scene:DexScene", {"allow_keys": ["menu:dex"]}),

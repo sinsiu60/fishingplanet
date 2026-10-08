@@ -120,7 +120,7 @@ class Guide:
 
     @staticmethod
     def _fight_tut(tid: str) -> bool:
-        return tid == "TG-02" or tid.startswith(("TG-P", "TG-19"))
+        return tid in ("TG-02", "TG-20") or tid.startswith(("TG-P", "TG-19"))
 
     def request(self, tid: str) -> None:
         if tid not in self.queue and (self.run is None or self.run["id"] != tid) and self.can_start(tid):

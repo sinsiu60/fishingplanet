@@ -1314,6 +1314,9 @@ class FishingScene(Scene):
             self.toasts.show(f"{kinds[muts[0]]['name']} 변이", col, 3.2, 11)
             # 변이 등장은 소리 없이 화면 연출만 (N3, 강조 등급 '없음')
             self.sparkles.burst(*self._fish_screen(), count=16, speed=0.9)
+        from src.fishing.rank import line_allow
+        if not train and line_allow(fish) > 0:
+            self.game.guide.event("first:heavy_fish")   # TG-20 대형 물고기: 줄은 반드시 닳고 랭크는 봐줌 (49-4)
         for g in sorted(self.fight.gim.kinds(self.fight.brain)):
             key = f"gimmick:{g}"
             if not train:
