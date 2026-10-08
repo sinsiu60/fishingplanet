@@ -1,0 +1,123 @@
+{
+ "_설명": "전설을 낚시터 티어 장비(전설 기준 −1 티어)로 상대할 때 봇 성공률 (12판, 비늘석 없음 'bare' / 평균 비늘석 'avg') — 진행 시뮬이 장비 1티어 부족 전설에 씀 (CU8)",
+ "golden_carp": {
+  "average": {
+   "bare": 0.917,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 1.0,
+   "avg": 1.0
+  }
+ },
+ "tiger_mandarin": {
+  "average": {
+   "bare": 0.917,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 1.0,
+   "avg": 1.0
+  }
+ },
+ "silver_bass": {
+  "average": {
+   "bare": 0.917,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 1.0,
+   "avg": 1.0
+  }
+ },
+ "marlin": {
+  "average": {
+   "bare": 0.0,
+   "avg": 0.417
+  },
+  "skilled": {
+   "bare": 0.0,
+   "avg": 1.0
+  }
+ },
+ "coelacanth": {
+  "average": {
+   "bare": 1.0,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 1.0,
+   "avg": 1.0
+  }
+ },
+ "dragon_carp": {
+  "average": {
+   "bare": 0.833,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 1.0,
+   "avg": 1.0
+  }
+ },
+ "silva": {
+  "average": {
+   "bare": 0.583,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 0.667,
+   "avg": 1.0
+  }
+ },
+ "prisia": {
+  "average": {
+   "bare": 0.917,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 1.0,
+   "avg": 1.0
+  }
+ },
+ "aeris": {
+  "average": {
+   "bare": 0.25,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 0.75,
+   "avg": 1.0
+  }
+ },
+ "ignis": {
+  "average": {
+   "bare": 1.0,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 1.0,
+   "avg": 1.0
+  }
+ },
+ "borealis": {
+  "average": {
+   "bare": 1.0,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 1.0,
+   "avg": 1.0
+  }
+ },
+ "orsiel": {
+  "average": {
+   "bare": 0.75,
+   "avg": 1.0
+  },
+  "skilled": {
+   "bare": 1.0,
+   "avg": 1.0
+  }
+ }
+}

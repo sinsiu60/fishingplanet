@@ -43,6 +43,10 @@ SKILLS_ALL = dict(SKILLS, drag_only=dict(SKILLS["average"], no_patterns=True))
 SPOT_TIER = {s["id"]: s.get("gear_tier", 1) for s in load_json("spots.json")["spots"]}  # spots.json gear_tier
 # 낚싯대가 그 물고기 티어보다 낮을 때 성공률 배율 (울렁임 ×1.5/티어 — tools 벤치 측정값을 반올림)
 DEFICIT_SUCCESS = {"common": [1.0, 1.0, 0.9], "uncommon": [1.0, 0.95, 0.5], "rare": [1.0, 0.85, 0.1], "legend": [1.0, 0.05, 0.0]}
+# 전설을 낚시터 티어 장비(전설 기준 −1)로 만났을 때 실측 성공률 — tools/legend_spot_tier.py (CU8). 없으면 DEFICIT_SUCCESS
+_LST = os.path.join(os.path.dirname(__file__), "legend_spot_tier.json")
+LEGEND_SPOT_TIER = {k: v for k, v in json.load(open(_LST, encoding="utf-8")).items() if not k.startswith("_")} \
+    if os.path.exists(_LST) else {}
 PERIODS = [(6.0, "morning"), (10.0, "day"), (17.0, "evening"), (20.0, "night")]
 # 봇은 장력 수치를 정확히 보고 반응하므로 사람보다 잘한다 → 진행 시뮬에선 사람 기준으로 보정
 # 랭크 비율은 새 랭크 식(DESIGN 49-2) 봇 실측 분포
@@ -389,6 +393,22 @@ class Sim:
         self.t += 5.0
         _ = target
 
+    def rest_until(self, times: list, weathers: list, max_days: int = 14) -> None:
+        """달력 (CU1) 으로 시간대 + 날씨가 맞는 칸을 골라 쉬기 — 게임 시간만 흐르고 실제 5초."""
+        for _ in range(max_days * 48):
+            if self.period() in times and self.weather in weathers:
+                break
+            self.hour += 0.5
+            if self.hour >= 24:
+                self.hour -= 24
+                self.day += 1
+            if self.hour >= self.next_weather or self.next_weather - self.hour > 3:
+                w = self.spots[self.spot]["weather"]
+                keys = list(w)
+                self.weather = self.rnd.choices(keys, [w[k] for k in keys])[0]
+                self.next_weather = (int(self.hour) // 3 + 1) * 3.0
+        self.t += 5.0
+
     def note(self, what: str) -> None:
         self.log.append((round(self.t / 60, 1), what))
 
@@ -602,12 +622,12 @@ class Sim:
         fish = None
         if hunting:
             # 달력 (CU1) 이 있는 사람처럼: 그 낚시터에 못 잡은 종이 남아 있으면 조건 칸이 마침 맞을 때만 전설을 노리고
-            # (아니면 평소처럼 도감 채우기), 남은 종이 없을 때만 전설 시간대로 쉬어 감 — 전설 5% (CU7-1) 에서 밤만 낚다 멈추지 않게
+            # (아니면 평소처럼 도감 채우기), 남은 종이 없을 때만 달력으로 조건 칸(시간대 + 날씨)을 골라 쉬어 감
             left = [f for f in all_fish() if f["spot"] == self.spot and f["rarity"] != "legend" and not s.caught(f["id"])]
             if left and not (self.period() in leg["times"] and self.weather in leg["weathers"]):
                 hunting = False
-            elif self.period() not in leg["times"]:
-                self.rest_to(leg["times"][0])
+            elif not left and not (self.period() in leg["times"] and self.weather in leg["weathers"]):
+                self.rest_until(leg["times"], leg["weathers"])   # 달력에서 맞는 3시간 칸을 골라 한 번에 쉼 (CU1)
             if self.weather in leg["weathers"]:
                 bait = next(b for b in load_json("baits.json")["baits"] if b["id"] == leg["bait"])
                 if self.rnd.random() < load_json("fishing_config.json")["legend"]["chance"]:
@@ -622,16 +642,19 @@ class Sim:
             bait = s.equipped("bait") if not bait else bait
             fish = pick_fish(self.period(), self.weather, 28.0, self.rnd, self.spot, bait)
         if fish is None:
-            self.advance(self.OVERHEAD)
+            self.advance(3.0)   # 게임과 같이: 고를 물고기가 없으면 3초 뒤 다시 굴림 (bite.BiteSystem WAIT)
             return
         rec = self.d[fish["id"]][self.skill]
         from src.fishing.fight import fish_gear_tier
         deficit = min(2, max(0, fish_gear_tier(fish) - s.gear_tier("rod")))
         rod_k = DEFICIT_SUCCESS[fish["rarity"]][deficit]
+        p_ok = rec["success"] * rod_k
+        if fish["rarity"] == "legend" and deficit == 1 and fish["id"] in LEGEND_SPOT_TIER:
+            p_ok = LEGEND_SPOT_TIER[fish["id"]][self.skill]["bare"]   # 낚시터 티어 장비 · 비늘석 없음 실측 (CU8)
         need = s.float_need(fish, sp)
         escape = need > s.float_tier()
         hum = HUMAN[self.skill]
-        ok = self.rnd.random() < rec["success"] * hum["success"] * rod_k and not escape
+        ok = self.rnd.random() < p_ok * hum["success"] and not escape
         t_fight = rec["t_ok"] if ok and rec["t_ok"] else rec["t_all"]
         self.advance(self.OVERHEAD + (t_fight or 40))
         if not ok:
@@ -645,7 +668,7 @@ class Sim:
         first = not s.caught(fish["id"])
         s.record_catch({"fish": fish, "size": size, "rank": rank, "price": price,
                         "perfects": self.rnd.randint(0, 6 if fish["rarity"] == "legend" else 3)})
-        s.data["keepnet"].pop()
+        price = s.data["keepnet"].pop()["price"]   # 대물 +30% (CU8-④) 반영된 값, 첫 만남 보너스는 record_catch 가 돈에 더함
         s.data["money"] += price
         s.data["stats"]["earned"] += price
         st = self.spot_stats.setdefault(self.spot, [0, 0.0, 0])
