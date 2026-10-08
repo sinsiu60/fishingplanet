@@ -691,6 +691,14 @@ class SaveGame:
             lo, hi = fish["size_cm"]
             top = load_json("core.json")["arm"]["trophy_top"]
             news["heavy"] = result["size"] >= hi - (hi - lo) * top
+            eco = load_json("fishing_config.json").get("economy", {})   # 돈이 목표에서 (CU8-④)
+            if news["heavy"]:
+                result = dict(result, price=int(round(result["price"] * (1 + eco.get("trophy_bonus", 0.0)))))
+            if news["new"] and eco.get("first_catch_mult"):
+                bonus = int(round(result["price"] * eco["first_catch_mult"]))
+                self.data["money"] += bonus
+                self.data["stats"]["earned"] = self.data["stats"].get("earned", 0) + bonus
+                news["first_bonus"] = bonus
         self.data["keepnet"].append({"id": fid, "size": result["size"], "rank": result["rank"],
                                      "price": result["price"]})
         if news["record"]:

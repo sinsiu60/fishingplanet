@@ -2417,7 +2417,8 @@
      }
     }
    ],
-   "drag_floor": 18
+   "drag_floor": 18,
+   "line_damage_mult": 0.75
   },
   {
    "id": "blackthroat",

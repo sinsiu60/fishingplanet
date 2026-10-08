@@ -308,6 +308,9 @@
   "economy": {
     "_설명": "경제 맞춤 (CORE_UPDATE CU7-3): 판매가 = 기본가 × rarity_price_mult × spot_price_mult (전설 · 환상은 낚시터 배율 없음). 희귀 · 전설은 드물어진 만큼 올리고 일반은 조금 내림, 낚시터 배율로 봇 '보통' 시간당 판매 골드를 CU2 ±5% 로 (tools/core_baseline.py).",
     "rarity_price_mult": {"common": 0.8, "uncommon": 1.0, "rare": 1.8, "legend": 1.5},
+    "_goal_설명": "돈이 목표에서 (CU8-④): 처음 잡은 종 = 그 판매가 × first_catch_mult 를 바로 지급 (전설 · 환상은 트로피 규칙 그대로), 대물(크기 상위 10%) = 판매가 × (1 + trophy_bonus)",
+    "first_catch_mult": 2.0,
+    "trophy_bonus": 0.3,
     "spot_price_mult": {
       "reservoir": 0.9,
       "valley": 1.123,

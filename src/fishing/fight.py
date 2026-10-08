@@ -1015,6 +1015,7 @@ class Fight:
             dmg *= self.gear.get("line_red_mult", 1.0)  # 온기 장갑
             if self.is_legend:
                 dmg *= cfg.get("legend_line_damage_mult", 1.0)   # 긴 전설 파이팅 동안 줄이 버티게
+            dmg *= self.fish.get("line_damage_mult", 1.0)   # 종별 (일섬: 돌진마다 줄이 빨강인 대형 — CU8 재측정)
             self.line -= dmg
             self.line_damage += dmg
             if self.line_frac < 0.5:

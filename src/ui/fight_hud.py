@@ -335,8 +335,10 @@ def catch_badges(news: dict | None) -> list:
         badges.append(("최대 크기 경신!", (140, 240, 150)))
     if news.get("gold"):
         badges.append(("도감 금테 획득!", RANK_COLORS["S"]))
-    if news.get("heavy"):   # 대물 (크기 상위 10%, CU5-2)
-        badges.append(("묵직한 손맛!", (255, 190, 120)))
+    if news.get("heavy"):   # 대물 (크기 상위 10%, CU5-2) — 판매가 +30% (CU8-④)
+        badges.append(("묵직한 손맛! 판매가 +30%", (255, 190, 120)))
+    if news.get("first_bonus"):   # 첫 만남 보너스 (CU8-④)
+        badges.append((f"첫 만남 보너스 +{news['first_bonus']:,}원", (140, 240, 150)))
     if news.get("hint"):
         badges.append((f"힌트 해금 ({news['hint']}회) - 도감 확인", (150, 220, 255)))
     if news.get("phantom_new"):

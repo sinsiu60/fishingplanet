@@ -601,8 +601,12 @@ class Sim:
         bait = None
         fish = None
         if hunting:
-            # 전설 시간대로 쉬고, 날씨가 맞을 때만 전설 미끼
-            if self.period() not in leg["times"]:
+            # 달력 (CU1) 이 있는 사람처럼: 그 낚시터에 못 잡은 종이 남아 있으면 조건 칸이 마침 맞을 때만 전설을 노리고
+            # (아니면 평소처럼 도감 채우기), 남은 종이 없을 때만 전설 시간대로 쉬어 감 — 전설 5% (CU7-1) 에서 밤만 낚다 멈추지 않게
+            left = [f for f in all_fish() if f["spot"] == self.spot and f["rarity"] != "legend" and not s.caught(f["id"])]
+            if left and not (self.period() in leg["times"] and self.weather in leg["weathers"]):
+                hunting = False
+            elif self.period() not in leg["times"]:
                 self.rest_to(leg["times"][0])
             if self.weather in leg["weathers"]:
                 bait = next(b for b in load_json("baits.json")["baits"] if b["id"] == leg["bait"])
