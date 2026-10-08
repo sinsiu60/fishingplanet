@@ -301,12 +301,12 @@ class ExamNoticeScene(Scene):
         for ln in wrap_text(self.line, 210):
             text(canvas, ln, (240 - 54, y), ui.TEXT, 11, "midleft")
             y += 16
-        text(canvas, "장비 구매 · 장착은 합격한 티어까지 — 다음 티어는 백 노인의 시험", (240, 168), ui.DIM, 11, "center")
+        text(canvas, "장비 구매 · 장착은 합격한 티어까지 — 다음 티어는 백 노인의 시험", (240, 162), ui.DIM, 11, "center")
         tiers = " ".join(exam.ROMAN[i] for i in range(2, self.tier + 1))
-        su.btext(canvas, f"합격  {tiers}", (240, 184), GREEN, 11, "center")
+        su.btext(canvas, f"합격  {tiers}", (240, 177), GREEN, 11, "center")
         names = [n for t, n in ((4, "물을 아는 자"), (8, "해강의 뒤를 이은 자")) if self.tier >= t]
         if names:
-            text(canvas, "  ".join(f"칭호 「{n}」" for n in names), (240, 199), (255, 214, 90), 11, "center")
+            text(canvas, "  ".join(f"칭호 「{n}」" for n in names), (240, 192), (255, 214, 90), 11, "center")
         self.button.draw(canvas, self.mouse)
 
 
