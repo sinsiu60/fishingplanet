@@ -185,6 +185,22 @@ def draw_fish_shadow(canvas, pal, cam, shadow: dict, t: float) -> None:
         (tail_x - direction * tail_len, sy - body_h * 0.45 + wag),
         (tail_x - direction * tail_len, sy + body_h * 0.45 + wag),
     ])
+    if shadow.get("spray"):
+        _draw_spray_tail(canvas, water, tail_x - direction * tail_len, sy, direction, body_h, shadow["alpha"], t)
+
+
+def _draw_spray_tail(canvas, water, x: float, y: float, direction: int, body_h: float, alpha: float, t: float) -> None:
+    """들뜬 물고기 (CU9): 꼬리 뒤로 작은 물보라 점 4개가 튀었다 사라짐 (하얀 1~2px)."""
+    for i in range(4):
+        ph = (t * 3.2 + i * 0.27) % 1.0
+        dx = -direction * (2 + ph * (6 + i * 2))
+        dy = -ph * (3 + body_h * 0.4) + (i - 1.5) * 1.2
+        a = alpha * (1 - ph)
+        if a <= 0.05:
+            continue
+        col = lerp_color(water, (250, 252, 255), 0.85 * a)
+        r = 1 if ph > 0.5 or i % 2 else 2
+        pygame.draw.circle(canvas, col, (int(x + dx), int(y + dy)), r)
 
 
 # ───────────────────────── 낚싯줄 ─────────────────────────

@@ -337,6 +337,11 @@ def catch_badges(news: dict | None) -> list:
         badges.append(("도감 금테 획득!", RANK_COLORS["S"]))
     if news.get("heavy"):   # 대물 (크기 상위 10%, CU5-2) — 판매가 +30% (CU8-④)
         badges.append(("묵직한 손맛! 판매가 +30%", (255, 190, 120)))
+    if news.get("excited"):   # 들뜬 물고기 (CU9) — 판매가 × core.json variety.excited_price
+        k = load_json("core.json")["variety"]["excited_price"]
+        badges.append((f"들뜬 녀석! 판매가 ×{k:g}", (255, 170, 120)))
+    if news.get("stray"):     # 길을 잃은 손님 (CU9) — 다른 낚시터 물고기
+        badges.append(("길을 잃은 손님", (170, 210, 255)))
     if news.get("first_bonus"):   # 첫 만남 보너스 (CU8-④)
         badges.append((f"첫 만남 보너스 +{news['first_bonus']:,}원", (140, 240, 150)))
     if news.get("hint"):

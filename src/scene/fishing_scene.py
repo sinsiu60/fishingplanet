@@ -130,6 +130,8 @@ class FishingScene(Scene):
         # 수면 징후 (U7): 전용 난수 (씨앗 = 시계, 다른 난수 흐름을 건드리지 않게)
         self.signs = SurfaceSigns(random.Random(int(_time.time() * 1000) + 7))
         self.sign_fx_t = 0.0
+        self.school: dict | None = None    # 물고기 떼 지나감 (CU9): {"x", "z", "t", "life"}
+        self.school_next = random.uniform(*load_json("core.json")["variety"]["school_interval_sec"])
         self.popups = fight_fx.JudgePopups()
         self.gather = fight_fx.GatherFX()
         self.screen_fx = ScreenFX(canvas.get_width(), canvas.get_height())
@@ -306,6 +308,9 @@ class FishingScene(Scene):
         self.save.data["continent"] = self.spot.get("continent", "sharmion")
         self._advance_hours(1.0)
         self.toasts.show(f"{self.spot['name']}에 도착했다 · {WEATHER_KO[self.weather]}", GOOD, 2.0)
+        left = sum(1 for f in self.all_fish if f["spot"] == spot_id and not self.save.caught(f["id"]))   # 남은 미지 (CU9)
+        self.toasts.show(f"이 물에 아직 못 본 물고기 {left}종" if left else "이 물의 물고기를 모두 만났어요",
+                         (190, 225, 255) if left else (255, 214, 90), 2.6, 11)
         line = phantom.rumor()  # 가끔 소문 한 줄 (로딩 문구 풀, 33장 P6)
         if line:
             self.toasts.show(line, (190, 160, 235), 3.2, 11)
@@ -1162,6 +1167,13 @@ class FishingScene(Scene):
                 from src.fishing import live_bait
                 if live_bait.consume(self.save):
                     self.toasts.show(f"생미끼를 다 썼다 — {self.save.equipped('bait')['name']}(으)로", INFO, 2.0)
+            if self.bite.fish is not None and self.bite.fish.get("bottle"):
+                self._bottle_catch()   # 유리병 편지 (CU9): 파이팅 없이 건져 올림
+                return
+            if self.school is not None and self.bite.school_fish is None and self.bite.fish is not None \
+                    and self.bite.fish["rarity"] in ("common", "uncommon", "rare"):
+                base = next((f for f in self.all_fish if f["id"] == self.bite.fish["id"]), None)
+                self.bite.school_fish = base   # 떼가 지나가는 동안: 처음 문 종이 연달아 (CU9)
             c.hooked()
             heavy = sum(self.bite.fish["size_cm"]) / 2 >= 100 if self.bite.fish else False
             self.sfx.play("sfx_hook_heavy" if heavy else "sfx_hook_success")  # 딱 + 쿵 + 팅 + 물보라 (큰 물고기는 더 깊게)
@@ -1493,6 +1505,23 @@ class FishingScene(Scene):
             sid_ = self.game.boss.song_for(fish["id"])
             if not self.game.boss.is_suno(sid_):   # SUNO 곡은 전설의 노래를 쓰지 않는다 (BOSS_BGM_SUNO.md)
                 legend_song.prefetch(self.sfx, cont, sid_)   # 전설마다 그 파이팅 곡 조성 (DESIGN.md 43)
+
+    def _bottle_catch(self) -> None:
+        """유리병 편지 (CU9): 물고기 대신 유리병 — 편지 한 장을 펼쳐 보여 주고 일지에 모음, 12장이면 칭호."""
+        from src.save import bottles
+        from src.story.ui import PaperScene
+        self.sfx.play("sfx_splash_small", 0.6)
+        self._splash_at(self.cast.bx, self.cast.bz, big=0.3)
+        b, done = bottles.take(self.save)
+        self.bite.stop()
+        self.cast.reset()
+        if b is None:
+            return
+        self.toasts.show(f"유리병을 건졌다! ({len(bottles.collected(self.save))}/12)", (190, 225, 255), 2.6)
+        if done:
+            self.toasts.show("칭호 '유리병을 읽는 자'", (255, 214, 90), 3.0, 11)
+        self.game.scenes.push(PaperScene(self.game, bottles.body(b), backdrop=self.draw))
+        self.game.save_now()
 
     def _end_fight(self) -> None:
         last = self.fight.result if self.fight is not None else None
@@ -1875,6 +1904,7 @@ class FishingScene(Scene):
             self.toasts.show(msg, INFO, 2.6, 11)
         w.events.clear()
         self._update_signs(dt)
+        self._update_school(dt)
         self.wind.update(dt, self.weather)
         self.rain.dir = 1 if self.wind.x >= 0 else -1   # 빗줄기 기울기 = 바람 방향
         lf = self.legend_fx   # 여우비: 실제 날씨는 그대로, 화면 빗줄기만 (쏟아지는 순간 굵게 → 파이팅 내내 가늘게)
@@ -1993,6 +2023,14 @@ class FishingScene(Scene):
             (self.all_fish[self.force_i] if self.force_i >= 0 else None)
         landed = self.cast.state == CastState.LANDED   # 대기 = 기다리기만 (루어 액션 저킹 · 리트리브는 삭제, DESIGN 47장)
         self.bite.sign_mods = self.signs.mods(self.cast.bx, self.cast.bz) if landed else {}
+        from src.save import bottles
+        self.bite.bottle_ok = self.training is None and self.exam_fish is None and bool(bottles.remaining(self.save))
+        sc = self.school
+        near = (sc is not None and landed
+                and math.hypot(self.cast.bx - sc["x"], self.cast.bz - sc["z"]) <= load_json("core.json")["variety"]["school_radius_m"])
+        self.bite.school_mult = load_json("core.json")["variety"]["school_wait_mult"] if near else 1.0
+        if sc is None:
+            self.bite.school_fish = None
         self.bite.update(dt)
         for ev in self.bite.events:
             self._on_bite_event(ev)
@@ -2058,6 +2096,67 @@ class FishingScene(Scene):
         elif kind == "birds" and self.sign_fx_t > 0.9:
             self.sign_fx_t = 0.0
             self._splash_at(rx(), rz(), 0.4)  # 새가 물을 찍는다
+
+    def _update_school(self, dt: float) -> None:
+        """물고기 떼 지나감 (CU9): 실제 3~6분마다 25% — 찌 근처 수면에 작은 물고기 떼 반짝임 20초.
+        수면 징후와 겹치지 않게 (징후가 있으면 다음으로 미루고, 떼가 있는 동안 징후는 안 생김)."""
+        v = load_json("core.json")["variety"]
+        sc = self.school
+        if sc is not None:
+            sc["t"] += dt
+            self.signs.next_t = max(self.signs.next_t, sc["life"] - sc["t"] + 5.0)
+            if sc["t"] >= sc["life"]:
+                self.school = None
+                return
+            sc["fx"] = sc.get("fx", 0.0) + dt
+            if sc["fx"] > 0.12:
+                sc["fx"] = 0.0
+                if random.random() < 0.25:
+                    self.ripples.spawn(sc["x"] + random.uniform(-1, 1), sc["z"] + random.uniform(-1, 1), size=0.25, life=0.7)
+                ang = random.uniform(0, math.tau)
+                r = random.uniform(0.2, 1.0) * v["school_radius_m"] * 0.6
+                p = self.cam.project(sc["x"] + math.cos(ang) * r, sc["z"] + math.sin(ang) * r)
+                if p:
+                    self.sparkles.burst(p[0], p[1], count=1, speed=0.2, ring=False)
+            return
+        landed = self.cast.state == CastState.LANDED and self.bite.state == BiteState.WAIT and self.fight is None
+        if not landed or self.training is not None or self.exam_fish is not None or self.bite.phantom is not None:
+            return
+        self.school_next -= dt
+        if self.school_next > 0:
+            return
+        self.school_next = random.uniform(*v["school_interval_sec"])
+        if self.signs.sign is not None or random.random() >= v["school_chance"]:
+            return
+        ang = random.uniform(0, math.tau)
+        self.school = {"x": self.cast.bx + math.cos(ang) * 1.2, "z": self.cast.bz + math.sin(ang) * 1.2,
+                       "t": 0.0, "life": v["school_sec"], "dir": random.uniform(0, math.tau)}
+        self.toasts.show("물고기 떼가 지나간다!", (190, 225, 255), 2.2, 11)
+
+    def _draw_school(self, canvas) -> None:
+        """떼: 은빛 작은 물고기 12마리가 원을 그리며 반짝 (수면 바로 아래)."""
+        sc = self.school
+        if sc is None:
+            return
+        fade = min(1.0, sc["t"] / 1.0, (sc["life"] - sc["t"]) / 1.5)
+        if fade <= 0.05:
+            return
+        rad = load_json("core.json")["variety"]["school_radius_m"] * 0.55
+        for i in range(12):
+            a = sc["dir"] + self.t * (0.9 + (i % 3) * 0.15) + i * (math.tau / 12)
+            rr = rad * (0.55 + 0.45 * math.sin(i * 1.7 + self.t * 0.7))
+            p = self.cam.project(sc["x"] + math.cos(a) * rr, sc["z"] + math.sin(a) * rr, -0.05)
+            if p is None:
+                continue
+            flash = 0.5 + 0.5 * math.sin(self.t * 9 + i * 2.3)
+            col = tuple(int(c) for c in (170 + 85 * flash, 190 + 65 * flash, 205 + 50 * flash))
+            ln = max(3, int(p[2] * 0.45))
+            dx = int(-math.sin(a) * ln) or 3
+            if fade < 1.0 and (i / 12) > fade:
+                continue
+            x0, y0 = int(p[0]), int(p[1])
+            pygame.draw.line(canvas, (40, 60, 80), (x0, y0 + 1), (x0 + dx, y0 + 1), 1)   # 물속 그림자 한 줄
+            pygame.draw.line(canvas, col, (x0, y0), (x0 + dx, y0), 2 if flash > 0.7 else 1)   # 은빛 몸 (반짝일 때 두껍게)
 
     def _draw_birds(self, canvas) -> None:
         s = self.signs.sign
@@ -3698,6 +3797,7 @@ class FishingScene(Scene):
         self.ripples.draw(canvas, pal, cam)
         self.ilseom_fx.draw(canvas, "world")
         self._draw_birds(canvas)
+        self._draw_school(canvas)
         self.bubbles.draw(canvas, pal)
         self.hazard_decor.draw(canvas, pal, cam, t, f.in_hazard if f is not None and f.phase == "fight" else None)
         self.ambient.draw(canvas, pal, self.clock.period()[0], weather, theme.get("sea", False), t)
@@ -3980,7 +4080,7 @@ class FishingScene(Scene):
         if mods.get("curl"):
             wag = 0.0
         return {"x": x, "z": z, "heading": heading, "alpha": alpha, "len": f.fish["shadow_len_m"],
-                "scale": scale, "wag": wag, "glow": glow, **mods}
+                "scale": scale, "wag": wag, "glow": glow, "spray": bool(f.fish.get("excited")), **mods}
 
     def _line_pal(self, pal: dict) -> dict:
         """낚싯줄·뜰채 티어 외형: 줄 색(시간대 밝기와 섞음)·PE 색 마디·빛, 뜰채 테·그물·손잡이·장식·빛."""

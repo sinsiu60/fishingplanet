@@ -151,6 +151,26 @@ def _rare_cap(cands: list, weights: list, bases: list, cap: float) -> list:
     return [w * k if f["rarity"] == "rare" else w for f, w in zip(cands, weights)]
 
 
+def stray_pick(spot: str, rnd) -> dict | None:
+    """길을 잃은 손님 (CU9): 같은 대륙 다른 낚시터(이 낚시터 티어 이하 — 이웃 물에서 흘러옴)의 일반 · 고급 하나 (시간 · 날씨 조건 없이)."""
+    spots = {s["id"]: s for s in load_json("spots.json")["spots"]}
+    here = spots.get(spot, {})
+    cont, tier = here.get("continent", "sharmion"), here.get("gear_tier", 1)
+    pool = [f for f in load_json("fish.json")["fish"] if f["spot"] != spot and f["rarity"] in ("common", "uncommon")
+            and spots.get(f["spot"], {}).get("continent", "sharmion") == cont
+            and spots.get(f["spot"], {}).get("gear_tier", 1) <= tier]
+    return rnd.choice(pool) if pool else None
+
+
+def excited_action(fish: dict, rnd) -> str | None:
+    """들뜬 물고기 (CU9): 그 물고기 행동 중 하나 (가중치대로) — 예고가 1.3배 빨라짐 (brain.excited_action)."""
+    acts = {k: w for k, w in fish.get("actions", {}).items() if w > 0 and k not in ("idle", "pump")}
+    if not acts:
+        return None
+    keys = list(acts)
+    return rnd.choices(keys, [acts[k] for k in keys])[0]
+
+
 def legend_chance(bait: dict | None) -> float:
     """입질당 전설 확률 (CU7-1): 기본 chance, 전설 미끼 위에 희귀 생미끼를 덧붙였으면 chance_live_rare."""
     lg = load_json("fishing_config.json")["legend"]
@@ -233,6 +253,9 @@ class BiteController:
         self.phantom: dict | None = None     # 환상어 (33장): 착수 순간 판정 → 연출 동안 대기 → 가짜 입질 없이 진짜 입질
         self.wait_elapsed = 0.0
         self.sign_mods: dict = {}            # 수면 징후 보정 (낚시 씬이 매 틱)
+        self.school_mult = 1.0               # 물고기 떼 지나감 (CU9): 대기 ×0.5 (낚시 씬이 매 틱)
+        self.school_fish: dict | None = None  # 떼가 지나가는 동안 처음 문 종 → 같은 종이 연달아
+        self.bottle_ok = True                # 유리병 편지가 남았는지 (12장 다 모으면 False)
 
     def _rand(self, pair) -> float:
         return self.rnd.uniform(pair[0], pair[1])
@@ -301,10 +324,31 @@ class BiteController:
                          season=getattr(self, "season", None), extra=getattr(self, "extra_pool", None),
                          rare_pp=getattr(self, "rare_pp", 0.0))
 
+    def _variety(self, fish: dict | None) -> dict | None:
+        """던질 때마다 변수 (CU9, data/core.json variety): 떼 지나감(같은 종 연달아) · 유리병 편지 · 길을 잃은 손님 · 들뜬 물고기.
+        전설 · 환상 · 시험 · 대본(튜토리얼) · 강제 물고기는 손대지 않음 (호출하는 쪽에서 이미 빠짐)."""
+        if fish is None or fish["rarity"] in ("legend", "phantom") or fish.get("exam"):
+            return fish
+        v = load_json("core.json")["variety"]
+        if self.school_fish is not None and self.school_fish["spot"] == fish["spot"] and self.rnd.random() < v["school_same"]:
+            sf = self.school_fish   # 떼 지나감: 같은 종이 연달아 (조건이 맞을 때만 — 처음 문 종)
+            if self.period in sf["times"] and self.weather in sf["weathers"]:
+                fish = sf
+        if fish["rarity"] == "common" and self.bottle_ok and self.rnd.random() < v["bottle_chance"]:
+            return dict(fish, bottle=True, shadow_len_m=0.3)   # 물고기 대신 유리병 (그림자는 아주 작게)
+        if fish["rarity"] in ("common", "uncommon") and self.rnd.random() < v["stray_chance"]:
+            st = stray_pick(self.spot, self.rnd)
+            if st is not None:
+                fish = dict(st, stray=True)   # 길을 잃은 손님: 도감은 원래 낚시터(spot)로
+        if self.rnd.random() < v["excited_chance"]:
+            fish = dict(fish, excited=excited_action(fish, self.rnd))
+        return fish
+
     def _update_wait(self, dt: float) -> None:
-        """WAIT 중 대기 시계: 새 떼 징후(wait_mult) 만큼 빨리 간다 (루어 액션은 삭제됨)."""
+        """WAIT 중 대기 시계: 새 떼 징후(wait_mult) · 물고기 떼(school_mult, CU9) 만큼 빨리 간다 (루어 액션은 삭제됨)."""
         self.wait_elapsed += dt
         mult = self.sign_mods.get("wait_mult", 1.0) if self.sign_mods else 1.0
+        mult *= self.school_mult
         if mult < 1.0:
             self.timer -= dt * (1 / mult - 1)
 
@@ -337,7 +381,7 @@ class BiteController:
                 d0 = cfg["approach_start_distance_m"]
                 self.shadow = {"x0": bx + math.sin(ang) * d0, "z0": bz + math.cos(ang) * d0,
                                "x": bx + math.sin(ang) * d0, "z": bz + math.cos(ang) * d0,
-                               "heading": ang + math.pi, "alpha": 0.0, "len": self.fish["shadow_len_m"],
+                               "heading": ang + math.pi, "alpha": 0.0, "len": self.fish["shadow_len_m"], "spray": bool(self.fish.get("excited")),
                                "vx": 0.0, "vz": 0.0, "scale": 1.3}
                 self.events.append("phantom_approach")
         elif self.state == BiteState.WAIT:
@@ -357,7 +401,7 @@ class BiteController:
                 elif legend and self.rnd.random() < legend_chance(self.bait):
                     self.fish = legend
                 else:
-                    self.fish = self._pick()
+                    self.fish = self._variety(self._pick())
                 self.legend = self.fish is not None and self.fish["rarity"] == "legend"
                 if self.fish is None:
                     self.timer = 3.0
@@ -377,7 +421,7 @@ class BiteController:
                     "x0": bx + math.sin(ang) * d0, "z0": bz + math.cos(ang) * d0,
                     "x": bx + math.sin(ang) * d0, "z": bz + math.cos(ang) * d0,
                     "heading": ang + math.pi, "alpha": 0.0,
-                    "len": self.fish["shadow_len_m"], "vx": 0.0, "vz": 0.0,
+                    "len": self.fish["shadow_len_m"], "spray": bool(self.fish.get("excited")), "vx": 0.0, "vz": 0.0,
                     "scale": load_json("fishing_config.json")["legend"]["shadow_scale"] if self.legend else 1.0,
                 }
 

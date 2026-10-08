@@ -699,6 +699,12 @@ class SaveGame:
                 self.data["money"] += bonus
                 self.data["stats"]["earned"] = self.data["stats"].get("earned", 0) + bonus
                 news["first_bonus"] = bonus
+        var = load_json("core.json").get("variety", {})   # 던질 때마다 변수 (CU9)
+        if fish.get("excited"):
+            result = dict(result, price=int(round(result["price"] * var.get("excited_price", 1.5))))
+            news["excited"] = True   # 결과 배지 "들뜬 녀석!"
+        if fish.get("stray"):
+            news["stray"] = True     # 결과 배지 "길을 잃은 손님" (도감은 원래 낚시터)
         self.data["keepnet"].append({"id": fid, "size": result["size"], "rank": result["rank"],
                                      "price": result["price"]})
         if news["record"]:

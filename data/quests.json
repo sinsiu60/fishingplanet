@@ -425,7 +425,8 @@
     "weekly_master": "주간 의뢰 정복자",
     "phantom_reader": "물결을 읽는 자",
     "phantom_calm": "고요의 낚시꾼",
-    "phantom_master": "환상을 낚은 자"
+    "phantom_master": "환상을 낚은 자",
+    "bottle_reader": "유리병을 읽는 자"
   },
   "skins_extra": {
     "haegang_bobber": {"kind": "float_skin", "name": "해강의 찌", "colors": [[242, 242, 238], [242, 242, 238]], "band": [201, 168, 106], "dot": [232, 74, 74]},
