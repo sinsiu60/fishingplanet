@@ -473,9 +473,10 @@ class Sim:
         return "eldrasion" in self.s.data["unlocked_continents"] and self.s.float_tier() < self.float_need_now()
 
     def scale_reserve(self) -> int:
-        """봉인 찌용 비늘은 남겨둔다."""
+        """다음 봉인 찌용 비늘은 남겨둔다 (마지막 찌까지 샀으면 0)."""
         tier = self.s.float_tier()
-        return 8 if tier >= 4 else 3 if tier >= 3 else 0
+        nxt = next((f for f in load_json("floats.json")["floats"] if f["tier"] == tier + 1), None)
+        return nxt.get("scales", 0) if nxt and tier >= 3 else 0
 
     def float_need_now(self) -> int:
         """열린 엘드라시온 낚시터 중 가장 높은 요구 티어 (그곳 전설 미끼가 있으면 +1)."""

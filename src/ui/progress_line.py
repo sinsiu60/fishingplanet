@@ -1,5 +1,5 @@
 """진행 막대 (CORE_UPDATE.md CU8-②): 화면 왼쪽 위 작은 한 줄
-"다음: 시험 자격 2/3 · 장비까지 12,400원 (약 25분)" — 남은 돈 ÷ 최근 30분 시간당 수입. 누르면 자격 · 장비 목록이 잠깐 펼쳐짐.
+"다음: 시험 자격 2/3 · 장비까지 12,400원 (약 25분)" — 남은 돈 ÷ 최근 30분 시간당 수입 (T7+ 는 모자란 비늘도). 누르면 자격 · 장비 목록이 잠깐 펼쳐짐.
 설정 '진행 막대' (progress_line, 기본 켬) 으로 끔.
 """
 import collections
@@ -64,6 +64,9 @@ def summary(save, rate: float | None) -> tuple[str, list[str]] | None:
                  for x in q]
     if gear:
         left = max(0, cost - save.data["money"])
+        scales = max(0, sum(g.get("scales", 0) for g in gear) - save.data.get("scales", 0))
+        if scales:
+            parts.append(f"전설 비늘 {scales}개 더")   # 엘드라시온 T7+ 장비: 돈과 함께 비늘도 (전설 첫 포획 5개)
         if left <= 0:
             parts.append("장비 살 돈 모임")
         elif rate:
