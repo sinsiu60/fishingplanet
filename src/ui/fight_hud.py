@@ -450,13 +450,13 @@ BAR_KEYS = ("line", "time", "signal", "miss")
 
 
 def rank_ratios(result: dict) -> dict:
-    """결과 카드 막대 4개의 채움 비율 (BAEK_EXAM 🅰-6): 줄 · 시간 · 신호 = 항목 점수 / 최대, 실수 = 1 − 깎인 점수 / 24."""
+    """결과 카드 막대 4개의 채움 비율 (BAEK_EXAM 🅰-6): 줄 · 시간 · 신호 = 항목 점수 / 최대, 실수 = 1 − 깎인 점수 / (실수 3번 몫)."""
     r = load_json("fishing_config.json")["rank"]
     sc = result.get("score") or {}
     return {"line": clamp(sc.get("line_pts", 0) / r["line_max"], 0, 1),
             "time": clamp(sc.get("time_pts", 0) / r["time_max"], 0, 1),
             "signal": clamp(sc.get("signal_pts", 0) / r["signal_max"], 0, 1),
-            "miss": clamp(1 + sc.get("miss_pts", 0) / 24, 0, 1)}
+            "miss": clamp(1 + sc.get("miss_pts", 0) / (3 * r["per_miss"]), 0, 1)}
 
 
 def rank_bars_rect(rx: int, y: int) -> pygame.Rect:

@@ -36,19 +36,21 @@ def compute_score(opp: dict, misses: int, line_damage: float, elapsed: float, pa
     n = P + G + M
     gc = r["legend_good_credit"] if legend else r["good_credit"]
     signal_pts = r["signal_none"] if n == 0 else r["signal_max"] * min(1.0, (P + gc * G) / n)
-    miss_pts = -misses * r["per_miss"]
+    # 전설 · 환상: 판이 길어 틈 공략(좋음) · 실수가 많이 쌓임 → 전용 기준 (CU8, 없으면 일반 기준)
+    cut = {k: r.get("legend_" + k, r[k]) if legend else r[k] for k in ("S", "A", "B", "per_miss")}
+    miss_pts = -misses * cut["per_miss"]
     score = line_pts + time_pts + signal_pts + miss_pts
-    if score >= r["S"] and P >= r["S_min_perfects"]:
+    if score >= cut["S"] and P >= r["S_min_perfects"]:
         rank = "S"
-    elif score >= r["A"]:
+    elif score >= cut["A"]:
         rank = "A"
-    elif score >= r["B"]:
+    elif score >= cut["B"]:
         rank = "B"
     else:
         rank = "C"
     return {"score": score, "rank": rank, "line_pts": line_pts, "time_pts": time_pts, "signal_pts": signal_pts,
             "miss_pts": miss_pts, "opps": n, "perfects": P, "line_allow": allow,
-            "s_blocked": score >= r["S"] and P < r["S_min_perfects"]}   # 점수는 S 인데 퍼펙트가 모자라 A
+            "s_blocked": score >= cut["S"] and P < r["S_min_perfects"]}   # 점수는 S 인데 퍼펙트가 모자라 A
 
 
 def final_size(size_cm: float, rank: str) -> float:

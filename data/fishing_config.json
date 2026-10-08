@@ -225,6 +225,11 @@
     "S_min_perfects": 2,
     "A": 82,
     "B": 67,
+    "legend_S": 90,
+    "legend_A": 80,
+    "legend_B": 60,
+    "legend_per_miss": 3,
+    "_legend_cut": "전설 · 환상 전용 기준 (CU8): 판이 길어 틈 공략(좋음) · 실수가 쌓여 일반 기준으론 보통 봇 전설 S 0.7% (CU2 13%) — 세계수 해금(전설 S 1번)이 막힘. 보통 S 9 · A 43 · B 42 · C 6, 숙련 S 95%",
     "price_mult": {
       "S": 2.56,
       "A": 1.93,
