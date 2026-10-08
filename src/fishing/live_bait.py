@@ -2,8 +2,8 @@
 
 생미끼 = 살림망 물고기를 미끼로 끼운 것 (세이브 live_bait). 끼우면 영구 미끼 효과는 꺼지고, 다 쓰면 원래 미끼로 자동 복귀.
   일반 생미끼: 1마리 = 입질 3번 (물렸을 때만 1번 줄어듦), 사슬표의 노리는 희귀 가중치 ×3.
-  희귀 생미끼: 1마리 = 입질 1번, 전설 조건 칸 안이면 (그 전설 전용 미끼를 가지고 있을 때) 전설 확률 chance_live_rare,
-              밖이면 그 낚시터 희귀 가중치 ×1.5.
+  희귀 생미끼: 1마리 = 입질 1번. 지금 끼운 영구 미끼 위에 '덧붙임' — 끼운 미끼가 그 전설의 전용 미끼일 때만
+              전설 조건 칸 안에서 전설 확률 chance_live_rare (5% → 10%). 다른 미끼 위에선 전설 없음, 그 낚시터 희귀 가중치 ×1.5.
 전설 전용 미끼 만들기: craft 의 희귀 1마리 + 지금 가격의 60% (영구).
 낚시 화면은 bait_dict() 를 BiteSystem.bait 로 쓰고, 물리면 consume().
 """
@@ -101,12 +101,14 @@ def bait_dict(save, spot: str) -> dict | None:
     lb = state(save)
     if not lb:
         return None
-    from src.save.save_game import baits, fish_by_id
+    from src.save.save_game import fish_by_id
     fish = fish_by_id(lb["fish"])
-    owned = [b["legend_for"] for b in baits().values() if b.get("legend_for") and save.owns("bait", b["id"])]
-    live = {"kind": lb["kind"], "fish": lb["fish"], "targets": targets(spot, lb["fish"]) if lb["kind"] == "common" else [],
-            "legend_owned": owned if lb["kind"] == "rare" else []}
-    return {"id": f"live:{lb['fish']}", "name": f"{fish['name']} 생미끼", "tier": 0, "live": live}
+    live = {"kind": lb["kind"], "fish": lb["fish"], "targets": targets(spot, lb["fish"]) if lb["kind"] == "common" else []}
+    out = {"id": f"live:{lb['fish']}", "name": f"{fish['name']} 생미끼", "tier": 0, "live": live}
+    base = save.equipped("bait")
+    if lb["kind"] == "rare" and base.get("legend_for"):
+        out["legend_for"] = base["legend_for"]   # 전설 미끼 위에 덧붙인 희귀 생미끼만 전설을 부름 (확률 ×2)
+    return out
 
 
 def weight_mult(bait: dict | None, fish: dict) -> float:
