@@ -2,7 +2,7 @@
 
   python tools/boss_signal_set.py            실제 파이팅을 화면 없이 돌려 검사:
                                              보스전 = sig_boss_* 만 (모드 상관없이) · 일반 = 보스 소리 없음 · '쾅'/'챙'과 화면 임팩트가 같은 틱 ·
-                                             보스 곡 덕킹 −4/−5dB · 숙련 '처음' 보조음 · '소리 신호' 끔 = 소리 없음 · 길이 = 일반 신호와 같음
+                                             보스 곡 덕킹 = boss_arena.json sound.duck (v1.6.3: −2/−2.5dB) · 숙련 '처음' 보조음 · '소리 신호' 끔 = 소리 없음 · 길이 = 일반 신호와 같음
   python tools/boss_signal_set.py --render   계열 6개 × (보스 / 일반) 5초 녹음을 SUNO 보스 곡 위에 게임 음량으로 섞어
                                              tools/audio/reference/boss_signals/ 에 wav 로 + 비교 표 (길이 · 시각 · LUFS)
 """
@@ -57,7 +57,13 @@ def run_fight(g, fid: str, sec: float, pre=None):
     return played, log, ducks
 
 
+DUCK = None
+
+
 def checks():
+    global DUCK
+    from src.core.config import load_json
+    DUCK = load_json("boss_arena.json")["sound"]["duck"]
     import boss_arena_check as bc
     g = bc.pb.make_game()
     print("보스전 (여우비 · 일렉트로 · 일섬 · 환상, 각 40초):")
@@ -73,7 +79,7 @@ def checks():
             allp += played
             alllog += log
             if boss:
-                check(min(ducks) <= -3.9, f"{fid} 모드 {mode}: 보스 곡 덕킹 최저 {min(ducks):.1f}dB")
+                check(min(ducks) <= DUCK["telegraph"][0] + 0.1, f"{fid} 모드 {mode}: 보스 곡 덕킹 최저 {min(ducks):.1f}dB")
     g.settings.set("signal_mode", 0)
     fams = {n.split("#")[0] for _, n in allp if n.startswith("sig_boss_")}
     print("  나온 보스 소리:", sorted(fams))
@@ -185,9 +191,9 @@ def unit():
                     all(n.startswith(("sig_boss_", "sig_aux_")) for n in names)
                 aux = any(n.startswith("sig_aux_") for n in names)
                 check(ok and aux == first, f"보스 {FAM_KO[fam]}{' (숙련 처음)' if first else ''}: {sorted(set(n.split('#')[0] for n in names))}")
-                check(sfx.ducks and sfx.ducks[0] == (-4, 0.25), f"보스 {FAM_KO[fam]}: 예고 시작 보스 곡 −4dB 0.25초")
+                check(sfx.ducks and sfx.ducks[0] == tuple(DUCK["telegraph"]), f"보스 {FAM_KO[fam]}: 예고 시작 보스 곡 {DUCK['telegraph'][0]}dB {DUCK['telegraph'][1]}초")
                 if fam in ("release", "timing"):
-                    check((-5, 0.2) in sfx.ducks, f"보스 {FAM_KO[fam]}: 행동 · 정점 −5dB 0.2초")
+                    check(tuple(DUCK["action"]) in sfx.ducks, f"보스 {FAM_KO[fam]}: 행동 · 정점 {DUCK['action'][0]}dB {DUCK['action'][1]}초")
                 if fam == "timing":
                     check(hits == ["apex"], "보스 타이밍: '챙' 순간 장면에 알림 (같은 틱 임팩트)")
                 vols = [v for n, v, _ in sfx.played if n in ("sig_boss_reel", "sig_boss_endure", "sig_boss_gesture", "sig_boss_direction",

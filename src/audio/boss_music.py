@@ -244,8 +244,8 @@ class BossMusic:
             return
         for slot in self.lay_ch:
             for ch in slot.values():
-                ch.fadeout(fade_ms) if fade_ms else ch.stop()
-        self.head_ch.fadeout(fade_ms) if fade_ms else self.head_ch.stop()
+                halt(ch, fade_ms)
+        halt(self.head_ch, fade_ms)
         was = self.active
         self.active = False
         self.song = None
@@ -301,7 +301,7 @@ class BossMusic:
         for lay in LAYERS:
             ch = chs[lay]
             snd = self._get(f"{sid}_{phase + 1}_{lay}")
-            ch.stop()
+            halt(ch)
             self.level[(slot, lay)] = self.goal[(slot, lay)] = ON[lay]
             self._vol_q.pop((slot, lay), None)
             if snd is None:
@@ -368,7 +368,7 @@ class BossMusic:
                     self.loop_t0 = self.t
         if self.switch_at is not None and self.t >= self.switch_at:
             for ch in self.lay_ch[self.old_slot].values():
-                ch.stop()
+                halt(ch)   # 큐에 걸린 앞 페이즈 반복까지 버림 (chan.py)
             self.loop_t0 = self.switch_at
             self.q, self.bar = self.timing(sid, self.phase)   # 새 페이즈의 마디 (빠르기·박자가 바뀌는 곡)
             self.switch_at = self.next_at = None

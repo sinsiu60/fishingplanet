@@ -16,6 +16,7 @@ import json
 import math
 
 from src.audio import loader
+from src.audio.chan import halt
 from src.core.paths import asset_path, data_path
 
 CROSS_MS = 150
@@ -312,7 +313,7 @@ class SunoBoss:
         if not self.enabled:
             return
         for ch in self.ch_main + self.ch_cr:
-            ch.fadeout(fade_ms) if fade_ms else ch.stop()
+            halt(ch, fade_ms)   # 큐에 걸린 다음 반복까지 버림 (chan.py)
         was = self.active
         self.active = False
         self.song = None
@@ -518,9 +519,9 @@ class SunoBoss:
         bus = self._bus()
         fade = CROSS_MS if cross else 0
         if prev is not None:
-            prev.ch.fadeout(CROSS_MS) if cross else prev.ch.stop()
+            halt(prev.ch, fade)   # 앞 파일의 큐(다음 반복)까지 버림 — 안 그러면 페이드가 끝난 뒤 앞 페이즈가 한 번 더 겹쳐 나옴
             if prev.cr_ch is not None:
-                prev.cr_ch.fadeout(CROSS_MS) if cross else prev.cr_ch.stop()
+                halt(prev.cr_ch, fade)
         ch.set_volume(bus)
         self._vol_q[id(ch)] = round(bus * 128)
         ch.play(snd, fade_ms=fade)

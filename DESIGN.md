@@ -7066,3 +7066,19 @@ drag_floor 물고기와 첫 파이팅 시작 (`guide.event("first:heavy_fish")`,
 **확인 모음**: `boss_arena_check` · `boss_signal_set` · `boss_arena_bot` · compat_smoke · fight_text_check · `sound_audit --strict` · `bake_sfx --check` 통과. 빌드 = 푸시 CI (BA3 까지 성공).
 
 **문서**: DESIGN 32장(신호 6계열 줄) · 43장(덕킹 · 믹서 규칙 줄)에 '(→ 51장)'. RELEASE_NOTES '다음 버전 (준비 중)' 에 "⚔️ 전설 · 환상과 싸울 때 무대가 바뀌어요 — 페이즈마다 거세지는 화면과 보스 전용 예고음." MASTER.md 는 저장소에 없어서 건너뜀.
+
+### 51-5. (사용자 제보, v1.6.2 뒤) 보스 곡 겹침 · 음악이 주인공이 되게
+
+**겹침 원인**: pygame(ce 2.5)은 `Channel.stop()` · `fadeout()` 이 끝나는 순간 그 채널 queue 에 남은 소리를 **원래 음량으로 바로 튼다** (dummy 드라이버로 확인).
+SUNO 보스 곡 · 예전 합성 보스 곡은 반복 구간의 다음 바퀴를 늘 queue 해 두므로, 페이즈 전환(브리지로 0.15초 크로스페이드) · 포획(ending_hit) 때
+앞 페이즈 반복이 **한 바퀴 더 끝까지** 나와 새 파일과 겹침 → "몇 마디 뒤 다시 하나만" · "성공 음악과 파이팅 곡이 같이".
+- 고침: `src/audio/chan.py` `halt(ch, fade_ms)` — 큐를 5ms 무음으로 바꿔 두고 멈춤 (pygame 엔 큐만 비우는 함수가 없음). `boss_suno.py`(stop · 파일 전환) · `boss_music.py`(stop · 페이즈 슬롯 전환 · 층 재시작) 모두.
+- 검증 (등용 곡, 실제 시간 · dummy 믹서): 전환 0.3초 뒤에도 소리 나는 '지금 파일 아닌' 보스 채널 — 고치기 전 2페이즈 · 3페이즈 · 포획 각 1개 → 고친 뒤 0. ending_hit 끝나면 보스 채널 전부 조용.
+
+**음량 (사용자 요청: 전설 곡이 분위기를 좌우하게, 기본 음량에서 릴 · 신호가 큼)** — 전설 · 환상 전용 곡 파이팅 동안만:
+| | 전 | 후 |
+|---|---|---|
+| 릴 소리 (`audio_config.boss.reel_db`) | −2dB | **−7dB** |
+| 신호 버스 (`boss.sig_db`) | +2dB | **−2dB** |
+| 보스 예고음 때 보스 곡 덕킹 (`boss_arena.sound.duck`) | 예고 −4dB · 행동 −5dB | **−2 · −2.5dB** |
+- 신호 대 음악 (`tools/boss_signal_set.py --render`, 여우비 2페이즈, 기본 음량): 보스 예고음이 음악 대비 풀기 +0.2 · 감기 −2.7 · 타이밍 −2.7 · 방향 −1.2 · 참기 +0.2 · 제스처 +3.6dB — 음악과 비슷한 크기 (묻히지는 않음). 일반 파이팅은 그대로.
