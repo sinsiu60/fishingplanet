@@ -186,6 +186,10 @@ def legacy() -> None:
         s = SaveGame.load(slot)
         check(exam.passed(s) == top and exam.legacy_notice(s) == top, f"{label}: 자동 합격 T{top} · 안내 대기")
         check(all(s.equip_locked(k, s.data["gear"][k]) is None for k in GEAR_KINDS), f"{label}: 장착 중인 장비 잠기지 않음")
+        want = [tid for t, tid in exam.cfg()["titles"].items() if int(t) <= top]
+        titles = s.data.get("cosmetics", {}).get("titles", [])
+        check(all(t in titles for t in want) and not [t for t in exam.cfg()["titles"].values() if t in titles and t not in want],
+              f"{label}: 칭호 {want or '없음'}")
         nxt = exam.next_tier(s)
         if nxt and nxt <= 5:
             check(s.buy("rod", next(x for x in eq["rod"] if x["tier"] == nxt)) == "locked", f"{label}: T{nxt} 구매 잠김")
@@ -223,8 +227,10 @@ def letter() -> None:
     ex._close()
     g.scenes.stack.remove(it)
     exam.give_float(s)
-    r = ExamResultScene(g, sc, exam.finish(s, True, 1, {}))
+    res = exam.finish(s, True, 1, {})
+    r = ExamResultScene(g, sc, res)
     check(r.letter, "T6 결과 = 백 노인의 편지")
+    check(res["titles"] == ["물을 아는 자"], f"T4 이상 합격 → 칭호 '물을 아는 자' ({res['titles']})")
     g.scenes.push(r)
     for _ in range(60):
         r.update(1 / 60)

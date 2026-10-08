@@ -237,6 +237,7 @@ def baek_back(canvas, env) -> None:
     pygame.draw.polygon(canvas, _c("#2B2622"), [(pr.x + 54, pr.y + 23), (pr.x + 68, pr.y + 13), (pr.x + 66, pr.y + 34)])
     canvas.fill(_c("#E3D6B8"), (pr.x + 19, pr.y + 20, 2, 2))   # 눈
     canvas.fill(_c("#B03A2E"), (pr.right - 12, pr.bottom - 11, 7, 7))   # 도장
+    _plaques(canvas, pr.x + 3, pr.bottom + 10, env.get("exam_passed", 1))
     # 걸린 그물 (오른쪽 끝) + 찌
     nx0, ny0 = cx + 150, by + 16
     for i in range(0, 90, 9):
@@ -251,6 +252,38 @@ def baek_back(canvas, env) -> None:
     pygame.draw.polygon(canvas, _c("#C9A86A"), [(hx - 24, hy), (hx, hy - 15), (hx + 24, hy)])
     for k in range(-20, 21, 6):
         pygame.draw.line(canvas, _c("#A0823F"), (hx, hy - 14), (hx + k, hy), 1)
+
+
+# 합격 목패 새김 (5줄, '#' = 파인 자리) — Ⅱ ~ Ⅷ (BAEK_EXAM 🅱-6, DESIGN 49-5)
+_ROMAN_PX = {
+    2: ["#.#"] * 5,
+    3: ["#.#.#"] * 5,
+    4: ["#.#.#", "#.#.#", "#.#.#", "#..#.", "#..#."],
+    5: ["#.#", "#.#", "#.#", ".#.", ".#."],
+    6: ["#.#.#", "#.#.#", "#.#.#", ".#..#", ".#..#"],
+    7: ["#.#.#.#", "#.#.#.#", "#.#.#.#", ".#..#.#", ".#..#.#"],
+    8: ["#.##.#.#", "#.##.#.#", "#.##.#.#", ".#.#.#.#", ".#.#.#.#"],
+}
+
+
+def _plaques(canvas, x: int, y: int, passed: int) -> None:
+    """백 노인 오두막 벽: 합격한 티어마다 작은 나무 목패 (8×12px, Ⅱ~Ⅷ 새김). 아직이면 빈 못만."""
+    for i, t in enumerate(range(2, 9)):
+        px = x + i * 11
+        canvas.fill(_c("#2B1E14"), (px + 3, y - 3, 2, 2))   # 못
+        if t > passed:
+            continue
+        canvas.fill(_c("#2E2118"), (px + 1, y + 1, 8, 12))   # 그림자
+        canvas.fill(_c("#9A7448"), (px, y, 8, 12))
+        canvas.fill(_c("#B48A58"), (px, y, 8, 1))
+        canvas.fill(_c("#6E5032"), (px, y + 11, 8, 1))
+        canvas.fill(_c("#6E5032"), (px + 3, y - 2, 2, 2))   # 끈
+        rows = _ROMAN_PX[t]
+        ox = px + (8 - len(rows[0])) // 2
+        for ry, row in enumerate(rows):
+            for rx, ch in enumerate(row):
+                if ch == "#":
+                    canvas.set_at((ox + rx, y + 3 + ry), _c("#4A3220"))
 
 
 def baek_counter(canvas, env) -> None:

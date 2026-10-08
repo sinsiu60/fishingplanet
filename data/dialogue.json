@@ -1,5 +1,5 @@
 {
- "_설명": "NPC 대사 (DESIGN.md 35-3·35-12). cond: spot_unlocked·legend_caught(id/any)·legend_caught_eld·gear_tier_ge[종류,티어]·mastery_ge·dex_stars_ge·prints_ge/prints_lt·gold_print·legend_print·phantom_print·lost_streak_ge·quest_fail_streak_ge·quests_done_ge·catches_ge·keepnet_ge·continent_unlocked·period·weather·season·event·phantom_tutorial. once = 한 번만(들은 기록 저장), prio: 3 새 달성 반응 > 2 계절·이벤트 > 1 일반 잡담. 환상 튜토리얼 전(phantom_tutorial false)에는 '환상' 단어 금지 — 흐릿한 소문만. expr = 초상화 표정 (haru neutral/happy/surprised · baek neutral/smile/sharp · ella neutral/smile/closed · oren neutral/excited/thinking, 없으면 neutral). kind = chat(기본, 잡담·인사) / greet_first(건물 첫 입장 1회) / bye(나가기) / react_buy·react_sell·react_enhance·react_short(상점 반응) / old_tales·legend_tales·season_tales(내부 대화 메뉴 이야기 묶음, 조건으로 해금). seq = 여러 줄 [[표정, 대사], …] (text 대신). 대사 안 {purple}…{/} = 보라색 강조 (환상 힌트).",
+ "_설명": "NPC 대사 (DESIGN.md 35-3·35-12). cond: spot_unlocked·legend_caught(id/any)·legend_caught_eld·gear_tier_ge[종류,티어]·mastery_ge·dex_stars_ge·prints_ge/prints_lt·gold_print·legend_print·phantom_print·lost_streak_ge·quest_fail_streak_ge·quests_done_ge·catches_ge·keepnet_ge·continent_unlocked·period·weather·season·event·phantom_tutorial. once = 한 번만(들은 기록 저장), prio: 3 새 달성 반응 > 2 계절·이벤트 > 1 일반 잡담. 환상 튜토리얼 전(phantom_tutorial false)에는 '환상' 단어 금지 — 흐릿한 소문만. expr = 초상화 표정 (haru neutral/happy/surprised · baek neutral/smile/sharp · ella neutral/smile/closed · oren neutral/excited/thinking, 없으면 neutral). kind = chat(기본, 잡담·인사) / greet_first(건물 첫 입장 1회) / bye(나가기) / react_buy·react_sell·react_enhance·react_short(상점 반응) / old_tales·legend_tales·season_tales(내부 대화 메뉴 이야기 묶음, 조건으로 해금). seq = 여러 줄 [[표정, 대사], …] (text 대신). 대사 안 {purple}…{/} = 보라색 강조 (환상 힌트). exam_* = 백 노인의 시험 (BAEK_EXAM 🅱-7, DESIGN 49-5): 상황마다 한 줄 (kind 로 고름, 잡담 후보에 안 섞임), letter_* 는 편지 본문 (표정 없음).",
  "lines": [
   {
    "id": "haru_01",
@@ -2972,6 +2972,153 @@
    },
    "once": false,
    "prio": 2
+  },
+  {
+   "id": "exam_short",
+   "npc": "baek",
+   "kind": "exam_short",
+   "text": "아직 그 물을 다 모르는구먼. 더 앉아 있다 오게.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "neutral"
+  },
+  {
+   "id": "exam_ready",
+   "npc": "baek",
+   "kind": "exam_ready",
+   "text": "…눈빛이 달라졌군. 시험을 보겠나?",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "sharp"
+  },
+  {
+   "id": "exam_give",
+   "npc": "baek",
+   "kind": "exam_give",
+   "text": "이걸 끼우고 던지게. 그놈이 올 걸세. 내 낚싯대도 빌려주지.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "neutral"
+  },
+  {
+   "id": "exam_pass_2",
+   "npc": "baek",
+   "kind": "exam_pass_2",
+   "text": "손이 좀 거칠어졌구먼. 좋아.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "smile"
+  },
+  {
+   "id": "exam_pass_mid",
+   "npc": "baek",
+   "kind": "exam_pass_mid",
+   "text": "해강이도 그 나이엔 그렇게 잡았지.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "smile"
+  },
+  {
+   "id": "exam_fail",
+   "npc": "baek",
+   "kind": "exam_fail",
+   "text": "오늘은 물이 자네 편이 아니군. 내일 다시 오게.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "neutral"
+  },
+  {
+   "id": "exam_hint",
+   "npc": "baek",
+   "kind": "exam_hint",
+   "text": "{pattern} 때마다 손이 늦더군. 수조에서 몸에 익히고 오게.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "sharp"
+  },
+  {
+   "id": "exam_wait",
+   "npc": "baek",
+   "kind": "exam_wait",
+   "text": "오늘은 물이 자네 편이 아니군. 내일 다시 오게.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "neutral"
+  },
+  {
+   "id": "exam_done",
+   "npc": "baek",
+   "kind": "exam_done",
+   "text": "더 가르칠 게 없네. 이제 자네 물이야.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "smile"
+  },
+  {
+   "id": "exam_legacy",
+   "npc": "baek",
+   "kind": "exam_legacy",
+   "text": "자네 솜씨는 이미 들었네. T{tier} 까지는 시험 안 봐도 되네.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "smile"
+  },
+  {
+   "id": "exam_letter_open",
+   "npc": "ella",
+   "kind": "exam_letter_open",
+   "text": "백 할아버지 편지가 와 있어요. 시험 이야기네요.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "neutral"
+  },
+  {
+   "id": "exam_give_ella",
+   "npc": "ella",
+   "kind": "exam_give_ella",
+   "text": "백 할아버지가 보내셨어요. 시험 찌랑 빌려주신 장비예요.",
+   "cond": {},
+   "once": false,
+   "prio": 1,
+   "expr": "neutral"
+  },
+  {
+   "id": "exam_letter_pass",
+   "npc": "baek",
+   "kind": "exam_letter_pass",
+   "text": "엘라에게 들었네. 바다 건너에서도 물이 자네를 알아보는군.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "exam_letter_pass_8",
+   "npc": "baek",
+   "kind": "exam_letter_pass_8",
+   "text": "…해강이도 거기까진 못 갔네. 자네가 대신 가 줬구먼.",
+   "cond": {},
+   "once": false,
+   "prio": 1
+  },
+  {
+   "id": "exam_letter_fail",
+   "npc": "baek",
+   "kind": "exam_letter_fail",
+   "text": "오늘은 물이 자네 편이 아니었다지. 서두를 것 없네. 내일 다시 엘라를 찾아가게.",
+   "cond": {},
+   "once": false,
+   "prio": 1
   }
  ]
 }

@@ -617,11 +617,8 @@ class Sim:
         spot = self.spots[exam.base_spots(s)[0]]
         res = bot_fight(fish, spot, exam.borrowed_gear(t), SKILLS[self.skill], self.rnd)
         self.advance(self.OVERHEAD + res["t"])
-        # 사람 보정: 봇 랭크 대신 사람 분포로 한 번 더 (봇은 줄 · 시간 점수를 거의 잃지 않음)
+        # 랭크 · 퍼펙트는 봇 판 그대로 (시험 물고기 봇 합격률과 같은 기준, 49-5), 포획만 사람 성공률로 한 번 더
         ok = res["ok"] and self.rnd.random() < HUMAN[self.skill]["success"]
-        if ok:
-            ranks = HUMAN[self.skill]["ranks"]
-            res["rank"] = self.rnd.choices("SABC", [ranks[k] for k in "SABC"])[0]
         passed = exam.judge(t, res if ok else None)
         exam.give_float(s)
         exam.finish(s, passed, self.day)

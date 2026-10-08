@@ -61,7 +61,8 @@ class ExamScene(Scene):
         elif self._waiting():
             self._speak("wait")
         elif exam.eligible(self.save):
-            self._speak("ready")
+            if exam.ready_first(self.save, t):   # 자격 충족 (처음) — sharp, 그 뒤로는 말없이 패널만
+                self._speak("ready")
         else:
             self._speak("short")
 
@@ -191,7 +192,7 @@ class ExamScene(Scene):
         draw_fish_fit(canvas, box.inflate(-8, -8), f, 70, silhouette=None if known else (8, 8, 14),
                       tail_wag=0.25 * math.sin(self.age * 3))
         name = f["name"] if known else "???"
-        if exam.cfg().get("stamina_mult", {}).get(str(t)):
+        if exam.cfg().get("stamina_mult", {}).get(str(t), 1.0) > 1.0:
             name += " (큰 놈)"
         text(canvas, su.fit(name, L.w - 12), (x, L.y + 72), su.RARITY["rare"], 11, "midleft")
         rows = [("합격", exam.pass_text(t), su.WHITE),
@@ -302,7 +303,10 @@ class ExamNoticeScene(Scene):
             y += 16
         text(canvas, "장비 구매 · 장착은 합격한 티어까지 — 다음 티어는 백 노인의 시험", (240, 168), ui.DIM, 11, "center")
         tiers = " ".join(exam.ROMAN[i] for i in range(2, self.tier + 1))
-        su.btext(canvas, f"합격  {tiers}", (240, 186), GREEN, 11, "center")
+        su.btext(canvas, f"합격  {tiers}", (240, 184), GREEN, 11, "center")
+        names = [n for t, n in ((4, "물을 아는 자"), (8, "해강의 뒤를 이은 자")) if self.tier >= t]
+        if names:
+            text(canvas, "  ".join(f"칭호 「{n}」" for n in names), (240, 199), (255, 214, 90), 11, "center")
         self.button.draw(canvas, self.mouse)
 
 
@@ -328,12 +332,14 @@ class ExamResultScene(Scene):
         self.expr, self.line = exam.line(key)
         self.sub = (f"T{t} 장비 4종을 이제 살 수 있어요" if res["pass"] else
                     f"불합격 {res['fails']}번 — 게임 하루 뒤 다시 (비용 없음)")
+        self.titles = res.get("titles") or []
         self.hint = exam.line("hint", pattern=exam.pattern_name(hint))[1] if hint else None
         if self.letter:
-            body = exam.cfg()["lines"]["letter_pass_8" if (res["pass"] and t == 8) else
-                                       "letter_pass" if res["pass"] else "letter_fail"]
+            body = exam.line("letter_pass_8" if (res["pass"] and t == 8) else
+                             "letter_pass" if res["pass"] else "letter_fail")[1]
             from src.story.story import player_name
-            paras = [f"{player_name(game.save)}에게.", "", *wrap_text(body, 250), "", *wrap_text(self.sub, 250), "", "— 백"]
+            paras = [f"{player_name(game.save)}에게.", "", *wrap_text(body, 250), "", *wrap_text(self.sub, 250),
+                     *[f"칭호 「{n}」" for n in self.titles], "", "— 백"]
             self.body = "\n".join(paras)
             game.sfx.play("st_paper", 0.6)
         self.button = ui.Button((240 - 50, 214, 100, 22), "확인", self._close, size=13)
@@ -389,5 +395,7 @@ class ExamResultScene(Scene):
         col = GREEN if self.res["pass"] else (255, 150, 130)
         su.btext(canvas, ("합격!  " if self.res["pass"] else "불합격  ") + exam.ROMAN[self.res["tier"]], (240, 166), col, 16,
                  "center")
-        text(canvas, self.sub, (240, 190), ui.DIM, 11, "center")
+        text(canvas, self.sub, (240, 186), ui.DIM, 11, "center")
+        if self.titles:
+            text(canvas, "  ".join(f"칭호 「{n}」" for n in self.titles), (240, 200), (255, 214, 90), 11, "center")
         self.button.draw(canvas, self.mouse)

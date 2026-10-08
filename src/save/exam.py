@@ -19,7 +19,7 @@ def cfg() -> dict:
 
 
 def default_state() -> dict:
-    return {"passed": 1, "fails": {}, "retry_day": {}, "active": None, "notice_seen": False, "missed": {}}
+    return {"passed": 1, "fails": {}, "retry_day": {}, "active": None, "notice_seen": False, "missed": {}, "ready_seen": []}
 
 
 def state(save) -> dict:
@@ -69,6 +69,10 @@ def migrate(data: dict) -> None:
     st["passed"] = legacy_passed(data)
     st["notice_seen"] = st["passed"] <= 1
     data["exam"] = st
+    titles = data.setdefault("cosmetics", {}).setdefault("titles", [])
+    for t, tid in cfg()["titles"].items():   # 자동 합격한 티어의 칭호도 (T4 · T8)
+        if int(t) <= st["passed"] and tid not in titles:
+            titles.append(tid)
 
 
 def legacy_notice(save) -> int | None:
@@ -170,6 +174,12 @@ def exam_fish(tier: int) -> dict:
     k = c.get("stamina_mult", {}).get(str(tier))
     if k:
         f["stamina"] = round(f["stamina"] * k)
+    k = c.get("power_mult", {}).get(str(tier))
+    if k:
+        f["power"] = round(f["power"] * k, 3)
+    k = c.get("telegraph_mult", {}).get(str(tier))
+    if k:   # 예고를 길게 = 신호를 받아내기 쉽게 (49-5)
+        f["telegraph_sec"] = round(f.get("telegraph_sec", 1.0) * k, 3)
     f["exam"] = tier
     f["nibbles"] = [1, 1]   # 톡톡 한 번 뒤 바로 입질 (3초 대기 + 접근 → 실측 약 6초)
     return f
@@ -229,12 +239,14 @@ def finish(save, ok: bool, day: int, missed: dict | None = None) -> dict:
     t = int(act["tier"])
     st["active"] = None
     st["missed"] = dict(missed or {})
+    titles = []
     if ok:
         st["passed"] = max(st["passed"], t)
+        titles = grant_titles(save, st["passed"])
     else:
         st["fails"][str(t)] = int(st["fails"].get(str(t), 0)) + 1
         st["retry_day"][str(t)] = day + int(cfg()["retry_days"])
-    return {"tier": t, "pass": ok, "fails": int(st["fails"].get(str(t), 0))}
+    return {"tier": t, "pass": ok, "fails": int(st["fails"].get(str(t), 0)), "titles": titles}
 
 
 def fails(save, tier: int | None = None) -> int:
@@ -289,7 +301,27 @@ def letter_menu(save) -> bool:
 
 
 def line(key: str, **kw) -> tuple:
-    v = cfg()["lines"][key]
-    if isinstance(v, list):
-        return v[0], v[1].format(**kw)
-    return None, v.format(**kw)
+    """(표정, 대사) — data/dialogue.json kind exam_<key> (🅱-7). 편지 본문은 표정 None."""
+    ln = next(x for x in load_json("dialogue.json")["lines"] if x.get("kind") == f"exam_{key}")
+    return ln.get("expr"), ln["text"].format(**kw)
+
+
+def ready_first(save, tier: int) -> bool:
+    """자격 충족을 처음 본 순간이면 True (그 뒤로는 'sharp' 대사 없이)."""
+    seen = state(save).setdefault("ready_seen", [])
+    if tier in seen:
+        return False
+    seen.append(tier)
+    return True
+
+
+def grant_titles(save, upto: int) -> list[str]:
+    """합격 칭호 (T4 '물을 아는 자' · T8 '해강의 뒤를 이은 자', 🅱-6). 새로 받은 칭호 이름 목록."""
+    from src.save import quests
+    titles = quests.cosmetics(save)["titles"]
+    got = []
+    for t, tid in cfg()["titles"].items():
+        if int(t) <= upto and tid not in titles:
+            titles.append(tid)
+            got.append(quests.shop_item(tid)["name"])
+    return got

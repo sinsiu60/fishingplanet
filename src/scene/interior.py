@@ -392,7 +392,12 @@ class InteriorScene(Scene):
         pal = event_palette(pal, ev["id"] if ev else None, self.cont)
         return {"w": w, "top_h": top_h, "t": self.t, "night": vr._night(f.clock.hour), "pal": pal,
                 "season": self.season, "cont": self.cont,
-                "flash": self.game.zones.window_flash if hasattr(self.game, "zones") else 0.0}   # 실내 천둥: 창밖 번쩍
+                "flash": self.game.zones.window_flash if hasattr(self.game, "zones") else 0.0,   # 실내 천둥: 창밖 번쩍
+                "exam_passed": self._exam_passed()}   # 백 노인 오두막 합격 목패 (49-5)
+
+    def _exam_passed(self) -> int:
+        from src.save import exam
+        return exam.passed(self.save) if self.npc == "baek" and self.save is not None else 1
 
     def _portrait_img(self) -> pygame.Surface:
         if self.yawn_left > 0:   # 하품: 눈 감고 입 크게 (놀람 표정의 눈 감은 · 말하는 그림)
