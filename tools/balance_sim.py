@@ -87,6 +87,27 @@ class BotPlayer:
         self.plan_thrash = [None, None]
         self.plan_bite = None
         self.fake_fooled = None
+        self.plan_rel = None       # 풀기: 돌진 시작 기준 누를 시각 오차 (− 이르게 / + 늦게), "skip" = 놓침
+        self.rel_seen = 0.0
+        self.rel_done = False
+
+    def _release(self, f, b) -> None:
+        skill, rnd = self.skill, self.rnd
+        if b.state == "telegraph" and b.pending == "rush":
+            if self.plan_rel is None:
+                self.plan_rel = "skip" if rnd.random() < skill["miss_pattern"] else rnd.gauss(0, skill["sigma"])
+                self.rel_seen, self.rel_done = 0.0, False
+            self.rel_seen += DT
+            if self.plan_rel != "skip" and not self.rel_done and self.rel_seen >= skill["react"] \
+                    and b.timer <= -self.plan_rel:
+                f.release()
+                self.rel_done = True
+        elif b.state == "rush":
+            if self.plan_rel not in (None, "skip") and not self.rel_done and b.state_t >= self.plan_rel:
+                f.release()
+                self.rel_done = True
+        else:
+            self.plan_rel = None
 
     def act(self, f) -> tuple:
         skill, rnd = self.skill, self.rnd
@@ -96,14 +117,17 @@ class BotPlayer:
             if still and rnd.random() < 0.08:  # 반응 지연
                 f.net_click()
             return False, 0.0, None
-        # 드랙: 돌진 예고를 반응 시간 뒤에 알아챔
-        if b.signal == "rush" or b.state == "rush":
-            self.react_t += DT
-            if self.react_t >= skill["react"] or b.state == "rush":
-                f.drag = 1 if f.drag_steps <= 6 else 2
-        else:
-            self.react_t = 0.0
-            f.drag = f.drag_steps if b.is_calm else max(1, f.drag_steps // 2)
+        if getattr(f, "manual_drag", True):
+            # (설정 '드랙 직접 조절') 드랙: 돌진 예고를 반응 시간 뒤에 알아챔
+            if b.signal == "rush" or b.state == "rush":
+                self.react_t += DT
+                if self.react_t >= skill["react"] or b.state == "rush":
+                    f.drag = 1 if f.drag_steps <= 6 else 2
+            else:
+                self.react_t = 0.0
+                f.drag = f.drag_steps if b.is_calm else max(1, f.drag_steps // 2)
+        elif not skill.get("no_patterns"):
+            self._release(f, b)   # 자동 드랙 (CU3): 돌진 예고에 맞춰 '풀기' 한 번 ('드랙만' 봇은 안 누름)
         # 감기: 초록 위쪽 끝 바로 아래까지 / 울렁이는 물고기가 날뛸 땐 초록 가운데를 노린다 (좋은 플레이어처럼)
         edge = f.green_high - 3 - (2 if skill is SKILLS["average"] else 0)
         if b.is_active and f.heave_amp > 0:

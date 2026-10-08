@@ -153,6 +153,9 @@ def migrate(data: dict, slot: int | None = None) -> dict:
                               "first_quest_bonus": done, "next_id": 1}
     if "enhance" in data:
         _refund_enhance(data)
+    if "drag_auto" not in data:
+        # 자동 드랙 이전 세이브 (CU3): 이미 낚아 봤으면 처음 파이팅 때 하루 아저씨 안내 한 번 (TG-26)
+        data["drag_auto"] = {"legacy": data.get("stats", {}).get("catches", 0) > 0}
     if "exam" not in data:
         from src.save import exam
         exam.migrate(data)   # 시험 이전 세이브: 가진 장비 최고 티어까지 자동 합격 + 안내 한 번 (BAEK_EXAM 🅱-5)
@@ -265,6 +268,7 @@ def new_data() -> dict:
         "season_seen": None,                             # 마지막으로 마을에서 본 계절 (계절 바뀜 알림)
         "events": {"day": -1, "plan": None, "active": None, "seen": {}},  # 날씨 이벤트 (오늘 계획·진행 중·본 횟수)
         "exam": exam_default(),                          # 백 노인의 등급 시험 (DESIGN.md 49-3, src/save/exam.py)
+        "drag_auto": {"legacy": False},                  # 자동 드랙 (CORE_UPDATE CU3): legacy = 예전 Q/E 드랙으로 낚아 본 세이브 → TG-26 한 번
     }
 
 

@@ -29,7 +29,8 @@ DEFAULTS = {"tutorial_seen": [], "screen_shake": True, "volume": 0.8, "scale": N
             "gpu_present": True,     # 폰: 화면 확대를 GPU 로 (끄면 예전 CPU 확대, DESIGN.md 44)
             "splash_short": False,   # 시작 로고 '시우 공방' 짧게 (1.2초, SPLASH.md)
             "vol_boss": 1.0,         # 전설·환상 전용 곡 음량 0~1 (음악 음량과 곱, DESIGN.md 43)
-            "catch_scene": "normal"}  # 포획 장면 계측판 (DESIGN.md 45장 DT7): normal 1.6초 · short 0.6초 · off
+            "catch_scene": "normal",
+            "drag_manual": False}    # 드랙 직접 조절 (CORE_UPDATE CU3): 끔 = 자동 드랙 + 돌진 '풀기'(Q), 켬 = 예전 5단계 Q/E + 감기 +10%  # 포획 장면 계측판 (DESIGN.md 45장 DT7): normal 1.6초 · short 0.6초 · off
 
 TELE_MULTS = (1.0, 1.25, 1.5)
 

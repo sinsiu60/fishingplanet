@@ -62,12 +62,12 @@ DRAGON_LOOK = {"colors": {"body": [200, 40, 40], "belly": [255, 214, 110], "fin"
 
 # 튜토리얼 카드를 본 뒤 한 번 더 짧게 상기시킨다 (DESIGN.md 4장)
 TIPS = {
-    "telegraph:rush": "빛이 줄을 타고 손에 닿으면 돌진! 그 전에 Q로 드랙을 낮추세요",
+    "telegraph:rush": "빛이 줄을 타고 손에 닿는 순간 돌진! 그때 Q(풀기) 한 번",
     "telegraph:jump": "그림자가 커진다 = 점프! 원이 겹치는 순간 우클릭",
     "telegraph:turn": "줄이 쏠린다 = 방향 전환! 꺾는 순간 반대쪽으로 확 슬라이드",
     "telegraph:leap": "하늘색 원 = 몸털기! 원이 겹칠 때 화살표 쪽으로 슬라이드",
     "action:charge": "멈췄다 = 힘 모으기! 지금 확 감으세요",
-    "tired": "지쳤다! 드랙을 올리고(E) 크게 감으세요",
+    "tired": "지쳤다! 지금 크게 감으세요",
     "fake_tired": "기포가 계속 올라온다 = 가짜 지침! 돌진 대비",
     "telegraph:lure": "등불만 번쩍 = 가짜 신호! 기포·판정 원이 없으면 속지 마세요",
 }
@@ -476,6 +476,8 @@ class FishingScene(Scene):
                 "show_bag": free and self.can_open_menus(),
                 "can_retrieve": free and f is None and c.state == CastState.LANDED,
                 "items": items, "drag": (f.drag, f.drag_steps) if fighting else None,
+                "manual_drag": f.manual_drag if fighting else True,   # 자동 드랙(CU3)이면 ▲▼ 대신 '풀기' 버튼 하나
+                "release_blink": fighting and fight_hud.release_ready(f) and int(self.t * 6) % 2 == 0,
                 "safe_x": self.game.screen.safe_x}
 
     def _cycle_debug(self, key: str) -> None:
@@ -732,12 +734,18 @@ class FishingScene(Scene):
                 self.toasts.show("화면 연출(흔들림·줌) " + ("켬" if self.shake_on else "끔"), INFO, 1.2, 11)
         elif n == "time_fast":
             self.clock.fast = not self.clock.fast
-        elif n == "drag":
+        elif n == "drag":   # Q/E · 모바일 ▲▼ — 자동 드랙(CU3)이면 Q · '풀기' 버튼 = 풀기
             if f:
-                f.change_drag(a.value)
-        elif n == "scroll":
+                if f.manual_drag:
+                    f.change_drag(a.value)
+                elif a.value < 0:
+                    f.release()
+        elif n == "scroll":   # 휠 — 자동 드랙이면 아래 = 풀기
             if f:
-                f.change_drag(1 if a.value > 0 else -1)
+                if f.manual_drag:
+                    f.change_drag(1 if a.value > 0 else -1)
+                elif a.value < 0:
+                    f.release()
         elif n == "flick":
             if f is not None and f.phase == "fight":
                 self.sfx.play("sfx_cast_swing", 0.3)  # 휘두르는 소리 (판정과 상관없이)
@@ -1313,6 +1321,7 @@ class FishingScene(Scene):
                            hazards=[] if train else self.spot["hazards"], gimmick=gim,
                            float_need=fneed, float_tier=self.save.float_tier(),
                            touch_lead=load_json("mobile_config.json")["touch_lead_sec"] if self.touch else 0.0)
+        self.fight.manual_drag = bool(self.settings.get("drag_manual"))   # 설정 '드랙 직접 조절' (CU3, 기본 끔 = 자동 드랙 + 풀기)
         self.toasts.items.clear()
         self.toasts.sink = self._say  # 파이팅 중 글자 슬롯 하나 (31장)
         # 패턴 숙련도·연속 실패 보조 (31장 C5) — 세이브 값을 두뇌가 바로 쓴다
@@ -2109,7 +2118,8 @@ class FishingScene(Scene):
             self._detect_flick(dt)  # 터치는 릴 패드에서 튕기기 → "flick" 행동
         if f.phase == "fight":
             self.ctl.update_fight(dt, self.t, self.game.input)
-            f.set_drag_min(self.ctl.drag_min)
+            if f.manual_drag:   # 자동 드랙이면 Shift(▼ 길게)는 물어뜯기 판정에만 (PatternInput.drag_min)
+                f.set_drag_min(self.ctl.drag_min)
             f.ctl = self.ctl
         from src.fishing.patterns import PatternInput
         f.update(dt, reeling, aim, PatternInput.from_controls(self.ctl) if f.phase == "fight" else None)
@@ -4603,7 +4613,10 @@ class FishingScene(Scene):
             canvas.blit(lay, r.topleft, r)
 
     def _drag_needed(self, f) -> bool:
-        """드랙 칸을 진하게: 돌진·힘 모으기·장력 빨강, 또는 방금 드랙을 바꿨을 때."""
+        """드랙 칸을 진하게: 돌진·힘 모으기·장력 빨강, 또는 방금 드랙을 바꿨을 때.
+        자동 드랙 (CU3): 릴이 스스로 바꾸니 '방금 바꿈'은 빼고, 돌진 예고('Q 풀기' 깜빡) 동안 진하게."""
+        if not f.manual_drag:
+            return fight_hud.release_ready(f) or f.brain.state == "rush" or f.zone() == "red"
         if f.drag != getattr(self, "_drag_last", f.drag):
             self.drag_seen_t = 1.2
         self._drag_last = f.drag

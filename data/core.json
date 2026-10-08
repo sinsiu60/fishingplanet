@@ -3,12 +3,48 @@
   "calendar": {
     "_설명": "달력 (CU1-2): days = 오늘부터 며칠, bar_colors = 시간대 막대 색 (날씨별), rest_max_hours 는 game_config time 쪽.",
     "days": 14,
-    "bar_colors": {"clear": [240, 200, 80], "rain": [90, 150, 230], "storm": [120, 124, 136], "fog": [204, 208, 216]}
+    "bar_colors": {
+      "clear": [
+        240,
+        200,
+        80
+      ],
+      "rain": [
+        90,
+        150,
+        230
+      ],
+      "storm": [
+        120,
+        124,
+        136
+      ],
+      "fog": [
+        204,
+        208,
+        216
+      ]
+    }
   },
   "tide_conch": {
     "_설명": "물때 멈춤 소라 (CU1-4, storm_conch): 실제 real_sec 초 동안 게임 시계 정지 + 고른 날씨(안개 금지) 고정, 끝나기 blink_sec 초 전부터 아이콘 깜빡. 쉬기 · 이동하면 끝 (확인 창).",
     "real_sec": 600,
     "blink_sec": 30,
-    "weathers": ["clear", "rain", "storm"]
+    "weathers": [
+      "clear",
+      "rain",
+      "storm"
+    ]
+  },
+  "release": {
+    "_설명": "자동 드랙 + 돌진 '풀기' 신호 (CU3). 자동 드랙: 쉼 · 지침 = 최고 / 날뛰는 중 = active_frac (최저 0 ~ 최고 1) / 돌진 = 풀기 판정에 따라 — 퍼펙트 1단계 · 좋음 good_drag 단계 · 놓침 날뛰는 중 단계. 퍼펙트 = 돌진 시작 ±perfect_sec, 좋음 = 그 앞 good_sec 안. 돌진이 끝나도 return_sec 동안 풀어 둔 단계 유지. 고대 어부의 릴: 판정 구간 ×ancient_window_mult · 복귀 ancient_return_sec. '드랙 직접 조절' 설정 = 예전 방식 + 감기 ×(1+manual_reel_bonus).",
+    "perfect_sec": 0.12,
+    "good_sec": 0.5,
+    "good_drag": 2,
+    "active_frac": 0.5,
+    "return_sec": 0.5,
+    "ancient_window_mult": 1.5,
+    "ancient_return_sec": 0.2,
+    "manual_reel_bonus": 0.1
   }
 }

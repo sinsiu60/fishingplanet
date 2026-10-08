@@ -77,6 +77,9 @@ def check(game, name: str, run) -> bool:
         if ex.get("passed", 1) >= 8:
             return False
         return ("TG-21" in d.get("tutorial", {}).get("done", [])) if not ex.get("legacy") else bool(ex.get("notice_seen"))
+    if name == "drag_legacy":   # TG-26 자동 드랙 (CU3): 예전 드랙으로 낚아 본 세이브 + '드랙 직접 조절' 꺼짐
+        st = getattr(game, "settings", None)
+        return bool(d.get("drag_auto", {}).get("legacy")) and not (st is not None and st.get("drag_manual"))
     if name == "float_owned":
         return bool(d.get("float", {}).get("owned"))
     if name == "float_equipped":

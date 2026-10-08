@@ -13,7 +13,7 @@ from src.fishing import rank as rank_mod
 from src.fishing.patterns import JUDGES, PATTERN_IDS, Combo, PatternInput, TwistGauge
 
 LOSE_REASONS = {
-    "snap": ("줄이 끊어졌다", "빨간 구간에 너무 오래 있었다. 돌진할 땐 드랙(Q)을 낮추고 감기를 멈추세요."),
+    "snap": ("줄이 끊어졌다", "빨간 구간에 너무 오래 있었다. 돌진 예고 때 Q(풀기)를 누르고 감기를 멈추세요."),
     "slack": ("바늘이 빠졌다", "줄이 너무 느슨했다. 장력을 초록 구간 아래로 떨어뜨리지 마세요."),
     "jump": ("바늘이 빠졌다", "점프 정점에 낚싯대를 숙이지 못했다. 그림자가 커지면 우클릭을 준비하세요."),
     "snag": ("줄이 걸려 끊어졌다", "물고기가 위협 구역(수초·바위)으로 들어갔다. 그쪽으로 가면 마우스를 반대로 당겨 빼내세요."),
@@ -90,6 +90,14 @@ class Fight:
         self.drag_steps = self.gear["drag_steps"]
         self.drag = (self.drag_steps + 1) // 2
         self.drag_min_prev: int | None = None  # 순간 최저 드랙 중이면 떼고 돌아갈 단계
+        # 자동 드랙 + 돌진 '풀기' 신호 (CORE_UPDATE CU3, DESIGN 52-2). manual_drag = 설정 '드랙 직접 조절' (예전 방식, 낚시 화면이 넣어 줌)
+        self.manual_drag = bool(self.gear.get("manual_drag", False))
+        self.rel_cfg = load_json("core.json")["release"]
+        self.rel_press: float | None = None   # 돌진 전에 '풀기'를 누른 시각 (elapsed)
+        self.rel_grade: str | None = None     # 이번 돌진 판정: perfect / good / miss
+        self.rush_start_t: float | None = None
+        self.rel_hold = 0.0                   # 돌진이 끝난 뒤 풀어 둔 단계를 유지하는 남은 초
+        self.rel_hold_drag = 1
         self.ctl = None  # 추가 조작 상태 (src/platform/gesture.Controls, 낚시 씬이 넣어 줌)
         # 신규 패턴 (U3): 진행 중 판정, 꼬임 게이지, 연쇄 콤보
         self.inp = PatternInput()
@@ -267,6 +275,79 @@ class Fight:
         if self.auto_drag_prev is not None:
             # 자동 하강 중에 직접 바꾸면, 끝난 뒤엔 바꾼 값에서 1단계 위로 돌아온다
             self.auto_drag_prev = int(clamp(self.drag + 1, 1, self.drag_steps))
+
+    # ── 자동 드랙 · 풀기 (CU3) ──
+    def _rel_windows(self) -> tuple[float, float]:
+        k = self.rel_cfg["ancient_window_mult"] if self.gear.get("auto_drag") else 1.0   # 고대 어부의 릴: 판정 구간 +50%
+        return self.rel_cfg["perfect_sec"] * k, self.rel_cfg["good_sec"] * k
+
+    def release(self) -> None:
+        """'풀기' (Q 한 번 · 마우스 휠 아래 · 모바일 '풀기' 버튼): 돌진 예고에 맞춰 누르면 돌진 동안 드랙이 최저로."""
+        if self.manual_drag or self.phase != "fight":
+            return
+        self.events.append("release")
+        b = self.brain
+        if b.state == "rush" and self.rush_start_t is not None:
+            if self.rel_grade is None:   # 돌진이 시작된 뒤에 누름: 퍼펙트 구간 안이면 퍼펙트, 아니면 늦음
+                late = self.elapsed - self.rush_start_t
+                self._rel_judge("perfect" if late <= self._rel_windows()[0] else "miss")
+            return
+        self.rel_press = self.elapsed   # 예고 중(또는 그 전): 돌진이 시작될 때 판정
+
+    def _rel_judge(self, grade: str) -> None:
+        self.rel_grade = grade
+        if grade == "perfect":
+            self._perfect()
+            self.events.append("release_perfect")
+        elif grade == "good":
+            self._good()
+            self.events.append("release_good")
+        else:   # 놓침: 드랙이 날뛰는 중 단계에 머물러 장력이 크게 튐 (바늘 게이지 벌은 없음 — 돌진 자체가 벌)
+            self.opp["M"] += 1
+            self.misses += 1
+            self.perfect_streak = 0
+            if self.combo:
+                self.combo.fail()
+            self.last_judge = "miss_late"
+            self.events.append("release_miss")
+
+    def _rush_started(self) -> None:
+        self.rush_start_t = self.elapsed
+        self.rel_grade = None
+        if self.manual_drag:
+            return
+        if self.rel_press is not None:
+            early = self.elapsed - self.rel_press
+            pw, gw = self._rel_windows()
+            if early <= pw:
+                self._rel_judge("perfect")
+            elif early <= gw:
+                self._rel_judge("good")
+        self.rel_press = None
+
+    def _auto_level(self, dt: float) -> None:
+        """릴이 물고기 상태를 보고 드랙을 맞춤: 쉼 · 지침 = 최고 / 날뛰는 중 = 중간 / 돌진 = 풀기 판정대로."""
+        b = self.brain
+        top = self.drag_steps
+        mid = max(1, int(round(1 + (top - 1) * self.rel_cfg["active_frac"])))
+        if b.state == "rush" and self.rush_start_t is not None:
+            if self.rel_grade is None and self.elapsed - self.rush_start_t > self._rel_windows()[0]:
+                self._rel_judge("miss")
+            g = self.rel_grade
+            want = 1 if g == "perfect" else (min(top, int(self.rel_cfg["good_drag"])) if g == "good" else mid)
+            if g in ("perfect", "good"):
+                self.rel_hold_drag = want
+                self.rel_hold = self.rel_cfg["ancient_return_sec"] if self.gear.get("auto_drag") else self.rel_cfg["return_sec"]
+        elif self.rel_hold > 0:
+            self.rel_hold -= dt
+            want = self.rel_hold_drag
+        elif b.is_calm or b.state in ("exhausted", "recover"):
+            want = top
+        else:
+            want = mid
+        if b.state != "rush":
+            self.rush_start_t = None
+        self.drag = int(clamp(want, 1, top))
 
     def dip(self) -> None:
         """우클릭: 낚싯대 숙이기. 점프 정점이면 퍼펙트."""
@@ -548,10 +629,11 @@ class Fight:
             self._update_escape(dt)
             return
         if self.phase == "fight":
-            if self.gear.get("auto_drag"):
-                self._auto_drag()
-            if self.drag_min_prev is not None:
-                self.drag = 1  # 자동 하강이 끝나며 되돌려도 누르는 동안은 최저
+            if self.manual_drag:   # '드랙 직접 조절': 예전 방식 (고대 어부의 릴 = 예전 능력)
+                if self.gear.get("auto_drag"):
+                    self._auto_drag()
+                if self.drag_min_prev is not None:
+                    self.drag = 1  # 자동 하강이 끝나며 되돌려도 누르는 동안은 최저
             self._update_fight(dt, reeling, rod_aim)
         elif self.phase == "net":
             self._update_net(dt)
@@ -679,9 +761,13 @@ class Fight:
                 b.thrash_judged[0] = True  # 예고 중 숙여서 이미 놓친 첫 번째
                 self.thrash_first = None
                 self.pre_judged = False
+            if ev == "action:rush":
+                self._rush_started()
             self.events.append(ev)
             self._pattern_event(ev)
         b.events.clear()
+        if not self.manual_drag:
+            self._auto_level(dt)   # 자동 드랙 (CU3) — 장력 계산 전에
         self._update_patterns(dt, reeling)
 
         self._update_turn_flick()
@@ -749,6 +835,8 @@ class Fight:
             reel_in = 0.0
         if self.reel_bonus_t > 0:
             reel_in *= 1 + self.reel_bonus  # 펌핑 리듬 보상
+        if self.manual_drag:
+            reel_in *= 1 + self.rel_cfg["manual_reel_bonus"]   # '드랙 직접 조절' 수고 보상 (CU3-3)
         if any(p.hold_payout for p in self.pats):
             payout = 0.0  # 잠수 중 낚싯대를 세우고 있으면 줄이 풀리지 않는다
         self.reel_speed_now = reel_in

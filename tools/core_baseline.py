@@ -31,7 +31,7 @@ from src.fishing.rank import sell_price  # noqa: E402
 
 PERIOD_H = {"morning": 4, "day": 7, "evening": 3, "night": 10}
 BOTS = ("average", "skilled", "drag_only")
-OUT = os.path.join(ROOT, "tools", "core_baseline.json")
+OUT = os.environ.get("CORE_BASELINE_OUT") or os.path.join(ROOT, "tools", "core_baseline.json")   # 비교 측정은 다른 파일로 (CU3 이후)
 
 
 def spots() -> dict:

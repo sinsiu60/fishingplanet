@@ -162,6 +162,9 @@ def _single_cond(save, t: str, fish: dict, rnd) -> dict | None:
             return None
         return {"t": t, "n": n}
     if t == "drag_fixed":
+        from src.save.settings import Settings
+        if not Settings().get("drag_manual"):
+            return None   # 자동 드랙 (CU3): 드랙을 직접 안 만지니 '고정' 의뢰는 '직접 조절' 켠 사람만
         steps = save.fight_gear()["drag_steps"]
         return {"t": t, "k": (steps + 1) // 2}  # 파이팅 시작 단계 그대로 = 드랙을 건드리지 않기
     if t == "perfects":
@@ -388,7 +391,7 @@ class QuestRun:
                 t = c["t"]
                 if t == "gear_limit" and not self.start_checked and self.save.gear_tier("rod") > c["n"]:
                     self._fail(it, f"낚싯대가 T{c['n']}보다 좋다")
-                elif t == "drag_fixed" and fight.drag != c["k"]:
+                elif t == "drag_fixed" and getattr(fight, "manual_drag", True) and fight.drag != c["k"]:
                     self._fail(it, "드랙을 바꿨다")
                 elif t == "line_keep" and fight.line / fight.line_max * 100 < c["p"]:
                     self._fail(it, f"줄 {c['p']}% 아래")

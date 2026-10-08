@@ -208,6 +208,9 @@ OTHER = {
     "TG-25": {"title": "새 랭크", "who": "haru", "start": "event:catch_shown", "need_cond": "catch_card", "after": ["TG-03"],
               "group": "rank",
               "steps": [("freeze", "catch.rank_bars", "tap"), ("freeze", "catch.rank_bars.weak", "tap")]},
+    # TG-26 자동 드랙 (CORE_UPDATE CU3-4): 옛 세이브만, 업데이트 뒤 첫 파이팅 — 장력 게이지 한 줄
+    "TG-26": {"title": "자동 드랙", "who": "haru", "start": "event:fight_start", "need_cond": "drag_legacy",
+              "steps": [("freeze", "fight.gauge.tension", "tap")]},
     "TG-PH": {"title": "환상의 물고기", "who": "baek", "start": "event:phantom_caught", "script": "phantom",
               "steps": [("info", "catch.card", "tap"), ("info", "catch.card", "tap", {"on_done": "close_catch"}),
                         ("spotlight", "dex.open", "scene:DexScene", {"allow_keys": ["menu:dex"]}),

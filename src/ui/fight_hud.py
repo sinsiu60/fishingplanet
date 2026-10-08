@@ -54,6 +54,12 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
     # 초록 구간 경계선
     canvas.fill((230, 255, 230), (x - 2, int(ty(gl)), w + 4, 1))
     canvas.fill((230, 255, 230), (x - 2, int(ty(gh)), w + 4, 1))
+    if fight.manual_drag and fight.drag_limit < 100:   # '드랙 직접 조절' (CU3-3): 줄이 풀리기 시작하는 장력 = 흰 1px 선, 넘은 구간 하늘색 줄무늬
+        ly = int(ty(fight.drag_limit))
+        if fight.tension > fight.drag_limit:
+            for yy in range(int(top), ly, 3):
+                canvas.fill((150, 210, 255), (x + 2, yy, w - 4, 1))
+        canvas.fill((255, 255, 255), (x - 1, ly, w + 2, 1))
     # 현재 장력 표시
     blink = zone != "green" and int(t * 8) % 2 == 0
     mc = (255, 255, 255) if not blink else col
@@ -169,9 +175,31 @@ def draw_boss_bar(canvas, pal, fight) -> None:
     text(canvas, st, (x + bw + (26 if shift else 6), y + 3), STATE_COLOR.get(st, (255, 200, 170)), 11, "midleft")
 
 
+def release_ready(fight) -> bool:
+    """돌진 예고 중 (아직 풀기 판정 전) — 'Q' · '풀기' 버튼 깜빡 (CU3)."""
+    b = fight.brain
+    return not fight.manual_drag and fight.rel_grade is None and (
+        (b.state == "telegraph" and b.pending == "rush") or (b.state == "rush" and fight.rush_start_t is not None
+                                                            and fight.elapsed - fight.rush_start_t <= 0.12))
+
+
 def draw_drag(canvas, pal, fight, need: bool = False, t: float = 0.0) -> None:
-    """드랙 5칸. need = 지금 드랙이 중요할 때(돌진·힘 모으기·장력 빨강·방금 바꿈) — 금색 테두리로 강조 (31장 C6)."""
+    """드랙 5칸. need = 지금 드랙이 중요할 때(돌진·힘 모으기·장력 빨강·방금 바꿈) — 금색 테두리로 강조 (31장 C6).
+    자동 드랙 (CU3): 칸 대신 작은 릴 (풀릴수록 빠르게 돎) + 돌진 예고 동안 'Q' 깜빡."""
     x, y = 8, 226
+    if not fight.manual_drag:
+        spin = 3.0 + 16.0 * (1 - fight.drag_frac)        # 풀림(최저) = 빠르게
+        col = (255, 220, 120) if need else pal["text"]
+        cx, cy = x + 6, y
+        for c, o in ((SHADOW, 1), (col, 0)):
+            pygame.draw.circle(canvas, c, (cx + o, cy + o), 6, 2)
+        for k in range(3):
+            a = t * spin + k * math.tau / 3
+            pygame.draw.line(canvas, col, (cx, cy), (cx + math.cos(a) * 5, cy + math.sin(a) * 5), 1)
+        if release_ready(fight) and int(t * 6) % 2 == 0:
+            r = text(canvas, "Q", (cx + 12, cy), (255, 220, 120), 11, "midleft")
+            text(canvas, "풀기", (r.right + 3, cy), (255, 220, 120), 11, "midleft")
+        return
     icons.reel(canvas, x + 6, y, (255, 220, 120) if need else pal["text"])
     bx = x + 18
     for i in range(fight.drag_steps):

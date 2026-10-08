@@ -81,8 +81,12 @@ def layout(w: int, h: int, ctx: dict, settings, items_open: bool = False) -> lis
         add("dip", m, h - m - 2 * r, 2 * r, 2 * r, "circle", "숙이기")
         bw, bh = 28 * s, 22 * s
         bx = m + 2 * r + 8
-        add("drag_up", bx, h - m - 2 * bh - 6, bw, bh, label="▲")
-        add("drag_down", bx, h - m - bh, bw, bh, label="▼")
+        if ctx.get("manual_drag", True):   # 설정 '드랙 직접 조절': 예전 ▲▼ (▼ 길게 = 순간 최저)
+            add("drag_up", bx, h - m - 2 * bh - 6, bw, bh, label="▲")
+            add("drag_down", bx, h - m - bh, bw, bh, label="▼")
+        else:   # 자동 드랙 (CU3): '풀기' 하나 (▼ 자리, 1.3배) — 탭 = 풀기, 길게 = 물어뜯기 판정(순간 최저)
+            rw, rh = bw * 1.3 * 1.4, bh * 1.3
+            add("drag_down", bx, h - m - rh, rw, rh, label="풀기!" if ctx.get("release_blink") else "풀기")
         pr = 40 * s
         add("pad", w - m - 2 * pr, h - m - 2 * pr, 2 * pr, 2 * pr, "circle", "감기")
     else:
@@ -107,6 +111,10 @@ def _icon(surf, c: Control, col) -> None:
     elif c.id == "item":
         from src.ui import icons
         icons.bag(surf, x, y, col)
+    elif c.id == "drag_down" and c.label.startswith("풀기"):   # 자동 드랙 '풀기' 버튼 (돌진 예고 동안 금색 테두리 깜빡)
+        if c.label.endswith("!"):
+            pygame.draw.rect(surf, (255, 220, 120), c.rect.inflate(2, 2), 2, border_radius=5)
+        text(surf, "풀기", (x, y), (255, 228, 140) if c.label.endswith("!") else col, 11, "center")
     elif c.id in ("drag_up", "drag_down"):
         d = -1 if c.id == "drag_up" else 1
         k = max(4, c.rect.h // 4)

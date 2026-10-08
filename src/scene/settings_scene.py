@@ -137,6 +137,8 @@ class SettingsScene(Scene):
         s = self.s
         tele = ("예고 시간 배율", "step", lambda: f"{TELE_MULTS[s.get('tele_mult')]}배",
                 (lambda: self._step("tele_mult", -1, 2), lambda: self._step("tele_mult", 1, 2)))
+        drag = ("드랙 직접 조절 (감기 +10%)", "toggle", lambda: s.get("drag_manual"),
+                lambda: s.set("drag_manual", not s.get("drag_manual")))   # CU3: 끄면 릴이 알아서 + 돌진 때만 Q(풀기)
         cards = ("첫 만남 신호 카드", "toggle", lambda: s.get("signal_cards"),
                  lambda: s.set("signal_cards", not s.get("signal_cards")))
         slot = ("신호 크기", "step", lambda: ("작게", "보통", "크게")[s.get("slot_size")],
@@ -155,7 +157,7 @@ class SettingsScene(Scene):
         plog = ("성능 로그 (1초마다 CSV)", "toggle", lambda: pf.logging, self._toggle_perf_log)
         pexp = ("성능 로그 내보내기", "button", lambda: "공유" if IS_MOBILE else "폴더", self._export_perf)
         bench = ("테스트: 벤치마크 B1~B6 (3분)", "button", lambda: "시작", self._start_bench)
-        rows = [tele, cards, slot, cb, snd, test, show, trv, bgm, plog, pexp, bench]
+        rows = [tele, drag, cards, slot, cb, snd, test, show, trv, bgm, plog, pexp, bench]
         if self.game.save is not None:
             rows.append(("테스트: NPC 대사", "button", lambda: "열기", self._open_dialogue_test))
             rows.append(("테스트: 날씨 이벤트", "button", self._event_label, self._cycle_event))
