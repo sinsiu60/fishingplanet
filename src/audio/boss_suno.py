@@ -100,6 +100,8 @@ class SunoBoss:
         self._reset()
 
     def _reset(self) -> None:
+        self.beat_events: list = []   # 화면 박자 펄스 (BOSS_ARENA 🅰-3, 51-2): 'bar' · 'beat' — 장면이 비움
+        self._ub = self._ubt = None
         self.t = 0.0
         self.song = None
         self.active = False
@@ -443,6 +445,7 @@ class SunoBoss:
             self.sched = None
             fn()
         seg = self.seg
+        self._track_beats()
         # 반복: 큐가 비면 같은 파일을 다시 (주 · 위기 같이)
         if seg is not None and seg.loop:
             for ch, snd in ((seg.ch, seg.snd), (seg.cr_ch, seg.cr_snd)):
@@ -460,6 +463,20 @@ class SunoBoss:
         if loader.busy():   # 일꾼이 OGG 를 푸는 동안은 믹서가 잠김 → 음량은 다음 프레임에 (O5)
             return
         self._apply_volumes()
+
+    def _track_beats(self) -> None:
+        """다음 마디 · 박까지 남은 시간이 갑자기 늘면 = 방금 지남 → beat_events 에 쌓음 (markers.json bar_starts_sec 기준)."""
+        if self.seg is None or self.ending:
+            self._ub = self._ubt = None
+            return
+        ub, ubt = self.until_next_bar(), self.until_next_beat()
+        if ub is not None and self._ub is not None and ub > self._ub + 0.05:
+            self.beat_events.append("bar")
+        if ubt is not None and self._ubt is not None and ubt > self._ubt + 0.03:
+            self.beat_events.append("beat")
+        self._ub, self._ubt = ub, ubt
+        if len(self.beat_events) > 16:
+            del self.beat_events[:-4]
 
     # ── 안쪽 ──
     SUNO_GAIN = 0.95   # 채널 기준 음량 (× 곡별 배율 × 음악 설정 × 전설 음량 설정 × 소리 구역). 합성 보스 곡(0.35 × 1.04 ≈ 0.36)보다 +8.4dB —

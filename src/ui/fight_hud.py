@@ -14,6 +14,7 @@ RARITY_COLOR = {"common": (230, 230, 230), "uncommon": (130, 230, 150), "rare": 
                 "phantom": (190, 120, 255), "legend": (255, 214, 90)}
 GREEN, RED, SLACK = (70, 180, 95), (205, 62, 58), (80, 98, 130)
 PANEL = (24, 30, 50)
+TOP_PAD = 0   # 보스전 시네마 띠 높이 (51-2) — 위쪽 가장자리 HUD(거리 막대)를 띠 안쪽으로
 
 
 _RANK: dict = {}   # 랭크 도장 글자 (크기별)
@@ -187,7 +188,7 @@ def draw_distance(canvas, pal, fight, inset: int = 0) -> None:
     from src.core.config import load_json
     far = load_json("fishing_config.json")["cast"]["max_distance"]
     w = 46
-    icons.distance(canvas, canvas.get_width() - 10 - inset - w, 8, w, fight.distance / far, (150, 200, 255))
+    icons.distance(canvas, canvas.get_width() - 10 - inset - w, 8 + TOP_PAD, w, fight.distance / far, (150, 200, 255))
 
 
 STAMP_T = 0.6       # 랭크 도장이 찍히는 시각 (획득 컷 기준)

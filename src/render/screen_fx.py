@@ -47,6 +47,7 @@ class ScreenFX:
         self.sway = 0             # 배 위: 1이면 화면이 천천히 출렁
         self.legend = False       # 전설 등장 중: 금빛 테두리 맥동
         self.legend_color = (255, 196, 70)
+        self.extra_vignettes: list = []   # 보스전 무대 비네트 [(색, 세기)] (boss_arena.vignettes, 51-2) — 전설 테두리 대신
         self.whip_v = 0.0         # 꺾기: 화면이 휙 휘청 (패닝 충격)
         self.whip_x = 0.0
         self.slashes: list[list] = []
@@ -290,6 +291,9 @@ class ScreenFX:
         t = self.t
         w, h = self.w, self.h
         self._vig_req = []   # 중간 · 낮음: 비네트 요청을 모아 한 장으로 (높음은 예전처럼 차례로 섞음 — 픽셀 동일)
+        for col, amt in self.extra_vignettes:
+            if amt > 0.01:
+                self._blit_vignette(canvas, col, amt)
         if self.v_legend > 0.02:
             pulse = 0.55 + 0.45 * math.sin(t * 2.2)
             self._blit_vignette(canvas, self.legend_color, self.v_legend * 0.45 * pulse * getattr(self, "legend_alpha", 1.0))

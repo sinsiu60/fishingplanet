@@ -27,6 +27,7 @@ from src.render.phantom_fx import PhantomFx, phantom_palette
 from src.fishing import phantom
 from src.render.rod import draw_rod, rod_geometry
 from src.render.screen_fx import ScreenFX
+from src.render.boss_arena import BossArena
 from src.save.scalestone import frac as _ss_frac
 from src.audio import theme_sfx
 from src.render.weather_fx import Ambient, Fog, Lightning, Rain, themed_palette
@@ -129,6 +130,8 @@ class FishingScene(Scene):
         self.popups = fight_fx.JudgePopups()
         self.gather = fight_fx.GatherFX()
         self.screen_fx = ScreenFX(canvas.get_width(), canvas.get_height())
+        self.arena = BossArena(canvas.get_width(), canvas.get_height())   # 보스전 무대 (BOSS_ARENA.md, 51-2)
+        self.crisis_now = False
         self.fish_cfg = load_json("fishing_config.json")
         self.spots = {sp["id"]: sp for sp in load_json("spots.json")["spots"]}
         self.spot_ids = list(self.spots)
@@ -1333,8 +1336,10 @@ class FishingScene(Scene):
             phantom.reset_pity(self.save, self.spot_id)  # 환상어와 파이팅까지 갔다 → 천장 카운트 0
             self.phantom_fx.to_fight()
             self.game.haptics.vibrate("bite", 0.6)
+        arena_on = not train and not ex and self.arena.start(fish)   # 전설 · 환상: 무대 (이름 카드가 '전설!' 글자 대신)
         if fish["rarity"] == "legend":
-            self.toasts.show("전설!", (255, 214, 90), 3.0)
+            if not arena_on:
+                self.toasts.show("전설!", (255, 214, 90), 3.0)
             if not self.cine_ran:   # ② 챔질 연출이 있었으면 그게 등장 소리 · 흔들림 (한 순간 주인공 소리 하나)
                 self.sfx.play("sfx_legend_appear", 1.0, haptic="legend")  # 깊은 드론 + 심장박동 + 수면 울림
                 self.shake_kick = 2.5
@@ -1438,6 +1443,7 @@ class FishingScene(Scene):
         self.landing = None
         self.dragon_fx = None
         self.legend_fx.end_fight()   # 여우비 빗줄기 끝
+        self.arena.stop()
         self.board = None
         self.release_scene = None
         self.release_item = None
@@ -1702,7 +1708,7 @@ class FishingScene(Scene):
         self.legend_on = on
         self._update_music(on, dt)
         ph_on = f is not None and f.phase in ("fight", "net") and f.fish.get("rarity") == "phantom"
-        self.screen_fx.legend = on or ph_on
+        self.screen_fx.legend = (on or ph_on) and not self.arena.active   # 무대가 있으면 무대 비네트가 대신 (51-2)
         self.screen_fx.legend_alpha = 0.35 if ph_on else 1.0  # 환상: 화면 가장자리 아주 옅은 보라
         if ph_on:
             self.screen_fx.legend_color = phantom.COLOR
@@ -1746,6 +1752,7 @@ class FishingScene(Scene):
             state = "idle"
         if f is None or f.phase not in ("fight", "net"):
             self.red_t = self.crisis_hold = 0.0
+        self.crisis_now = crisis   # 보스전 무대 위기 덧씌움 (51-2)
         am.set(state, intensity, phase, am.daylight_of(self.clock.hour, tuple(am.cfg["night_hours"])), rarity=rarity,
                crisis=crisis)
         self._update_boss(crisis)
@@ -2386,11 +2393,12 @@ class FishingScene(Scene):
             if off != (0, 0):
                 self.game.screen.shake = off
                 return
+        ax, ay = self.arena.shake_offset()   # 보스전 무대: 강도별 미세 흔들림 · 임팩트 방향 흔들림 (끄기 · 줄이기 반영)
         if not self.shake_on or amp < 0.3:
-            self.game.screen.shake = (0, 0)
+            self.game.screen.shake = (ax, ay)
             return
         a = int(round(amp))
-        self.game.screen.shake = (random.randint(-a, a), random.randint(-a, a))
+        self.game.screen.shake = (max(-5, min(5, random.randint(-a, a) + ax)), max(-5, min(5, random.randint(-a, a) + ay)))
 
     # ───────────────────────── 이벤트 ─────────────────────────
     def float_warning(self) -> str | None:
@@ -3002,6 +3010,8 @@ class FishingScene(Scene):
                 self.game.guide.event("net_phase")
         self._mastery_event(ev)
         self.signal_audio.on_event(ev)
+        if self.arena.active:
+            self._arena_event(ev)
         self.sfx.boost = 2 if "clear" in f.mutations and ev.startswith("telegraph:") else 1  # 투명: 예고 소리 +6dB
         if ev in SUCC_RESET or ev.startswith(("pattern_fail", "lost:")):
             self.succ_streak = 0  # 연속 성공 끊김
@@ -3160,6 +3170,7 @@ class FishingScene(Scene):
             self._swipe_vfx(True)
             pos = self._fish_screen()
             self.screen_fx.perfect(self.screen_fx.map(pos))
+            self.arena.parry(self.screen_fx.map(pos))
             self.popups.add("swipe_perfect", pos, f.perfect_streak)
         elif ev == "good" and f.last_judge_kind == "swipe":
             self._swipe_vfx(False)
@@ -3173,6 +3184,7 @@ class FishingScene(Scene):
                 self.sparkles.burst(*pos, count=40, speed=1.7)
                 self.sparkles.burst(*pos, count=16, speed=0.6, ring=False)
                 self.screen_fx.perfect(self.screen_fx.map(pos), glow=self._glow_sec())
+                self.arena.parry(self.screen_fx.map(pos))   # 보스전: 받아쳤다 — 흰 금색 테두리 + 물보라
                 self.popups.add("perfect", pos, ps)
                 self.shake_kick = 2.5
                 fc = self.fish_cfg["fight"]
@@ -3407,17 +3419,33 @@ class FishingScene(Scene):
 
     def scene_palette(self) -> dict:
         """지금 시각 · 낚시터 · 날씨 · 계절 · 이벤트를 입힌 팔레트 (모닥불 야영지 배경도 같이 씀)."""
-        pal = themed_palette(self.palette.sample(self.clock.hour), self.theme, self.weather, self.lightning.flash, self.legend_k)
+        pal = themed_palette(self.palette.sample(self.clock.hour), self.theme, self.weather, self.lightning.flash,
+                             *self._legend_tint())
         from src.render.season_fx import season_palette
         pal = season_palette(pal, self.season, self.spot.get("continent", "sharmion"))   # 계절 색감 (은은하게)
         from src.render.event_fx import event_palette
         pal = event_palette(pal, self._event_id(), self.spot.get("continent", "sharmion"))   # 붉은 달·은빛 안개 (환상 팔레트가 위)
         pal = self._line_pal(pal)
         if self.dragon_k > 0.01:
-            for key, v in pal.items():
-                if isinstance(v, tuple) and key not in ("text", "bobber", "bobber_base"):
+            from src.render.boss_arena import WORLD_KEYS   # 용의 붉은 하늘 · 물 (낚싯대 · 손은 원래 색, 51-2)
+            for key in WORLD_KEYS:
+                v = pal.get(key)
+                if isinstance(v, tuple):
                     pal[key] = lerp_color(v, (120, 16, 26), 0.28 * self.dragon_k)
         return pal
+
+    def _legend_tint(self) -> tuple:
+        """전설 등장 황혼: 그 보스의 무대 색 (어둡게). 파이팅 무대가 물들기 시작하면 무대 색이 넘겨받음."""
+        k = self.legend_k
+        if k <= 0.001:
+            return 0.0, (70, 36, 96)
+        from src.render import boss_arena
+        f = self.fight
+        e = boss_arena.entry(f.fish if f is not None else self.bite.fish)
+        col = lerp_color(boss_arena.color_of(e), (20, 14, 30), 0.45) if e else (70, 36, 96)
+        if self.arena.active:
+            k *= 1.0 - self.arena.entrance_k()
+        return k, col
 
     def _draw_world(self, canvas, pal: dict) -> None:
         """하늘·별·해달·구름·산·물 (환상 파장은 이걸 두 번 그려 마스크로 합성).
@@ -3445,6 +3473,7 @@ class FishingScene(Scene):
         world.draw_mountains(canvas, pal, cam, theme["terrain"], t)
         amp = {"clear": 1.0, "rain": 1.25, "storm": 1.9, "fog": 0.8}[weather] * (1.3 if theme.get("sea") else 1.0)
         amp *= 1.0 - 0.8 * self.phantom_fx.calm()  # 환상: 물결이 숨을 죽인다
+        amp *= self.arena.wave_mult()               # 보스전 무대: 강도별 물결 (51-2)
         refl = weather == "clear" and theme["terrain"] != "cave"
         top = max(0, hz - self.WATER_MARGIN)
 
@@ -3467,7 +3496,8 @@ class FishingScene(Scene):
         world.SKY.clear()
         world.SKY.update(date_events.sky_tweak(hour))   # 새해 아침 해돋이 · 추석 보름달 (DT11)
         theme, weather = self.theme, self.weather
-        pal = self.scene_palette()
+        self._arena_tick()
+        pal = self.arena.palette(self.scene_palette())   # 보스전 무대 색: 하늘 · 물 · 먼 배경 키에만 (51-2)
         cam, c, t, f = self.cam, self.cast, self.t, self.fight
         pfx = self.phantom_fx
         base_pal = pal
@@ -3661,6 +3691,8 @@ class FishingScene(Scene):
         if getattr(self, "scenic", False):
             return   # 이동 컷신의 도착 전경: 풍경·낚싯대까지만 (HUD·카드 없음)
         self._draw_event_banner(canvas)
+        if f is None or f.phase not in ("fight", "net"):
+            self.arena.draw_bars(canvas)   # 시네마 띠가 빠지는 중 (파이팅 중엔 _draw_fight_overlay 에서 비네트 뒤 · HUD 아래)
 
         inset = self.hud_inset
         if f is not None:
@@ -3953,6 +3985,79 @@ class FishingScene(Scene):
         if f.phase == "fight":
             draw_bobber(canvas, pal, sx, sy + bob, size, floating=True, dip=0.55)
 
+    # ───────────────────────── 보스전 무대 (BOSS_ARENA.md, DESIGN 51-2) ─────────────────────────
+    def _arena_target(self, f) -> int:
+        from src.render.boss_arena import cfg as arena_cfg
+        c = arena_cfg()
+        if f.fish.get("rarity") == "phantom":
+            return c["phase_levels"]["phantom"][1 if getattr(self, "p2_on", False) else 0]
+        phases = f.brain.phases or []
+        if len(phases) <= 1:
+            fr = f.stamina_frac
+            return 3 if fr <= c["hp_levels"]["3"] else 2 if fr <= c["hp_levels"]["2"] else 1
+        lv = c["phase_levels"]["legend"]
+        return lv[min(len(lv) - 1, max(0, f.brain.phase))]
+
+    def _arena_tick(self) -> None:
+        """그리기마다 실제 시간으로 (슬로우모션 · 히트스톱과 무관하게 등장 · 강도 전환이 흐름)."""
+        ar, f = self.arena, self.fight
+        now = time.perf_counter()
+        dt = min(0.1, max(0.0, now - getattr(self, "_arena_rt", now)))
+        self._arena_rt = now
+        suno = self.game.boss.suno
+        beats = list(getattr(suno, "beat_events", ()))
+        if beats:
+            suno.beat_events.clear()
+        if ar.active and (f is None or f.phase not in ("fight", "net")):
+            ar.finish()
+        if ar.active:
+            fighting = f is not None and f.phase == "fight"
+            ar.update(dt, {"target": self._arena_target(f) if f is not None else 0, "crisis": self.crisis_now,
+                           "telegraph": fighting and f.brain.state == "telegraph",
+                           "reduce": bool(self.settings.get("reduce_fx")), "shake_on": self.shake_on,
+                           "horizon": self.cam.horizon, "beats": beats if fighting else (),
+                           "beats_live": suno.active and suno.seg is not None})
+        self.screen_fx.extra_vignettes = ar.vignettes()
+        fight_hud.TOP_PAD = ar.bar_px()
+
+    def _arena_holes(self) -> list:
+        """무대 효과가 건드리지 않는 칸: 신호 보호 영역 + 물고기에 붙은 신호 자리 + 게이지 묶음."""
+        holes = list(self.screen_weather.protect.rects)
+        f = self.fight
+        W, H = self.cam.width, self.cam.height
+        if f is not None and f.phase == "fight":
+            ax, ay = self.screen_fx.map(self._fish_screen())
+            x, y = int(clamp(ax, 70, W - 70)), int(clamp(ay - 30, 62, H - 74))
+            holes.append(pygame.Rect(x - 62, y - 42, 124, 84))
+            holes.append(pygame.Rect(int(ax) - 30, int(ay) - 20, 60, 38))
+            gw = self.GAUGE_W if f.gim.kinds(f.brain) else 80
+            ox = self.game.screen.safe_x
+            if self.touch and self.settings.get("touch_left"):
+                ox = W - gw - ox
+            holes.append(pygame.Rect(ox, 30, gw, 184))
+        return holes
+
+    def _boss_bar(self, canvas, pal, f) -> None:
+        if self.arena.card_on:
+            self.arena.draw_card(canvas)   # 이름 카드 → 위로 올라가 체력 바가 됨
+        else:
+            fight_hud.draw_boss_bar(canvas, pal, f)
+
+    def _arena_event(self, ev: str) -> None:
+        """큰 행동 순간 임팩트 (🅰-4): 히트스톱 · 흔들림 · 충격파 · (강도 3) 색 갈라짐 · (착수 · 페이즈) 번쩍임."""
+        from src.render.boss_arena import cfg as arena_cfg
+        f = self.fight
+        kind = "phase" if ev.startswith("phase:") else ev
+        if kind not in arena_cfg()["impact"]["events"] or f is None:
+            return
+        if kind == "phase" and f.fish.get("rarity") == "phantom":
+            return   # 환상 2페이즈는 전용 컷신
+        pos = self.screen_fx.map(self._fish_screen())
+        d = 1.0 if pos[0] >= self.cam.width / 2 else -1.0
+        res = self.arena.impact(kind, pos, d)
+        if res["hitstop"] > 0:
+            self.game.hitstop(res["hitstop"])
+
     def _draw_fight_overlay(self, canvas, pal) -> None:
         f, t = self.fight, self.t
         if f.phase != "fight":
@@ -3960,7 +4065,8 @@ class FishingScene(Scene):
         if f.phase == "net":
             pose, still = f.net_pose()
             draw_net_scene(canvas, pal, self._display_fish(f.fish), f.size_cm, pose, still, t, self.net_anim, self.mouse)
-            fight_hud.draw_boss_bar(canvas, pal, f)
+            self.arena.draw_bars(canvas)
+            self._boss_bar(canvas, pal, f)
             self.popups.draw(canvas, self.screen_fx.map)  # 뜰채 중 한 단어 ("뜰채!")
             return
         qr = getattr(self, "quest_run", None)
@@ -3995,15 +4101,19 @@ class FishingScene(Scene):
         if f.escape_t is not None:
             self._draw_escape(canvas, f)
             self.screen_fx.draw_edges(canvas)
+            self.arena.draw_fx(canvas, self._arena_holes())
+            self.arena.draw_bars(canvas)
             fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
             return
         self._draw_behavior_ui(canvas)
         self.popups.draw(canvas, self.screen_fx.map)
         self.screen_fx.draw_edges(canvas)
+        self.arena.draw_fx(canvas, self._arena_holes())   # 무대 파티클 · 충격파 · 박자 · 번쩍임 — 게이지 · 신호보다 먼저, 보호 칸 제외
+        self.arena.draw_bars(canvas)                       # 시네마 띠 (HUD 는 그 위 · 안쪽)
         # HUD 우선순위 (31장 C6): 1 신호 칸 / 2 장력·내구도 / 3 드랙(필요할 때만 진하게) / 4 거리(작게) / 5 의뢰·소모품(반투명).
         # 신호가 막 뜨면 3 이하는 잠깐 더 흐려진다.
         fight_hud.draw_gauges(self._gauge_canvas(canvas), pal, f, t)
-        fight_hud.draw_boss_bar(canvas, pal, f)
+        self._boss_bar(canvas, pal, f)
         dim = 1.0 - 0.55 * min(1.0, self.sig_dim_t / 0.3)
         qr = getattr(self, "quest_run", None)
         w = self.cam.width
@@ -4011,7 +4121,7 @@ class FishingScene(Scene):
         if qr is not None and qr.items:   # 칸 = 각 HUD 가 그리는 자리 + 여유 (fight_hud · icons 좌표)
             self._faded(canvas, 150 * dim, lambda c: fight_hud.draw_quest_icon(c, qr.hud_lines(), inset),
                         (w - inset - 32, 8, 32, 30))
-        dist_area = (w - inset - 64, 0, 64, 18)
+        dist_area = (w - inset - 64, fight_hud.TOP_PAD, 64, 18)
         if self.touch:
             # 드랙·소모품·조작 안내는 터치 버튼이 대신한다
             self._faded(canvas, 200 * dim, lambda c: fight_hud.draw_distance(c, pal, f, self.hud_inset), dist_area)
@@ -4100,7 +4210,7 @@ class FishingScene(Scene):
             T.mark("fight.fish", (fx - 22, fy - 16, 44, 30))
             T.mark("fight.slots", (fx - 34, fy - 52, 68, 40))
             T.mark("fight.slot.reel", (fx - 34, fy - 52, 68, 40))
-            T.mark("fight.distance", (W - 60 - (self.hud_inset if self.touch else 0), 2, 52, 14))
+            T.mark("fight.distance", (W - 60 - (self.hud_inset if self.touch else 0), 2 + fight_hud.TOP_PAD, 52, 14))
             # 엘드라시온 기믹 게이지 (fight_hud.draw_gauges 와 같은 자리)
             kinds = f.gim.kinds(f.brain)
             gx = 116 if f.hazards else 88

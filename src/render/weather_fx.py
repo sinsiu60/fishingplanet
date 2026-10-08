@@ -10,7 +10,8 @@ from src.core.mathutil import clamp, lerp, lerp_color, scale_color
 KEEP = ("text", "bobber", "bobber_base")
 
 
-def themed_palette(pal: dict, theme: dict, weather: str, flash: float = 0.0, legend: float = 0.0) -> dict:
+def themed_palette(pal: dict, theme: dict, weather: str, flash: float = 0.0, legend: float = 0.0,
+                   legend_col=(70, 36, 96)) -> dict:
     """시간대 팔레트에 낚시터 물색·어두움, 날씨 색감, 번개 섬광을 입힌다."""
     out = dict(pal)
     k = theme.get("tint_k", 0.0)
@@ -48,10 +49,10 @@ def themed_palette(pal: dict, theme: dict, weather: str, flash: float = 0.0, leg
         out["stars"] = out["stars"] * 0.3
         out["reflect"] = out["reflect"] * 0.3
     if legend > 0:
-        # 전설 등장: 하늘·물이 보랏빛 황혼처럼 물든다
+        # 전설 등장: 하늘·물이 그 보스의 무대 색 황혼처럼 물든다 (보라 = 환상 전용, BOSS_ARENA 51-2 — legend_col)
         for key, v in out.items():
             if isinstance(v, tuple) and key not in KEEP:
-                out[key] = lerp_color(v, (70, 36, 96), 0.22 * legend)
+                out[key] = lerp_color(v, legend_col, 0.22 * legend)
         out["wave_light"] = lerp_color(out["wave_light"], (255, 214, 120), 0.3 * legend)
     if flash > 0:
         for key, v in out.items():

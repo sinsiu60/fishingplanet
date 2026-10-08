@@ -94,6 +94,7 @@ class Game:
         # 슬로우모션용 (퍼펙트 0.3초 슬로우 등). 틱 간격은 그대로, 쌓이는 시간만 줄인다.
         self.time_scale = 1.0
         self.slow_timer = 0.0  # 실제 시간 기준 남은 슬로우모션
+        self.hit_timer = 0.0   # 히트스톱 (보스전 임팩트, 51-2): 실제 시간 동안 게임 틱 정지 — 슬로우모션은 멈췄다 그대로 이어감
         self.fade = 0.0        # 화면 전환 페이드 인 (남은 시간)
         self.fade_total = 1.0
         self.running = True
@@ -283,6 +284,11 @@ class Game:
         self.slow_timer = real_sec
         self.time_scale = scale
 
+    def hitstop(self, real_sec: float) -> None:
+        """게임 시간만 real_sec 초 멈춤 (판정 · 두뇌 · 신호음 시각이 모두 게임 시간이라 함께 멈춤 — 판정 손해 없음, DESIGN 51-1 ⑥).
+        걸려 있던 슬로우모션은 덮어쓰지 않고 끝난 뒤 이어감."""
+        self.hit_timer = max(self.hit_timer, real_sec)
+
     def _scene_open_sound(self, scene) -> None:
         try:
             name = scene.open_sound()
@@ -356,11 +362,14 @@ class Game:
                 self.slow_device = True
             elif work < 12.0:
                 self.slow_device = False
-        if self.slow_timer > 0:
-            self.slow_timer -= frame_time
-            if self.slow_timer <= 0:
-                self.time_scale = 1.0
-        self._acc += frame_time * self.time_scale
+        if self.hit_timer > 0:
+            self.hit_timer -= frame_time   # 히트스톱 동안은 틱 없음 (슬로우모션 시계도 멈춰 둠)
+        else:
+            if self.slow_timer > 0:
+                self.slow_timer -= frame_time
+                if self.slow_timer <= 0:
+                    self.time_scale = 1.0
+            self._acc += frame_time * self.time_scale
         if self.save is not None:
             self.save.data["playtime"] += frame_time
             self.autosave_t += frame_time
