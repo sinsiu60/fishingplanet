@@ -510,7 +510,9 @@ class Fight:
             elif g == "good":   # 좋음: 처음 잠깐만 한 단계 덜 풀림 = 장력 조금 튐
                 want = min(top, int(self.rel_cfg["good_drag"])) if since < self.rel_cfg["good_spike_sec"] else 1
             else:   # 놓침: 릴이 잠긴 채 (최고 단계, miss_drag) = 장력이 빨강으로 튐 → 늦게라도 Q 를 누르면 그때부터 풀림
-                want = top if self.rel_cfg.get("miss_drag", "top") == "top" else mid
+                big = self.fish.get("rarity") in ("legend", "phantom")
+                md = self.rel_cfg.get("miss_drag_boss" if big else "miss_drag", "top")
+                want = top if md == "top" else max(mid, top - 1) if md == "high" else mid   # 전설 · 환상은 한 단계 아래 (돌진이 많은 긴 싸움)
             if g in ("perfect", "good") or self.rel_late:
                 self.rel_hold_drag = want
                 self.rel_hold = self.rel_cfg["ancient_return_sec"] if self.gear.get("auto_drag") else self.rel_cfg["return_sec"]
@@ -1147,7 +1149,9 @@ class Fight:
         elif reeling and b.is_calm:
             drain += cfg["stamina_drain_reel_calm"]
         if self.taut_in:   # 팽팽 구간 (53): 고정 소모(감기 · 버티기)만 배수 — 신호 · 틈 · 측면과 따로
-            drain *= self.taut_cfg["streak_mult"] if self.taut_hot else self.taut_cfg["drain_mult"]
+            tc = self.taut_cfg
+            boss = self.fish.get("rarity") in ("legend", "phantom")   # 전설 · 환상은 따로 (최소 2분 규칙)
+            drain *= tc["boss_streak_mult" if boss else "streak_mult"] if self.taut_hot else tc["boss_drain_mult" if boss else "drain_mult"]
         drain *= self.passive_k   # 판 길이 (CU6-2): 줄인 체력만큼 고정 소모도
         drain += self._gap_tick(dt, reeling)
         if self.align < 0:   # 측면 압박 (CU4-4): 반대쪽으로 당기는 만큼
