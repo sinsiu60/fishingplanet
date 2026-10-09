@@ -1,0 +1,81 @@
+[warning] Unrecognized feature: 'monetization'.
+[warning] Unrecognized feature: 'xr'.
+[warning] Allow attribute will take precedence over 'allowfullscreen'.
+[warning] Connection: Wired
+[log] AUTOSTART https://pygame-web.github.io/cdn/0.9.3/pythons.js http://localhost:8000/ undefined
+[log] Location of pythons.js overrides script https://pygame-web.github.io/cdn/0.9.3/pythons.js => https://pygame-web.github.io/cdn/0.9.3/pythons.js?#
+[log] {"xtermjs":"1","_sdl2":"canvas","user_canvas":0,"user_canvas_managed":0,"gui_divider":2,"ume_block":1,"can_close":0,"archive":"webapp","gui_debug":2,"cdn":"https://pygame-web.github.io/cdn/0.9.3/","autorun":0,"PYBUILD":"3.12","fb_ar":1.77,"fb_width":"1280","fb_height":"720","pydigits":"312","executable":"https://pygame-web.github.io/cdn/0.9.3/cpython312/main.js","debug":false,"interactive":false,"columns":132,"lines":"42","console":10,"fbdev":false,"quiet":false,"features":["vtx","snd","gui"]}
+[log] config.xtermjs = 1
+[log] config._sdl2 = canvas
+[log] config.user_canvas = 0
+[log] config.user_canvas_managed = 0
+[log] config.gui_divider = 2
+[log] config.ume_block = 1
+[log] config.can_close = 0
+[log] config.archive = webapp
+[log] config.gui_debug = 2
+[log] config.cdn = https://pygame-web.github.io/cdn/0.9.3/
+[log] config.autorun = 0
+[log] config.PYBUILD = 3.12
+[log] config.fb_ar = 1.77
+[log] config.fb_width = 1280
+[log] config.fb_height = 720
+[log] config.pydigits = 312
+[log] config.executable = https://pygame-web.github.io/cdn/0.9.3/cpython312/main.js
+[log] config.debug = false
+[log] config.interactive = false
+[log] config.columns = 132
+[log] config.lines = 42
+[log] config.console = 10
+[log] config.fbdev = false
+[log] config.quiet = false
+[log] config.features = [vtx, snd, gui]
+[log] interpreter= cpython
+[log] orig_argv []
+[log] sys.argv:  []
+[log] docurl= http://localhost:8000/
+[log] srcurl= https://pygame-web.github.io/cdn/0.9.3/pythons.js
+[log] data-os= vtx,snd,gui
+[log] data-python= python3.12
+[log] script: id= site
+[log] code :  3621  as site.py
+[warning] 
+
+
+== FLAGS : is_mobile(false) dev=false debug_user=false debug_mobile=false ==
+
+
+
+
+[log] Terminal+ImageAddon importing from CDN : https://pygame-web.github.io/cdn/0.9.3/../vt/
+[log] vtx font: -5%
+[warning] vtx font: 720 / 52 = 9  Cols: 132 Cons: 10
+[warning] terminal 132 52 {url: https://pygame-web.github.io/cdn/0.9.3/xtermjsixel/xterm-addon-image-worker.js, sixelSupport: true}
+[warning] Auto ume unlocker safari== false
+[warning] TODO: user defined canvas
+[log] pythons.js:  custom_onload
+[warning] Loading python interpreter from https://pygame-web.github.io/cdn/0.9.3/cpython312/main.js
+[log] main.js:  locateData: main.data  -> https://pygame-web.github.io/cdn/0.9.3/cpython312/main.data
+[log] main.js:  locateFile: main.wasm https://pygame-web.github.io/cdn/0.9.3/cpython312/
+[warning] VM.prerun:Begin
+[warning] VM.prerun:End
+[log] PyMain: running in main thread, faking onCustomMessage
+[error] PyMain: BrowserFS not found
+[warning] VM.postrun Begin
+[log] Maybe RC https://pygame-web.github.io/cdn/0.9.3/cpythonrc.py
+[warning] VM.postrun End
+[log] Begin.cross_file.fetch https://pygame-web.github.io/cdn/index-0.9.3-cp312.json {redirect: follow, credentials: omit}
+[log] cross_file.fetch 200
+[log] End.cross_file.fetch /tmp/tmp-1-0 r/w= 1451
+[log] Begin.cross_file.fetch webapp.tar.gz {redirect: follow, credentials: omit}
+[log] cross_file.fetch 200
+[log] End.cross_file.fetch /tmp/tmp-12-1 r/w= 24215968
+[log] Begin.cross_file.fetch http://localhost:8000/cdn//cp312/numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl {redirect: follow, credentials: omit}
+[smoke] cdn → https://pygame-web.github.io/cdn//cp312/numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl
+[log] cross_file.fetch 200
+[log] End.cross_file.fetch /tmp/tmp-17-2 r/w= 12461368
+[log] Begin.cross_file.fetch http://localhost:8000/cdn/cp312/pygame_ce-2.5.7-cp312-cp312-wasm32_bi_emscripten.whl# {redirect: follow, credentials: omit}
+[smoke] cdn → https://pygame-web.github.io/cdn/cp312/pygame_ce-2.5.7-cp312-cp312-wasm32_bi_emscripten.whl
+[log] cross_file.fetch 200
+[log] End.cross_file.fetch /tmp/tmp-453-3 r/w= 1527290
+[warning] The ScriptProcessorNode is deprecated. Use AudioWorkletNode instead. (https://bit.ly/audio-worklet)

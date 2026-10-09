@@ -1,0 +1,274 @@
+[warning] Unrecognized feature: 'monetization'.
+[warning] Unrecognized feature: 'xr'.
+[warning] Allow attribute will take precedence over 'allowfullscreen'.
+[warning] Connection: Wired
+[log] AUTOSTART https://pygame-web.github.io/cdn/0.9.3/pythons.js http://localhost:8000/ undefined
+[log] Location of pythons.js overrides script https://pygame-web.github.io/cdn/0.9.3/pythons.js => https://pygame-web.github.io/cdn/0.9.3/pythons.js?#
+[log] {"xtermjs":"1","_sdl2":"canvas","user_canvas":0,"user_canvas_managed":0,"gui_divider":2,"ume_block":1,"can_close":0,"archive":"webapp","gui_debug":2,"cdn":"https://pygame-web.github.io/cdn/0.9.3/","autorun":0,"PYBUILD":"3.12","fb_ar":1.77,"fb_width":"1280","fb_height":"720","pydigits":"312","executable":"https://pygame-web.github.io/cdn/0.9.3/cpython312/main.js","debug":false,"interactive":false,"columns":132,"lines":"42","console":10,"fbdev":false,"quiet":false,"features":["vtx","snd","gui"]}
+[log] config.xtermjs = 1
+[log] config._sdl2 = canvas
+[log] config.user_canvas = 0
+[log] config.user_canvas_managed = 0
+[log] config.gui_divider = 2
+[log] config.ume_block = 1
+[log] config.can_close = 0
+[log] config.archive = webapp
+[log] config.gui_debug = 2
+[log] config.cdn = https://pygame-web.github.io/cdn/0.9.3/
+[log] config.autorun = 0
+[log] config.PYBUILD = 3.12
+[log] config.fb_ar = 1.77
+[log] config.fb_width = 1280
+[log] config.fb_height = 720
+[log] config.pydigits = 312
+[log] config.executable = https://pygame-web.github.io/cdn/0.9.3/cpython312/main.js
+[log] config.debug = false
+[log] config.interactive = false
+[log] config.columns = 132
+[log] config.lines = 42
+[log] config.console = 10
+[log] config.fbdev = false
+[log] config.quiet = false
+[log] config.features = [vtx, snd, gui]
+[log] interpreter= cpython
+[log] orig_argv []
+[log] sys.argv:  []
+[log] docurl= http://localhost:8000/
+[log] srcurl= https://pygame-web.github.io/cdn/0.9.3/pythons.js
+[log] data-os= vtx,snd,gui
+[log] data-python= python3.12
+[log] script: id= site
+[log] code :  3621  as site.py
+[warning] 
+
+
+== FLAGS : is_mobile(true) dev=false debug_user=false debug_mobile=false ==
+
+
+
+
+[warning] NO VT/stdout on mobile, use remote debugger or explicit flag
+[warning] safari ume unlocking
+[warning] NO VT/stdout on mobile, use remote debugger or explicit flag
+[warning] TODO: user defined canvas
+[warning] NO VT/stdout on mobile, use remote debugger or explicit flag
+[log] pythons.js:  custom_onload
+[warning] Loading python interpreter from https://pygame-web.github.io/cdn/0.9.3/cpython312/main.js
+[warning] Unsupported device pixel ratio 2
+[log] main.js:  locateData: main.data  -> https://pygame-web.github.io/cdn/0.9.3/cpython312/main.data
+[log] main.js:  locateFile: main.wasm https://pygame-web.github.io/cdn/0.9.3/cpython312/
+[warning] VM.prerun:Begin
+[warning] VM.prerun:End
+[log] PyMain: running in main thread, faking onCustomMessage
+[error] PyMain: BrowserFS not found
+[warning] VM.postrun Begin
+[log] Maybe RC https://pygame-web.github.io/cdn/0.9.3/cpythonrc.py
+[warning] VM.postrun End
+[log] 807: DEV MODE ON ['http://localhost:8000/cdn/']
+
+[log] 
+
+[log] 
+
+[log] 
+
+[log] # 805: runpy(/data/data/org.python/assets/__main__.py id=0) workdir = /data/data/org.python/assets len(code)=3621
+
+[log] 655: preload_code(len(code)=3621 hint='/data/data/org.python/assets/__main__.py' loaderhome='.')
+
+[log] # 696: no pep 723 block found
+
+[log] #
+
+[log] ----------- computing required packages ----------
+
+[log] # 450: parse_code() patches loaded : ['matplotlib', 'panda3d', 'wcwidth', 'pygame', 'pygame_ce', 'textual']
+
+[log] 76: fopen: fetching "https://pygame-web.github.io/cdn/index-0.9.3-cp312.json"
+
+[log] Begin.cross_file.fetch https://pygame-web.github.io/cdn/index-0.9.3-cp312.json {redirect: follow, credentials: omit}
+[log] cross_file.fetch 200
+[log] End.cross_file.fetch /tmp/tmp-1-0 r/w= 1451
+[log] # 217: rewritecdn='http://localhost:8000/cdn/'
+
+[log] # 507: compiling wasm, last_state=False
+
+[log] # 235: Scanning /data/data/org.python/assets/build/env for WebAssembly libraries [compiling]
+
+[log] # 510: patching modules if required, PATCHLIST=[]
+
+[log] # 500
+
+[log] --------------------------------------------------
+
+[log] 
+
+[log] 
+
+[log] Loading 미니 피싱 from webapp.apk
+
+[log]     Pygbag Version : 0.9.3
+
+[log]     Template Version : 0.9.3
+
+[log]     Python  : 3.12
+
+[log]     CDN URL : https://pygame-web.github.io/cdn/0.9.3/
+
+[log]     Screen  : 1280x720
+
+[log]     Title   : 미니 피싱
+
+[log]     Folder  : webapp
+
+[log]     Authors : pgw
+
+[log]     SPDX-License-Identifier: cookiecutter.spdx
+
+[log] 
+
+[log] 
+
+[log] 404: embed= or sys.argv=['']
+
+[log] 
+
+[log] Python 3.12.12 (main, Feb 28 2026, 17:34:01) [Clang 19.0.0git (https:/github.com/llvm/llvm-project 7cfffe74eeb68fbb3fb9706ac7 on emscripten
+
+[log] Type "help", "copyright", "credits" or "license" for more information.
+
+[log] >>> 
+[log] 76: fopen: fetching "webapp.tar.gz"
+
+[log] Begin.cross_file.fetch webapp.tar.gz {redirect: follow, credentials: omit}
+[log] cross_file.fetch 200
+[log] End.cross_file.fetch /tmp/tmp-12-1 r/w= 24215968
+[log] 309: assets found : 0
+
+[log] 364: EventTarget delayed by loader
+
+[log] 
+
+[log] 
+
+[log] 
+
+[log] 
+
+[log]      * Waiting for media user engagement. 화면을 누르면 시작해요 * 
+
+[log] 
+
+[log] 
+
+[log] 
+
+[log] 
+
+[log] 
+
+[log] 
+
+[log] 
+
+[log] # 805: runpy(/data/data/webapp/assets/main.py id=1) workdir = /data/data/webapp/assets len(code)=3789
+
+[log] 655: preload_code(len(code)=3789 hint=PosixPath('/data/data/webapp/assets/main.py') loaderhome='.')
+
+[log] #
+
+[log] ----------- computing required packages ----------
+
+[log] # 109
+
+[log]  {
+
+[log]     "dependencies": [
+
+[log]         "numpy"
+
+[log]     ]
+
+[log] }
+
+[log] 76: fopen: fetching "http://localhost:8000/cdn//cp312/numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl"
+
+[log] Begin.cross_file.fetch http://localhost:8000/cdn//cp312/numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl {redirect: follow, credentials: omit}
+[smoke] cdn → https://pygame-web.github.io/cdn//cp312/numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl
+[log] cross_file.fetch 200
+[log] End.cross_file.fetch /tmp/tmp-102-2 r/w= 12461368
+[log] # 166: /tmp/numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl installed
+
+[log] found on pygbag repo and installed to env : numpy
+
+[log] # 507: compiling wasm, last_state=False
+
+[log] # 235: Scanning /data/data/org.python/assets/build/env for WebAssembly libraries [compiling]
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/_core/_multiarray_tests.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/_core/_multiarray_umath.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/_core/_operand_flag_tests.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/_core/_rational_tests.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/_core/_simd.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/_core/_struct_ufunc_tests.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/_core/_umath_tests.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/fft/_pocketfft_umath.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/linalg/_umath_linalg.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/linalg/lapack_lite.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/random/_bounded_integers.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/random/_common.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/random/_generator.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/random/_mt19937.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/random/_pcg64.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/random/_philox.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/random/_sfc64.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/random/bit_generator.cpython-312-wasm32-emscripten.so'
+
+[log] # 260: preload src='/data/data/org.python/assets/build/env/numpy/random/mtrand.cpython-312-wasm32-emscripten.so'
+
+[log] # 510: patching modules if required, PATCHLIST=[]
+
+[log] # 500
+
+[log] --------------------------------------------------
+
+[log] 
+
+[log] 76: fopen: fetching "http://localhost:8000/cdn/cp312/pygame_ce-2.5.7-cp312-cp312-wasm32_bi_emscripten.whl#"
+
+[log] Begin.cross_file.fetch http://localhost:8000/cdn/cp312/pygame_ce-2.5.7-cp312-cp312-wasm32_bi_emscripten.whl# {redirect: follow, credentials: omit}
+[smoke] cdn → https://pygame-web.github.io/cdn/cp312/pygame_ce-2.5.7-cp312-cp312-wasm32_bi_emscripten.whl
+[log] cross_file.fetch 200
+[log] End.cross_file.fetch /tmp/tmp-712-3 r/w= 1527290
+[log] # 166: /tmp/pygame_ce-2.5.7-cp312-cp312-wasm32_bi_emscripten.whl installed
+
+[log] # 235: Scanning /data/data/org.python/assets/build/env for WebAssembly libraries [compiling]
+
+[log] # 835: if your __main__ code is not async or valid for pygbag it may block now
+
+[log] __main__ async: ok
+
+[log] default.tmpl: done
+
+[log] >>> 
+[log] 세이브 되살림: 0 개
+
+[warning] The ScriptProcessorNode is deprecated. Use AudioWorkletNode instead. (https://bit.ly/audio-worklet)
+[warning] Unsupported device pixel ratio 2
