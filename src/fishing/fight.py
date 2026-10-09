@@ -328,7 +328,7 @@ class Fight:
         rar = self.fish.get("rarity")
         if b.phases and ((rar == "legend" and b.phase >= 2) or (rar == "phantom" and b.phase >= 1)):
             w *= c["last_phase_width"]
-        hi = gh - wob
+        hi = gh - max(c["top_gap_min"], (gh - self.green_low) * c["top_gap_frac"]) - wob   # 초록 맨 위에서 조금 띄움 (53-5)
         return hi - w, hi
 
     def taut_beaten(self) -> bool:
@@ -1061,6 +1061,12 @@ class Fight:
             self.stagger_t -= dt
             reel_in *= self.atk["stagger_reel_mult"]   # 퍼펙트 뒤 휘청 (CU4-2)
         reel_in *= self._arm_tick(dt, reeling)          # 팔 힘 (CU5-1): 바닥나면 2초 동안 30%
+        if self.taut_in:   # 팽팽 구간 (53-5): 띠 안에서 감으면 줄도 더 빨리 들어옴 (체력 배수만으론 판이 안 짧아져서)
+            tc = self.taut_cfg
+            if self.fish.get("rarity") in ("legend", "phantom"):
+                reel_in *= tc["boss_reel_mult"]   # 전설 · 환상: 최소 2분 규칙
+            else:
+                reel_in *= tc["streak_reel_mult"] if self.taut_hot else tc["reel_mult"]
         if self.manual_drag:
             reel_in *= 1 + self.rel_cfg["manual_reel_bonus"]   # '드랙 직접 조절' 수고 보상 (CU3-3)
         if any(p.hold_payout for p in self.pats):
