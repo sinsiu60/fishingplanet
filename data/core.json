@@ -46,7 +46,7 @@
     "return_sec": 0.5,
     "ancient_window_mult": 1.5,
     "ancient_return_sec": 0.2,
-    "manual_reel_bonus": 0.1
+    "manual_reel_bonus": 0.1, "miss_drag": "top", "_miss_drag": "v1.7.1: 풀기를 놓치면 돌진 동안 드랙이 최고 단계로 잠김 (예전 = 날뛰는 중 단계 mid → 장력이 거의 안 튀어 Q 를 안 눌러도 버텨짐). 늦게라도 누르면 그 순간부터 1단계"
   },
   "attack": {
     "_설명": "신호가 중요하게 (CU4). 체력은 최대 체력 비율로: 퍼펙트 −perfect_frac + 휘청 stagger_sec 동안 감기 ×stagger_reel_mult, 좋음 −good_frac, 놓침 +miss_heal_frac ('숨을 돌렸다'). 경과가 par × overtime_par_mult 를 넘으면 줄이 초당 overtime_line_frac (최대 줄의 비율) 닳음. 틈(gap): gap.actions 가 끝난 직후 gap.sec 동안 감으면 초당 −gap.drain_frac + 릴 티어별 pull_by_tier m 를 그 동안 나눠 당김, ok_hold_sec 넘게 감으면 랭크 응답 기회 '좋음' 1. 측면 압박(side): 낚싯대가 물고기 반대쪽(align<0)이면 초당 −drain_frac × (−align), 위협 구역 쪽으로 끌려가는 속도 ×hazard_lateral_mult.",

@@ -3558,6 +3558,12 @@ class FishingScene(Scene):
             self.popups.add(ev, pos)
             self.screen_fx.miss(self.screen_fx.map(pos))
             self.shake_kick = 3.0
+        elif ev == "rush_strain":
+            # 풀기를 놓친 돌진 (v1.7.1): 릴이 잠긴 채 장력이 빨강 — 늦게라도 Q 를 누르면 그때부터 풀림
+            pos = self._fish_screen()
+            self.popups.say("Q 풀어!", (255, 90, 80), pos, 1.6)
+            self.sfx.play(random.choice(("legacy_creak", "legacy_creak2", "legacy_creak3")), 0.75)
+            self.shake_kick = max(self.shake_kick, 3.5)
         elif ev == "creak":
             # v0.8.14 롤백: 장력 소리는 예전처럼 빨강 + 줄 50% 아래에서만 가끔 '끼익' (상시 삐걱임 반복음 없앰)
             self.sfx.play(random.choice(("legacy_creak", "legacy_creak2", "legacy_creak3")), random.uniform(0.45, 0.65))

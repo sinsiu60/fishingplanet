@@ -117,6 +117,7 @@ class Fight:
         self.rel_hold = 0.0                   # 돌진이 끝난 뒤 풀어 둔 단계를 유지하는 남은 초
         self.rel_hold_drag = 1
         self.rel_late = False                  # 돌진이 시작된 뒤 늦게 누름 (놓침 판정 + 그때부터 최저)
+        self.rush_strain = False               # 풀기를 놓친 돌진에서 '줄이 비명' 알림을 띄웠는지 (v1.7.1)
         # 신호가 중요하게 (CU4): 체력은 최대 체력 비율로 · 휘청 · 틈 공략 · 측면 압박 · 오래 끌기
         self.atk = load_json("core.json")["attack"]
         # 전설 · 환상: 신호 하나의 비율을 줄여 긴 싸움 유지 (atk.big_mult — 등급 안에서는 크기 상관없이 같은 무게)
@@ -415,6 +416,7 @@ class Fight:
         self.rush_start_t = self.elapsed
         self.rel_grade = None
         self.rel_late = False
+        self.rush_strain = False   # 이번 돌진에서 '줄이 비명' 알림을 띄웠는지
         if self.manual_drag:
             return
         if self.rel_press is not None:
@@ -442,8 +444,8 @@ class Fight:
                 want = 1   # 늦은 풀기도 누른 순간부터 풀림 (판정은 놓침 — 그 사이 튄 장력이 벌)
             elif g == "good":   # 좋음: 처음 잠깐만 한 단계 덜 풀림 = 장력 조금 튐
                 want = min(top, int(self.rel_cfg["good_drag"])) if since < self.rel_cfg["good_spike_sec"] else 1
-            else:
-                want = mid   # 놓침: 날뛰는 중 단계 그대로 = 장력 크게 튐
+            else:   # 놓침: 릴이 잠긴 채 (최고 단계, miss_drag) = 장력이 빨강으로 튐 → 늦게라도 Q 를 누르면 그때부터 풀림
+                want = top if self.rel_cfg.get("miss_drag", "top") == "top" else mid
             if g in ("perfect", "good") or self.rel_late:
                 self.rel_hold_drag = want
                 self.rel_hold = self.rel_cfg["ancient_return_sec"] if self.gear.get("auto_drag") else self.rel_cfg["return_sec"]
@@ -954,6 +956,10 @@ class Fight:
         self.target = target
         k = 1 - math.exp(-dt / cfg["tension_response_sec"])
         self.tension = clamp(self.tension + (target - self.tension) * k, 0, 110)
+        if b.state == "rush" and self.rel_grade == "miss" and not self.rel_late and not self.manual_drag \
+                and not self.rush_strain and self.tension > self.green_high:
+            self.rush_strain = True
+            self.events.append("rush_strain")   # 풀기를 놓쳐 줄이 빨강 — 화면 'Q 풀어!' (늦게라도 누르면 풀림)
 
         # 거리
         if reeling:
