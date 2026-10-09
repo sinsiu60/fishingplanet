@@ -118,6 +118,19 @@ class Fight:
         self.rel_hold_drag = 1
         self.rel_late = False                  # 돌진이 시작된 뒤 늦게 누름 (놓침 판정 + 그때부터 최저)
         self.rush_strain = False               # 풀기를 놓친 돌진에서 '줄이 비명' 알림을 띄웠는지 (v1.7.1)
+        # 팽팽 구간 (TAUT_ZONE.md, DESIGN 53): 초록 맨 위 금색 띠 — 감으며 그 안에 붙잡으면 고정 소모 ×2 (연속 ×2.5)
+        self.taut_cfg = load_json("core.json")["taut"]
+        self.taut_lo = self.taut_hi = 0.0
+        self.taut_on = False         # 장력이 띠 안 (그리기용, 감기 · 신호와 무관)
+        self.taut_in = False         # 효과를 받는 중 (감는 중 + 띠 안 + 신호 없음)
+        self.taut_paused = False     # 신호 예고 · 판정 중 = 효과 정지 (띠는 흐리게)
+        self.taut_streak = 0.0       # 연속으로 안에 있던 초
+        self.taut_hot = False        # streak_sec 넘음 ('물 올랐다')
+        self.taut_time = 0.0         # 효과를 받은 총 초
+        self.taut_reel_time = 0.0    # 신호 밖에서 감은 총 초 (팽팽 비율의 분모)
+        self.taut_last_t = -99.0     # 마지막으로 띠 안이던 시각 (줄타기 중 넘쳐 끊겼는지)
+        self.taut_overflow = False
+        self.taut_hold = 0.0         # 쉬는 물고기를 감는 동안 누른 시간 (calm_hold)
         # 신호가 중요하게 (CU4): 체력은 최대 체력 비율로 · 휘청 · 틈 공략 · 측면 압박 · 오래 끌기
         self.atk = load_json("core.json")["attack"]
         # 전설 · 환상: 신호 하나의 비율을 줄여 긴 싸움 유지 (atk.big_mult — 등급 안에서는 크기 상관없이 같은 무게)
@@ -298,6 +311,58 @@ class Fight:
             if d < best_d and hz["dist"][0] - 3 <= self.distance <= hz["dist"][1] + 3:
                 best, best_d = (1 if center > self.angle else -1), d
         return best
+
+    # ── 팽팽 구간 (TAUT_ZONE.md, DESIGN 53) ──
+    def taut_band(self) -> tuple[float, float]:
+        """금색 띠 (아래, 위) 장력 값: 초록 맨 위 width_frac · 무게 · 날뛸 때 ×0.6 + 흔들림 · 마지막 페이즈 ×0.9."""
+        c = self.taut_cfg
+        b = self.brain
+        gh = self.green_high
+        w = max(c["min_width"], (gh - self.green_low) * c["width_frac"])
+        hw = c["heavy_width"]
+        w *= lerp(hw[0], hw[1], clamp((self.weight - 0.4) / 2.6, 0.0, 1.0))
+        wob = 0.0
+        if not b.is_calm:   # 날뛰는 중: 좁고 위아래로 흔들림 (초록 위로는 안 나감)
+            w *= c["active_width"]
+            wob = c["active_wobble"] * (1 - math.cos(math.tau * self.elapsed / c["wobble_sec"]))
+        rar = self.fish.get("rarity")
+        if b.phases and ((rar == "legend" and b.phase >= 2) or (rar == "phantom" and b.phase >= 1)):
+            w *= c["last_phase_width"]
+        hi = gh - wob
+        return hi - w, hi
+
+    def taut_beaten(self) -> bool:
+        """다 지쳐 뜰채까지 끌어오는 중 (체력이 뜰채 기준 이하): 줄타기 없이 꾹 감아도 됨."""
+        need = self.cfg["net_min_stamina_legend" if self.fish.get("rarity") in ("legend", "phantom") else "net_min_stamina"]
+        return self.stamina_frac <= need
+
+    def taut_busy(self) -> bool:
+        """신호 예고 · 판정 중 (팽팽 구간 효과 정지 — 신호 대응이 먼저) · 다 지친 뒤 끌어오기."""
+        st = self.brain.state
+        return bool(self.pats) or st in ("telegraph", "rush", "jump", "turn", "dual", "fake_tired") or st in PATTERN_IDS \
+            or self.taut_beaten()
+
+    def _taut_tick(self, dt: float, reeling: bool) -> None:
+        self.taut_lo, self.taut_hi = self.taut_band()
+        self.taut_on = self.taut_lo <= self.tension <= self.taut_hi
+        self.taut_paused = self.taut_busy()
+        self.taut_in = reeling and self.taut_on and not self.taut_paused and self.phase == "fight"
+        if reeling and not self.taut_paused:
+            self.taut_reel_time += dt
+        if self.taut_in:
+            self.taut_time += dt
+            self.taut_streak += dt
+            self.taut_last_t = self.elapsed
+            if not self.taut_hot and self.taut_streak >= self.taut_cfg["streak_sec"]:
+                self.taut_hot = True
+                self.events.append("taut_hot")   # '물 올랐다' — 불꽃 커짐 · 줄 우는 소리
+        else:
+            self.taut_streak = 0.0
+            self.taut_hot = False
+
+    def taut_ratio(self) -> float:
+        """감은 시간(신호 밖) 중 팽팽 구간에 있던 비율 (랭크 '줄' 막대 · '줄타기 명인')."""
+        return self.taut_time / self.taut_reel_time if self.taut_reel_time > 0.5 else 0.0
 
     def _arm_tick(self, dt: float, reeling: bool) -> float:
         """팔 힘 (CU5-1). 돌려줌: 감기 배율 (바닥난 동안 out_reel_mult)."""
@@ -912,6 +977,12 @@ class Fight:
         self.align = rod_aim * side  # + 같은 쪽(나쁨), - 반대쪽(좋음)
         dir_mult = 1 + cfg["rod_align_tension"] * self.align
 
+        ch = self.taut_cfg.get("calm_hold")
+        if ch:   # 누른 시간 (떼면 fall 배로 줄어듦 — 짧게 떼었다 다시 누르면 바로 띠 근처로)
+            if reeling:   # 상한 = 곡선이 cap 에 닿는 시간
+                self.taut_hold = min(self.taut_hold + dt, (ch["cap"] - ch["base"]) / ch["per_sec"])
+            else:         # 떼는 순간 초록 맨 위 값 아래로 → 그다음 fall 배로 줄어듦 (뗐는데 빨강에 머물지 않게)
+                self.taut_hold = max(0.0, min(self.taut_hold, (1.0 - ch["base"]) / ch["per_sec"]) - ch["fall"] * dt)
         # 목표 장력
         drag_frac = self.drag_frac
         pull = b.pull * self.fish.get("power", 1.0) * cfg["fish_pull_scale"] * dir_mult
@@ -923,6 +994,7 @@ class Fight:
         reel_t = 0.0
         if reeling:
             reel_t = cfg["reel_tension_min"] + cfg["reel_tension_per_drag"] * drag_frac
+            reel_t += self.taut_cfg.get("reel_bias", 0.0)   # 팽팽 구간 반응 맞춤 (기본 0)
             if calm:
                 reel_t *= cfg["reel_tension_mult_when_calm"]
         target = cfg["base_line_tension"] + pull + reel_t
@@ -934,7 +1006,18 @@ class Fight:
             over = target - self.drag_limit
             payout = min(cfg["payout_max_speed"], over * cfg["payout_speed_per_tension"])
             target = self.drag_limit + over * cfg["drag_overflow_keep"]
-        if reeling and calm:
+        ch = self.taut_cfg.get("calm_hold")
+        beaten = self.taut_beaten()
+        if reeling and calm and ch and not beaten:   # 다 지친 뒤 끌어오기는 예전처럼 꾹 (초록 안에 머묾)
+            # 팽팽 구간 (53 🅰-4): 쉬는 물고기를 꾹 감으면 누른 시간만큼 장력이 차오름 — 0.5초쯤 금색 띠, 1초 넘으면 빨강
+            # (예전 '초록 아래 + 20 에서 멈춤'은 T1 에선 띠 꼭대기에 영원히, T3+ 에선 띠에 못 닿아 줄타기가 안 됨)
+            gw = self.green_high - self.green_low
+            target = max(target, self.green_low + gw * min(ch["cap"], ch["base"] + ch["per_sec"] * self.taut_hold))
+        elif not reeling and calm and ch and not beaten and self.taut_hold > 0:
+            # 짧게 뗐을 때: 장력이 한 번에 무너지지 않고 rel_drop 만큼 내려간 뒤 누른 시간이 줄어드는 만큼 부드럽게 (끊어 감기)
+            gw = self.green_high - self.green_low
+            target = max(target, self.green_low + gw * (ch["base"] - ch["rel_drop"] + ch["per_sec"] * self.taut_hold))
+        elif reeling and calm:
             # 지친 물고기를 감는 중엔 물고기 무게만큼 줄이 당겨짐 → 장력은 초록 구간 안에 유지
             # (드랙 풀림 계산 뒤에 적용: 저항이 없으니 줄은 풀리지 않는다)
             floor = self.green_low + cfg["calm_reel_floor"] + cfg["calm_reel_floor_per_drag"] * drag_frac
@@ -960,6 +1043,7 @@ class Fight:
                 and not self.rush_strain and self.tension > self.green_high:
             self.rush_strain = True
             self.events.append("rush_strain")   # 풀기를 놓쳐 줄이 빨강 — 화면 'Q 풀어!' (늦게라도 누르면 풀림)
+        self._taut_tick(dt, reeling)
 
         # 거리
         if reeling:
@@ -1062,6 +1146,8 @@ class Fight:
             drain += cfg["stamina_drain_active"] + self.tension / 100 * cfg["stamina_drain_per_tension"]
         elif reeling and b.is_calm:
             drain += cfg["stamina_drain_reel_calm"]
+        if self.taut_in:   # 팽팽 구간 (53): 고정 소모(감기 · 버티기)만 배수 — 신호 · 틈 · 측면과 따로
+            drain *= self.taut_cfg["streak_mult"] if self.taut_hot else self.taut_cfg["drain_mult"]
         drain *= self.passive_k   # 판 길이 (CU6-2): 줄인 체력만큼 고정 소모도
         drain += self._gap_tick(dt, reeling)
         if self.align < 0:   # 측면 압박 (CU4-4): 반대쪽으로 당기는 만큼
@@ -1161,7 +1247,8 @@ class Fight:
         damage = clamp(self.line_damage / self.line_max, 0, 1)
         score = rank_mod.compute_score(self.opp, self.misses, damage, self.elapsed, self.par,
                                        legend=self.fish.get("rarity") in ("legend", "phantom"),
-                                       allow=rank_mod.line_allow(self.fish))   # 대형 물고기 줄 손상 예외 (49-4)
+                                       allow=rank_mod.line_allow(self.fish),   # 대형 물고기 줄 손상 예외 (49-4)
+                                       taut=self.taut_ratio())                 # 팽팽 구간 비율 (53)
         size = rank_mod.final_size(self.size_cm, score["rank"])
         price = rank_mod.sell_price(self.fish, size, score["rank"])
         if self.mutations:
@@ -1175,10 +1262,13 @@ class Fight:
             "price": price, "mutations": list(self.mutations), "twin": self.twin_brains is not None,
             "perfects": self.perfects, "misses": self.misses, "line_damage": damage, "opp": dict(self.opp),
             "elapsed": self.elapsed, "par": self.par,
+            "taut_ratio": self.taut_ratio(),
+            "taut_badge": self.taut_ratio() >= self.taut_cfg["badge_ratio"],   # '줄타기 명인' (53)
         }
         self.events.append("caught")
 
     def _lose(self, reason: str) -> None:
         self.phase = "lost"
         self.lose_reason = reason
+        self.taut_overflow = reason == "snap" and self.elapsed - self.taut_last_t < 3.0   # 줄타기 중 넘쳐 끊김 (놓친 이유 문구)
         self.events.append("lost:" + reason)

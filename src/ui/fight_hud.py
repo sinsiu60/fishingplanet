@@ -54,6 +54,7 @@ def draw_gauges(canvas, pal, fight, t: float) -> None:
     # 초록 구간 경계선
     canvas.fill((230, 255, 230), (x - 2, int(ty(gl)), w + 4, 1))
     canvas.fill((230, 255, 230), (x - 2, int(ty(gh)), w + 4, 1))
+    _draw_taut(canvas, fight, x, w, ty, t)
     if fight.manual_drag and fight.drag_limit < 100:   # '드랙 직접 조절' (CU3-3): 줄이 풀리기 시작하는 장력 = 흰 1px 선, 넘은 구간 하늘색 줄무늬
         ly = int(ty(fight.drag_limit))
         if fight.tension > fight.drag_limit:
@@ -174,6 +175,8 @@ def draw_boss_bar(canvas, pal, fight) -> None:
         if getattr(fight, "gap_t", 0) > 0 and int(fight.elapsed * 8) % 2 == 0:
             border = (255, 220, 90)   # 틈 (CU4-3): 테두리 노란 깜빡
         pygame.draw.rect(canvas, border, (x - 2, y - 2, bw + 4, bh + 4), 1)
+        if getattr(fight, "taut_in", False):   # 팽팽 구간 (53): 체력 바 금색 1px
+            pygame.draw.rect(canvas, TAUT_GOLD, (x - 3, y - 3, bw + 6, bh + 6), 1)
         fx = getattr(fight, "stam_fx", None)
         if fx and fx["kind"] == "perfect" and fight.elapsed - fx["t"] < fight.atk["bar"]["flash_sec"]:
             pygame.draw.rect(canvas, (255, 255, 255), (x - 3, y - 3, bw + 6, bh + 6), 1)   # 퍼펙트: 흰 번쩍 테두리
@@ -182,6 +185,39 @@ def draw_boss_bar(canvas, pal, fight) -> None:
         st = "지침"
     shift = p2 or getattr(fight, "p2_shift", False)   # 2페이즈 바의 마름모 · 점 2개 오른쪽으로 (컷신 폭발부터)
     text(canvas, st, (x + bw + (26 if shift else 6), y + 3), STATE_COLOR.get(st, (255, 200, 170)), 11, "midleft")
+
+
+TAUT_GOLD, TAUT_EDGE = (255, 214, 90), (255, 236, 170)
+_TAUT_SURF: dict = {}
+
+
+def _draw_taut(canvas, fight, x: int, w: int, ty, t: float) -> None:
+    """팽팽 구간 (TAUT_ZONE 🅰-1, DESIGN 53): 초록 맨 위 금색 띠 (알파 160 · 테두리 1px). 안에서 감으면 밝아지고 옆에 작은 불꽃,
+    0.8초 넘게 이어지면 불꽃이 커짐. 신호 예고 · 판정 중 · 다 지친 뒤엔 흐리게 (효과 정지)."""
+    if not hasattr(fight, "taut_lo") or fight.taut_hi <= fight.taut_lo:
+        return
+    y0, y1 = int(ty(fight.taut_hi)), int(round(ty(fight.taut_lo)))
+    hh = max(2, y1 - y0)
+    on = fight.taut_in
+    a = 80 if fight.taut_paused else (255 if on else 200)
+    key = (w, hh, a)
+    band = _TAUT_SURF.get(key)
+    if band is None:   # 매 프레임 새 반투명 표면을 만들지 않게 (폰, DESIGN 44)
+        if len(_TAUT_SURF) > 64:
+            _TAUT_SURF.clear()
+        band = _TAUT_SURF[key] = pygame.Surface((w, hh), pygame.SRCALPHA)
+        band.fill((*(lerp_color(TAUT_GOLD, (255, 255, 255), 0.3) if a >= 255 else TAUT_GOLD), a))
+    canvas.blit(band, (x, y0))
+    edge = TAUT_EDGE if not fight.taut_paused else lerp_color(TAUT_EDGE, (40, 40, 50), 0.55)
+    canvas.fill(edge, (x - 1, y0, w + 2, 1))
+    canvas.fill(edge, (x - 1, y0 + hh - 1, w + 2, 1))
+    if on and int(t * 20) % 3 != 2:   # 작은 금색 불꽃 (3프레임 깜빡) — 오래 붙잡으면 커짐 ('물 올랐다')
+        big = fight.taut_hot
+        fx, fy = x + w + 10, (y0 + y1) // 2
+        hgt = 9 if big else 5
+        pts = [(fx, fy - hgt), (fx + 3, fy + 1), (fx, fy + 3), (fx - 3, fy + 1)]
+        pygame.draw.polygon(canvas, TAUT_GOLD, pts)
+        pygame.draw.polygon(canvas, (255, 250, 220), [(fx, fy - hgt + 3), (fx + 1, fy + 1), (fx - 1, fy + 1)])
 
 
 ARM_COL = (0xE8, 0xA0, 0x40)
@@ -342,6 +378,8 @@ def catch_badges(news: dict | None) -> list:
         badges.append(("도감 금테 획득!", RANK_COLORS["S"]))
     if news.get("heavy"):   # 대물 (크기 상위 10%, CU5-2) — 판매가 +30% (CU8-④)
         badges.append(("묵직한 손맛! 판매가 +30%", (255, 190, 120)))
+    if news.get("taut"):      # 팽팽 구간 비율 50% 이상 (TAUT_ZONE 🅰-6, 53)
+        badges.append((f"줄타기 명인 · 금색 칸 {news['taut']}%", TAUT_GOLD))
     if news.get("excited"):   # 들뜬 물고기 (CU9) — 판매가 × core.json variety.excited_price
         k = load_json("core.json")["variety"]["excited_price"]
         badges.append((f"들뜬 녀석! 판매가 ×{k:g}", (255, 170, 120)))

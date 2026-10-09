@@ -36,6 +36,23 @@
       "storm"
     ]
   },
+  "taut": {
+    "_설명": "팽팽 구간 (TAUT_ZONE.md, DESIGN 53). 장력 게이지 초록 맨 위 width_frac (최소 min_width). 감는 중 안에 있으면 고정 소모 × drain_mult, streak_sec 연속이면 × streak_mult. 날뛸 때 폭 × active_width · 흔들림 ±active_wobble (wobble_sec 주기). 무게에 따라 폭 × lerp(heavy_width[0], heavy_width[1], (무게 − 0.4) / 2.6). 전설 · 환상 마지막 페이즈 × last_phase_width. 신호 예고 · 판정 중엔 효과 정지. reel_bias = 감기 중 장력 목표 보정 (반응 맞춤용, 기본 0). rank_weight = 랭크 '줄' 점수 중 팽팽 비율 몫, badge_ratio = '줄타기 명인' 배지 기준.",
+    "width_frac": 0.15,
+    "min_width": 4,
+    "drain_mult": 2.0,
+    "streak_sec": 0.8,
+    "streak_mult": 2.5,
+    "active_width": 0.6,
+    "active_wobble": 3,
+    "wobble_sec": 1.2,
+    "heavy_width": [1.15, 0.7],
+    "last_phase_width": 0.9,
+    "reel_bias": 0,
+    "calm_hold": {"_설명": "🅰-4 장력 반응: 물고기가 쉼 · 지침일 때 감기 장력 = 초록 아래 + 초록 폭 × min(cap, base + per_sec × 누른 시간). 떼면 누른 시간이 fall 배 빠르게 줄어들고, 그동안 장력 목표 = 같은 식 − rel_drop (짧게 떼면 부드럽게 내려옴, 누른 시간이 0 이 되면 예전처럼 느슨). 예전 '초록 아래 + 20 에서 멈춤' (T1 은 띠 꼭대기에서 영원히 · T3+ 는 띠에 못 닿음) 대신.", "base": 0.72, "per_sec": 0.36, "cap": 1.3, "fall": 2.0, "rel_drop": 0.12},
+    "rank_weight": 0.2,
+    "badge_ratio": 0.5
+  },
   "release": {
     "_설명": "자동 드랙 + 돌진 '풀기' 신호 (CU3). 자동 드랙: 쉼 · 지침 = 최고 / 날뛰는 중 = floor(단계 수 × active_frac) (5단계 → 2) / 돌진 = 풀기 판정에 따라 — 퍼펙트 1단계 · 좋음 처음 good_spike_sec 동안 good_drag 단계 뒤 1단계 · 늦게 누름(판정은 놓침) 누른 순간부터 1단계 · 안 누름 날뛰는 중 단계. 퍼펙트 = 돌진 시작 ±perfect_sec, 좋음 = 그 앞 good_sec 안. 돌진이 끝나도 return_sec 동안 풀어 둔 단계 유지. 고대 어부의 릴: 판정 구간 ×ancient_window_mult · 복귀 ancient_return_sec. '드랙 직접 조절' 설정 = 예전 방식 + 감기 ×(1+manual_reel_bonus).",
     "perfect_sec": 0.12,

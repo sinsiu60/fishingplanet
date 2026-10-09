@@ -1786,6 +1786,21 @@
     }
    ]
   },
+  "TG-28": {
+   "title": "팽팽 구간",
+   "who": "haru",
+   "start": "event:taut_first",
+   "steps": [
+    {
+     "kind": "freeze",
+     "target": "fight.gauge.taut",
+     "text": "초록 맨 위 금색 칸 보이지? 감았다 뗐다 하면서 거기 붙잡아 둬. 물고기가 훨씬 빨리 지쳐!",
+     "expr": null,
+     "until": "tap",
+     "src_text": "초록 맨 위 금색 칸 보이죠? 감았다 뗐다 하면서 거기 붙잡아 두세요. 물고기가 훨씬 빨리 지쳐요!"
+    }
+   ]
+  },
   "TG-PH": {
    "title": "환상의 물고기",
    "who": "baek",

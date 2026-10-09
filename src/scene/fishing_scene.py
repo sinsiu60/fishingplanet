@@ -48,7 +48,7 @@ HINTS = {
     CastState.FLIGHT: "",
     CastState.LANDED: "좌클릭: 챔질(쑥!)   우클릭: 회수   화면 끝: 둘러보기",
     CastState.RETRIEVE: "줄 감는 중...",
-    CastState.HOOKED: "좌클릭 유지: 감기   우클릭: 숙이기   Q/E·휠: 드랙   마우스: 버티기   H: 도움말",
+    CastState.HOOKED: "좌클릭 유지: 감기 (금색 칸 = 2배)   우클릭: 숙이기   Q: 풀기   마우스: 버티기   H: 도움말",
 }
 GOOD = (140, 240, 150)
 BAD = (255, 150, 130)
@@ -1453,6 +1453,7 @@ class FishingScene(Scene):
         self.slack_t = self.red_t = 0.0
         if self.training is None:
             self.game.guide.event("fight_start")   # TG-02 (예전 'fight_intro' 카드 대신)
+            self.taut_told = False   # 팽팽 구간 튜토리얼 (TG-28): 이번 파이팅에서 물고기가 처음 쉴 때 한 번 알림
         self._preload_catch_song(fish)
 
     # ── 어탁 (35-2) ──
@@ -2211,6 +2212,11 @@ class FishingScene(Scene):
             self.training.update(dt)  # 끝나면 바로 다시, 게이지는 계속 채움
             if self.training is None or self.fight is None:
                 return
+        f = self.fight
+        if not getattr(self, "taut_told", True) and f.phase == "fight" and self.training is None \
+                and f.brain.is_calm and not f.taut_paused:
+            self.taut_told = True
+            self.game.guide.event("taut_first")   # TG-28 팽팽 구간: 물고기가 처음 쉴 때 (모든 세이브 한 번)
         f = self.fight
         # 클릭(뜰채·우클릭)으로 생긴 이벤트는 틱 밖에서 발생하므로 먼저 처리
         for ev in f.events:
@@ -3558,6 +3564,9 @@ class FishingScene(Scene):
             self.popups.add(ev, pos)
             self.screen_fx.miss(self.screen_fx.map(pos))
             self.shake_kick = 3.0
+        elif ev == "taut_hot":
+            # 팽팽 구간 0.8초 연속 ('물 올랐다', 53): 줄이 팽팽히 우는 낮은 '우웅' — 풀기 빌드업 줄 소리 한 단계 위 (+약 2.8반음)
+            self.sfx.play("sig_release_hum#1", 0.3)
         elif ev == "rush_strain":
             # 풀기를 놓친 돌진 (v1.7.1): 릴이 잠긴 채 장력이 빨강 — 늦게라도 Q 를 누르면 그때부터 풀림
             pos = self._fish_screen()
@@ -3620,6 +3629,8 @@ class FishingScene(Scene):
             f.result["fish"] = shown
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
+            if f.result.get("taut_badge") and self.catch_news is not None:
+                self.catch_news["taut"] = round(f.result.get("taut_ratio", 0) * 100)   # '줄타기 명인' 배지 (53)
             self._check_exam_ready()
             hc = load_json("details/hands_catch.json")
             self.release_item = (self.save.data["keepnet"][-1] if f.fish.get("rarity") in hc["release"]["for"]
@@ -4512,7 +4523,10 @@ class FishingScene(Scene):
             self._draw_access_mark(canvas)
             return
         if f.phase == "lost":
-            fight_hud.draw_lose_panel(canvas, f, LOSE_REASONS[f.lose_reason], self.end_t)
+            why = LOSE_REASONS[f.lose_reason]
+            if getattr(f, "taut_overflow", False):   # 줄타기 중 넘쳐 끊김 (TAUT_ZONE 🅰-5)
+                why = (why[0], why[1] + " 금색 칸을 넘지 않게 감기를 끊어 주세요.")
+            fight_hud.draw_lose_panel(canvas, f, why, self.end_t)
             if self.exam_run is not None and self.end_t > 0.6:
                 hud.text(canvas, f"T{self.exam_run['tier']} 시험 불합격 — 게임 하루 뒤 다시", (canvas.get_width() // 2, 58),
                          BAD, 11, "center")
@@ -4635,6 +4649,9 @@ class FishingScene(Scene):
             red_h = int(h - f.green_high / 100 * h)
             T.mark("fight.gauge.tension.red", (ox + 6, y, 16, max(4, red_h)))
             T.mark("fight.gauge.line", (ox + 32, y - 2, 13, h + 18))
+            if hasattr(f, "taut_lo"):   # 팽팽 구간 금색 띠 (TG-28, 53)
+                t_hi, t_lo = y + h - f.taut_hi / 100 * h, y + h - f.taut_lo / 100 * h
+                T.mark("fight.gauge.taut", (ox + 2, int(t_hi) - 4, 26, max(6, int(t_lo - t_hi)) + 8))
             fx, fy = mp(self._fish_screen())
             T.mark("fight.fish", (fx - 22, fy - 16, 44, 30))
             T.mark("fight.slots", (fx - 34, fy - 52, 68, 40))

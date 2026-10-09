@@ -120,7 +120,7 @@ class Guide:
 
     @staticmethod
     def _fight_tut(tid: str) -> bool:
-        return tid in ("TG-02", "TG-20") or tid.startswith(("TG-P", "TG-19"))
+        return tid in ("TG-02", "TG-20", "TG-26", "TG-28") or tid.startswith(("TG-P", "TG-19"))   # TG-26 자동 드랙 · TG-28 팽팽 구간도 파이팅 중
 
     def request(self, tid: str) -> None:
         if tid not in self.queue and (self.run is None or self.run["id"] != tid) and self.can_start(tid):
@@ -217,8 +217,11 @@ class Guide:
             if self.queue and not conds.story_busy(self.game):
                 tid = self.queue[0]
                 if conds.fighting(self.game) and not self._fight_tut(tid):
-                    return   # 파이팅 중엔 파이팅 튜토리얼만 — 나머지는 끝난 뒤
-                self.queue.pop(0)
+                    # 파이팅 중엔 파이팅 튜토리얼만 — 나머지는 끝난 뒤 (앞에 밀린 게 있어도 파이팅 튜토리얼은 지금)
+                    tid = next((q for q in self.queue if self._fight_tut(q)), None)
+                    if tid is None:
+                        return
+                self.queue.remove(tid)
                 if self.can_start(tid):
                     self._begin(tid)
             return

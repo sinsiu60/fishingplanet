@@ -19,7 +19,7 @@ def line_allow(fish: dict) -> float:
 
 
 def compute_score(opp: dict, misses: int, line_damage: float, elapsed: float, par: float, legend: bool = False,
-                  allow: float = 0.0) -> dict:
+                  allow: float = 0.0, taut: float | None = None) -> dict:
     """새 랭크 (BAEK_EXAM 🅰-2, DESIGN.md 49-2): 줄 관리 + 시간 + 신호 대응 − 실수, 기본 점수 없음.
     opp = 응답 기회의 {"P": 퍼펙트, "G": 좋음, "M": 놓침}. 신호 대응 = (퍼펙트 + 좋음 × good_credit) / 기회 × signal_max,
     기회가 0번이면 signal_none. S 는 점수 + 퍼펙트 S_min_perfects 번 이상. 전설 · 환상은 좋음을 legend_good_credit 으로 (길게 싸우는 만큼)."""
@@ -28,6 +28,9 @@ def compute_score(opp: dict, misses: int, line_damage: float, elapsed: float, pa
     if allow > 0:   # 대형 물고기: 봐주는 몫을 넘은 손상만 남은 폭에 비례해 (끊기지만 않으면 거의 만점)
         dmg = max(0.0, dmg - allow) / (1.0 - allow)
     line_pts = (1.0 - dmg) * r["line_max"]
+    if taut is not None:   # 팽팽 구간 (TAUT_ZONE 🅰-6): 줄 점수 × (1 − w + w × 팽팽 비율)
+        w = load_json("core.json")["taut"]["rank_weight"]
+        line_pts *= (1.0 - w) + w * max(0.0, min(1.0, taut))
     if elapsed <= par:
         time_pts = r["time_max"]
     else:
@@ -49,7 +52,7 @@ def compute_score(opp: dict, misses: int, line_damage: float, elapsed: float, pa
     else:
         rank = "C"
     return {"score": score, "rank": rank, "line_pts": line_pts, "time_pts": time_pts, "signal_pts": signal_pts,
-            "miss_pts": miss_pts, "opps": n, "perfects": P, "line_allow": allow,
+            "miss_pts": miss_pts, "opps": n, "perfects": P, "line_allow": allow, "taut": taut,
             "s_blocked": score >= cut["S"] and P < r["S_min_perfects"]}   # 점수는 S 인데 퍼펙트가 모자라 A
 
 

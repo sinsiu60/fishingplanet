@@ -95,6 +95,8 @@ class BotPlayer:
         self.rel_seen = 0.0
         self.rel_done = False
         self.arm_rest = False      # 팔 힘 (CU5): 바닥 근처면 잘못된 타이밍 감기를 쉬고 회복을 기다림
+        self.taut_t = 0.0          # 팽팽 구간 조준 흔들림 다시 뽑기까지 남은 초
+        self.taut_err = 0.0
 
     def _release(self, f, b) -> None:
         skill, rnd = self.skill, self.rnd
@@ -138,6 +140,15 @@ class BotPlayer:
         if b.is_active and f.heave_amp > 0:
             edge = min(edge, (f.green_low + f.green_high) / 2 + 2)
         reeling = f.tension < edge
+        if hasattr(f, "taut_band") and not skill.get("no_patterns") and not f.taut_busy() and f.line_frac >= 0.5:
+            # 팽팽 구간 (TAUT_ZONE, DESIGN 53): 금색 띠 가운데를 노림 — 손 떨림 = 초록 폭 × sigma (0.25초마다 다시 뽑음),
+            # '보통'은 띠를 자주 넘거나 못 미침. '드랙만' 봇 · 줄이 반 넘게 닳았을 땐 예전처럼 초록 위쪽 끝 −3.
+            self.taut_t -= DT
+            if self.taut_t <= 0:
+                self.taut_t = 0.25
+                self.taut_err = rnd.gauss(0, skill["sigma"] * (f.green_high - f.green_low))
+            lo, hi = f.taut_lo, f.taut_hi
+            reeling = f.tension < min(hi - 0.8, (lo + hi) / 2 + self.taut_err)   # 일부러 빨강을 노리진 않음 (넘침은 손 늦음으로)
         # 낚싯대: 물고기 반대쪽 (위협 구역·기믹 쪽이면 더 세게)
         target = -f.fish_side() * 0.9
         cur = b.pending if b.state == "telegraph" else b.state
