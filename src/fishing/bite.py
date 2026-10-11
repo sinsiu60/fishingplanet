@@ -52,7 +52,7 @@ def limited_here(f: dict, spot: str, level: float | None = None) -> dict:
 def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot: str = "reservoir",
               bait: dict | None = None, rare_bonus: float = 0.0,
               mods: dict | None = None, season: str | None = None, extra: list | None = None,
-              rare_pp: float = 0.0) -> dict | None:
+              rare_pp: float = 0.0, min_rarity: str | None = None, rare_mult: float = 1.0) -> dict | None:
     """mods = 수면 징후 보정.
     season = 지금 계절 (종별 잘 나옴 ×1.5 / 안 나옴 ×0.5, data/seasons.json), extra = [(물고기, 가중치)] 계절·날씨 이벤트 한정 물고기
     (그 낚시터 기준 시간·날씨 조건 없이 추가, 낚이면 spot = 지금 낚시터)."""
@@ -98,6 +98,13 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
             bases.append(base)
     if not candidates:
         return None
+    if min_rarity:   # 낚시터 사건 보상 (DESIGN 54-4): 다음 한 마리는 이 등급 이상 (전설 제외, 없으면 그대로)
+        rk = {"common": 0, "uncommon": 1, "rare": 2}
+        keep = [i for i, f in enumerate(candidates) if rk.get(f["rarity"], -1) >= rk[min_rarity]]
+        if keep:
+            candidates = [candidates[i] for i in keep]
+            weights = [weights[i] for i in keep]
+            bases = [bases[i] for i in keep]
     if extra:
         # 한정 물고기: 판매가 = 지금 후보(전설·한정 제외)의 출현 가중 기대 기본가 × 희귀도 배율,
         # 가중치 = 데이터 값 × (지금 후보 합 / 표준 풀 limited_ref_pool) — 작은 풀(비밀 낚시터 등)에서도 같은 비율로 드물게.
@@ -129,6 +136,8 @@ def pick_fish(period: str, weather: str, cast_distance: float, rnd=random, spot:
             k = target * (total - rare) / ((1 - target) * rare)
             weights = [w * k if f["rarity"] == "rare" else w for f, w in zip(candidates, weights)]
     weights = _rare_cap(candidates, weights, bases, cfg.get("rare_boost_cap", 0.0))
+    if rare_mult != 1.0:   # 낚시터 사건 보상 (54-4): 몇 분 동안 희귀 × (상한 밖 — 잠깐뿐인 사건 보상)
+        weights = [w * rare_mult if f["rarity"] == "rare" else w for f, w in zip(candidates, weights)]
     return rnd.choices(candidates, weights)[0]
 
 
@@ -325,7 +334,8 @@ class BiteController:
         return pick_fish(self.period, self.weather, self.cast_distance, self.rnd, self.spot, self.bait,
                          rare_bonus=self.rare_bonus, mods=self.sign_mods or None,
                          season=getattr(self, "season", None), extra=getattr(self, "extra_pool", None),
-                         rare_pp=getattr(self, "rare_pp", 0.0))
+                         rare_pp=getattr(self, "rare_pp", 0.0), min_rarity=getattr(self, "min_rarity", None),
+                         rare_mult=getattr(self, "event_rare_mult", 1.0))
 
     def _variety(self, fish: dict | None) -> dict | None:
         """던질 때마다 변수 (CU9, data/core.json variety): 떼 지나감(같은 종 연달아) · 유리병 편지 · 길을 잃은 손님 · 들뜬 물고기.

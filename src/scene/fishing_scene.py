@@ -131,6 +131,7 @@ class FishingScene(Scene):
         self.signs = SurfaceSigns(random.Random(int(_time.time() * 1000) + 7))
         self.sign_fx_t = 0.0
         self.school: dict | None = None    # 물고기 떼 지나감 (CU9): {"x", "z", "t", "life"}
+        self.spot_event = None             # 낚시터 사건 연출 (JOURNEY 🅰, 54-4): src/render/spot_events.EventPlayer
         self.breach = None                 # 전설 등장 도약 (CU10, LEGEND_BREACH): 동안 파이팅 정지
         self.p3 = None                     # 전설 3페이즈 컷신 (CU11): 눈빛 대치 + 각자의 필살
         self.school_next = random.uniform(*load_json("core.json")["variety"]["school_interval_sec"])
@@ -658,6 +659,11 @@ class FishingScene(Scene):
                     self.help_page = 1
                 else:
                     self.help = False
+            return
+        if self.spot_event is not None:   # 낚시터 사건: 건너뛰기 (뒤로 · 건너뛰기 글자)
+            e = self.spot_event
+            if a.name == "back" or (a.name == "primary" and a.pos is not None and e.skip_rect.collidepoint(a.pos)):
+                e.skip()
             return
         if self.card is not None:
             if a.any_press and self.card["t"] > 0.35:
@@ -1630,6 +1636,10 @@ class FishingScene(Scene):
             self.game.screen.shake = (0, 0)
             return
         self.t += dt
+        if self.spot_event is not None:   # 낚시터 사건 중: 낚시 멈춤 (풍경만 움직임)
+            self._tick_spot_event(dt)
+            return
+        self._maybe_spot_event()
         from src.ui import achv_toast
         achv_toast.update(self.game, dt, self.fight is None and self.landing is None and self.catch_show is None
                           and self.game.scenes.current is self)   # 업적 확인·알림 (파이팅·포획 연출 중엔 대기)
@@ -2050,6 +2060,10 @@ class FishingScene(Scene):
         self.bite.legend_block = not gear_ok(self.save, self.spot)   # 미리 맛보기 (CU8-⑤): 장비 조건 전엔 전설 없음
         self.bite.legend_first = {f["id"] for f in self.all_fish if f["rarity"] == "legend" and f["spot"] == self.spot_id
                                   and not self.save.caught(f["id"])}   # 전설 첫 만남 50% (JOURNEY ✂️ ③, 54-3)
+        from src.save import spot_events   # 낚시터 사건 보상 (54-4): 다음 한 마리 등급 · 몇 분 희귀 ×2
+        plain = self.training is None and self.exam_fish is None
+        self.bite.min_rarity = spot_events.take_next_min(self.save) if plain else None
+        self.bite.event_rare_mult = spot_events.rare_mult(self.save, float(self.save.data.get("playtime", 0.0))) if plain else 1.0
         self.bite.force_fish = self.exam_fish if self.exam_fish is not None else \
             (self.all_fish[self.force_i] if self.force_i >= 0 else None)
         landed = self.cast.state == CastState.LANDED   # 대기 = 기다리기만 (루어 액션 저킹 · 리트리브는 삭제, DESIGN 47장)
@@ -3631,6 +3645,12 @@ class FishingScene(Scene):
             f.result["fish"] = shown
             self.end_t = 0.0
             self.catch_news = self.save.record_catch(f.result | {"perfects": f.perfects})
+            if self.training is None and self.exam_fish is None and not f.fish.get("exam"):
+                from src.save import spot_events   # 낚시터 사건 (54-4): 마리 세기 · '다음 한 마리' 보상은 맞는 등급을 잡으면 끝
+                spot_events.on_catch(self.save, self.spot_id)
+                nm = spot_events.take_next_min(self.save)
+                if nm and spot_events.RANK.get(f.fish.get("rarity"), 3) >= spot_events.RANK[nm]:
+                    spot_events.consume_next_min(self.save)
             if f.result.get("taut_badge") and self.catch_news is not None:
                 self.catch_news["taut"] = round(f.result.get("taut_ratio", 0) * 100)   # '줄타기 명인' 배지 (53)
             self._check_exam_ready()
@@ -3834,11 +3854,12 @@ class FishingScene(Scene):
             world.draw_sky(s, pal, cam)
             self.stars.draw(s, pal, cam, t)
             world.draw_celestial(s, pal, cam, hour, t, visible=sky_vis)
-            if theme.get("aurora"):
+            if theme.get("aurora") and self.spot_event is None:   # 빙해 사건 (54-4): 오로라 없이
                 from src.render.eldra_world import draw_aurora
                 draw_aurora(s, pal, cam, t)
             self.clouds.draw(s, pal, cam)
-        sky = self._bg_band(canvas, pal, "sky", (pk, round(cam.yaw, 5), sky_vis, bool(theme.get("aurora"))), paint_sky)
+        sky = self._bg_band(canvas, pal, "sky", (pk, round(cam.yaw, 5), sky_vis, bool(theme.get("aurora")) and self.spot_event is None),
+                            paint_sky)
         canvas.blit(sky, (0, 0), (0, 0, W, hz))
         if theme["terrain"] != "cave":   # 날씨 이벤트 하늘 (유성·쌍무지개·붉은 달) — 산보다 먼저
             self.event_fx.draw_sky(canvas, eid, self.spot.get("continent", "sharmion"), cam.horizon,
@@ -3979,6 +4000,11 @@ class FishingScene(Scene):
         self.legend_fx.draw_world(canvas, pal)      # ② 전설: 거대한 그림자 · 빨려 드는 물결 (찌보다 먼저)
         self.phantom_hfx.draw_world(canvas, pal)    # ② 환상: 보라 터짐 · 깊은 등불 · 달 조각
         self.life.draw_world(canvas, pal, t)        # 먼 낚시꾼 · 배 · 물새 · 먼 점프 (DT8)
+        if self.spot_event is not None:   # 낚시터 사건 (JOURNEY 🅰, 54-4): 물속 그림자 · 말뚝 · 결정 (낚싯대 · 전경보다 뒤)
+            if not getattr(self, "_ev_shot", False):
+                self._ev_shot = True
+                self._save_event_shot(canvas)
+            self.spot_event.draw_world(canvas, pal, cam)
 
         geo = self._rod_geo()
         tip = geo["tip"]
@@ -4069,6 +4095,13 @@ class FishingScene(Scene):
         self.map_fx.draw_screen(canvas)           # 계곡: 위에서 떨어지는 물방울 (DT3)
         self.legend_fx.draw_screen(canvas, pal)   # ② 전설 고유 연출 (DT5)
         self.phantom_hfx.draw_screen(canvas, pal)  # ② 환상 고유 연출 (DT6)
+        if self.spot_event is not None:   # 낚시터 사건 (54-4): HUD · 메뉴 없이 연출만 (띠 · 자막 · 건너뛰기)
+            self.spot_event.draw_screen(canvas, pal, cam)
+            dx, dy = self.spot_event.shake()
+            if dx or dy:
+                canvas.scroll(dx, dy)
+            hud.draw_cursor(canvas, self.mouse)
+            return
         if self.breach is not None:
             self.breach.compose(canvas)   # 전설 도약: 1.7배 확대가 전설을 따라감 · 착수 흔들림 · 노란 번쩍 (카드 · HUD 는 이 뒤 — 확대 안 함)
         if self.p3 is not None:
@@ -4176,6 +4209,64 @@ class FishingScene(Scene):
             self.p2.draw_top(canvas)
         self._mark_targets(canvas)
         hud.draw_cursor(canvas, self.mouse)
+
+    # ── 낚시터 사건 (JOURNEY 🅰, DESIGN 54-4) ──
+    def _maybe_spot_event(self) -> None:
+        if (self.spot_event is not None or self.game.scenes.current is not self or self.backdrop is not None
+                or self.fight is not None or self.landing is not None or self.catch_show is not None or self.board is not None
+                or self.release_scene is not None or self.training is not None or self.exam_fish is not None
+                or self.cast.state != CastState.READY or self.tut_busy() or self.game.guide.frozen()
+                or self._exam_float_on()):
+            return
+        from src.save import spot_events
+        ev = spot_events.due(self.save, self.spot_id)
+        if ev is None:
+            return
+        from src.render.spot_events import EventPlayer
+        self.spot_event = EventPlayer(self.spot_id, ev)
+        self._ev_shot = False
+        self.bite.stop()
+
+    def _tick_spot_event(self, dt: float) -> None:
+        e = self.spot_event
+        e.update(dt)
+        self.clouds.update(dt)
+        self.ripples.update(dt)
+        self.sparkles.update(dt)
+        self.toasts.update(dt)
+        for name, vol in e.cues:
+            self.sfx.play(name, vol)
+        e.cues.clear()
+        if not e.done:
+            return
+        self.spot_event = None
+        from src.core import season as seasons
+        from src.save import spot_events
+        msgs = spot_events.finish(self.save, self.spot_id, float(self.save.data.get("playtime", 0.0)), self.clock.day,
+                                  seasons.current(self.settings))
+        rw = e.ev.get("reward", {})
+        if rw.get("school"):   # 첫 항해: 물고기 떼 지나감 확정
+            ang = random.uniform(0, math.tau)
+            self.school = {"x": self.cast.bx + math.cos(ang) * 1.2 if self.cast.bx else math.cos(ang) * 1.2,
+                           "z": (self.cast.bz or 18.0) + math.sin(ang) * 1.2, "t": 0.0, "life": float(rw["school"]),
+                           "dir": random.uniform(0, math.tau)}
+        for i, m in enumerate(msgs):
+            self.toasts.show(m, (255, 226, 150) if i == 0 else (240, 220, 170), 3.4, 11)
+        self.sfx.play("st_paper", 0.4)
+        self.game.save_now()
+
+    def _save_event_shot(self, canvas) -> None:
+        """다시 보기용 그림 (집 '추억'): 사건 첫 장면의 풍경을 세이브 폴더 events/ 에 (실패해도 그만)."""
+        try:
+            from src.core.paths import save_dir
+            from src.save import spot_events
+            d = save_dir() / "events"
+            d.mkdir(parents=True, exist_ok=True)
+            path = d / f"slot{self.save.slot}_{self.spot_id}.png"
+            pygame.image.save(canvas, str(path))
+            spot_events.state(self.save)["shots"][self.spot_id] = str(path)
+        except (OSError, pygame.error, AttributeError):
+            pass
 
     def _rod_geo(self) -> dict:
         c, f = self.cast, self.fight

@@ -445,6 +445,7 @@
     "merchant_shell_float": {"kind": "float_skin", "name": "조개껍데기 찌", "colors": [[250, 235, 220], [230, 200, 190]], "band": [200, 150, 140], "dot": [120, 90, 80]},
     "merchant_star_float": {"kind": "float_skin", "name": "별가루 찌", "colors": [[60, 60, 120], [220, 220, 255]], "band": [255, 220, 120], "dot": [255, 255, 255], "star": true},
     "haegang_bobber": {"kind": "float_skin", "name": "해강의 찌", "colors": [[242, 242, 238], [242, 242, 238]], "band": [201, 168, 106], "dot": [232, 74, 74]},
+    "haegang_old_bobber": {"kind": "float_skin", "name": "해강의 낡은 찌", "colors": [[214, 206, 186], [226, 220, 204]], "band": [168, 138, 86], "dot": [190, 80, 70]},
     "birthday_float": {"kind": "float_skin", "name": "생일 축하 찌", "colors": [[248, 248, 246], [248, 248, 246]], "band": [255, 150, 190], "dot": [255, 214, 90], "star": true},
     "phantom_float": {"kind": "float_skin", "name": "환상 찌", "colors": [[190, 120, 255], [245, 235, 255]], "trail": [200, 140, 255]},
     "phx_float": {"kind": "float_skin", "name": "잔광 찌", "colors": [[230, 160, 255], [60, 40, 90]], "trail": [230, 170, 255]},

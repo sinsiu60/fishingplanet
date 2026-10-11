@@ -62,9 +62,10 @@ def day_summary(wsys, spot: dict, day: int) -> dict:
 
 
 def legends_with_bait(save, spot: dict, all_fish) -> list[dict]:
-    """그 낚시터 전설 중 전용 미끼를 가진 것 (없으면 표시 안 함 — 스포일러 방지)."""
+    """그 낚시터 전설 중 전용 미끼를 가진 것 (없으면 표시 안 함 — 스포일러 방지). 낚시터 사건으로 본 전설은 미끼가 없어도 (54-4)."""
+    from src.save import spot_events
     return [fi for fi in all_fish if fi["spot"] == spot["id"] and fi.get("rarity") == "legend"
-            and fi.get("bait") and save.owns("bait", fi["bait"])]
+            and fi.get("bait") and (save.owns("bait", fi["bait"]) or spot_events.hinted(save, fi["id"]))]
 
 
 def legend_hits(legends: list[dict], block: int, weather: str) -> list[dict]:

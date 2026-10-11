@@ -223,7 +223,26 @@ class MemoriesScene(Scene):
                 cur = act
                 out.append((acts.get(act, "환상") if act is not None else "환상", None))
             out.append((None, sid))
+        from src.save import spot_events   # 낚시터 사건 (JOURNEY 🅰, 54-4): 다시 보기 + 기념품
+        sev = spot_events.state(self.game.save)
+        evs = [sp for sp in spot_events.cfg()["events"] if sp in sev["seen"]]
+        if evs:
+            out.append(("낚시터 사건", None))
+            out += [(None, "SE:" + sp) for sp in evs]
+        keep = spot_events.keepsakes(self.game.save)
+        if keep:
+            out.append(("기념품", None))
+            out += [(None, "KEEP:" + k) for k in keep]
         return out
+
+    def _label(self, sid: str) -> str:
+        if sid.startswith("SE:"):
+            from src.save import journey, spot_events
+            ev = spot_events.event(sid[3:])
+            return f"{ev['id']}  {journey.spot_short(sid[3:])} · {ev['name']}"
+        if sid.startswith("KEEP:"):
+            return sid[5:]
+        return f"{sid}  {_title(story.scenes()[sid])}"
 
     def _list_rect(self, w, h) -> pygame.Rect:
         return pygame.Rect(w // 2 - 200, h // 2 - 110, 400, 200)
@@ -242,8 +261,11 @@ class MemoriesScene(Scene):
             if lr.collidepoint(a.pos):
                 i = (a.pos[1] - lr.y) // self.ROW + self.scroll
                 rows = self._rows()
-                if 0 <= i < len(rows) and rows[i][1]:
+                if 0 <= i < len(rows) and rows[i][1] and not rows[i][1].startswith("KEEP:"):
                     self.game.sfx.play("ui_click")
+                    if rows[i][1].startswith("SE:"):
+                        self.game.scenes.push(EventReplayScene(self.game, rows[i][1][3:]))
+                        return
                     from src.story import runner
                     runner.replay(self.game, self.room.fishing, rows[i][1])
 
@@ -276,9 +298,57 @@ class MemoriesScene(Scene):
             r = pygame.Rect(lr.x + 10, y - 7, lr.w - 10, self.ROW - 1)
             if r.collidepoint(self.mouse):
                 canvas.fill(ui.PANEL_LIGHT, r)
-            text(canvas, f"{sid}  {_title(sc[sid])}", (lr.x + 14, y), ui.TEXT, 11, "midleft")
+            text(canvas, self._label(sid), (lr.x + 14, y), ui.DIM if sid.startswith("KEEP:") else ui.TEXT, 11, "midleft")
         if not rows:
             text(canvas, "아직 추억이 없다.", lr.center, ui.DIM, 11, "center")
         self.close_btn.rect.topleft = (lr.right - 60, lr.bottom + 6)
         self.close_btn.draw(canvas, self.mouse)
+        draw_cursor(canvas, self.mouse)
+
+
+class EventReplayScene(Scene):
+    """낚시터 사건 다시 보기 (54-4): 처음 볼 때 남긴 풍경 그림 위에 같은 연출 (그림이 없으면 낚시터 색 바탕). 기록은 그대로."""
+
+    def __init__(self, game, spot_id: str):
+        super().__init__(game)
+        from src.render.spot_events import EventPlayer
+        from src.save import spot_events
+        self.player = EventPlayer(spot_id, spot_events.event(spot_id), replay=True)
+        self.bg = None
+        path = spot_events.state(game.save)["shots"].get(spot_id)
+        if path:
+            try:
+                self.bg = pygame.image.load(path)
+            except (OSError, pygame.error, FileNotFoundError):
+                self.bg = None
+        self.mouse = (0, 0)
+
+    def handle_action(self, a) -> None:
+        if a.name == "back" or (a.name == "primary" and a.pos is not None and self.player.skip_rect.collidepoint(a.pos)):
+            self._close()
+
+    def _close(self) -> None:
+        if self in self.game.scenes.stack:
+            self.game.scenes.stack.remove(self)
+
+    def update(self, dt: float) -> None:
+        self.mouse = self.game.input.pointer
+        self.player.update(dt)
+        for name, vol in self.player.cues:
+            self.game.sfx.play(name, vol)
+        self.player.cues.clear()
+        if self.player.done:
+            self._close()
+
+    def draw(self, canvas) -> None:
+        w, h = canvas.get_size()
+        if self.bg is not None:
+            canvas.blit(pygame.transform.scale(self.bg, (w, h)) if self.bg.get_size() != (w, h) else self.bg, (0, 0))
+        else:
+            for y in range(h):   # 바탕: 하늘 → 물
+                k = y / h
+                canvas.fill((int(60 + 40 * k), int(80 + 30 * k), int(110 + 20 * k)) if k < 0.42 else (30, 60, 90), (0, y, w, 1))
+        pal = {"water_top": (40, 80, 110)}
+        self.player.draw_world(canvas, pal, None)
+        self.player.draw_screen(canvas, pal, None)
         draw_cursor(canvas, self.mouse)
