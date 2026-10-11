@@ -76,6 +76,11 @@ def value(save, a: dict) -> int:
         return len(d.get("prints", {}))
     if t == "release":
         return int(d.get("details", {}).get("release_count", 0))
+    if t == "s_eldra":   # 옛 해금 조건 → 업적 (JOURNEY ✂️ ⑤, DESIGN 54-2)
+        return int(st.get("s_ranks_eldra", 0))
+    if t == "legend_s":
+        return sum(1 for f in load_json("fish.json")["fish"] if f["rarity"] == "legend"
+                   and d.get("dex", {}).get(f["id"], {}).get("best_rank") == "S")
     if t == "campfire_seen":   # 모닥불의 작은 일 (TIME_REST 🅳)
         return len(set(d.get("campfire_seen", [])))
     if t == "phantoms":

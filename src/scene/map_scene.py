@@ -11,6 +11,7 @@ from src.scene.base import Scene
 from src.ui import weather_icons
 from src.ui import widgets as ui
 from src.ui.hud import draw_cursor, text, wrap_text
+from src.ui.shop_ui import fit as fit_text
 
 SHARMION_SPOTS = ("reservoir", "valley", "breakwater", "offshore", "deep")
 LAND = (88, 128, 82)
@@ -22,12 +23,29 @@ FC = pygame.Rect(298, 28, 168, 50)   # 오늘 날씨 한 줄 + [달력] 상자 (
 
 
 def unlock_status(save, spot: dict) -> tuple[bool, list[tuple[str, bool]]]:
-    """(조건을 모두 채웠는지, [(조건 설명, 충족 여부)]) — 지도 체크리스트."""
-    cond = spot.get("unlock", {})
-    rows = []
+    """(조건을 모두 채웠는지, [(조건 설명, 충족 여부)]) — 지도 체크리스트. 진행 사슬 (JOURNEY, DESIGN 54-2):
+    옛 조건을 이미 채운 옛 세이브의 낚시터는 열 수 있음 (journey.old_ok)."""
+    from src.save import journey
     cont = spot.get("continent", "sharmion")
+    if cont in save.data["unlocked_continents"] and journey.old_ok(save, spot["id"]):
+        return True, [("이전 조건을 이미 채웠어요", True)]
+    rows = []
     if cont not in save.data["unlocked_continents"]:
         rows.append(("대륙이 아직 열리지 않았다", False))
+    rows += cond_rows(save, spot, spot.get("unlock", {}))
+    if preview_ok(save, spot):   # 다음 티어 미리 맛보기 (CU8-⑤): 장비 조건은 '권장' — 막지 않음
+        rows = [(f"{label} — 권장", True) if _is_gear_row(label) and not ok else (label, ok) for label, ok in rows]
+    return all(ok for _, ok in rows), rows
+
+
+def cond_rows(save, spot: dict, cond: dict) -> list[tuple[str, bool]]:
+    """해금 조건 한 묶음 → [(설명, 충족)] (옛 조건 판정 journey._legacy_open 도 같이 씀)."""
+    rows = []
+    if "exam" in cond:   # 진행 사슬: 백 노인 시험 합격 (54-2)
+        from src.save import exam
+        rows.append((f"백 노인 T{cond['exam']} 시험 합격", exam.passed(save) >= cond["exam"]))
+    if "need_rod" in cond:   # 세계수: 그 티어 낚싯대 하나 (54-2, '권장'으로 풀리지 않게 장비 줄과 이름이 다름)
+        rows.append((f"T{cond['need_rod']} 낚싯대 장만 (지금 T{save.gear_tier('rod')})", save.gear_tier("rod") >= cond["need_rod"]))
     if "dex" in cond:
         rows.append((f"도감 {cond['dex']}종 ({save.dex_count()}/{cond['dex']})", save.dex_count() >= cond["dex"]))
     if "dex_pct" in cond:
@@ -82,9 +100,7 @@ def unlock_status(save, spot: dict) -> tuple[bool, list[tuple[str, bool]]]:
                      n >= cond["perfects"]))
     if cond.get("cost"):
         rows.append((f"비용 {ui.money_text(cond['cost'])}", save.money >= cond["cost"]))
-    if preview_ok(save, spot):   # 다음 티어 미리 맛보기 (CU8-⑤): 장비 조건은 '권장' — 막지 않음
-        rows = [(f"{label} — 권장", True) if _is_gear_row(label) and not ok else (label, ok) for label, ok in rows]
-    return all(ok for _, ok in rows), rows
+    return rows
 
 
 GEAR_ROWS = ("낚싯대 T", "장비 ", "낚싯줄 T")
@@ -153,6 +169,8 @@ class MapScene(Scene):
         self.go_btn = ui.Button((300, 214, 164, 17), "", self._go)
         self.cal_btn = ui.Button((FC.x + 4, FC.bottom - 20, FC.w - 8, 16), "달력 (K) · 14일 예보 · 골라 쉬기", self._calendar)
         self.train_btn = ui.Button((330, 250, 70, 15), "훈련 수조", self._train)
+        from src.save import journey
+        self.goal = journey.next_goal(self.save)   # 다음 목적지 (54-2)
 
     @property
     def spots(self) -> list:
@@ -245,6 +263,8 @@ class MapScene(Scene):
             self.game.sfx.play("ui_buy")
             self.game.sfx.play("sfx_catch", 0.7)
             self._say(f"{sp['name']} 해금!", ui.GOOD)
+            from src.save import journey
+            self.goal = journey.next_goal(self.save)
             reward = {"secret": ("dragon_pearl", "여의주"), "world_tree": ("world_fruit", "세계수 열매")}.get(sp["id"])
             if reward and not self.save.owns("bait", reward[0]):
                 # 최종 전설을 부르는 미끼
@@ -324,6 +344,9 @@ class MapScene(Scene):
         self._draw_info(canvas)
         if self.msg_t > 0:
             text(canvas, self.msg, (14, 256), self.msg_col, 11, "midleft")
+        elif self.goal:   # 진행 사슬 '다음 목적지' 조건 한 줄 (JOURNEY 🔗, DESIGN 54-2)
+            r = text(canvas, "다음", (14, 256), (255, 214, 90), 11, "midleft")
+            text(canvas, fit_text(self.goal["text"], 300), (r.right + 5, 256), ui.TEXT, 11, "midleft")
         self.close_btn.draw(canvas, self.mouse)
         self.train_btn.enabled = self.fishing.fight is None
         self.train_btn.draw(canvas, self.mouse)
@@ -382,6 +405,11 @@ class MapScene(Scene):
                 pygame.draw.circle(canvas, ui.ACCENT, (x, y), rr, 1)
             if current and self.village is None:   # 마을에 있으면 '현재'는 마을 칸에만
                 text(canvas, "현재", (x, y - 13), ui.ACCENT, 11, "center")
+            elif self.goal and sp["id"] == self.goal["spot"] and not unlocked:   # 다음 목적지 (54-2): 금색 깃발
+                bob = int(1.5 * math.sin(self.t * 3))
+                pygame.draw.line(canvas, (255, 214, 90), (x + 7, y - 4 + bob), (x + 7, y - 13 + bob), 1)
+                pygame.draw.polygon(canvas, (255, 214, 90), [(x + 8, y - 13 + bob), (x + 14, y - 11 + bob), (x + 8, y - 9 + bob)])
+                text(canvas, "다음", (x, y - 13), (255, 214, 90), 11, "center")
             text(canvas, sp["short"], (x, y + 13), col, 11, "center")
             if unlocked and self.save.charm_on("phantom_eye"):
                 self._draw_phantom_eye(canvas, sp["id"], x + 10, y - 6)
@@ -551,8 +579,8 @@ class MapScene(Scene):
                 yy += 12
             cost = sp["unlock"].get("cost", 0)
             self.go_btn.label = f"해금하기 ({cost:,}원)" if cost else "해금하기"
-            if sp["id"] == "offshore":   # 스토리: 먼바다용 배 = 해강의 배 수리 (가격·조건 그대로)
-                self.go_btn.label = f"해강의 배 수리 ({cost:,}원)"
+            if sp["id"] == "offshore":   # 스토리: 먼바다용 배 = 해강의 배 수리 (54-2: 비용 없음)
+                self.go_btn.label = f"해강의 배 수리 ({cost:,}원)" if cost else "해강의 배 수리"
             self.go_btn.enabled = ok
         self.go_btn.draw(canvas, self.mouse)
 

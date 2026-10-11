@@ -9,7 +9,7 @@ import math
 
 import pygame
 
-from src.save import exam
+from src.save import exam, journey
 from src.scene.base import Scene
 from src.ui import shop_ui as su
 from src.ui import widgets as ui
@@ -216,13 +216,13 @@ class ExamScene(Scene):
         x = R.x + 6
         su.btext(canvas, "응시 자격", (x, R.y + 9), su.YELLOW, 11, "midleft")
         text(canvas, f"T{t - 1} 낚시터 기준", (R.right - 6, R.y + 9), su.GRAY, 11, "midright")
-        marks = ("①", "②", "③")
+        marks = ("①", "②")
         y = R.y + 26
         from src.tutorial import targets as T
         for i, q in enumerate(exam.quals(self.save)):
-            T.mark_ui(self, f"exam.qual.{q['key']}", (R.x + 2, y - 7, R.w - 4, 36))   # TG-23 자격 막대 ①②③
+            T.mark_ui(self, f"exam.qual.{q['key']}", (R.x + 2, y - 7, R.w - 4, 36))   # TG-23 자격 막대 ①②
             text(canvas, f"{marks[i]} {q['label']}", (x, y), su.WHITE, 11, "midleft")
-            num = f"{min(q['have'], q['need'])} / {q['need']}" if not q.get("legend") else "전설 포획"
+            num = f"{min(q['have'], q['need'])} / {q['need']}" if not q.get("legend") else ("잡았다" if q["ok"] else "아직")
             text(canvas, num, (R.right - 18, y), GREEN if q["ok"] else su.WHITE, 11, "midright")
             if q["ok"]:
                 su.check(canvas, R.right - 14, y, GREEN)
@@ -233,12 +233,9 @@ class ExamScene(Scene):
             canvas.fill(GREEN if q["ok"] else (230, 180, 80), (bar.x + 1, bar.y + 1, int((bar.w - 2) * frac * k), bar.h - 2))
             pygame.draw.rect(canvas, (70, 76, 100), bar, 1)
             sub = {"dex": "전설 빼고 그 물 고기 등록",
-                   "stars": "S 랭크 · 대물 · 변이 · 숙련으로 별",
-                   "owner": q.get("alt", "")}[q["key"]]
+                   "owner": f"{journey.fish(q['fish'])['name']} 포획" if q.get("fish") else ""}[q["key"]]
             text(canvas, sub, (x, y + 22), su.GRAY, 11, "midleft")
             y += 42
-        if len(exam.quals(self.save)) < 3:
-            text(canvas, "③ 그 물의 주인 — T3 시험부터", (x, y), su.SUB, 11, "midleft")
 
     def _draw_status(self, canvas, t) -> None:
         fr = self.frame

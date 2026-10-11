@@ -245,6 +245,8 @@
     "_설명": "전설: 조건(시간·날씨·전용 미끼·거리)이 맞으면 캐스트당 chance 확률로 등장. phase_at = 페이즈 전환 체력 비율. phase3_heal = 3페이즈 진입 회복.",
     "chance": 0.05,
     "chance_live_rare": 0.10,
+    "chance_first": 0.5,
+    "_chance_first": "전설 첫 만남 (JOURNEY ✂️ ③, DESIGN 54-3): 그 전설을 아직 못 잡았으면 조건 칸 안 입질당 chance_first (희귀 생미끼와 겹치지 않음 — 그대로 50%). 다시 잡을 땐 chance · chance_live_rare 그대로",
     "min_distance": 25,
     "approach_mult": 1.6,
     "shadow_scale": 2.2,

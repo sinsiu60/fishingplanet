@@ -574,6 +574,13 @@ class Sim:
         order = ["reservoir", "valley", "breakwater", "offshore", "deep", "secret",
                  "marsh", "crystal_cave", "sky_falls", "volcano", "ice_sea", "world_tree"]
         opened = [o for o in order if o in s.data["unlocked_spots"]]
+        # 진행 사슬 (JOURNEY, DESIGN 54-2): 사람처럼 지도 '다음 목적지'를 따라감 — 노릴 전설이 있는 곳 (미끼가 아직 잠겼으면 그곳에서 낚으며 열기)
+        legs = {f["id"]: f for f in all_fish() if f["rarity"] == "legend"}
+        for fid in self.wanted_legends():
+            f = legs[fid]
+            if f["spot"] in opened and self.can_hold(f["spot"], self.legend_bait_owned(f)):
+                self.go(f["spot"])
+                return
         # 0) 백 노인의 시험 자격이 모자라면 (49-3): 지금 합격 티어 낚시터로 — 전설(③) · 빈 도감 칸(①) · 별(②) 순
         from src.save import exam
         if exam.next_tier(s) and not exam.eligible(s):
@@ -612,6 +619,27 @@ class Sim:
                 self.go(o)
                 return
 
+    def wanted_legends(self) -> list[str]:
+        """사슬 위에서 지금 필요한 전설: 다음 시험 '그 물의 주인' · 다음 해금 조건 전설 · (T5 뒤) 용문 폭포 다섯 전설 · 오르시엘."""
+        from src.save import exam, journey
+        s = self.s
+        out = []
+        t = exam.next_tier(s)
+        if t:
+            out.append(exam.cfg()["owner"][str(t)])
+        nxt = journey.next_spot(s)
+        cond = self.spots[nxt].get("unlock", {}) if nxt else {}
+        if cond.get("legend"):
+            out.append(cond["legend"])
+        if cond.get("legends") and exam.passed(s) >= cond.get("exam", 0):
+            from src.scene.map_scene import SHARMION_SPOTS
+            out += [f["id"] for f in all_fish() if f["rarity"] == "legend" and f["spot"] in SHARMION_SPOTS]
+        if nxt in (None, "world_tree") or "world_tree" in s.data["unlocked_spots"]:
+            out.append("orsiel")
+        if "eldrasion" not in s.data["unlocked_continents"] and exam.passed(s) >= 5:
+            out.append("dragon_carp")
+        return [f for f in dict.fromkeys(out) if not s.caught(f)]
+
     def can_hold(self, spot: str, legend: bool) -> bool:
         sp = self.spots[spot]
         if sp.get("continent") != "eldrasion":
@@ -634,8 +662,10 @@ class Sim:
         sp = self.spots[self.spot]
         leg = next((f for f in all_fish() if f["spot"] == self.spot and f["rarity"] == "legend"), None)
         from src.scene.map_scene import gear_ok
-        hunting = leg is not None and (not s.caught(leg["id"]) or getattr(self, "rehunt", None) == leg["id"]) \
+        hunting = leg is not None and ((not s.caught(leg["id"]) and leg["id"] in self.wanted_legends())
+                                       or getattr(self, "rehunt", None) == leg["id"]) \
             and self.legend_bait_owned(leg) and gear_ok(s, sp)   # 미리 맛보기 낚시터 (CU8-⑤): 장비 조건 전엔 전설 없음
+        # 사슬에 필요 없는 전설은 안 노림 (사람: 지도 '다음 목적지'만 봄, 54-2)
         bait = None
         fish = None
         if hunting:
@@ -650,7 +680,9 @@ class Sim:
                 bait = next(b for b in load_json("baits.json")["baits"] if b["id"] == leg["bait"])
                 lc = load_json("fishing_config.json")["legend"]
                 chance = lc["chance"]
-                if self.rare_stock:   # 사람은 거의 항상 희귀 생미끼를 덧붙여 10% 로 노림 (사용자 2026-10-08) — 1마리 = 입질 1번
+                if not s.caught(leg["id"]):   # 전설 첫 만남 (JOURNEY ✂️ ③, 54-3): 생미끼와 겹치지 않음
+                    chance = lc.get("chance_first", chance)
+                elif self.rare_stock:   # 사람은 거의 항상 희귀 생미끼를 덧붙여 10% 로 노림 (사용자 2026-10-08) — 1마리 = 입질 1번
                     self.rare_stock.pop()
                     self.live_used += 1
                     chance = lc.get("chance_live_rare", chance)

@@ -22,6 +22,10 @@ NAMES = ("scenes", "journal", "phone", "goals", "letters", "chapters")
 BASE = sys.argv[1] if len(sys.argv) > 1 else "add4f6e"
 # 기준 커밋 뒤 사용자가 승인한 해금 조건 변경 (낚시터, 키): (전, 후)
 APPROVED_UNLOCK = {("deep", "s_total"): (15, 5), ("world_tree", "s_eldra"): (30, 10)}   # 랭크 개편 (DESIGN 49-2)
+# 진행 사슬 (JOURNEY.md, DESIGN 54-2 — 사용자 승인 2026-10-11): 옛 조건(journey.LEGACY_UNLOCK)이 이 사슬로 바뀜. 해금 비용은 없어짐
+APPROVED_CHAIN = {"valley": {"exam": 2}, "breakwater": {"exam": 3}, "offshore": {"exam": 4}, "deep": {"exam": 4},
+                  "secret": {"exam": 5, "legends": 5}, "crystal_cave": {"exam": 6}, "sky_falls": {"legend": "prisia"},
+                  "volcano": {"legend": "aeris"}, "ice_sea": {"exam": 7}, "world_tree": {"legend": "borealis", "need_rod": 8}}
 APPROVED_PRICE = {"data/equipment.json": {   # CU8 진행 구조 T5~T8 장비 값 (DESIGN 52-7)
     f".{slot}[{gid}].price": v for slot, row in {
         "rod": {"master_rod": 17000, "crystal_rod": 192000, "nebula_rod": 204000, "abyss_rod": 840000},
@@ -136,6 +140,11 @@ def check_unchanged() -> None:
         for (sid, key), (before, after) in APPROVED_UNLOCK.items():   # 승인된 변경은 기준에 반영
             if o.get(sid, {}).get(key) == before:
                 o[sid][key] = after
+        sys.path.insert(0, ROOT)
+        from src.save.journey import LEGACY_UNLOCK
+        for sid, chain in APPROVED_CHAIN.items():   # 옛 조건이 그대로였을 때만 사슬로 바꿔 비교
+            if o.get(sid) == LEGACY_UNLOCK.get(sid):
+                o[sid] = dict(chain)
         if o != n:
             errors.append("[안 바뀜] 낚시터 해금 조건이 바뀌었다 (data/spots.json)")
 
@@ -153,7 +162,10 @@ def check_unchanged() -> None:
     for p in ("data/equipment.json", "data/baits.json", "data/floats.json", "data/lure.json", "data/spots.json",
               "data/continents.json", "data/fish.json"):
         old, new = js(p)
-        if old is not None and {**prices(old, {}), **APPROVED_PRICE.get(p, {})} != prices(new, {}):
+        before = {**prices(old, {}), **APPROVED_PRICE.get(p, {})} if old is not None else None
+        if p == "data/spots.json" and before is not None:   # 진행 사슬 (54-2): 낚시터 해금 비용 삭제
+            before = {k: v for k, v in before.items() if not k.endswith(".cost")}
+        if old is not None and before != prices(new, {}):
             errors.append(f"[안 바뀜] 가격이 바뀌었다 ({p})")
 
     def strings(path):

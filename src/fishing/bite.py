@@ -171,9 +171,12 @@ def excited_action(fish: dict, rnd) -> str | None:
     return rnd.choices(keys, [acts[k] for k in keys])[0]
 
 
-def legend_chance(bait: dict | None) -> float:
-    """입질당 전설 확률 (CU7-1): 기본 chance, 전설 미끼 위에 희귀 생미끼를 덧붙였으면 chance_live_rare."""
+def legend_chance(bait: dict | None, first: bool = False) -> float:
+    """입질당 전설 확률 (CU7-1): 기본 chance, 전설 미끼 위에 희귀 생미끼를 덧붙였으면 chance_live_rare.
+    그 전설을 처음 만나면 chance_first (JOURNEY ✂️ ③, DESIGN 54-3 — 생미끼와 겹치지 않음)."""
     lg = load_json("fishing_config.json")["legend"]
+    if first:
+        return lg.get("chance_first", lg["chance"])
     live = (bait or {}).get("live")
     return lg.get("chance_live_rare", lg["chance"]) if live and live["kind"] == "rare" else lg["chance"]
 
@@ -398,7 +401,7 @@ class BiteController:
                     legend = None
                 elif self.force_fish is not None:
                     self.fish = self.force_fish
-                elif legend and self.rnd.random() < legend_chance(self.bait):
+                elif legend and self.rnd.random() < legend_chance(self.bait, legend["id"] in getattr(self, "legend_first", ())):
                     self.fish = legend
                 else:
                     self.fish = self._variety(self._pick())

@@ -2048,6 +2048,8 @@ class FishingScene(Scene):
         self.bite.bait = live or self.save.equipped("bait")   # 생미끼 (CU7-2): 끼우면 영구 미끼 효과는 꺼짐
         from src.scene.map_scene import gear_ok
         self.bite.legend_block = not gear_ok(self.save, self.spot)   # 미리 맛보기 (CU8-⑤): 장비 조건 전엔 전설 없음
+        self.bite.legend_first = {f["id"] for f in self.all_fish if f["rarity"] == "legend" and f["spot"] == self.spot_id
+                                  and not self.save.caught(f["id"])}   # 전설 첫 만남 50% (JOURNEY ✂️ ③, 54-3)
         self.bite.force_fish = self.exam_fish if self.exam_fish is not None else \
             (self.all_fish[self.force_i] if self.force_i >= 0 else None)
         landed = self.cast.state == CastState.LANDED   # 대기 = 기다리기만 (루어 액션 저킹 · 리트리브는 삭제, DESIGN 47장)

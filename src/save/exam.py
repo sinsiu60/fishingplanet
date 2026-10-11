@@ -134,31 +134,23 @@ def _base_fish(save) -> list[dict]:
 
 
 def quals(save) -> list[dict]:
-    """자격 ①②③ — [{key, label, have, need, ok, alt}] (③ 은 T3 시험부터)."""
-    from src.save import dexbook
+    """자격 ①② — [{key, label, have, need, ok}] (진행 사슬, DESIGN 54-2): ① 도감 dex_ratio (전설 빼고) · ② 그 물의 주인 = 그 티어 전설
+    (exam.json owner). 옛 자격을 이미 채운 옛 세이브의 다음 시험은 둘 다 채운 것으로 (journey.exam_ok)."""
+    from src.save import journey
     c = cfg()
     tier = next_tier(save)
     if tier is None:
         return []
-    allf = _base_fish(save)
-    fs = [f for f in allf if f["rarity"] != "legend"]
+    fs = [f for f in _base_fish(save) if f["rarity"] != "legend"]
     dex = save.data.get("dex", {})
-    caught = [f for f in fs if dex.get(f["id"], {}).get("count", 0) > 0]
-    need1 = math.ceil(c.get("dex_ratio_tier", {}).get(str(tier), c["dex_ratio"]) * len(fs) - 1e-9)   # 티어별 덮어쓰기 (CU8-③)
-    stars = sum(dexbook.star_count(save, f) for f in fs)
-    need2 = math.ceil(c["star_ratio"] * 5 * len(fs) - 1e-9)
-    out = [{"key": "dex", "label": "도감", "have": len(caught), "need": need1, "ok": len(caught) >= need1},
-           {"key": "stars", "label": "도감 별", "have": stars, "need": need2, "ok": stars >= need2}]
-    if tier >= c["owner_from"]:
-        legends = [f for f in allf if f["rarity"] == "legend"]
-        leg_ok = any(dex.get(f["id"], {}).get("count", 0) > 0 for f in legends)
-        rares = [f for f in fs if f["rarity"] == "rare"]
-        have = sum(1 for f in rares if dex.get(f["id"], {}).get("count", 0) > 0)
-        need3 = math.ceil(c["rare_ratio"] * len(rares) - 1e-9)
-        out.append({"key": "owner", "label": "그 물의 주인", "have": need3 if leg_ok else have, "need": need3,
-                    "ok": leg_ok or have >= need3, "legend": leg_ok,
-                    "alt": "전설 1마리 또는 희귀 " + str(need3) + "종"})
-    return out
+    caught = sum(1 for f in fs if dex.get(f["id"], {}).get("count", 0) > 0)
+    need1 = math.ceil(c["dex_ratio"] * len(fs) - 1e-9)
+    leg = c["owner"][str(tier)]
+    leg_ok = dex.get(leg, {}).get("count", 0) > 0
+    old = journey.exam_grandfathered(save, tier)
+    return [{"key": "dex", "label": "도감", "have": need1 if old else caught, "need": need1, "ok": old or caught >= need1},
+            {"key": "owner", "label": "그 물의 주인", "have": int(old or leg_ok), "need": 1, "ok": old or leg_ok,
+             "legend": True, "fish": leg}]
 
 
 def eligible(save) -> bool:
