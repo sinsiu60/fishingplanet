@@ -9,9 +9,9 @@
     "success": 99.0,
     "t_mean": 21.7,
     "ranks": {
-     "S": 33,
-     "A": 47,
-     "B": 16,
+     "S": 15,
+     "A": 62,
+     "B": 20,
      "C": 4
     },
     "fails": {
@@ -35,7 +35,7 @@
      }
     },
     "catch_per_h": 94.5,
-    "gold_per_h": 7238,
+    "gold_per_h": 6765,
     "share": {
      "common": 70.2,
      "uncommon": 25.0,
@@ -47,8 +47,8 @@
     "success": 100.0,
     "t_mean": 20.0,
     "ranks": {
-     "S": 86,
-     "A": 14,
+     "S": 57,
+     "A": 42,
      "B": 0,
      "C": 0
     },
@@ -71,7 +71,7 @@
      }
     },
     "catch_per_h": 100.1,
-    "gold_per_h": 11740,
+    "gold_per_h": 10787,
     "share": {
      "common": 70.0,
      "uncommon": 23.0,
@@ -83,9 +83,9 @@
     "success": 43.0,
     "t_mean": 45.6,
     "ranks": {
-     "S": 6,
+     "S": 5,
      "A": 5,
-     "B": 13,
+     "B": 15,
      "C": 75
     },
     "fails": {
@@ -110,7 +110,7 @@
      }
     },
     "catch_per_h": 25.1,
-    "gold_per_h": 660,
+    "gold_per_h": 648,
     "share": {
      "common": 69.2,
      "uncommon": 26.0,
@@ -124,9 +124,9 @@
     "success": 99.8,
     "t_mean": 20.1,
     "ranks": {
-     "S": 38,
-     "A": 54,
-     "B": 7,
+     "S": 22,
+     "A": 68,
+     "B": 9,
      "C": 0
     },
     "fails": {
@@ -150,7 +150,7 @@
      }
     },
     "catch_per_h": 99.5,
-    "gold_per_h": 19081,
+    "gold_per_h": 18113,
     "share": {
      "common": 70.8,
      "uncommon": 21.5,
@@ -162,8 +162,8 @@
     "success": 100.0,
     "t_mean": 18.2,
     "ranks": {
-     "S": 86,
-     "A": 14,
+     "S": 63,
+     "A": 37,
      "B": 0,
      "C": 0
     },
@@ -186,7 +186,7 @@
      }
     },
     "catch_per_h": 105.4,
-    "gold_per_h": 26855,
+    "gold_per_h": 24049,
     "share": {
      "common": 73.5,
      "uncommon": 18.5,
@@ -198,9 +198,9 @@
     "success": 80.5,
     "t_mean": 34.1,
     "ranks": {
-     "S": 7,
-     "A": 25,
-     "B": 29,
+     "S": 5,
+     "A": 21,
+     "B": 34,
      "C": 40
     },
     "fails": {
@@ -227,7 +227,7 @@
      }
     },
     "catch_per_h": 57.8,
-    "gold_per_h": 6865,
+    "gold_per_h": 6753,
     "share": {
      "common": 67.8,
      "uncommon": 24.2,
@@ -241,9 +241,9 @@
     "success": 100.0,
     "t_mean": 18.6,
     "ranks": {
-     "S": 26,
-     "A": 52,
-     "B": 19,
+     "S": 9,
+     "A": 66,
+     "B": 22,
      "C": 2
     },
     "fails": {},
@@ -265,7 +265,7 @@
      }
     },
     "catch_per_h": 103.9,
-    "gold_per_h": 15092,
+    "gold_per_h": 14405,
     "share": {
      "common": 71.8,
      "uncommon": 21.5,
@@ -277,8 +277,8 @@
     "success": 100.0,
     "t_mean": 17.0,
     "ranks": {
-     "S": 72,
-     "A": 28,
+     "S": 36,
+     "A": 64,
      "B": 0,
      "C": 0
     },
@@ -301,7 +301,7 @@
      }
     },
     "catch_per_h": 109.2,
-    "gold_per_h": 19328,
+    "gold_per_h": 17210,
     "share": {
      "common": 72.8,
      "uncommon": 21.5,
@@ -315,7 +315,7 @@
     "ranks": {
      "S": 1,
      "A": 4,
-     "B": 8,
+     "B": 9,
      "C": 87
     },
     "fails": {
@@ -343,7 +343,7 @@
      }
     },
     "catch_per_h": 9.7,
-    "gold_per_h": 791,
+    "gold_per_h": 790,
     "share": {
      "common": 71.5,
      "uncommon": 23.8,
@@ -357,9 +357,9 @@
     "success": 100.0,
     "t_mean": 20.3,
     "ranks": {
-     "S": 27,
-     "A": 57,
-     "B": 13,
+     "S": 13,
+     "A": 70,
+     "B": 15,
      "C": 2
     },
     "fails": {},
@@ -381,7 +381,7 @@
      }
     },
     "catch_per_h": 99.3,
-    "gold_per_h": 39238,
+    "gold_per_h": 37929,
     "share": {
      "common": 73.2,
      "uncommon": 21.5,
@@ -393,8 +393,8 @@
     "success": 100.0,
     "t_mean": 18.7,
     "ranks": {
-     "S": 73,
-     "A": 27,
+     "S": 42,
+     "A": 57,
      "B": 0,
      "C": 0
     },
@@ -417,7 +417,7 @@
      }
     },
     "catch_per_h": 103.8,
-    "gold_per_h": 55995,
+    "gold_per_h": 48511,
     "share": {
      "common": 69.8,
      "uncommon": 24.2,
@@ -429,8 +429,8 @@
     "success": 41.2,
     "t_mean": 114.9,
     "ranks": {
-     "S": 2,
-     "A": 5,
+     "S": 1,
+     "A": 7,
      "B": 10,
      "C": 83
     },
@@ -458,7 +458,7 @@
      }
     },
     "catch_per_h": 11.3,
-    "gold_per_h": 906,
+    "gold_per_h": 898,
     "share": {
      "common": 73.0,
      "uncommon": 19.0,
@@ -472,9 +472,9 @@
     "success": 99.8,
     "t_mean": 21.9,
     "ranks": {
-     "S": 28,
-     "A": 60,
-     "B": 12,
+     "S": 14,
+     "A": 72,
+     "B": 14,
      "C": 1
     },
     "fails": {
@@ -498,7 +498,7 @@
      }
     },
     "catch_per_h": 94.7,
-    "gold_per_h": 78359,
+    "gold_per_h": 73926,
     "share": {
      "common": 67.8,
      "uncommon": 24.5,
@@ -510,8 +510,8 @@
     "success": 100.0,
     "t_mean": 19.1,
     "ranks": {
-     "S": 78,
-     "A": 22,
+     "S": 48,
+     "A": 52,
      "B": 0,
      "C": 0
     },
@@ -534,7 +534,7 @@
      }
     },
     "catch_per_h": 102.6,
-    "gold_per_h": 101028,
+    "gold_per_h": 89357,
     "share": {
      "common": 74.0,
      "uncommon": 19.0,
@@ -546,9 +546,9 @@
     "success": 34.0,
     "t_mean": 156.1,
     "ranks": {
-     "S": 6,
-     "A": 20,
-     "B": 30,
+     "S": 2,
+     "A": 21,
+     "B": 32,
      "C": 44
     },
     "fails": {
@@ -575,7 +575,7 @@
      }
     },
     "catch_per_h": 7.1,
-    "gold_per_h": 3541,
+    "gold_per_h": 3384,
     "share": {
      "common": 70.5,
      "uncommon": 22.2,
@@ -589,9 +589,9 @@
     "success": 96.0,
     "t_mean": 35.7,
     "ranks": {
-     "S": 4,
-     "A": 62,
-     "B": 27,
+     "S": 1,
+     "A": 63,
+     "B": 30,
      "C": 6
     },
     "fails": {
@@ -607,7 +607,7 @@
      }
     },
     "catch_per_h": 66.8,
-    "gold_per_h": 371282,
+    "gold_per_h": 363984,
     "share": {
      "common": 0.0,
      "uncommon": 0.0,
@@ -619,9 +619,9 @@
     "success": 100.0,
     "t_mean": 30.6,
     "ranks": {
-     "S": 38,
-     "A": 59,
-     "B": 2,
+     "S": 11,
+     "A": 86,
+     "B": 3,
      "C": 0
     },
     "fails": {},
@@ -633,7 +633,7 @@
      }
     },
     "catch_per_h": 77.2,
-    "gold_per_h": 556749,
+    "gold_per_h": 500339,
     "share": {
      "common": 0.0,
      "uncommon": 0.0,
@@ -646,8 +646,8 @@
     "t_mean": 49.7,
     "ranks": {
      "S": 3,
-     "A": 19,
-     "B": 21,
+     "A": 17,
+     "B": 24,
      "C": 57
     },
     "fails": {
@@ -664,7 +664,7 @@
      }
     },
     "catch_per_h": 9.9,
-    "gold_per_h": 38804,
+    "gold_per_h": 38534,
     "share": {
      "common": 0.0,
      "uncommon": 0.0,
@@ -678,9 +678,9 @@
     "success": 99.5,
     "t_mean": 22.7,
     "ranks": {
-     "S": 32,
-     "A": 57,
-     "B": 10,
+     "S": 21,
+     "A": 65,
+     "B": 12,
      "C": 2
     },
     "fails": {
@@ -704,7 +704,7 @@
      }
     },
     "catch_per_h": 92.5,
-    "gold_per_h": 168356,
+    "gold_per_h": 160090,
     "share": {
      "common": 67.8,
      "uncommon": 24.5,
@@ -716,8 +716,8 @@
     "success": 100.0,
     "t_mean": 20.3,
     "ranks": {
-     "S": 84,
-     "A": 16,
+     "S": 66,
+     "A": 34,
      "B": 0,
      "C": 0
     },
@@ -740,7 +740,7 @@
      }
     },
     "catch_per_h": 99.2,
-    "gold_per_h": 224609,
+    "gold_per_h": 211180,
     "share": {
      "common": 71.2,
      "uncommon": 21.5,
@@ -752,9 +752,9 @@
     "success": 45.5,
     "t_mean": 53.4,
     "ranks": {
-     "S": 8,
-     "A": 20,
-     "B": 20,
+     "S": 5,
+     "A": 21,
+     "B": 21,
      "C": 53
     },
     "fails": {
@@ -780,7 +780,7 @@
      }
     },
     "catch_per_h": 23.6,
-    "gold_per_h": 21855,
+    "gold_per_h": 21271,
     "share": {
      "common": 70.5,
      "uncommon": 22.8,
@@ -794,9 +794,9 @@
     "success": 100.0,
     "t_mean": 21.7,
     "ranks": {
-     "S": 30,
-     "A": 60,
-     "B": 10,
+     "S": 17,
+     "A": 72,
+     "B": 11,
      "C": 0
     },
     "fails": {},
@@ -818,7 +818,7 @@
      }
     },
     "catch_per_h": 95.6,
-    "gold_per_h": 280675,
+    "gold_per_h": 268540,
     "share": {
      "common": 65.2,
      "uncommon": 26.0,
@@ -830,8 +830,8 @@
     "success": 100.0,
     "t_mean": 18.4,
     "ranks": {
-     "S": 79,
-     "A": 21,
+     "S": 53,
+     "A": 47,
      "B": 0,
      "C": 0
     },
@@ -854,7 +854,7 @@
      }
     },
     "catch_per_h": 104.8,
-    "gold_per_h": 330456,
+    "gold_per_h": 296566,
     "share": {
      "common": 72.5,
      "uncommon": 21.5,
@@ -866,9 +866,9 @@
     "success": 41.2,
     "t_mean": 114.8,
     "ranks": {
-     "S": 2,
+     "S": 1,
      "A": 17,
-     "B": 25,
+     "B": 26,
      "C": 56
     },
     "fails": {
@@ -893,7 +893,7 @@
      }
     },
     "catch_per_h": 11.4,
-    "gold_per_h": 14947,
+    "gold_per_h": 14821,
     "share": {
      "common": 73.0,
      "uncommon": 20.2,
@@ -907,9 +907,9 @@
     "success": 99.0,
     "t_mean": 21.3,
     "ranks": {
-     "S": 27,
-     "A": 61,
-     "B": 11,
+     "S": 12,
+     "A": 73,
+     "B": 14,
      "C": 1
     },
     "fails": {
@@ -934,7 +934,7 @@
      }
     },
     "catch_per_h": 95.5,
-    "gold_per_h": 266146,
+    "gold_per_h": 253615,
     "share": {
      "common": 72.2,
      "uncommon": 21.8,
@@ -946,8 +946,8 @@
     "success": 100.0,
     "t_mean": 18.4,
     "ranks": {
-     "S": 71,
-     "A": 29,
+     "S": 46,
+     "A": 54,
      "B": 0,
      "C": 0
     },
@@ -970,7 +970,7 @@
      }
     },
     "catch_per_h": 104.7,
-    "gold_per_h": 373444,
+    "gold_per_h": 345806,
     "share": {
      "common": 73.2,
      "uncommon": 19.5,
@@ -982,9 +982,9 @@
     "success": 31.8,
     "t_mean": 65.7,
     "ranks": {
-     "S": 7,
-     "A": 44,
-     "B": 36,
+     "S": 3,
+     "A": 45,
+     "B": 39,
      "C": 13
     },
     "fails": {
@@ -1013,7 +1013,7 @@
      }
     },
     "catch_per_h": 14.0,
-    "gold_per_h": 35360,
+    "gold_per_h": 33241,
     "share": {
      "common": 66.8,
      "uncommon": 24.8,
@@ -1027,9 +1027,9 @@
     "success": 100.0,
     "t_mean": 20.0,
     "ranks": {
-     "S": 28,
-     "A": 54,
-     "B": 16,
+     "S": 13,
+     "A": 68,
+     "B": 17,
      "C": 2
     },
     "fails": {},
@@ -1051,7 +1051,7 @@
      }
     },
     "catch_per_h": 99.9,
-    "gold_per_h": 409933,
+    "gold_per_h": 380373,
     "share": {
      "common": 69.0,
      "uncommon": 24.0,
@@ -1063,8 +1063,8 @@
     "success": 100.0,
     "t_mean": 17.2,
     "ranks": {
-     "S": 82,
-     "A": 18,
+     "S": 46,
+     "A": 54,
      "B": 0,
      "C": 0
     },
@@ -1087,7 +1087,7 @@
      }
     },
     "catch_per_h": 108.4,
-    "gold_per_h": 580780,
+    "gold_per_h": 509878,
     "share": {
      "common": 69.5,
      "uncommon": 23.5,
@@ -1139,8 +1139,8 @@
     "success": 99.5,
     "t_mean": 20.2,
     "ranks": {
-     "S": 26,
-     "A": 62,
+     "S": 12,
+     "A": 75,
      "B": 12,
      "C": 1
     },
@@ -1165,7 +1165,7 @@
      }
     },
     "catch_per_h": 99.0,
-    "gold_per_h": 491080,
+    "gold_per_h": 472043,
     "share": {
      "common": 71.0,
      "uncommon": 22.2,
@@ -1177,8 +1177,8 @@
     "success": 100.0,
     "t_mean": 17.1,
     "ranks": {
-     "S": 74,
-     "A": 26,
+     "S": 43,
+     "A": 57,
      "B": 0,
      "C": 0
     },
@@ -1201,7 +1201,7 @@
      }
     },
     "catch_per_h": 108.9,
-    "gold_per_h": 657576,
+    "gold_per_h": 565733,
     "share": {
      "common": 74.0,
      "uncommon": 20.5,
@@ -1213,9 +1213,9 @@
     "success": 16.0,
     "t_mean": 210.3,
     "ranks": {
-     "S": 5,
+     "S": 3,
      "A": 16,
-     "B": 38,
+     "B": 39,
      "C": 42
     },
     "fails": {
@@ -1240,7 +1240,7 @@
      }
     },
     "catch_per_h": 2.5,
-    "gold_per_h": 7781,
+    "gold_per_h": 7727,
     "share": {
      "common": 68.8,
      "uncommon": 25.2,
@@ -1254,8 +1254,8 @@
     "success": 100.0,
     "t_mean": 21.1,
     "ranks": {
-     "S": 28,
-     "A": 61,
+     "S": 17,
+     "A": 72,
      "B": 11,
      "C": 0
     },
@@ -1278,7 +1278,7 @@
      }
     },
     "catch_per_h": 96.9,
-    "gold_per_h": 690520,
+    "gold_per_h": 665097,
     "share": {
      "common": 71.8,
      "uncommon": 23.2,
@@ -1290,8 +1290,8 @@
     "success": 100.0,
     "t_mean": 18.4,
     "ranks": {
-     "S": 70,
-     "A": 30,
+     "S": 46,
+     "A": 54,
      "B": 0,
      "C": 0
     },
@@ -1314,7 +1314,7 @@
      }
     },
     "catch_per_h": 104.8,
-    "gold_per_h": 887121,
+    "gold_per_h": 810016,
     "share": {
      "common": 72.2,
      "uncommon": 22.5,
@@ -1326,9 +1326,9 @@
     "success": 53.2,
     "t_mean": 77.9,
     "ranks": {
-     "S": 15,
-     "A": 37,
-     "B": 33,
+     "S": 5,
+     "A": 46,
+     "B": 34,
      "C": 15
     },
     "fails": {
@@ -1354,7 +1354,7 @@
      }
     },
     "catch_per_h": 20.4,
-    "gold_per_h": 64724,
+    "gold_per_h": 61399,
     "share": {
      "common": 75.0,
      "uncommon": 19.2,
