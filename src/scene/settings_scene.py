@@ -161,7 +161,12 @@ class SettingsScene(Scene):
         plog = ("성능 로그 (1초마다 CSV)", "toggle", lambda: pf.logging, self._toggle_perf_log)
         pexp = ("성능 로그 내보내기", "button", lambda: "공유" if IS_MOBILE else "폴더", self._export_perf)
         bench = ("테스트: 벤치마크 B1~B6 (3분)", "button", lambda: "시작", self._start_bench)
-        rows = [tele, drag, name_show, prog, cards, slot, cb, snd, test, show, trv, bgm, plog, pexp, bench]
+        playlog = ("플레이 기록 남기기 (기기 안에만)", "toggle", lambda: s.get("play_log"),
+                   lambda: s.set("play_log", not s.get("play_log")))   # JOURNEY 📏 (54-5)
+        rows = [tele, drag, name_show, prog, playlog]
+        if self.game.save is not None:
+            rows.append(("플레이 기록 보기 · 복사", "button", lambda: "열기", self._open_play_log))
+        rows += [cards, slot, cb, snd, test, show, trv, bgm, plog, pexp, bench]
         if self.game.save is not None:
             rows.append(("테스트: NPC 대사", "button", lambda: "열기", self._open_dialogue_test))
             rows.append(("테스트: 날씨 이벤트", "button", self._event_label, self._cycle_event))
@@ -269,6 +274,10 @@ class SettingsScene(Scene):
         i = getattr(self, "_int_i", 0)
         self._int_i = i + 1
         self.game.scenes.push(InteriorScene(self.game, fishing, self.INTERIOR_ORDER[i % 4]))
+
+    def _open_play_log(self) -> None:
+        from src.scene.play_log_scene import PlayLogScene
+        self.game.scenes.push(PlayLogScene(self.game))
 
     def _open_dialogue_test(self) -> None:
         from src.scene.dialogue_debug import DialogueDebugScene

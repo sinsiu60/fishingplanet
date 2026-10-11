@@ -372,6 +372,8 @@ class Game:
             self._acc += frame_time * self.time_scale
         if self.save is not None:
             self.save.data["playtime"] += frame_time
+            from src.save import play_log
+            play_log.tick(self, frame_time)   # 플레이 기록 (JOURNEY 📏, 54-5): 최근 50세션 · 낚시터별 머문 시간
             self.autosave_t += frame_time
             if self.autosave_t >= AUTOSAVE_SEC:
                 self.save_now(sync=False)

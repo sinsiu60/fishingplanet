@@ -182,3 +182,39 @@ def _exam_goal(save, nxt: str, t: int | None) -> dict:
         return {"spot": nxt, "where": base[0] if base else nxt,
                 "text": f"{names} 도감 {dex['have']}/{dex['need']} 채우고 백 노인에게"}
     return {"spot": nxt, "where": "baek", "text": f"백 노인의 T{t} 시험을 보자"}
+
+
+# ── 엔딩 뒤 (JOURNEY 🏁, DESIGN 54-5) ──
+def ended(save) -> bool:
+    """오르시엘을 잡았거나 에필로그를 봤으면 엔딩 뒤."""
+    from src.story import story
+    return save.caught("orsiel") or (story.active(save) and story.seen(save, "E-01"))
+
+
+def remaining_goals(save) -> list[dict]:
+    """집 '남은 이야기' 쪽: [{title, line, have, need}] — 원하는 사람만 하는 목표 (숫자 채우기는 여기로)."""
+    from src.save import achievements, bottles, dexbook, events_cal
+    from src.save.save_game import equipment
+    out = []
+    got, tot = 0, 0
+    for cont in ("sharmion", "eldrasion"):
+        g, t = save.continent_dex(cont)
+        got, tot = got + g, tot + t
+    out.append({"title": "도감 완성", "line": f"도감 {got}/{tot}종 · 별 {dexbook.points(save)}/{dexbook.max_points(save)}",
+                "have": got, "need": tot})
+    legs = [f for f in load_json("fish.json")["fish"] if f["rarity"] == "legend"]
+    s = sum(1 for f in legs if save.data.get("dex", {}).get(f["id"], {}).get("best_rank") == "S")
+    out.append({"title": "전설 다시 낚기", "line": f"전설 S랭크 {s}/{len(legs)}종 (조건 칸 · 생미끼로 노리기, 입질당 5 · 10%)",
+                "have": s, "need": len(legs)})
+    eq = equipment()
+    t8 = sum(1 for k in ("rod", "reel", "line", "net") if any(g.get("tier") == 8 and save.owns(k, g["id"]) for g in eq[k]))
+    out.append({"title": "장비 완성", "line": f"T8 장비 {t8}/4종 · 비늘석 맞추기", "have": t8, "need": 4})
+    vis = [a for a in achievements.visible(save)]
+    ag = sum(1 for a in vis if a["id"] in achievements.state(save)["got"])
+    out.append({"title": "업적", "line": f"업적 {ag}/{len(vis)}개 · 퍼펙트 {save.data.get('stats', {}).get('perfects', 0)}번",
+                "have": ag, "need": len(vis)})
+    tro = len(events_cal.st(save).get("trophies", []))
+    out.append({"title": "계절 축제 · 대회 · 상인", "line": f"주간 대회 트로피 {tro}개 · 축제는 계절마다", "have": min(tro, 1), "need": 1})
+    b = len(bottles.collected(save))
+    out.append({"title": "해강의 자리", "line": f"유리병 편지 {b}/{len(bottles.letters())}장", "have": b, "need": len(bottles.letters())})
+    return out

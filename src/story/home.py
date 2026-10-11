@@ -77,6 +77,8 @@ class HomeScene(InteriorScene):
             self.game.scenes.push(JournalScene(self.game, self))
         elif item == "memories":
             self.game.scenes.push(MemoriesScene(self.game, self))
+        elif item == "remaining":
+            self.game.scenes.push(RemainingScene(self.game, self))
         elif item == "notebook":
             from src.scene.chest_scene import ChestScene, TABS
             cs = ChestScene(self.game, self.fishing)
@@ -351,4 +353,39 @@ class EventReplayScene(Scene):
         pal = {"water_top": (40, 80, 110)}
         self.player.draw_world(canvas, pal, None)
         self.player.draw_screen(canvas, pal, None)
+        draw_cursor(canvas, self.mouse)
+
+
+class RemainingScene(JournalScene):
+    """남은 이야기 (엔딩 뒤, JOURNEY 🏁 · 54-5): 수첩 한 쪽 — 원하는 사람만 하는 목표와 진행."""
+
+    def _pages(self) -> int:
+        return 1
+
+    def draw(self, canvas) -> None:
+        from src.save import journey
+        self.room.draw_room(canvas)
+        w, h = canvas.get_size()
+        dim = pygame.Surface((w, h), pygame.SRCALPHA)
+        dim.fill((0, 0, 0, 150))
+        canvas.blit(dim, (0, 0))
+        book = self._book(w, h)
+        canvas.fill((70, 44, 30), book.inflate(10, 10))
+        canvas.fill(PAGE_BG, book)
+        canvas.fill((200, 186, 160), (book.centerx - 1, book.y, 2, book.h))
+        text(canvas, "남은 이야기", (book.x + 14, book.y + 12), (120, 80, 50), 11, "midleft")
+        text(canvas, "엔딩 뒤 — 원하는 만큼", (book.right - 14, book.y + 12), (150, 130, 100), 11, "midright")
+        for i, g in enumerate(journey.remaining_goals(self.game.save)):
+            col, row = divmod(i, 3)
+            x0 = book.x + 14 + col * (book.w // 2)
+            y = book.y + 34 + row * 62
+            done = g["have"] >= g["need"]
+            text(canvas, g["title"] + (" · 완료" if done else ""), (x0, y), (120, 80, 50) if not done else (90, 130, 70), 11, "midleft")
+            for j, ln in enumerate(wrap_text(g["line"], book.w // 2 - 30)[:2]):
+                text(canvas, ln, (x0, y + 15 + j * 13), PAGE_INK, 11, "midleft")
+            bar = pygame.Rect(x0, y + 42, book.w // 2 - 34, 5)
+            canvas.fill((214, 202, 176), bar)
+            canvas.fill((170, 130, 70) if not done else (110, 150, 80),
+                        (bar.x, bar.y, int(bar.w * min(1.0, g["have"] / max(1, g["need"]))), bar.h))
+        text(canvas, "닫기", (book.centerx, book.bottom - 10), (120, 80, 50), 11, "center")
         draw_cursor(canvas, self.mouse)

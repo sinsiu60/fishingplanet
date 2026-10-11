@@ -220,7 +220,9 @@ class InteriorScene(Scene):
         if not self.menu_on:
             return []
         from src.save import exam
-        return [m for m in self.nc["menu"] if m != "letter" or exam.letter_menu(self.save)]   # 엘라 편지: T6 시험부터
+        from src.save import journey
+        return [m for m in self.nc["menu"] if (m != "letter" or exam.letter_menu(self.save))   # 엘라 편지: T6 시험부터
+                and (m != "remaining" or journey.ended(self.save))]   # 남은 이야기: 엔딩 뒤 (JOURNEY 🏁, 54-5)
 
     def _choose(self, item: str) -> None:
         self.game.sfx.play("ui_click")
