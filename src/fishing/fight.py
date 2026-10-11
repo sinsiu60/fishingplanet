@@ -512,6 +512,8 @@ class Fight:
             else:   # 놓침: 릴이 잠긴 채 (최고 단계, miss_drag) = 장력이 빨강으로 튐 → 늦게라도 Q 를 누르면 그때부터 풀림
                 big = self.fish.get("rarity") in ("legend", "phantom")
                 md = self.rel_cfg.get("miss_drag_boss" if big else "miss_drag", "top")
+                if big and self.fish.get("drag_floor"):   # 줄이 원래 닳는 대형 전설 (청새치 '일섬'): 예전대로
+                    md = "mid"
                 want = top if md == "top" else max(mid, top - 1) if md == "high" else mid   # 전설 · 환상은 한 단계 아래 (돌진이 많은 긴 싸움)
             if g in ("perfect", "good") or self.rel_late:
                 self.rel_hold_drag = want
@@ -1009,13 +1011,13 @@ class Fight:
             payout = min(cfg["payout_max_speed"], over * cfg["payout_speed_per_tension"])
             target = self.drag_limit + over * cfg["drag_overflow_keep"]
         ch = self.taut_cfg.get("calm_hold")
-        beaten = self.taut_beaten()
-        if reeling and calm and ch and not beaten:   # 다 지친 뒤 끌어오기는 예전처럼 꾹 (초록 안에 머묾)
+        free = not self.taut_busy()   # 신호 예고 · 판정 · 다 지친 뒤가 아님 — 쉼 · 지침 · 평소 헤엄 모두 (v1.8.0 테스트: 평소 헤엄은 자동 드랙 중간 단계라 장력이 50 에서 막혀 띠에 못 닿았음)
+        if reeling and free and ch:   # 다 지친 뒤 끌어오기는 예전처럼 꾹 (초록 안에 머묾)
             # 팽팽 구간 (53 🅰-4): 쉬는 물고기를 꾹 감으면 누른 시간만큼 장력이 차오름 — 0.5초쯤 금색 띠, 1초 넘으면 빨강
             # (예전 '초록 아래 + 20 에서 멈춤'은 T1 에선 띠 꼭대기에 영원히, T3+ 에선 띠에 못 닿아 줄타기가 안 됨)
             gw = self.green_high - self.green_low
             target = max(target, self.green_low + gw * min(ch["cap"], ch["base"] + ch["per_sec"] * self.taut_hold))
-        elif not reeling and calm and ch and not beaten and self.taut_hold > 0:
+        elif not reeling and free and ch and self.taut_hold > 0:
             # 짧게 뗐을 때: 장력이 한 번에 무너지지 않고 rel_drop 만큼 내려간 뒤 누른 시간이 줄어드는 만큼 부드럽게 (끊어 감기)
             gw = self.green_high - self.green_low
             target = max(target, self.green_low + gw * (ch["base"] - ch["rel_drop"] + ch["per_sec"] * self.taut_hold))
